@@ -1115,6 +1115,39 @@ const AuthorSubmissionsPanel = ({ user }) => {
       alert(isSpanish ? 'No hay documento disponible para descargar' : 'No document available for download');
     }
   };
+    const handleDownloadCertificate = () => {
+    // Verificar si existe certificado
+    const certificate = activePortal.certificateFileUrl || activePortal.certificateUrl;
+    
+    if (!certificate) {
+      alert(isSpanish 
+        ? 'El certificado aún no está disponible. Se generará cuando el manuscrito sea aceptado formalmente.' 
+        : 'The certificate is not yet available. It will be generated when the manuscript is formally accepted.');
+      return;
+    }
+    
+    // Convertir URL de Drive a URL de descarga directa
+    const downloadUrl = getDriveDownloadUrl(certificate);
+    
+    if (downloadUrl) {
+      // Crear nombre elegante para el archivo
+      const submissionId = activePortal.submissionId || activePortal.id?.substring(0, 8);
+      const fileName = `Certificado_${submissionId}_RNCE.pdf`;
+      
+      // Crear elemento de descarga
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Si no se puede convertir, abrir en nueva pestaña
+      window.open(certificate, '_blank', 'noopener noreferrer');
+    }
+  };
   const handleDownloadConsent = (consent) => {
     if (consent.fileUrl) {
       window.open(consent.fileUrl, '_blank', 'noopener noreferrer');
@@ -1934,7 +1967,63 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           <Icons.Download /> {isSpanish ? 'Descargar PDF' : 'Download PDF'}
                         </button>
                       </div>
-
+                      {/* Certificado de Aceptación */}
+                      <div className={`bg-white p-6 border shadow-sm flex flex-col ${
+                        activePortal.status === 'accepted' 
+                          ? 'border-[#C0A86A] border-2' 
+                          : 'border-slate-200 opacity-60'
+                      }`}>
+                        <div className="flex-1">
+                          <span className={`inline-block px-2 py-1 text-[10px] font-bold uppercase tracking-widest mb-3 ${
+                            activePortal.status === 'accepted'
+                              ? 'bg-[#C0A86A]/20 text-[#8B7745]'
+                              : 'bg-slate-100 text-slate-400'
+                          }`}>
+                            <span className="flex items-center gap-1.5">
+                              <Icons.CheckBadge />
+                              {isSpanish ? 'Certificado Oficial' : 'Official Certificate'}
+                            </span>
+                          </span>
+                          
+                          <h4 className="font-serif text-lg text-slate-800 mb-2">
+                            {isSpanish ? 'Certificado de Aceptación' : 'Acceptance Certificate'}
+                          </h4>
+                          
+                          <p className="text-xs text-slate-500 font-sans mb-6">
+                            {activePortal.status === 'accepted'
+                              ? (isSpanish 
+                                  ? 'Documento oficial que acredita la aceptación del manuscrito.'
+                                  : 'Official document accrediting the acceptance of the manuscript.')
+                              : (isSpanish 
+                                  ? 'Disponible cuando el manuscrito sea aceptado.'
+                                  : 'Available when the manuscript is accepted.')}
+                          </p>
+                          
+                          {activePortal.status === 'accepted' && (
+                            <div className="bg-emerald-50 border border-emerald-200 p-3 mb-4">
+                              <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
+                                {isSpanish ? 'Número de Certificado' : 'Certificate Number'}
+                              </p>
+                              <p className="font-mono text-xs text-emerald-800 break-all">
+                                {activePortal.certificateNumber || activePortal.certificateId || '—'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <button 
+                          onClick={handleDownloadCertificate}
+                          disabled={!activePortal.certificateFileUrl && !activePortal.certificateUrl}
+                          className={`w-full py-2.5 transition-colors text-xs font-bold uppercase tracking-wider flex justify-center items-center gap-2 ${
+                            activePortal.certificateFileUrl || activePortal.certificateUrl
+                              ? 'bg-[#003b5c] text-white hover:bg-[#002840]'
+                              : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                          }`}
+                        >
+                          <Icons.Download /> 
+                          {isSpanish ? 'Descargar Certificado' : 'Download Certificate'}
+                        </button>
+                      </div>
                                             {/* Docx de Revisiones */}
                       {activePortal.finalReviewDocUrl && (
                         <div className="bg-white p-6 border border-slate-200 shadow-sm flex flex-col border-l-4 border-l-[#C0A86A]">

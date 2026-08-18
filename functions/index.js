@@ -14697,7 +14697,11 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     const db = admin.firestore();
     
     // 1. Determinar idioma del certificado
-    const lang = submissionData.paperLanguage || submissionData.language || 'es';
+    const lang = submissionData.paperLanguage || 
+                 submissionData.currentMetadata?.paperLanguage ||
+                 submissionData.currentMetadata?.language ||
+                 submissionData.language || 
+                 'es';
     const isSpanish = lang === 'es';
     
     console.log(`[${requestId}] 📝 Idioma del certificado: ${lang}`);
@@ -14705,20 +14709,65 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     // 2. Obtener metadatos finales consolidados
     const finalMetadata = submissionData.currentMetadata || submissionData;
     
-    // 3. Preparar datos para el certificado
+    // 3. Determinar fecha de aceptación con múltiples fuentes
+    function getAcceptanceDate() {
+      if (options.acceptanceDate) return options.acceptanceDate;
+      
+      if (submissionData.acceptedDate) {
+        if (typeof submissionData.acceptedDate === 'string') return submissionData.acceptedDate;
+        if (submissionData.acceptedDate.toDate) return submissionData.acceptedDate.toDate().toISOString().split('T')[0];
+      }
+      
+      if (submissionData.acceptedAt) {
+        if (submissionData.acceptedAt.toDate) return submissionData.acceptedAt.toDate().toISOString().split('T')[0];
+        if (submissionData.acceptedAt instanceof Date) return submissionData.acceptedAt.toISOString().split('T')[0];
+      }
+      
+      if (submissionData.decisionMadeAt) {
+        if (submissionData.decisionMadeAt.toDate) return submissionData.decisionMadeAt.toDate().toISOString().split('T')[0];
+        if (submissionData.decisionMadeAt instanceof Date) return submissionData.decisionMadeAt.toISOString().split('T')[0];
+      }
+      
+      if (finalMetadata.acceptedDate) {
+        if (typeof finalMetadata.acceptedDate === 'string') return finalMetadata.acceptedDate;
+        if (finalMetadata.acceptedDate.toDate) return finalMetadata.acceptedDate.toDate().toISOString().split('T')[0];
+      }
+      
+      console.log(`[${requestId}] ⚠️ No se encontró fecha de aceptación, usando fecha actual`);
+      return new Date().toISOString().split('T')[0];
+    }
+    
+    const acceptanceDate = getAcceptanceDate();
+    console.log(`[${requestId}] 📅 Fecha de aceptación: ${acceptanceDate}`);
+    
+    // 4. Preparar autores formateados
+    const authors = (finalMetadata.authors || submissionData.authors || []).map(a => ({
+      firstName: a.firstName || '',
+      lastName: a.lastName || '',
+      email: a.email || null,
+      orcid: a.orcid || null,
+      fullName: a.fullName || `${a.firstName || ''} ${a.lastName || ''}`.trim() || a.email || 'Autor',
+      institution: a.institution || null,
+      isCorresponding: a.isCorresponding || false
+    }));
+    
+    // 5. Preparar datos para el certificado
     const certificateData = {
       title: finalMetadata.title || submissionData.title || 'Sin título',
-      authors: finalMetadata.authors || submissionData.authors || [],
+      authors: authors,
       submissionId: submissionData.submissionId,
-      acceptanceDate: options.acceptanceDate || 
-        (submissionData.acceptedAt?.toDate?.() || new Date()).toISOString().split('T')[0],
-      certificateNumber: `RNCE-${submissionData.submissionId?.substring(0, 8) || 'XXXXXXXX'}-${new Date().getFullYear()}`,
+      acceptanceDate: acceptanceDate,
+      certificateNumber: options.certificateNumber || 
+        `RNCE-${submissionData.submissionId?.substring(0, 8) || 'XXXXXXXX'}-${new Date().getFullYear()}`,
       volume: submissionData.volumen || 'En prensa',
       issue: submissionData.numero || 'En prensa',
       pages: submissionData.primeraPagina && submissionData.ultimaPagina 
         ? `${submissionData.primeraPagina}-${submissionData.ultimaPagina}`
         : 'En prensa',
-      doi: submissionData.doi || null
+      doi: submissionData.doi || null,
+      paperLanguage: lang,
+      articleType: submissionData.articleType || 'research',
+      area: submissionData.area || finalMetadata.area || null
     };
     
     console.log(`[${requestId}] 📊 Datos del certificado:`, {
@@ -14727,7 +14776,7 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
       certNumber: certificateData.certificateNumber
     });
     
-    // 4. Generar PDF con PDFKit
+    // 6. Generar PDF con PDFKit (sin el certificateDocId aún, lo generamos después)
     const pdfBuffer = await generateCertificatePDF(certificateData, lang, requestId);
     
     if (!pdfBuffer || pdfBuffer.length === 0) {
@@ -14736,10 +14785,10 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     
     console.log(`[${requestId}] 📄 PDF generado: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
     
-    // 5. Inicializar Drive
+    // 7. Inicializar Drive
     const { drive } = await getDriveClient(requestId);
     
-    // 6. Obtener o crear carpeta para certificados
+    // 8. Obtener o crear carpeta para certificados
     const editorialFolderId = submissionData.editorialFolderId || submissionData.driveFolderId;
     
     if (!editorialFolderId) {
@@ -14751,7 +14800,6 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     let certificateFolder;
     
     try {
-      // Intentar buscar carpeta existente
       const folderResponse = await drive.files.list({
         q: `name='${certificateFolderName}' and '${editorialFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
         fields: 'files(id, name)',
@@ -14770,7 +14818,7 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
       certificateFolder = await createDriveFolder(drive, certificateFolderName, editorialFolderId);
     }
     
-    // 7. Subir PDF a Drive
+    // 9. Subir PDF a Drive
     const fileName = `CERTIFICATE_${submissionData.submissionId}_${Date.now()}.pdf`;
     const pdfBase64 = pdfBuffer.toString('base64');
     
@@ -14784,8 +14832,8 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
     console.log(`[${requestId}] ✅ Certificado subido a Drive: ${certificateFile.id}`);
     console.log(`[${requestId}] 🔗 URL: ${certificateFile.webViewLink}`);
     
-    // 8. Guardar referencia en Firestore
-    const certificateRef = {
+    // 10. Guardar en colección pública 'certificates'
+    const publicCertificateData = {
       fileId: certificateFile.id,
       fileUrl: certificateFile.webViewLink,
       fileName: certificateFile.name,
@@ -14793,28 +14841,165 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
       generatedAt: admin.firestore.FieldValue.serverTimestamp(),
       generatedBy: 'system',
       language: lang,
-      acceptanceDate: certificateData.acceptanceDate
+      acceptanceDate: certificateData.acceptanceDate,
+      title: certificateData.title,
+      submissionId: submissionData.submissionId,
+      authors: authors,
+      volume: certificateData.volume,
+      issue: certificateData.issue,
+      pages: certificateData.pages,
+      doi: certificateData.doi,
+      paperLanguage: lang,
+      articleType: certificateData.articleType,
+      area: certificateData.area,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
     };
     
-    await db.collection('submissions').doc(submissionData.submissionId).update({
-      certificate: certificateRef,
-      certificateGenerated: true
+    // Verificar si ya existe un certificado con el mismo número
+    const existingCertQuery = await db.collection('certificates')
+      .where('certificateNumber', '==', certificateData.certificateNumber)
+      .limit(1)
+      .get();
+    
+    let certificateDocRef;
+    
+    if (!existingCertQuery.empty) {
+      // Actualizar certificado existente
+      certificateDocRef = existingCertQuery.docs[0].ref;
+      
+      // Eliminar archivo anterior de Drive
+      const oldFileId = existingCertQuery.docs[0].data().fileId;
+      if (oldFileId && oldFileId !== certificateFile.id) {
+        try {
+          await drive.files.delete({ fileId: oldFileId });
+          console.log(`[${requestId}] ✓ Archivo anterior eliminado de Drive: ${oldFileId}`);
+        } catch (deleteError) {
+          console.log(`[${requestId}] ⚠️ No se pudo eliminar archivo anterior: ${deleteError.message}`);
+        }
+      }
+      
+      await certificateDocRef.update({
+        ...publicCertificateData,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        regeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+        previousFileId: oldFileId || null
+      });
+      
+      console.log(`[${requestId}] 🔄 Certificado existente actualizado: ${certificateDocRef.id}`);
+    } else {
+      // Crear nuevo certificado
+      certificateDocRef = await db.collection('certificates').add(publicCertificateData);
+      console.log(`[${requestId}] ✅ Certificado guardado en colección pública: ${certificateDocRef.id}`);
+    }
+    
+    // 11. OBTENER EL ID DEL DOCUMENTO PARA EL QR
+    const certificateDocId = certificateDocRef.id;
+    console.log(`[${requestId}] 🔑 ID del documento para QR: ${certificateDocId}`);
+    
+    // 12. REGENERAR PDF CON EL ID DEL DOCUMENTO EN EL QR
+    const pdfBufferWithDocId = await generateCertificatePDFWithDocId(
+      certificateData, 
+      lang, 
+      requestId, 
+      certificateDocId
+    );
+    
+    if (pdfBufferWithDocId && pdfBufferWithDocId.length > 0) {
+      // Subir el PDF actualizado con el ID en el QR
+      const finalFileName = `CERTIFICATE_${submissionData.submissionId}_${Date.now()}_final.pdf`;
+      const finalFile = await uploadToDrive(
+        drive,
+        pdfBufferWithDocId.toString('base64'),
+        finalFileName,
+        certificateFolder.id
+      );
+      
+      console.log(`[${requestId}] ✅ PDF final con ID en QR subido: ${finalFile.id}`);
+      
+      // Eliminar el PDF anterior (sin ID en QR)
+      try {
+        await drive.files.delete({ fileId: certificateFile.id });
+        console.log(`[${requestId}] ✓ PDF anterior eliminado`);
+      } catch (deleteError) {
+        console.log(`[${requestId}] ⚠️ No se pudo eliminar PDF anterior: ${deleteError.message}`);
+      }
+      
+      // Actualizar documento con la información final
+      await certificateDocRef.update({
+        fileId: finalFile.id,
+        fileUrl: finalFile.webViewLink,
+        fileName: finalFile.name,
+        verificationId: certificateDocId,
+        qrContainsDocId: true,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      console.log(`[${requestId}] ✅ Documento actualizado con PDF final`);
+      
+      // Actualizar variable para usar en el resto del flujo
+      certificateFile.id = finalFile.id;
+      certificateFile.webViewLink = finalFile.webViewLink;
+      certificateFile.name = finalFile.name;
+    }
+    
+    // 13. Actualizar submission con referencia al certificado
+    const submissionRef = db.collection('submissions').doc(submissionData.submissionId);
+    
+    await submissionRef.update({
+      certificateId: certificateDocId,
+      certificateNumber: certificateData.certificateNumber,
+      certificateFileId: certificateFile.id,
+      certificateFileUrl: certificateFile.webViewLink,
+      certificateGenerated: true,
+      certificateGeneratedAt: admin.firestore.FieldValue.serverTimestamp()
     });
     
-    console.log(`[${requestId}] 💾 Referencia guardada en Firestore`);
+    console.log(`[${requestId}] 💾 Submission actualizado con referencia al certificado`);
     
-    // 9. Registrar en audit log
-    await db.collection('submissions').doc(submissionData.submissionId)
-      .collection('auditLogs').add({
-        action: 'certificate_generated',
-        certificateId: certificateFile.id,
-        certificateUrl: certificateFile.webViewLink,
-        certificateNumber: certificateData.certificateNumber,
-        language: lang,
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-      });
+    // 14. Eliminar campo certificate antiguo si existe
+    try {
+      const submissionDoc = await submissionRef.get();
+      if (submissionDoc.exists && submissionDoc.data().certificate) {
+        await submissionRef.update({
+          certificate: admin.firestore.FieldValue.delete()
+        });
+        console.log(`[${requestId}] ✓ Campo certificate antiguo eliminado`);
+      }
+    } catch (cleanupError) {
+      console.log(`[${requestId}] ⚠️ No se pudo limpiar campo antiguo: ${cleanupError.message}`);
+    }
     
-    // 10. Enviar email al autor con el certificado
+    // 15. Eliminar subcolección certificate si existe
+    try {
+      const oldSubCertificates = await submissionRef.collection('certificate').get();
+      if (!oldSubCertificates.empty) {
+        const batch = db.batch();
+        oldSubCertificates.docs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+        console.log(`[${requestId}] ✓ ${oldSubCertificates.docs.length} certificados antiguos eliminados de subcolección`);
+      }
+    } catch (subCleanupError) {
+      console.log(`[${requestId}] ⚠️ No se pudo limpiar subcolección: ${subCleanupError.message}`);
+    }
+    
+    // 16. Registrar en audit log
+    await submissionRef.collection('auditLogs').add({
+      action: 'certificate_generated',
+      certificateId: certificateDocId,
+      certificateUrl: certificateFile.webViewLink,
+      certificateNumber: certificateData.certificateNumber,
+      language: lang,
+      storedInPublicCollection: true,
+      qrContainsDocId: true,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    console.log(`[${requestId}] 📝 Audit log registrado`);
+    
+    // 17. Enviar email al autor con el certificado
     try {
       await sendCertificateEmail(
         submissionData.authorEmail || submissionData.correspondingAuthorEmail,
@@ -14825,15 +15010,16 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
       console.log(`[${requestId}] 📧 Email enviado al autor`);
     } catch (emailError) {
       console.error(`[${requestId}] ⚠️ Error enviando email:`, emailError.message);
-      // No interrumpir el flujo si falla el email
     }
     
     return {
       success: true,
-      certificateId: certificateFile.id,
+      certificateId: certificateDocId,
       certificateUrl: certificateFile.webViewLink,
       certificateNumber: certificateData.certificateNumber,
-      language: lang
+      language: lang,
+      storedIn: 'certificates',
+      qrContainsDocId: true
     };
     
   } catch (error) {
@@ -14842,33 +15028,19 @@ async function generateAcceptanceCertificate(submissionData, options = {}) {
   }
 }
 
-/* ===================== FUNCIÓN: GENERAR PDF CON PDFKIT ===================== */
-/**
- * Genera el PDF del certificado usando PDFKit
- * @param {Object} data - Datos del certificado
- * @param {string} lang - 'es' o 'en'
- * @param {string} requestId - ID para logging
- * @returns {Buffer} - Buffer del PDF generado
- */
-/* ===================== FUNCIÓN: GENERAR PDF CON PDFKIT ===================== */
-/**
- * Genera el PDF del certificado usando PDFKit
- * @param {Object} data - Datos del certificado
- * @param {string} lang - 'es' o 'en'
- * @param {string} requestId - ID para logging
- * @returns {Buffer} - Buffer del PDF generado
- */
-async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') {
-  console.log(`[${requestId}] 🔧 Generando PDF con PDFKit...`);
+/* ===================== FUNCIÓN: GENERAR PDF CON ID DE DOCUMENTO EN QR ===================== */
+async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'unknown', certificateDocId = null) {
+  console.log(`[${requestId}] 🔧 Generando PDF con ID de documento en QR...`);
   
   try {
-    // Cargar dependencias
     const PDFDocument = require('pdfkit');
     const QRCode = require('qrcode');
     
     const isSpanish = lang === 'es';
     
-    // Configuración del certificado (basada en el diseño original)
+    // USAR EL ID DEL DOCUMENTO COMO IDENTIFICADOR ÚNICO
+    const verificationId = certificateDocId || data.certificateNumber;
+    
     const CONFIG = {
       qr: {
         sizeCm: 2,
@@ -14878,7 +15050,7 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
         margin: 2,
         debug: false
       },
-      urlVerificacion: `https://www.revistacienciasestudiantes.com/verificar/${data.certificateNumber}`,
+      urlVerificacion: `https://www.revistacienciasestudiantes.com/verificar/index.html?id=${verificationId}`,
       cabecera: {
         marginTopCm: 2.2,
         extraSpaceCm: 0.3,
@@ -14888,7 +15060,6 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
       }
     };
     
-    // Inicializar documento A4 apaisado sin márgenes automáticos
     const doc = new PDFDocument({
       size: 'A4',
       layout: 'landscape',
@@ -14897,20 +15068,17 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
       bufferPages: true
     });
     
-    // Capturar chunks del PDF
     const chunks = [];
     doc.on('data', (chunk) => chunks.push(chunk));
     
-    // Promesa para esperar a que termine
     const pdfPromise = new Promise((resolve, reject) => {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
     });
     
-    const pageWidth = doc.page.width;   // A4 Landscape: 841.89 pts
-    const pageHeight = doc.page.height; // A4 Landscape: 595.28 pts
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
     
-    // Definición de colores
     const journalBlue = '#003B5C';
     const journalOrange = '#E86125';
     const lightGray = '#FBFBFC';
@@ -14918,16 +15086,9 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
     const textDark = '#333333';
     const textSlate = '#475569';
     
-    // Funciones auxiliares
-    function mmToPoints(mm) {
-      return mm * 2.83465;
-    }
+    function mmToPoints(mm) { return mm * 2.83465; }
+    function cmToPoints(cm) { return cm * 28.3465; }
     
-    function cmToPoints(cm) {
-      return cm * 28.3465;
-    }
-    
-    // Configuración de fuentes nativas
     const fontSans = 'Helvetica';
     const fontSansBold = 'Helvetica-Bold';
     const fontSansItalic = 'Helvetica-Oblique';
@@ -14936,9 +15097,6 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
     const fontSerifItalic = 'Times-Italic';
     const fontSerifSemiBold = 'Times-Bold';
     
-    console.log(`[${requestId}] ✓ Usando fuentes nativas de PDFKit`);
-    
-    // Textos según idioma
     const texts = isSpanish ? {
       journalName1: 'Revista Nacional de las Ciencias',
       journalName2: 'para Estudiantes',
@@ -14967,17 +15125,10 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
       verifyLabel: 'VERIFY AUTHENTICITY'
     };
     
-    // Formatear autores
     const authorsList = data.authors
-      ?.map(a => {
-        const firstName = a.firstName || '';
-        const lastName = a.lastName || '';
-        const fullName = `${firstName} ${lastName}`.trim();
-        return fullName || a.email || 'Author';
-      })
+      ?.map(a => a.fullName || `${a.firstName || ''} ${a.lastName || ''}`.trim() || a.email || 'Author')
       .join(', ') || 'Authors';
     
-    // Formatear fecha de aceptación
     const formattedDate = new Date(data.acceptanceDate).toLocaleDateString(
       isSpanish ? 'es-ES' : 'en-US',
       { day: 'numeric', month: 'long', year: 'numeric' }
@@ -14986,24 +15137,16 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
     // ==========================================
     // MARCO PERIMETRAL Y FONDO
     // ==========================================
-    // Fondo general sutil
     doc.rect(0, 0, pageWidth, pageHeight).fill(lightGray);
     
-    // Borde azul principal
     const borderOffset1 = cmToPoints(1.2);
     doc.lineWidth(4).strokeColor(journalBlue);
-    doc.rect(borderOffset1, borderOffset1, 
-             pageWidth - 2 * borderOffset1, 
-             pageHeight - 2 * borderOffset1).stroke();
+    doc.rect(borderOffset1, borderOffset1, pageWidth - 2 * borderOffset1, pageHeight - 2 * borderOffset1).stroke();
     
-    // Borde naranja fino interior
     const borderOffset2 = cmToPoints(1.4);
     doc.lineWidth(1).strokeColor(journalOrange);
-    doc.rect(borderOffset2, borderOffset2, 
-             pageWidth - 2 * borderOffset2, 
-             pageHeight - 2 * borderOffset2).stroke();
+    doc.rect(borderOffset2, borderOffset2, pageWidth - 2 * borderOffset2, pageHeight - 2 * borderOffset2).stroke();
     
-    // Acentos geométricos
     const largeTriangle = mmToPoints(23);
     const smallTriangle = mmToPoints(13);
     
@@ -15031,7 +15174,7 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
        .lineTo(pageWidth - borderOffset1, pageHeight - borderOffset1 - smallTriangle)
        .fill();
     
-    // Marca de agua (si es posible cargar el logo)
+    // Marca de agua
     const watermarkWidth = cmToPoints(12);
     doc.save();
     doc.opacity(0.03);
@@ -15040,6 +15183,7 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
       const response = await fetch(logoUrl);
       if (response.ok) {
         const arrayBuffer = await response.arrayBuffer();
+        const logoBuffer = Buffer.from(arrayBuffer);
         doc.image(logoBuffer, (pageWidth - watermarkWidth) / 2, (pageHeight - watermarkWidth) / 2, { width: watermarkWidth });
       }
     } catch(e) {
@@ -15058,28 +15202,24 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
     // CABECERA INSTITUCIONAL
     // ==========================================
     let currentY = marginY + cmToPoints(CONFIG.cabecera.extraSpaceCm);
-    
-    // Imagen Logo Izquierda
     const logoWidth = cmToPoints(CONFIG.cabecera.logoWidthCm);
+    
     try {
       const logoUrl = isSpanish ? 'https://www.revistacienciasestudiantes.com/logo.png' : 'https://www.revistacienciasestudiantes.com/logoEN.png';
       const response = await fetch(logoUrl);
       if (response.ok) {
         const arrayBuffer = await response.arrayBuffer();
+        const logoBuffer = Buffer.from(arrayBuffer);
         doc.image(logoBuffer, marginX, currentY, { width: logoWidth });
       } else {
-        // Placeholder si no hay logo
         doc.rect(marginX, currentY, logoWidth, logoWidth).strokeColor('#CCCCCC').lineWidth(1).stroke();
         doc.font(fontSans).fontSize(9).fillColor(textGray).text('LOGO', marginX, currentY + logoWidth/2 - 5, { width: logoWidth, align: 'center' });
       }
     } catch(e) {
-      console.log(`[${requestId}] ⚠ Error al cargar logo:`, e.message);
-      // Placeholder si hay error
       doc.rect(marginX, currentY, logoWidth, logoWidth).strokeColor('#CCCCCC').lineWidth(1).stroke();
       doc.font(fontSans).fontSize(9).fillColor(textGray).text('LOGO', marginX, currentY + logoWidth/2 - 5, { width: logoWidth, align: 'center' });
     }
     
-    // Bloque de Textos Cabecera
     const headerTextX = marginX + cmToPoints(3.8);
     const extraSpace = cmToPoints(CONFIG.cabecera.extraSpaceCm);
     
@@ -15100,47 +15240,35 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
     // ==========================================
     const bodyStartY = cmToPoints(6.5);
     
-    // Título Principal
     doc.font(fontSansBold).fontSize(26).fillColor(journalBlue)
        .text(texts.certificateTitle, marginX, bodyStartY, { width: contentWidth, align: 'center', characterSpacing: 1 });
     
-    // Texto introductorio
     doc.font(fontSerif).fontSize(13.5).fillColor(textDark)
-       .text(texts.introText, 
-             marginX, bodyStartY + cmToPoints(1.4), { width: contentWidth, align: 'center' });
+       .text(texts.introText, marginX, bodyStartY + cmToPoints(1.4), { width: contentWidth, align: 'center' });
     
-    // TÍTULO DEL ARTÍCULO
     doc.font(fontSansBold).fontSize(16.5).fillColor(journalBlue)
-       .text(`«${data.title}»`, 
-             marginX + cmToPoints(0.5), bodyStartY + cmToPoints(2.3), { width: contentWidth - cmToPoints(1), align: 'center', lineGap: 4 });
+       .text(`«${data.title}»`, marginX + cmToPoints(0.5), bodyStartY + cmToPoints(2.3), { width: contentWidth - cmToPoints(1), align: 'center', lineGap: 4 });
     
     let afterTitleY = doc.y + cmToPoints(0.4);
     
-    // Texto intermedio
     doc.font(fontSerif).fontSize(13.5).fillColor(textDark)
        .text(texts.authoredBy, marginX, afterTitleY, { width: contentWidth, align: 'center' });
     
-    // AUTORES
     doc.font(fontSerifSemiBold).fontSize(16).fillColor(textDark)
-       .text(authorsList, 
-             marginX + cmToPoints(0.5), afterTitleY + cmToPoints(0.6), { width: contentWidth - cmToPoints(1), align: 'center', lineGap: 4 });
+       .text(authorsList, marginX + cmToPoints(0.5), afterTitleY + cmToPoints(0.6), { width: contentWidth - cmToPoints(1), align: 'center', lineGap: 4 });
     
     let afterAuthorsY = doc.y + cmToPoints(0.7);
-    
-    // RESOLUCIÓN
     const resBoxWidth = contentWidth - cmToPoints(2);
     const resBoxX = marginX + cmToPoints(1);
     
     doc.font(fontSerif).fontSize(12.5).fillColor(textDark)
-       .text(texts.resolution, 
-             resBoxX, afterAuthorsY, { width: resBoxWidth, align: 'center', lineGap: 3 });
+       .text(texts.resolution, resBoxX, afterAuthorsY, { width: resBoxWidth, align: 'center', lineGap: 3 });
     
     // ==========================================
     // PIE CON QR DE AUTENTICIDAD
     // ==========================================
     const footerY = pageHeight - cmToPoints(4.5);
     
-    // Bloque Izquierdo: Metadatos
     doc.font(fontSansBold).fontSize(10).fillColor(textSlate)
        .text(`${texts.manuscriptIdLabel} `, marginX, footerY, { continued: true })
        .font(fontSans).text(data.submissionId);
@@ -15149,38 +15277,26 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
        .text(`${texts.acceptanceDateLabel} `, marginX, footerY + 16, { continued: true })
        .font(fontSans).text(formattedDate);
     
-    // Bloque Central: Sello y Lema
     const colCenterWidth = contentWidth * 0.35;
     const colCenterX = marginX + (contentWidth * 0.325);
     doc.font(fontSerifItalic).fontSize(11).fillColor(journalBlue)
        .text(texts.mottoText, colCenterX, footerY, { width: colCenterWidth, align: 'center' });
     
-    // Bloque Derecho: QR e Información
     const colRightWidth = contentWidth * 0.35;
     const colRightX = marginX + (contentWidth * 0.65);
-    
-    // Área para el QR
     const qrAreaWidth = cmToPoints(3);
     const qrAreaX = colRightX + (colRightWidth - qrAreaWidth) / 2;
     const qrAreaY = footerY + cmToPoints(0.5);
     
-    // Texto "Verificar autenticidad" antes del QR
     doc.font(fontSansBold).fontSize(9).fillColor(journalBlue)
-       .text(texts.verifyLabel, colRightX, qrAreaY - cmToPoints(0.8), { 
-           width: colRightWidth, 
-           align: 'center' 
-       });
+       .text(texts.verifyLabel, colRightX, qrAreaY - cmToPoints(0.8), { width: colRightWidth, align: 'center' });
     
-    // Generar e insertar QR
     try {
       const qrDataURL = await QRCode.toDataURL(CONFIG.urlVerificacion, {
         errorCorrectionLevel: CONFIG.qr.errorCorrection,
         margin: CONFIG.qr.margin,
         width: 500,
-        color: {
-          dark: '#003B5C',
-          light: '#FFFFFF'
-        }
+        color: { dark: '#003B5C', light: '#FFFFFF' }
       });
       
       const qrBuffer = Buffer.from(qrDataURL.split(',')[1], 'base64');
@@ -15188,31 +15304,24 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
       const qrX = qrAreaX + (qrAreaWidth - qrSize) / 2 + cmToPoints(CONFIG.qr.offsetXCm);
       const qrY = qrAreaY + cmToPoints(CONFIG.qr.offsetYCm);
       
-      doc.image(qrBuffer, qrX, qrY, {
-        width: qrSize,
-        height: qrSize
-      });
+      doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
       
-      console.log(`[${requestId}] ✅ QR insertado correctamente`);
+      console.log(`[${requestId}] ✅ QR insertado con ID: ${verificationId}`);
     } catch (qrError) {
       console.error(`[${requestId}] ❌ Error al insertar QR:`, qrError.message);
     }
     
-    // Finalizar documento
     doc.end();
-    
-    // Esperar a que termine la generación
     const pdfBuffer = await pdfPromise;
-    console.log(`[${requestId}] ✅ PDF generado: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
+    console.log(`[${requestId}] ✅ PDF generado con Doc ID en QR: ${(pdfBuffer.length / 1024).toFixed(2)}KB`);
     
     return pdfBuffer;
     
   } catch (error) {
-    console.error(`[${requestId}] ❌ Error generando PDF:`, error.message);
-    throw new Error(`PDF generation failed: ${error.message}`);
+    console.error(`[${requestId}] ❌ Error generando PDF con Doc ID:`, error.message);
+    throw new Error(`PDF generation with Doc ID failed: ${error.message}`);
   }
 }
-
 /* ===================== FUNCIÓN: ENVIAR EMAIL CON CERTIFICADO ===================== */
 /**
  * Envía email al autor con el enlace del certificado

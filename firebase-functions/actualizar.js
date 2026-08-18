@@ -1,4 +1,4 @@
-// fixAndRegenerateCertificates.js
+// regenerateCertificatesWithDocId.js
 "use strict";
 
 const admin = require('firebase-admin');
@@ -12,7 +12,10 @@ const { google } = require('googleapis');
 // ==================== CONFIGURACIÓN ====================
 const PROJECT_ID = 'usuarios-rnce';
 const CERTIFICATES_ROOT_FOLDER_NAME = 'CERTIFICADOS_ACEPTACION';
-const DRY_RUN = process.argv.includes('--dry-run'); // Modo simulación
+const DRY_RUN = process.argv.includes('--dry-run');
+
+// URL base para verificación (usando query params)
+const VERIFICATION_URL_BASE = 'https://www.revistacienciasestudiantes.com/verificar/index.html?id=';
 
 // ==================== CARGAR ARTICLES.JSON ====================
 let articlesJson = [];
@@ -23,7 +26,7 @@ try {
   console.warn('⚠️ No se pudo cargar articles.json, continuando sin él');
 }
 
-// ==================== OBTENER SECRETS DE FIREBASE ====================
+// ==================== OBTENER SECRETS ====================
 function getFirebaseSecret(secretName) {
   try {
     const secretValue = execSync(
@@ -106,12 +109,10 @@ function calculateSimilarity(str1, str2) {
   if (!normalized1 || !normalized2) return 0;
   if (normalized1 === normalized2) return 1;
   
-  // Verificar si uno contiene al otro
   if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) {
     return 0.8;
   }
   
-  // Contar palabras comunes
   const words1 = new Set(normalized1.split(' ').filter(w => w.length > 2));
   const words2 = new Set(normalized2.split(' ').filter(w => w.length > 2));
   
@@ -140,141 +141,6 @@ function normalizeDate(dateValue) {
   }
 }
 
-// ==================== FUNCIÓN: MATCHEO ROBUSTO ====================
-function matchSubmissionWithArticle(submissionData, submissionId) {
-  const articles = Array.isArray(articlesJson) ? articlesJson : [];
-  
-  if (articles.length === 0) {
-    console.log('   ⚠️ No hay articles.json para matchear');
-    return null;
-  }
-  
-  const title = submissionData.title || 
-                submissionData.currentMetadata?.title || 
-                '';
-  
-  console.log(`   🔍 Buscando match para: "${title.substring(0, 80)}..."`);
-  
-  // 1. Intentar match por submissionId
-  if (submissionId) {
-    const idMatch = articles.find(a => 
-      (a.submissionId || '').toLowerCase() === submissionId.toLowerCase()
-    );
-    if (idMatch) {
-      console.log('   ✓ Match por submissionId');
-      return { article: idMatch, confidence: 1.0, method: 'submissionId' };
-    }
-  }
-  
-  // 2. Match por título exacto
-  const normalizedTitle = normalizeString(title);
-  const titleMatch = articles.find(a => 
-    normalizeString(a.titulo) === normalizedTitle
-  );
-  
-  if (titleMatch) {
-    console.log('   ✓ Match por título exacto');
-    return { article: titleMatch, confidence: 1.0, method: 'title_exact' };
-  }
-  
-  // 3. Match por similitud de título
-  let bestMatch = null;
-  let bestScore = 0;
-  
-  for (const article of articles) {
-    const score = calculateSimilarity(title, article.titulo);
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = article;
-    }
-  }
-  
-  if (bestMatch && bestScore > 0.6) {
-    console.log(`   ⚠️ Match por similitud de título (${(bestScore * 100).toFixed(0)}%)`);
-    return { article: bestMatch, confidence: bestScore, method: 'title_similarity' };
-  }
-  
-  // 4. Match por autor
-  const submissionAuthors = submissionData.authors || 
-                           submissionData.currentMetadata?.authors || 
-                           [];
-  
-  const authorEmails = submissionAuthors
-    .map(a => a.email?.toLowerCase())
-    .filter(Boolean);
-  
-  const authorNames = submissionAuthors
-    .map(a => normalizeString(`${a.firstName} ${a.lastName}`))
-    .filter(Boolean);
-  
-  for (const article of articles) {
-    const articleAuthors = article.autores || [];
-    
-    // Match por email
-    for (const articleAuthor of articleAuthors) {
-      if (articleAuthor.email && authorEmails.includes(articleAuthor.email.toLowerCase())) {
-        console.log('   ⚠️ Match por email de autor');
-        return { article, confidence: 0.7, method: 'author_email' };
-      }
-    }
-    
-    // Match por nombre
-    for (const articleAuthor of articleAuthors) {
-      const articleAuthorName = normalizeString(articleAuthor.name || '');
-      if (articleAuthorName && authorNames.some(n => n === articleAuthorName)) {
-        console.log('   ⚠️ Match por nombre de autor');
-        return { article, confidence: 0.7, method: 'author_name' };
-      }
-    }
-  }
-  
-  console.log('   ✗ No se encontró match');
-  return null;
-}
-
-// ==================== FUNCIÓN: EXTRAER AUTORES CORRECTOS ====================
-function extractAuthorsFromArticle(article, submissionData) {
-  // Si el artículo del JSON tiene autores bien formados, usarlos
-  if (article.autores && Array.isArray(article.autores) && article.autores.length > 0) {
-    return article.autores.map(a => ({
-      firstName: a.name?.split(' ')[0] || '',
-      lastName: a.name?.split(' ').slice(1).join(' ') || '',
-      email: a.email || null,
-      orcid: a.orcid || null,
-      institution: a.institution || null,
-      authorId: a.authorId || null,
-      fullName: a.name || ''
-    }));
-  }
-  
-  // Fallback: usar los del submission pero corregir si son correos
-  const submissionAuthors = submissionData.authors || 
-                           submissionData.currentMetadata?.authors || 
-                           [];
-  
-  return submissionAuthors.map(a => {
-    const firstName = a.firstName || '';
-    const lastName = a.lastName || '';
-    
-    // Si firstName parece ser un correo, intentar extraer el nombre del correo
-    if (firstName.includes('@')) {
-      const emailName = firstName.split('@')[0];
-      const parts = emailName.split(/[._-]/);
-      return {
-        ...a,
-        firstName: parts[0]?.charAt(0).toUpperCase() + parts[0]?.slice(1) || '',
-        lastName: parts.slice(1).join(' '),
-        fullName: parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
-      };
-    }
-    
-    return {
-      ...a,
-      fullName: `${firstName} ${lastName}`.trim()
-    };
-  });
-}
-
 // ==================== FUNCIÓN: OBTENER CLIENTE DE DRIVE ====================
 async function getDriveClient() {
   const oauth2Client = new google.auth.OAuth2(
@@ -291,49 +157,19 @@ async function getDriveClient() {
   return google.drive({ version: 'v3', auth: oauth2Client });
 }
 
-// ==================== FUNCIÓN: ELIMINAR CERTIFICADO ANTERIOR ====================
-async function deleteOldCertificate(submissionId, submissionData) {
-  console.log(`   🗑️ Eliminando certificado anterior...`);
-  
-  try {
-    // 1. Eliminar archivo de Drive si existe
-    if (submissionData.certificate?.fileId) {
-      try {
-        const drive = await getDriveClient();
-        await drive.files.delete({ fileId: submissionData.certificate.fileId });
-        console.log(`   ✓ Archivo de Drive eliminado: ${submissionData.certificate.fileId}`);
-      } catch (driveError) {
-        console.log(`   ⚠️ No se pudo eliminar archivo de Drive: ${driveError.message}`);
-      }
-    }
-    
-    // 2. Eliminar campos de certificado de Firestore
-    if (DRY_RUN) {
-      console.log('   [DRY RUN] No se eliminaron campos de Firestore');
-    } else {
-      await db.collection('submissions').doc(submissionId).update({
-        certificate: admin.firestore.FieldValue.delete(),
-        certificateGenerated: admin.firestore.FieldValue.delete(),
-        certificateGeneratedAt: admin.firestore.FieldValue.delete()
-      });
-      console.log('   ✓ Campos de certificado eliminados de Firestore');
-    }
-    
-    return true;
-  } catch (error) {
-    console.error(`   ❌ Error eliminando certificado:`, error.message);
-    return false;
-  }
-}
-
-// ==================== FUNCIÓN: GENERAR PDF ====================
-async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') {
+// ==================== FUNCIÓN: GENERAR PDF CON QR USANDO DOC ID ====================
+async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown', certificateDocId = null) {
   console.log(`[${requestId}] 🔧 Generando PDF...`);
   
   const isSpanish = lang === 'es';
+  
+  // USAR EL ID DEL DOCUMENTO COMO IDENTIFICADOR ÚNICO EN EL QR
+  const verificationId = certificateDocId || data.certificateNumber;
+  
   const CONFIG = {
     qr: { sizeCm: 2, offsetYCm: -0.5, offsetXCm: 0, errorCorrection: 'M', margin: 2 },
-    urlVerificacion: `https://www.revistacienciasestudiantes.com/verificar/${data.certificateNumber}`,
+    // URL MODIFICADA: Ahora usa query params en lugar de path
+    urlVerificacion: `${VERIFICATION_URL_BASE}${verificationId}`,
     cabecera: { marginTopCm: 2.2, extraSpaceCm: 0.3, logoWidthCm: 3.2, tituloSize: 22, subtituloSize: 16 }
   };
   
@@ -401,7 +237,6 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
     verifyLabel: 'VERIFY AUTHENTICITY'
   };
   
-  // Formatear autores - USANDO fullName si está disponible
   const authorsList = data.authors
     ?.map(a => a.fullName || `${a.firstName || ''} ${a.lastName || ''}`.trim() || a.email || 'Author')
     .join(', ') || 'Authors';
@@ -490,7 +325,6 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
       doc.image(logoBuffer, marginX, currentY, { width: logoWidth });
     }
   } catch(e) {
-    // Placeholder
     doc.rect(marginX, currentY, logoWidth, logoWidth).strokeColor('#CCCCCC').lineWidth(1).stroke();
   }
   
@@ -579,6 +413,8 @@ async function generateCertificatePDF(data, lang = 'es', requestId = 'unknown') 
     const qrY = qrAreaY + cmToPoints(CONFIG.qr.offsetYCm);
     
     doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
+    
+    console.log(`[${requestId}] ✅ QR insertado con URL: ${CONFIG.urlVerificacion}`);
   } catch (qrError) {
     console.error(`[${requestId}] ❌ Error al insertar QR:`, qrError.message);
   }
@@ -646,125 +482,63 @@ async function findOrCreateFolder(drive, folderName, parentId = null) {
   return folder.data;
 }
 
-// ==================== FUNCIÓN: PROCESAR SUBMISSION ====================
-async function processSubmission(doc, drive, rootFolderId) {
-  const submissionData = doc.data();
-  const submissionId = doc.id;
+// ==================== FUNCIÓN: REGENERAR CERTIFICADO ====================
+async function regenerateCertificate(certDoc, drive, rootFolderId) {
+  const certId = certDoc.id;
+  const certData = certDoc.data();
   
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`📄 Procesando: ${submissionId}`);
+  console.log(`📄 Regenerando certificado: ${certId}`);
   console.log(`${'='.repeat(60)}`);
   
   try {
-    // 1. Verificar si es legacy
-    const articleType = submissionData.articleType || 'normal';
-    const isLegacy = articleType === 'legacy';
+    // 1. Obtener datos del submission relacionado
+    const submissionId = certData.submissionId;
+    const submissionRef = db.collection('submissions').doc(submissionId);
+    const submissionDoc = await submissionRef.get();
     
-    console.log(`   Tipo de artículo: ${articleType}`);
-    
-    // 2. Para legacy, hacer matcheo con articles.json
-    let matchedArticle = null;
-    let matchInfo = null;
-    
-    if (isLegacy) {
-      matchInfo = matchSubmissionWithArticle(submissionData, submissionId);
-      matchedArticle = matchInfo?.article || null;
-      
-      if (!matchedArticle) {
-        console.log('   ⚠️ Artículo legacy sin match en articles.json');
-        // Verificar si tiene autores válidos en Firestore
-        const hasValidAuthors = (submissionData.authors || []).some(a => 
-          a.firstName && !a.firstName.includes('@')
-        );
-        
-        if (!hasValidAuthors) {
-          console.log('   ❌ No se puede generar certificado sin autores válidos');
-          return { success: false, reason: 'no_valid_authors' };
-        }
-      }
+    if (!submissionDoc.exists) {
+      console.log('   ⚠️ Submission no encontrado, usando datos del certificado');
     }
     
-    // 3. Obtener metadatos finales
-    const finalMetadata = submissionData.currentMetadata || submissionData;
+    const submissionData = submissionDoc.exists ? submissionDoc.data() : {};
     
-    // 4. Determinar título
-    let title;
-    if (matchedArticle?.titulo) {
-      title = matchedArticle.titulo;
-      console.log(`   📝 Título desde JSON: "${title.substring(0, 60)}..."`);
-    } else {
-      title = finalMetadata.title || submissionData.title;
-      console.log(`   📝 Título desde Firestore: "${title?.substring(0, 60)}..."`);
-    }
+    // 2. Preparar datos para el PDF
+    const authors = certData.authors || [];
+    const title = certData.title || submissionData.title || 'Sin título';
+    const lang = certData.language || submissionData.paperLanguage || 'es';
+    const acceptanceDate = certData.acceptanceDate || new Date().toISOString().split('T')[0];
     
-    if (!title) {
-      console.log('   ⚠️ Sin título, saltando...');
-      return { success: false, reason: 'no_title' };
-    }
-    
-    // 5. Determinar autores
-    let authors;
-    if (matchedArticle?.autores) {
-      authors = extractAuthorsFromArticle(matchedArticle, submissionData);
-      console.log(`   👥 Autores desde JSON (${authors.length}):`);
-      authors.forEach(a => console.log(`      - ${a.fullName}`));
-    } else {
-      authors = (finalMetadata.authors || submissionData.authors || []).map(a => ({
-        ...a,
-        fullName: a.fullName || `${a.firstName || ''} ${a.lastName || ''}`.trim()
-      }));
-      console.log(`   👥 Autores desde Firestore (${authors.length}):`);
-      authors.forEach(a => console.log(`      - ${a.fullName || a.email}`));
-    }
-    
-    // 6. Determinar fecha de aceptación
-    let acceptanceDate;
-    if (matchedArticle?.acceptedDate) {
-      acceptanceDate = matchedArticle.acceptedDate;
-      console.log(`   📅 Fecha de aceptación desde JSON: ${acceptanceDate}`);
-    } else if (submissionData.acceptedAt) {
-      acceptanceDate = normalizeDate(submissionData.acceptedAt)?.toISOString().split('T')[0];
-      console.log(`   📅 Fecha de aceptación desde Firestore: ${acceptanceDate}`);
-    } else if (submissionData.decisionMadeAt) {
-      acceptanceDate = normalizeDate(submissionData.decisionMadeAt)?.toISOString().split('T')[0];
-      console.log(`   📅 Fecha de aceptación desde decisionMadeAt: ${acceptanceDate}`);
-    } else {
-      acceptanceDate = new Date().toISOString().split('T')[0];
-      console.log(`   📅 Fecha de aceptación predeterminada: ${acceptanceDate}`);
-    }
-    
-    // 7. Determinar idioma
-    const lang = finalMetadata.paperLanguage || submissionData.paperLanguage || 'es';
-    console.log(`   🗣️ Idioma: ${lang}`);
-    
-    // 8. Eliminar certificado anterior si existe
-    if (submissionData.certificateGenerated === true || submissionData.certificate) {
-      console.log('   🔄 Certificado anterior encontrado, eliminando...');
-      await deleteOldCertificate(submissionId, submissionData);
-    }
-    
-    // 9. Preparar datos del certificado
-    const certificateData = {
+    const pdfData = {
       title,
       authors,
       submissionId,
       acceptanceDate,
-      certificateNumber: `RNCE-${submissionId.substring(0, 8)}-${new Date().getFullYear()}`,
-      matchInfo: matchInfo
+      certificateNumber: certData.certificateNumber
     };
     
-    // 10. Generar PDF
-    const requestId = `CERT-${submissionId}-${Date.now()}`;
-    const pdfBuffer = await generateCertificatePDF(certificateData, lang, requestId);
+    // 3. Generar PDF con QR usando el ID del documento
+    const requestId = `REGEN-${certId.substring(0, 8)}-${Date.now()}`;
+    const pdfBuffer = await generateCertificatePDF(pdfData, lang, requestId, certId);
     
-    // 11. Crear carpeta para este submission
+    // 4. Eliminar archivo anterior de Drive si existe
+    if (certData.fileId) {
+      try {
+        await drive.files.delete({ fileId: certData.fileId });
+        console.log(`   ✓ Archivo anterior eliminado: ${certData.fileId}`);
+      } catch (deleteError) {
+        console.log(`   ⚠️ No se pudo eliminar archivo anterior: ${deleteError.message}`);
+      }
+    }
+    
+    // 5. Crear carpeta para este certificado
     const submissionFolder = await findOrCreateFolder(
       drive,
       `CERT_${submissionId}`,
       rootFolderId
     );
     
-    // 12. Subir PDF
+    // 6. Subir nuevo PDF
     const fileName = `CERTIFICATE_${submissionId}_${Date.now()}.pdf`;
     const uploadedFile = await uploadPDFToDrive(
       drive,
@@ -775,49 +549,44 @@ async function processSubmission(doc, drive, rootFolderId) {
     
     console.log(`   🔗 URL: ${uploadedFile.webViewLink}`);
     
-    // 13. Guardar en Firestore
-    if (DRY_RUN) {
-      console.log('   [DRY RUN] No se guardó en Firestore');
-    } else {
-      const certificateRef = {
+    // 7. Actualizar documento en colección certificates
+    if (!DRY_RUN) {
+      await certDoc.ref.update({
         fileId: uploadedFile.id,
         fileUrl: uploadedFile.webViewLink,
         fileName: uploadedFile.name,
-        certificateNumber: certificateData.certificateNumber,
-        generatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        generatedBy: 'fix-script',
-        language: lang,
-        acceptanceDate,
-        ...(matchInfo ? {
-          matchedWithJson: true,
-          matchMethod: matchInfo.method,
-          matchConfidence: matchInfo.confidence
-        } : {
-          matchedWithJson: false
-        }),
-        authors: authors.map(a => ({
-          fullName: a.fullName,
-          email: a.email || null,
-          orcid: a.orcid || null
-        }))
-      };
-      
-      await db.collection('submissions').doc(submissionId).update({
-        certificate: certificateRef,
-        certificateGenerated: true,
-        certificateGeneratedAt: admin.firestore.FieldValue.serverTimestamp()
+        verificationId: certId, // El ID del documento es el identificador único
+        verificationUrl: `${VERIFICATION_URL_BASE}${certId}`, // URL completa de verificación
+        regeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+        regeneratedBy: 'regenerate-script',
+        qrContainsDocId: true,
+        qrUsesQueryParams: true // Indicar que usa query params
       });
       
-      console.log('   ✅ Certificado guardado en Firestore');
+      console.log(`   ✅ Certificado actualizado con nuevo PDF`);
+      console.log(`   🔗 URL de verificación: ${VERIFICATION_URL_BASE}${certId}`);
+      
+      // 8. Actualizar submission con nueva referencia
+      if (submissionDoc.exists) {
+        await submissionRef.update({
+          certificateId: certId,
+          certificateFileId: uploadedFile.id,
+          certificateFileUrl: uploadedFile.webViewLink,
+          certificateGenerated: true,
+          certificateGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+          certificateVerificationUrl: `${VERIFICATION_URL_BASE}${certId}`
+        });
+        
+        console.log(`   ✅ Submission actualizado`);
+      }
     }
     
     return {
       success: true,
-      certificateId: uploadedFile.id,
-      certificateUrl: uploadedFile.webViewLink,
-      certificateNumber: certificateData.certificateNumber,
-      matchMethod: matchInfo?.method || 'none',
-      authors: authors.map(a => a.fullName)
+      certificateId: certId,
+      fileId: uploadedFile.id,
+      fileUrl: uploadedFile.webViewLink,
+      verificationUrl: `${VERIFICATION_URL_BASE}${certId}`
     };
     
   } catch (error) {
@@ -828,78 +597,43 @@ async function processSubmission(doc, drive, rootFolderId) {
 
 // ==================== FUNCIÓN PRINCIPAL ====================
 async function main() {
-  console.log('🚀 Iniciando script de corrección y regeneración de certificados...');
+  console.log('🚀 Iniciando regeneración de certificados con Doc ID en QR...');
   console.log(`⏰ Inicio: ${new Date().toISOString()}`);
-  console.log(`📋 Modo: ${DRY_RUN ? 'SIMULACIÓN (--dry-run)' : 'EJECUCIÓN REAL'}\n`);
+  console.log(`📋 Modo: ${DRY_RUN ? 'SIMULACIÓN (--dry-run)' : 'EJECUCIÓN REAL'}`);
+  console.log(`🔗 URL base: ${VERIFICATION_URL_BASE}\n`);
   
   try {
     // Inicializar Drive
     const drive = await getDriveClient();
     console.log('✅ Drive inicializado\n');
     
-    // Obtener todos los submissions
-    const snapshot = await db.collection('submissions').get();
-    console.log(`📦 Total submissions: ${snapshot.docs.length}\n`);
+    // Crear carpeta raíz
+    const rootFolder = await findOrCreateFolder(drive, CERTIFICATES_ROOT_FOLDER_NAME);
+    const rootFolderId = rootFolder.id;
+    console.log(`📁 Carpeta raíz: ${rootFolderId}\n`);
     
-    // Clasificar submissions
-    const legacySubmissions = [];
-    const normalSubmissions = [];
+    // Obtener todos los certificados de la colección pública
+    const certSnapshot = await db.collection('certificates').get();
+    console.log(`📦 Total certificados en colección: ${certSnapshot.docs.length}\n`);
     
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-      const articleType = data.articleType || 'normal';
-      
-      // Verificar si está aceptado o publicado
-      const isAccepted = data.status === 'accepted' || data.finalDecision === 'accept';
-      const isPublished = data.status === 'published' || data.publicationReady === true;
-      const hasCertificate = data.certificateGenerated === true || data.certificate;
-      
-      if (isAccepted || isPublished || hasCertificate) {
-        if (articleType === 'legacy') {
-          legacySubmissions.push(doc);
-        } else {
-          normalSubmissions.push(doc);
-        }
-      }
+    if (certSnapshot.empty) {
+      console.log('❌ No hay certificados para regenerar');
+      return;
     }
     
-    console.log(`📊 Submissions legacy: ${legacySubmissions.length}`);
-    console.log(`📊 Submissions normales: ${normalSubmissions.length}\n`);
-    
-    // Procesar todos los submissions relevantes
-    const allRelevant = [...legacySubmissions, ...normalSubmissions];
+    // Procesar cada certificado
     const results = [];
     let successCount = 0;
-    let skipCount = 0;
     let errorCount = 0;
     
-    for (const doc of allRelevant) {
-      const result = await processSubmission(doc, drive, null); // Usar carpeta raíz
+    for (const certDoc of certSnapshot.docs) {
+      const result = await regenerateCertificate(certDoc, drive, rootFolderId);
+      results.push({ certificateId: certDoc.id, ...result });
       
-      // Si no hay carpeta raíz, crear una
-      if (result.reason === 'no_folder' || !rootFolderId) {
-        // Crear carpeta raíz si no existe
-        const rootFolder = await findOrCreateFolder(drive, CERTIFICATES_ROOT_FOLDER_NAME);
-        const retryResult = await processSubmission(doc, drive, rootFolder.id);
-        results.push({ submissionId: doc.id, ...retryResult });
-        
-        if (retryResult.success) {
-          successCount++;
-        } else if (retryResult.reason === 'no_title' || retryResult.reason === 'no_valid_authors') {
-          skipCount++;
-        } else {
-          errorCount++;
-        }
+      if (result.success) {
+        successCount++;
       } else {
-        results.push({ submissionId: doc.id, ...result });
-        
-        if (result.success) {
-          successCount++;
-        } else if (result.reason === 'no_title' || result.reason === 'no_valid_authors') {
-          skipCount++;
-        } else {
-          errorCount++;
-        }
+        errorCount++;
       }
       
       // Pausa para evitar rate limiting
@@ -911,16 +645,19 @@ async function main() {
     console.log('🎉 PROCESO COMPLETADO');
     console.log(`${'='.repeat(60)}`);
     console.log(`✅ Exitosos: ${successCount}`);
-    console.log(`⏭️ Saltados: ${skipCount}`);
     console.log(`❌ Errores: ${errorCount}`);
-    console.log(`📦 Total: ${allRelevant.length}`);
+    console.log(`📦 Total: ${certSnapshot.docs.length}`);
     
     if (results.length > 0) {
       console.log('\n📋 Detalle:');
       for (const result of results) {
-        const emoji = result.success ? '✅' : (result.reason === 'no_title' || result.reason === 'no_valid_authors' ? '⏭️' : '❌');
-        const authors = result.authors ? ` - Autores: ${result.authors.join(', ')}` : '';
-        console.log(`   ${emoji} ${result.submissionId}: ${result.success ? `Éxito (${result.matchMethod || 'sin match'})${authors}` : result.reason}`);
+        const emoji = result.success ? '✅' : '❌';
+        if (result.success) {
+          console.log(`   ${emoji} ${result.certificateId}`);
+          console.log(`      🔗 ${result.verificationUrl}`);
+        } else {
+          console.log(`   ${emoji} ${result.certificateId}: ${result.reason}`);
+        }
       }
     }
     
@@ -933,8 +670,6 @@ async function main() {
 }
 
 // ==================== EJECUTAR ====================
-let rootFolderId = null; // Variable global para la carpeta raíz
-
 main()
   .then(() => {
     console.log('\n✅ Script completado');
