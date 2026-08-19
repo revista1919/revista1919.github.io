@@ -1495,7 +1495,7 @@ async function getSubmissionLanguage(submissionId) {
 
         const authorsArray = processAuthors(article.autores);
         const articleNumber = await getNextArticleNumber(currentArticles);
-        
+         const paperLanguage = await getSubmissionLanguage(article.submissionId);
         const newArticle = {
           numeroArticulo: articleNumber,
           titulo: article.titulo,
