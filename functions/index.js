@@ -5396,12 +5396,24 @@ exports.handleReviewerInvitationCreated = onDocumentCreated(
     console.log(`📋 Tipo: ${invitation.type || 'internal'}`);
     console.log(`📋 Tiene onboardingToken: ${!!invitation.onboardingToken}`);
     console.log(`📋 Tiene inviteHash: ${!!invitation.inviteHash}`);
+    console.log(`📋 Tiene reviewerUid: ${!!invitation.reviewerUid}`);
 
     // ===== ✅ PROTECCIÓN 2: OMITIR SI ES INVITACIÓN EXTERNA =====
     // Las invitaciones externas ya envían su propio email en createExternalReviewerInvitation
     if (invitation.type === 'external' || invitation.onboardingToken) {
       console.log('⏭️ Invitación EXTERNA detectada. Omitiendo email interno.');
       console.log('✅ El email de onboarding ya fue enviado por createExternalReviewerInvitation.');
+      
+      // ✅ PERO AÚN ASÍ ACTUALIZAR STATS DEL REVISOR SI TIENE UID
+      if (invitation.reviewerUid) {
+        try {
+          await updateReviewerStatsForNewInvitation(invitation);
+          console.log('✅ Stats del revisor actualizados para invitación externa');
+        } catch (statsError) {
+          console.warn('⚠️ Error actualizando stats del revisor externo:', statsError.message);
+        }
+      }
+      
       console.log(`🏁 [handleReviewerInvitationCreated] FIN (omitido por ser externa) - ${Date.now() - functionStartTime}ms`);
       console.log('='.repeat(60));
       return;
@@ -5428,6 +5440,16 @@ exports.handleReviewerInvitationCreated = onDocumentCreated(
         processInvitationSafe(event, invitation, invitationId, functionStartTime),
         functionTimeout
       ]);
+      
+      // ✅ ACTUALIZAR STATS DEL REVISOR DESPUÉS DE PROCESAR
+      if (invitation.reviewerUid) {
+        try {
+          await updateReviewerStatsForNewInvitation(invitation);
+          console.log('✅ Stats del revisor actualizados');
+        } catch (statsError) {
+          console.warn('⚠️ Error actualizando stats del revisor:', statsError.message);
+        }
+      }
       
       console.log(`✅ Invitación ${invitationId} procesada en ${Date.now() - functionStartTime}ms`);
       
@@ -5469,6 +5491,41 @@ exports.handleReviewerInvitationCreated = onDocumentCreated(
     }
   }
 );
+
+/**
+ * ✅ NUEVA FUNCIÓN AUXILIAR: Actualizar stats del revisor cuando se crea una invitación
+ */
+async function updateReviewerStatsForNewInvitation(invitation) {
+  const db = admin.firestore();
+  const reviewerUid = invitation.reviewerUid;
+  
+  if (!reviewerUid) {
+    console.warn('⚠️ Invitación sin reviewerUid, no se actualizan stats');
+    return { success: false, error: 'no_reviewer_uid' };
+  }
+  
+  const reviewerRef = db.collection('reviewers').doc(reviewerUid);
+  const reviewerSnap = await reviewerRef.get();
+  
+  if (!reviewerSnap.exists) {
+    console.warn(`⚠️ Perfil de revisor no encontrado para UID: ${reviewerUid}`);
+    return { success: false, error: 'profile_not_found' };
+  }
+  
+  const reviewerData = reviewerSnap.data();
+  const stats = reviewerData.stats || {};
+  const invitationsCount = stats.totalInvitations || 0;
+  
+  await reviewerRef.update({
+    'stats.totalInvitations': invitationsCount + 1,
+    'stats.lastInvitationAt': admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+  
+  console.log(`✅ Stats actualizados: totalInvitations ${invitationsCount} -> ${invitationsCount + 1}`);
+  
+  return { success: true };
+}
 /**
  * Procesa la invitación con múltiples capas de protección
  */
@@ -5812,6 +5869,10 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
 
     // Solo proceder si el estado cambió de 'pending' a 'accepted'
     if (beforeData.status !== 'pending' || afterData.status !== 'accepted') {
+      // ✅ NUEVO: Manejar otros cambios de estado (declined, expired, failed)
+      if (beforeData.status === 'pending' && ['declined', 'expired', 'failed'].includes(afterData.status)) {
+        await handleInvitationNonAccepted(afterData, invitationId);
+      }
       return;
     }
 
@@ -5820,7 +5881,18 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
     try {
       const db = admin.firestore();
       const requestId = `REV-${invitationId}-${Date.now().toString().substring(0, 8)}`;
-      const warnings = []; // Acumular warnings sin interrumpir
+      const warnings = [];
+
+      // ===== PASO 0: ✅ ACTUALIZAR STATS DEL REVISOR (ACEPTACIÓN) =====
+      if (afterData.reviewerUid) {
+        try {
+          await updateReviewerStatsOnAcceptance(db, afterData);
+          console.log(`[${requestId}] ✅ Stats del revisor actualizados (aceptación)`);
+        } catch (statsError) {
+          console.warn(`[${requestId}] ⚠️ Error actualizando stats:`, statsError.message);
+          warnings.push('stats_update_failed');
+        }
+      }
 
       // ===== PASO 1: Obtener el submission completo =====
       const submissionDoc = await db.collection('submissions').doc(afterData.submissionId).get();
@@ -5918,7 +5990,6 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
         console.error(`❌ Error creando copia:`, copyError.message);
         await logSystemError('copy_creation_failed', copyError, invitationId);
         
-        // Intentar crear la asignación igual sin archivo
         warnings.push('copy_failed');
         reviewerFileId = null;
         reviewerFileUrl = null;
@@ -5932,7 +6003,6 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
         } catch (permError) {
           console.warn(`[${requestId}] ⚠️ Error en permisos (no crítico):`, permError.message);
           warnings.push('permission_error');
-          // Continuar a pesar del error de permisos
         }
       }
 
@@ -5956,15 +6026,12 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
           assignedAt: admin.firestore.FieldValue.serverTimestamp(),
           dueDate: admin.firestore.Timestamp.fromDate(dueDate),
           
-          // Documento exclusivo del revisor
           reviewerFileId: reviewerFileId,
           reviewerFileUrl: reviewerFileUrl,
           
-          // Referencia a la carpeta editorial
           driveFolderId: submission.editorialFolderId,
           driveFolderUrl: submission.editorialFolderUrl || null,
           
-          // Metadata de la copia
           sourceFileId: sourceFileId,
           copyCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
           accessLevel: 'commenter',
@@ -6007,7 +6074,6 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
 
       console.log(`[${requestId}] ✅ Proceso completado${warnings.length > 0 ? ` con ${warnings.length} warnings` : ''}.`);
       
-      // Devolver resultado para posibles consumidores
       return {
         success: true,
         assignmentId: assignmentRef?.id,
@@ -6021,7 +6087,6 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
       
       await logSystemError('fatal_error', error, invitationId);
       
-      // No relanzar el error para evitar reintentos innecesarios
       return {
         success: false,
         error: error.message
@@ -6030,6 +6095,261 @@ exports.onReviewerInvitationUpdated = onDocumentUpdated(
   }
 );
 
+// ============================================================
+// ✅ NUEVA FUNCIÓN AUXILIAR: Actualizar stats cuando ACEPTA
+// ============================================================
+async function updateReviewerStatsOnAcceptance(db, invitationData) {
+  const reviewerUid = invitationData.reviewerUid;
+  
+  if (!reviewerUid) {
+    console.warn('⚠️ Invitación sin reviewerUid');
+    return { success: false, error: 'no_reviewer_uid' };
+  }
+  
+  const reviewerRef = db.collection('reviewers').doc(reviewerUid);
+  const reviewerSnap = await reviewerRef.get();
+  
+  if (!reviewerSnap.exists) {
+    console.warn(`⚠️ Perfil no encontrado para UID: ${reviewerUid}`);
+    return { success: false, error: 'profile_not_found' };
+  }
+  
+  const reviewerData = reviewerSnap.data();
+  const availability = reviewerData.availability || {};
+  const stats = reviewerData.stats || {};
+  
+  const currentActive = availability.currentActiveReviews || 0;
+  const maxActive = availability.maxActiveReviews || 3;
+  const acceptedInvitations = stats.acceptedInvitations || 0;
+  const totalInvitations = stats.totalInvitations || 0;
+  const statsActive = stats.activeReviews || 0;
+  const pendingReviews = stats.pendingReviews || 0;
+  
+  const newActive = Math.min(currentActive + 1, maxActive);
+  const newAccepted = acceptedInvitations + 1;
+  const newAcceptanceRate = totalInvitations > 0 
+    ? Math.round((newAccepted / totalInvitations) * 100) 
+    : 100;
+  
+  const updateData = {
+    // Disponibilidad
+    'availability.currentActiveReviews': newActive,
+    'availability.updatedAt': admin.firestore.FieldValue.serverTimestamp(),
+    
+    // Stats de invitaciones
+    'stats.acceptedInvitations': newAccepted,
+    'stats.acceptanceRate': newAcceptanceRate,
+    'stats.respondedAt': admin.firestore.FieldValue.serverTimestamp(),
+    
+    // Stats de revisiones activas
+    'stats.activeReviews': statsActive + 1,
+    'stats.pendingReviews': pendingReviews + 1,
+    
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  };
+  
+  await reviewerRef.update(updateData);
+  
+  console.log(`✅ Revisor actualizado (aceptación):`, {
+    uid: reviewerUid,
+    activeReviews: `${currentActive} -> ${newActive}`,
+    acceptedInvitations: `${acceptedInvitations} -> ${newAccepted}`,
+    acceptanceRate: newAcceptanceRate,
+    statsActive: `${statsActive} -> ${statsActive + 1}`,
+    pendingReviews: `${pendingReviews} -> ${pendingReviews + 1}`
+  });
+  
+  return { success: true };
+}
+
+// ============================================================
+// ✅ FUNCIÓN AUXILIAR: Manejar rechazo/expiración/fallo
+// Con notificación al editor
+// ============================================================
+async function handleInvitationNonAccepted(invitationData, invitationId) {
+  const db = admin.firestore();
+  const reviewerUid = invitationData.reviewerUid;
+  
+  if (!reviewerUid) {
+    console.warn('⚠️ Invitación sin reviewerUid, no se actualizan stats');
+    return;
+  }
+  
+  const reviewerRef = db.collection('reviewers').doc(reviewerUid);
+  const reviewerSnap = await reviewerRef.get();
+  
+  if (!reviewerSnap.exists) {
+    console.warn(`⚠️ Perfil no encontrado para UID: ${reviewerUid}`);
+    return;
+  }
+  
+  const reviewerData = reviewerSnap.data();
+  const stats = reviewerData.stats || {};
+  
+  const updateData = {};
+  let notificationType = '';
+  let notificationTitle = '';
+  let notificationMessage = '';
+  
+  if (invitationData.status === 'declined') {
+    updateData['stats.declinedInvitations'] = (stats.declinedInvitations || 0) + 1;
+    notificationType = 'reviewer_declined';
+    notificationTitle = 'Revisor rechazó invitación';
+    notificationMessage = `${invitationData.reviewerName || invitationData.reviewerEmail} rechazó la invitación de revisión.`;
+    console.log(`✅ Rechazo registrado para ${invitationData.reviewerEmail}`);
+    
+  } else if (invitationData.status === 'expired') {
+    updateData['stats.expiredInvitations'] = (stats.expiredInvitations || 0) + 1;
+    notificationType = 'reviewer_invitation_expired';
+    notificationTitle = 'Invitación expirada';
+    notificationMessage = `La invitación enviada a ${invitationData.reviewerName || invitationData.reviewerEmail} ha expirado sin respuesta.`;
+    console.log(`✅ Expiración registrada para ${invitationData.reviewerEmail}`);
+    
+  } else if (invitationData.status === 'failed') {
+    updateData['stats.failedInvitations'] = (stats.failedInvitations || 0) + 1;
+    notificationType = 'reviewer_invitation_failed';
+    notificationTitle = 'Invitación fallida';
+    notificationMessage = `La invitación enviada a ${invitationData.reviewerName || invitationData.reviewerEmail} falló durante el envío.`;
+    console.log(`✅ Fallo registrado para ${invitationData.reviewerEmail}`);
+  }
+  
+  // ===== ACTUALIZAR STATS DEL REVISOR =====
+  if (Object.keys(updateData).length > 0) {
+    await reviewerRef.update({
+      ...updateData,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+  }
+  
+  // ===== NOTIFICAR AL EDITOR =====
+  if (invitationData.editorialTaskId) {
+    try {
+      const taskSnap = await db.collection('editorialTasks').doc(invitationData.editorialTaskId).get();
+      
+      if (taskSnap.exists) {
+        const taskData = taskSnap.data();
+        
+        // 1. Crear notificación en Firestore
+        await db.collection('notifications').add({
+          type: notificationType,
+          title: notificationTitle,
+          message: notificationMessage,
+          forUid: taskData.assignedTo,
+          data: {
+            invitationId,
+            submissionId: invitationData.submissionId,
+            reviewerEmail: invitationData.reviewerEmail,
+            reviewerName: invitationData.reviewerName || '',
+            status: invitationData.status
+          },
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`✅ Notificación creada para editor: ${taskData.assignedTo}`);
+        
+        // 2. Enviar email al editor
+        if (taskData.assignedToEmail) {
+          const isSpanish = (invitationData.language || 'es') === 'es';
+          
+          const emailTitle = isSpanish
+            ? `📋 ${notificationTitle}: "${invitationData.submissionId}"`
+            : `📋 ${notificationTitle}: "${invitationData.submissionId}"`;
+          
+          const emailGreeting = isSpanish
+            ? `Estimado/a ${taskData.assignedToName || 'Editor/a'}:`
+            : `Dear ${taskData.assignedToName || 'Editor'}:`;
+          
+          // Obtener el título del submission para el email
+          let submissionTitle = invitationData.submissionId;
+          try {
+            const submissionSnap = await db.collection('submissions').doc(invitationData.submissionId).get();
+            if (submissionSnap.exists) {
+              submissionTitle = submissionSnap.data().title || invitationData.submissionId;
+            }
+          } catch (subError) {
+            console.warn('⚠️ No se pudo obtener título del submission:', subError.message);
+          }
+          
+          const bodyContent = isSpanish
+            ? `
+              <p><strong>${notificationMessage}</strong></p>
+              
+              <div class="highlight-box">
+                <p class="article-title">📚 "${submissionTitle}"</p>
+                <p><strong>ID del envío:</strong> ${invitationData.submissionId}</p>
+                <p><strong>Revisor:</strong> ${invitationData.reviewerName || 'No especificado'}</p>
+                <p><strong>Email del revisor:</strong> ${invitationData.reviewerEmail}</p>
+                <p><strong>Estado:</strong> ${invitationData.status === 'declined' ? 'Rechazada' : invitationData.status === 'expired' ? 'Expirada' : 'Fallida'}</p>
+              </div>
+              
+              <p>Puede invitar a otro revisor desde el panel editorial.</p>
+              
+              <div class="button-container">
+                <a href="https://www.revistacienciasestudiantes.com/es/login" class="btn">IR AL PANEL EDITORIAL</a>
+              </div>
+            `
+            : `
+              <p><strong>${notificationMessage}</strong></p>
+              
+              <div class="highlight-box">
+                <p class="article-title">📚 "${submissionTitle}"</p>
+                <p><strong>Submission ID:</strong> ${invitationData.submissionId}</p>
+                <p><strong>Reviewer:</strong> ${invitationData.reviewerName || 'Not specified'}</p>
+                <p><strong>Reviewer email:</strong> ${invitationData.reviewerEmail}</p>
+                <p><strong>Status:</strong> ${invitationData.status === 'declined' ? 'Declined' : invitationData.status === 'expired' ? 'Expired' : 'Failed'}</p>
+              </div>
+              
+              <p>You can invite another reviewer from the editorial panel.</p>
+              
+              <div class="button-container">
+                <a href="https://www.revistacienciasestudiantes.com/en/login" class="btn">GO TO EDITORIAL PANEL</a>
+              </div>
+            `;
+          
+          const htmlBody = getEmailTemplate(
+            emailTitle,
+            emailGreeting,
+            bodyContent,
+            isSpanish ? 'Sistema Editorial' : 'Editorial System',
+            isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+            isSpanish ? 'es' : 'en'
+          );
+          
+          await sendEmailViaExtension(taskData.assignedToEmail, emailTitle, htmlBody);
+          console.log(`✅ Email enviado al editor: ${taskData.assignedToEmail}`);
+        }
+      }
+    } catch (notifyError) {
+      console.warn('⚠️ Error notificando al editor:', notifyError.message);
+    }
+  } else {
+    console.log('⚠️ Sin editorialTaskId, no se notifica al editor');
+  }
+  
+  // ===== CANCELAR DEADLINES PENDIENTES =====
+  try {
+    const pendingDeadlines = await db.collection('deadlines')
+      .where('invitationId', '==', invitationId)
+      .where('status', 'in', ['pending', 'reminded'])
+      .get();
+    
+    const batch = db.batch();
+    pendingDeadlines.forEach(doc => {
+      batch.update(doc.ref, {
+        status: 'cancelled',
+        cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+        cancelledNote: `Invitación ${invitationData.status}`
+      });
+    });
+    
+    if (!pendingDeadlines.empty) {
+      await batch.commit();
+      console.log(`✅ ${pendingDeadlines.size} deadlines cancelados`);
+    }
+  } catch (deadlineError) {
+    console.warn('⚠️ Error cancelando deadlines:', deadlineError.message);
+  }
+}
 // ============================================================
 // FUNCIÓN AUXILIAR: Configurar permisos del revisor (NO BLOQUEANTE)
 // ============================================================
@@ -8175,6 +8495,16 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
       const db = admin.firestore();
       const taskId = newAssignment.editorialTaskId;
 
+      // ===== PASO 0: ✅ ACTUALIZAR STATS DEL REVISOR EN `reviewers` =====
+      if (newAssignment.reviewerUid) {
+        try {
+          await updateReviewerStatsOnAssignmentCreated(db, newAssignment);
+          console.log(`✅ Stats del revisor actualizados (totalAssignments incrementado)`);
+        } catch (statsError) {
+          console.warn(`⚠️ Error actualizando stats del revisor:`, statsError.message);
+        }
+      }
+
       if (!taskId) {
         console.warn(`⚠️ Asignación ${newAssignmentId} sin editorialTaskId. No se puede verificar.`);
         return;
@@ -8212,7 +8542,29 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
       const lang = submissionData.paperLanguage || 'es';
       const isSpanish = lang === 'es';
 
-      // ===== PASO 4: Construir lista de revisores =====
+      // ===== PASO 4: ✅ ACTUALIZAR DEADLINE PENDIENTE =====
+      if (newAssignment.invitationId) {
+        try {
+          const deadlinesQuery = await db.collection('deadlines')
+            .where('invitationId', '==', newAssignment.invitationId)
+            .where('targetId', '==', 'pending')
+            .where('type', '==', 'review-submission')
+            .limit(1)
+            .get();
+
+          if (!deadlinesQuery.empty) {
+            await deadlinesQuery.docs[0].ref.update({
+              targetId: newAssignmentId,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+            console.log(`✅ Deadline actualizado con assignmentId ${newAssignmentId}`);
+          }
+        } catch (deadlineError) {
+          console.warn(`⚠️ Error actualizando deadline:`, deadlineError.message);
+        }
+      }
+
+      // ===== PASO 5: Construir lista de revisores =====
       let reviewersListHtml = '<ul style="padding-left: 20px; line-height: 1.8;">';
       assignmentsSnapshot.docs.forEach(doc => {
         const reviewer = doc.data();
@@ -8220,7 +8572,7 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
       });
       reviewersListHtml += '</ul>';
 
-      // ===== PASO 5: LÓGICA SEGÚN CANTIDAD DE REVISORES =====
+      // ===== PASO 6: LÓGICA SEGÚN CANTIDAD DE REVISORES =====
       
       if (acceptedCount === 2) {
         // ============================================================
@@ -8344,7 +8696,7 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
         // ============================================================
         console.log(`🔔 REVISOR EXTRA (${acceptedCount} total). Enviando notificación especial al editor.`);
 
-        const extraReviewer = newAssignment; // El que acaba de aceptar
+        const extraReviewer = newAssignment;
         const extraCount = acceptedCount - 2;
 
         const emailTitle = isSpanish
@@ -8456,6 +8808,7 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
             details: `Revisor adicional #${acceptedCount} (${newAssignment.reviewerName}) aceptó. Total: ${acceptedCount} revisores.`,
             taskId: taskId,
             reviewerEmail: newAssignment.reviewerEmail,
+            reviewerUid: newAssignment.reviewerUid || null,
             timestamp: admin.firestore.FieldValue.serverTimestamp()
           });
 
@@ -8499,6 +8852,39 @@ exports.onReviewerAssignmentCreated = onDocumentCreated(
     }
   }
 );
+
+// ============================================================
+// ✅ FUNCIÓN AUXILIAR: Actualizar stats del revisor al crearse assignment
+// ============================================================
+async function updateReviewerStatsOnAssignmentCreated(db, assignmentData) {
+  const reviewerUid = assignmentData.reviewerUid;
+  
+  if (!reviewerUid) {
+    console.warn('⚠️ Assignment sin reviewerUid');
+    return { success: false, error: 'no_reviewer_uid' };
+  }
+  
+  const reviewerRef = db.collection('reviewers').doc(reviewerUid);
+  const reviewerSnap = await reviewerRef.get();
+  
+  if (!reviewerSnap.exists) {
+    console.warn(`⚠️ Perfil no encontrado para UID: ${reviewerUid}`);
+    return { success: false, error: 'profile_not_found' };
+  }
+  
+  const reviewerData = reviewerSnap.data();
+  const stats = reviewerData.stats || {};
+  const totalAssignments = stats.totalAssignments || 0;
+  
+  await reviewerRef.update({
+    'stats.totalAssignments': totalAssignments + 1,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+  
+  console.log(`✅ Stats actualizados: totalAssignments ${totalAssignments} -> ${totalAssignments + 1}`);
+  
+  return { success: true };
+}
 // ============================================================
 // CONFIGURACIÓN GLOBAL DE ESTILOS (mismo patrón que processDocumentWithDocsAPI)
 // ============================================================
@@ -8521,7 +8907,6 @@ const REVIEWS_STYLES = {
 };
 
 // Esta función actualiza el número de revisores.
-
 exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
   {
     document: 'reviewerAssignments/{assignmentId}',
@@ -8567,7 +8952,18 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
         return { success: false, error: 'submission_not_found' };
       }
       
-      // ===== PASO 2: CONTAR REVISIONES COMPLETADAS =====
+      const submissionData = submissionSnap.data();
+      
+      // ===== PASO 2: ✅ ACTUALIZAR PERFIL DEL REVISOR EN `reviewers` =====
+      try {
+        await updateReviewerProfileAfterSubmission(db, afterData, submissionData);
+        console.log(`✅ Perfil del revisor actualizado: ${afterData.reviewerEmail}`);
+      } catch (reviewerUpdateError) {
+        console.warn(`⚠️ Error actualizando perfil del revisor:`, reviewerUpdateError.message);
+        warnings.push('reviewer_profile_update_failed');
+      }
+      
+      // ===== PASO 3: CONTAR REVISIONES COMPLETADAS =====
       const assignmentsSnapshot = await db.collection('reviewerAssignments')
         .where('editorialTaskId', '==', taskId)
         .where('status', '==', 'submitted')
@@ -8578,7 +8974,7 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
       
       console.log(`📊 Revisiones: ${submittedCount}/${requiredReviews}`);
       
-      // ===== PASO 3: AUDIT LOG =====
+      // ===== PASO 4: AUDIT LOG =====
       try {
         await db.collection('submissions').doc(taskData.submissionId)
           .collection('auditLogs').add({
@@ -8587,10 +8983,12 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
             details: {
               reviewerEmail: afterData.reviewerEmail,
+              reviewerUid: afterData.reviewerUid || null,
               reviewerId: assignmentId,
               submittedAt: afterData.submittedAt,
               currentCount: submittedCount,
-              requiredCount: requiredReviews
+              requiredCount: requiredReviews,
+              recommendation: afterData.recommendation || null
             }
           });
       } catch (auditError) {
@@ -8598,7 +8996,7 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
         warnings.push('audit_log_failed');
       }
       
-      // ===== PASO 4: NOTIFICAR AL EDITOR (SIEMPRE) =====
+      // ===== PASO 5: NOTIFICAR AL EDITOR (SIEMPRE) =====
       try {
         await notifyEditorNewReview(taskData, afterData, submittedCount, requiredReviews);
         console.log(`✅ Editor notificado`);
@@ -8607,7 +9005,7 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
         warnings.push('notify_editor_failed');
       }
       
-      // ===== PASO 5: ACTUALIZAR CONTADOR EN LA TAREA =====
+      // ===== PASO 6: ACTUALIZAR CONTADOR EN LA TAREA =====
       try {
         await taskRef.update({
           completedReviews: submittedCount,
@@ -8619,8 +9017,28 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
         warnings.push('task_update_failed');
       }
       
-      // ===== NO HACER NADA MÁS - EL EDITOR DECIDE CUÁNDO PROCEDER =====
-      console.log(`✅ Revisión ${submittedCount}/${requiredReviews} registrada. Esperando decisión del editor.`);
+      // ===== PASO 7: COMPLETAR DEADLINE DE REVISIÓN =====
+      try {
+        const pendingDeadlines = await db.collection('deadlines')
+          .where('targetId', '==', assignmentId)
+          .where('type', '==', 'review-submission')
+          .where('status', 'in', ['pending', 'reminded'])
+          .get();
+        
+        if (!pendingDeadlines.empty) {
+          await pendingDeadlines.docs[0].ref.update({
+            status: 'completed',
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+            completedNote: 'Revisión enviada'
+          });
+          console.log(`✅ Deadline completado para assignment ${assignmentId}`);
+        }
+      } catch (deadlineError) {
+        console.warn(`⚠️ Error completando deadline:`, deadlineError.message);
+        warnings.push('deadline_update_failed');
+      }
+      
+      console.log(`✅ Revisión ${submittedCount}/${requiredReviews} registrada. Perfil del revisor actualizado.`);
       
       return {
         success: true,
@@ -8628,7 +9046,7 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
         submittedCount,
         requiredReviews,
         warnings,
-        message: 'Revisión registrada. El editor decidirá cuándo proceder a la decisión final.'
+        message: 'Revisión registrada. Perfil del revisor actualizado correctamente.'
       };
       
     } catch (error) {
@@ -8659,6 +9077,172 @@ exports.onReviewerAssignmentSubmitted = onDocumentUpdated(
   }
 );
 
+// ============================================================
+// ✅ FUNCIÓN AUXILIAR: Actualizar perfil del revisor en `reviewers`
+// ============================================================
+async function updateReviewerProfileAfterSubmission(db, assignmentData, submissionData) {
+  const reviewerUid = assignmentData.reviewerUid;
+  
+  if (!reviewerUid) {
+    console.warn('⚠️ Revisor sin UID. No se puede actualizar perfil.');
+    return { success: false, error: 'no_reviewer_uid' };
+  }
+  
+  const reviewerRef = db.collection('reviewers').doc(reviewerUid);
+  const reviewerSnap = await reviewerRef.get();
+  
+  if (!reviewerSnap.exists) {
+    console.warn(`⚠️ Perfil de revisor no encontrado para UID: ${reviewerUid}`);
+    return { success: false, error: 'reviewer_profile_not_found' };
+  }
+  
+  const reviewerData = reviewerSnap.data();
+  const availability = reviewerData.availability || {};
+  const stats = reviewerData.stats || {};
+  
+  // ===== VALORES ACTUALES =====
+  const currentActive = availability.currentActiveReviews || 0;
+  const maxActive = availability.maxActiveReviews || 3;
+  const totalCompleted = stats.totalReviewsCompleted || 0;
+  const statsActive = stats.activeReviews || 0;
+  const pendingReviews = stats.pendingReviews || 0;
+  const onTimeReviews = stats.onTimeReviews || 0;
+  const lateReviews = stats.lateReviews || 0;
+  const totalAssignments = stats.totalAssignments || 0;
+  
+  // ===== NUEVOS VALORES =====
+  const newActive = Math.max(0, currentActive - 1);
+  const newStatsActive = Math.max(0, statsActive - 1);
+  const newPendingReviews = Math.max(0, pendingReviews - 1);
+  const newTotalCompleted = totalCompleted + 1;
+  
+  // Fecha de envío
+  const submittedISO = assignmentData.submittedAt?.toDate 
+    ? assignmentData.submittedAt.toDate().toISOString() 
+    : new Date().toISOString();
+  
+  // ===== CALCULAR SCORE PROMEDIO =====
+  let newAvgScore = stats.averageReviewScore || 0;
+  if (assignmentData.scores && Object.keys(assignmentData.scores).length > 0) {
+    const scoreValues = Object.values(assignmentData.scores).filter(v => typeof v === 'number');
+    if (scoreValues.length > 0) {
+      const avgScoreForThisReview = scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length;
+      newAvgScore = totalCompleted > 0 
+        ? ((stats.averageReviewScore || 0) * totalCompleted + avgScoreForThisReview) / (totalCompleted + 1)
+        : avgScoreForThisReview;
+    }
+  }
+  
+  // ===== CALCULAR DURACIÓN DE LA REVISIÓN =====
+  let reviewDurationDays = null;
+  if (assignmentData.assignedAt && assignmentData.submittedAt) {
+    const assignedDate = assignmentData.assignedAt.toDate 
+      ? assignmentData.assignedAt.toDate() 
+      : new Date(assignmentData.assignedAt);
+    const submittedDate = assignmentData.submittedAt.toDate 
+      ? assignmentData.submittedAt.toDate() 
+      : new Date(assignmentData.submittedAt);
+    
+    reviewDurationDays = (submittedDate - assignedDate) / (1000 * 60 * 60 * 24);
+    reviewDurationDays = Math.round(reviewDurationDays * 10) / 10;
+  }
+  
+  // Calcular nuevo promedio de duración
+  const currentAvgDuration = stats.averageReviewDurationDays || 0;
+  const newAvgDuration = reviewDurationDays !== null
+    ? (totalCompleted > 0 
+        ? ((currentAvgDuration * totalCompleted) + reviewDurationDays) / (totalCompleted + 1)
+        : reviewDurationDays)
+    : currentAvgDuration;
+  
+  // ===== VERIFICAR SI FUE A TIEMPO =====
+  let isOnTime = null;
+  if (assignmentData.dueDate && assignmentData.submittedAt) {
+    const dueDate = assignmentData.dueDate.toDate 
+      ? assignmentData.dueDate.toDate() 
+      : new Date(assignmentData.dueDate);
+    const submittedDate = assignmentData.submittedAt.toDate 
+      ? assignmentData.submittedAt.toDate() 
+      : new Date(assignmentData.submittedAt);
+    
+    isOnTime = submittedDate <= dueDate;
+  }
+  
+  const newOnTimeReviews = isOnTime !== null ? onTimeReviews + (isOnTime ? 1 : 0) : onTimeReviews;
+  const newLateReviews = isOnTime !== null ? lateReviews + (isOnTime ? 0 : 1) : lateReviews;
+  const newOnTimeRate = newTotalCompleted > 0 
+    ? Math.round((newOnTimeReviews / newTotalCompleted) * 100) 
+    : 100;
+  
+  // ===== CONSTRUIR OBJETO DE ACTUALIZACIÓN =====
+  const updateData = {
+    // Disponibilidad
+    'availability.currentActiveReviews': newActive,
+    'availability.updatedAt': admin.firestore.FieldValue.serverTimestamp(),
+    
+    // Fecha de última revisión
+    lastReviewSubmittedAt: submittedISO,
+    
+    // Stats principales
+    'stats.totalReviewsCompleted': newTotalCompleted,
+    'stats.activeReviews': newStatsActive,
+    'stats.pendingReviews': newPendingReviews,
+    'stats.lastReviewSubmittedAt': submittedISO,
+    'stats.averageReviewScore': Math.round(newAvgScore * 10) / 10,
+    'stats.averageReviewDurationDays': Math.round(newAvgDuration * 10) / 10,
+    'stats.onTimeReviews': newOnTimeReviews,
+    'stats.lateReviews': newLateReviews,
+    'stats.onTimeRate': newOnTimeRate,
+    'stats.totalAssignments': totalAssignments,
+    'stats.statsRecalculatedAt': admin.firestore.FieldValue.serverTimestamp(),
+    
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  };
+  
+  // ===== RECOMENDACIONES =====
+  if (assignmentData.recommendation) {
+    const recommendations = stats.recommendations || {};
+    recommendations[assignmentData.recommendation] = (recommendations[assignmentData.recommendation] || 0) + 1;
+    updateData['stats.recommendations'] = recommendations;
+  }
+  
+  // ===== REVIEW BREAKDOWN =====
+  const currentBreakdown = stats.reviewBreakdown || [];
+  const newBreakdownEntry = {
+    id: assignmentData.invitationId || assignmentData.id || `assignment_${Date.now()}`,
+    daysOffset: reviewDurationDays !== null ? reviewDurationDays : 0,
+    hasRealDueDate: !!assignmentData.dueDate,
+    hasRealSubmittedAt: !!assignmentData.submittedAt,
+    isLegacy: false,
+    onTime: isOnTime !== null ? isOnTime : true,
+    recommendation: assignmentData.recommendation || '',
+    scores: assignmentData.scores || {}
+  };
+  currentBreakdown.push(newBreakdownEntry);
+  updateData['stats.reviewBreakdown'] = currentBreakdown;
+  
+  // ===== REVIEWS BY ROUND =====
+  const currentRound = assignmentData.round || 1;
+  const currentReviewsByRound = stats.reviewsByRound || {};
+  currentReviewsByRound[currentRound] = (currentReviewsByRound[currentRound] || 0) + 1;
+  updateData['stats.reviewsByRound'] = currentReviewsByRound;
+  updateData['stats.totalRoundsParticipated'] = Object.keys(currentReviewsByRound).length;
+  
+  // ===== APLICAR ACTUALIZACIÓN =====
+  await reviewerRef.update(updateData);
+  
+  console.log(`✅ Revisor actualizado:`, {
+    uid: reviewerUid,
+    activeReviews: `${currentActive} -> ${newActive}`,
+    totalCompleted: `${totalCompleted} -> ${newTotalCompleted}`,
+    avgScore: Math.round(newAvgScore * 10) / 10,
+    avgDuration: Math.round(newAvgDuration * 10) / 10,
+    onTimeRate: newOnTimeRate,
+    recommendation: assignmentData.recommendation || 'N/A'
+  });
+  
+  return { success: true };
+}
 
 // ===== FUNCIÓN AUXILIAR: Notificar al editor =====
 async function notifyEditorNewReview(taskData, reviewData, submittedCount, requiredReviews) {
