@@ -26,7 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, updateRole, auth } from '../firebase';
+import { db, onSnapshot, query, collection, doc, updateDoc, uploadImageToImgBB, updateRole, auth, getDocs, where } from '../firebase';
 import { signOut } from 'firebase/auth'; 
 import SubmissionForm from './SubmissionForm';
 import { useLanguage } from '../hooks/useLanguage';
@@ -1343,15 +1343,36 @@ const handleTabChange = (tabId, event) => {
 
       {/* Panel de invitaciones para revisores - AHORA USANDO NAVIGATE EN LUGAR DE WINDOW.OPEN */}
       {isReviewer && (
-        <ReviewerInvitationsPanel 
-          user={userData}
-          onAccept={(invitation) => {
-            // Usar setTimeout pero con navigate en lugar de window.open
-            setTimeout(() => {
-              navigate(`/reviewer-workspace/${invitation.submissionId}`);
-            }, 3000);
-          }}
-        />
+        // ✅ CORRECTO: Buscar assignmentId por invitationId
+<ReviewerInvitationsPanel 
+  user={userData}
+  onAccept={(invitation) => {
+    // Buscar la asignación por invitationId
+    const assignmentQuery = query(
+      collection(db, 'reviewerAssignments'),
+      where('invitationId', '==', invitation.id)
+    );
+    
+    getDocs(assignmentQuery).then(snapshot => {
+      if (!snapshot.empty) {
+        const assignmentId = snapshot.docs[0].id;
+        navigate(`/reviewer-workspace/${assignmentId}`);
+      } else {
+        // Si no existe aún, esperar y reintentar
+        setTimeout(async () => {
+          const retrySnapshot = await getDocs(assignmentQuery);
+          if (!retrySnapshot.empty) {
+            const assignmentId = retrySnapshot.docs[0].id;
+            navigate(`/reviewer-workspace/${assignmentId}`);
+          } else {
+            // Fallback: ir a la pestaña de revisiones
+            handleTabChange('reviewer-tasks', null);
+          }
+        }, 3000);
+      }
+    });
+  }}
+/>
       )}
 
       {/* TABS NAVEGACIÓN */}

@@ -1,3 +1,5 @@
+// src/firebase.js
+
 import { initializeApp } from 'firebase/app';
 import {
   getAuth,
@@ -24,7 +26,9 @@ import {
   updateDoc,
   onSnapshot,
   query,
-  collection
+  collection,
+  getDocs,    // ✅ AGREGAR
+  where       // ✅ AGREGAR
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
@@ -69,12 +73,6 @@ export const getUserInvitations = httpsCallable(functions, 'getUserInvitations')
    FUNCIONES DE RECLAMACIÓN DE PERFIL
 ============================== */
 
-/**
- * Verifica si existe un perfil anónimo que pueda ser reclamado
- * @param {Object} data - Datos para la verificación
- * @param {string} data.email - Email del usuario a verificar
- * @returns {Promise<Object>} Resultado de la verificación
- */
 export const checkAnonymousProfile = async (data) => {
   try {
     const checkFunction = httpsCallable(functions, 'checkAnonymousProfile');
@@ -86,14 +84,6 @@ export const checkAnonymousProfile = async (data) => {
   }
 };
 
-/**
- * Reclama un perfil anónimo y lo asocia al usuario autenticado
- * @param {Object} data - Datos para el reclamo
- * @param {string} data.anonymousUid - UID del perfil anónimo
- * @param {string} data.claimHash - Hash de verificación
- * @param {string} data.anonymousName - Nombre del perfil anónimo
- * @returns {Promise<Object>} Resultado del reclamo
- */
 export const claimAnonymousProfile = async (data) => {
   try {
     const claimFunction = httpsCallable(functions, 'claimAnonymousProfile');
@@ -112,12 +102,10 @@ export const claimAnonymousProfile = async (data) => {
 const IMGBB_FUNCTION_URL =
   "https://uploadimagetoimgbbcallable-ggqsq2kkua-uc.a.run.app";
 
-// CAMBIA la función HTTP por callable
 export const uploadImageToImgBB = async ({ base64, fileName }) => {
   const user = auth.currentUser;
   if (!user) throw new Error("Usuario no autenticado");
   
-  // Usar función callable en lugar de fetch
   const uploadFunction = httpsCallable(functions, 'uploadImageToImgBBCallable');
   
   const cleanBase64 = base64.includes("base64,")
@@ -184,11 +172,6 @@ export const submitRevision = async (data) => {
    FUNCIONES AUXILIARES
 ============================== */
 
-/**
- * Función para generar slugs (útil para UIDs y URLs)
- * @param {string} text - Texto a convertir en slug
- * @returns {string} Slug generado
- */
 export const generateSlug = (text) => {
   return text
     .toLowerCase()
@@ -223,7 +206,9 @@ export {
   updateDoc,
   onSnapshot,
   query,
-  collection
+  collection,
+  getDocs,    // ✅ AGREGAR AL EXPORT
+  where       // ✅ AGREGAR AL EXPORT
 };
 
 export default app;
