@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  CheckCircleIcon, 
   LockClosedIcon,
   XCircleIcon,
   ArrowRightIcon,
@@ -11,7 +10,6 @@ import {
   AcademicCapIcon,
   BuildingOfficeIcon,
   BriefcaseIcon,
-  CalendarIcon,
   GlobeAltIcon,
   CheckBadgeIcon,
   ChevronDownIcon,
@@ -21,7 +19,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as SolidCheck } from '@heroicons/react/24/solid';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '../firebase';
+import { functions, auth } from '../firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useLanguage } from '../hooks/useLanguage';
 
 // ============================================================
@@ -114,10 +113,11 @@ const ReviewerOnboarding = () => {
   // ================= ESTADOS DEL FLUJO =================
   const [step, setStep] = useState(1);
   const [invitationData, setInvitationData] = useState(null);
-  const [assignmentId, setAssignmentId] = useState(null); // ✅ NUEVO: Capturar assignmentId
+  const [assignmentId, setAssignmentId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -130,7 +130,7 @@ const ReviewerOnboarding = () => {
     confirmPassword: '',
     availability: 'medium',
     maxReviews: 2,
-    interests: [], // Áreas de expertise seleccionadas
+    interests: [],
     reviewedBefore: null,
     orcid: '',
     preferredLanguage: 'es',
@@ -149,7 +149,6 @@ const ReviewerOnboarding = () => {
     stepProfile: isSpanish ? 'Perfil Académico' : 'Academic Profile',
     stepReview: isSpanish ? 'Completado' : 'Completed',
     
-    // Paso 1
     step1Title: isSpanish ? 'Integración al Comité Revisor' : 'Editorial Board Integration',
     step1Subtitle: isSpanish ? 'Verifique su identidad académica y establezca sus credenciales de acceso.' : 'Verify your academic identity and establish your access credentials.',
     fullName: isSpanish ? 'Nombre completo' : 'Full name',
@@ -162,8 +161,8 @@ const ReviewerOnboarding = () => {
     passwordError: isSpanish ? 'La contraseña requiere un mínimo de 6 caracteres.' : 'Password requires a minimum of 6 characters.',
     passwordMismatch: isSpanish ? 'Las contraseñas ingresadas no coinciden.' : 'The entered passwords do not match.',
     createAccount: isSpanish ? 'Guardar credenciales y continuar' : 'Save credentials and continue',
+    signingIn: isSpanish ? 'Iniciando sesión...' : 'Signing in...',
     
-    // Paso 2
     step2Title: isSpanish ? 'Configuración de Par Evaluador' : 'Peer Reviewer Configuration',
     step2Subtitle: isSpanish ? 'Defina sus áreas de expertise y parámetros de disponibilidad.' : 'Define your areas of expertise and availability parameters.',
     expertiseTitle: isSpanish ? 'Áreas de Especialización' : 'Areas of Expertise',
@@ -184,14 +183,13 @@ const ReviewerOnboarding = () => {
     yesReviewed: isSpanish ? 'Sí, poseo experiencia' : 'Yes, I have experience',
     firstTime: isSpanish ? 'No, será mi primera vez' : 'No, this is my first time',
     saveProfile: isSpanish ? 'Consolidar perfil' : 'Consolidate profile',
+    sessionExpired: isSpanish ? 'Tu sesión ha expirado. Por favor, recarga la página e intenta nuevamente.' : 'Your session has expired. Please reload the page and try again.',
     
-    // Paso 3
     step3Title: isSpanish ? 'Registro Exitoso' : 'Successful Registration',
     step3Message: isSpanish ? 'Su perfil como par evaluador ha sido incorporado oficialmente a nuestros registros. Ya puede acceder al manuscrito asignado.' : 'Your peer reviewer profile has been officially incorporated into our records. You may now access the assigned manuscript.',
     goToReview: isSpanish ? 'Acceder al Centro de Evaluación' : 'Access Evaluation Center',
     profileReady: isSpanish ? 'Su perfil está listo' : 'Your profile is ready',
     
-    // Errores
     errorVerifying: isSpanish ? 'Error de conexión al verificar la invitación.' : 'Connection error verifying invitation.',
     errorCreating: isSpanish ? 'Error en el sistema al procesar la cuenta.' : 'System error processing account.',
     errorSaving: isSpanish ? 'Error al guardar los metadatos del perfil.' : 'Error saving profile metadata.'
@@ -212,7 +210,6 @@ const ReviewerOnboarding = () => {
         
         if (result.data.success) {
           setInvitationData(result.data.invitation);
-          // Pre-rellenar formulario
           setFormData(prev => ({
             ...prev,
             name: result.data.invitation.prefillData?.name || '',
@@ -236,7 +233,6 @@ const ReviewerOnboarding = () => {
     loadInvitation();
   }, [token, language]);
 
-  // Toggle área de expertise
   const toggleExpertise = (area) => {
     setFormData(prev => {
       const current = [...prev.interests];
@@ -245,7 +241,7 @@ const ReviewerOnboarding = () => {
       if (index > -1) {
         current.splice(index, 1);
       } else {
-        if (current.length >= MAX_EXPERTISE_AREAS) return prev; // Límite de 5
+        if (current.length >= MAX_EXPERTISE_AREAS) return prev;
         current.push(area);
       }
       
@@ -253,7 +249,6 @@ const ReviewerOnboarding = () => {
     });
   };
 
-  // Seleccionar todas las áreas de una categoría
   const selectAllInCategory = (categoryAreas) => {
     setFormData(prev => {
       const current = [...prev.interests];
@@ -272,7 +267,7 @@ const ReviewerOnboarding = () => {
     });
   };
 
-  // Paso 1: Crear cuenta
+  // Paso 1: Crear cuenta Y autenticar automáticamente
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     setError('');
@@ -299,12 +294,25 @@ const ReviewerOnboarding = () => {
       });
 
       if (result.data.success) {
-        // ✅ CAPTURAR EL ASSIGNMENT ID
         if (result.data.assignmentId) {
           setAssignmentId(result.data.assignmentId);
           console.log('✅ Assignment ID capturado:', result.data.assignmentId);
         }
-        setStep(2);
+        
+        // ✅ AUTENTICAR AUTOMÁTICAMENTE
+        setIsAuthenticating(true);
+        try {
+          console.log('🔐 Iniciando sesión automáticamente...');
+          await signInWithEmailAndPassword(auth, formData.email, formData.password);
+          console.log('✅ Sesión iniciada correctamente');
+          setStep(2);
+        } catch (signInError) {
+          console.error('❌ Error al iniciar sesión:', signInError);
+          console.warn('⚠️ No se pudo iniciar sesión automáticamente, pero continuando...');
+          setStep(2);
+        } finally {
+          setIsAuthenticating(false);
+        }
       } else {
         setError(result.data.error || texts.errorCreating);
       }
@@ -322,7 +330,13 @@ const ReviewerOnboarding = () => {
     setError('');
     setIsSubmitting(true);
     
-    // Validar que haya al menos 1 área seleccionada
+    // ✅ VERIFICAR AUTENTICACIÓN
+    if (!auth.currentUser) {
+      setError(texts.sessionExpired);
+      setIsSubmitting(false);
+      return;
+    }
+    
     if (formData.interests.length === 0) {
       setError(texts.selectAtLeastOne);
       setIsSubmitting(false);
@@ -354,29 +368,30 @@ const ReviewerOnboarding = () => {
       }
     } catch (err) {
       console.error('Error guardando perfil:', err);
-      setError(texts.errorSaving);
+      
+      if (err.code === 'unauthenticated' || err.code === 'permission-denied') {
+        setError(texts.sessionExpired);
+      } else {
+        setError(texts.errorSaving);
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Paso 3: Ir al panel - ✅ CORREGIDO: Usar assignmentId
   const handleGoToReview = () => {
     if (assignmentId) {
       navigate(`/reviewer-workspace/${assignmentId}`);
     } else {
-      // Fallback: ir al dashboard del revisor
       console.warn('⚠️ No se encontró assignmentId, redirigiendo al dashboard');
       navigate('/reviewer-dashboard');
     }
   };
 
-  // Cambiar idioma
   const handleLanguageToggle = () => {
     setLanguage(isSpanish ? 'en' : 'es');
   };
 
-  // ================= COMPONENTES UI =================
   const LanguageToggle = () => (
     <button
       onClick={handleLanguageToggle}
@@ -587,13 +602,13 @@ const ReviewerOnboarding = () => {
                   <div className="pt-4 flex justify-end">
                     <button 
                       type="submit" 
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isAuthenticating}
                       className="px-8 py-3.5 bg-[#003b5c] text-white rounded-xl font-bold text-sm tracking-wide hover:bg-[#00273f] hover:shadow-lg hover:shadow-[#003b5c]/20 transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isSubmitting ? (
+                      {(isSubmitting || isAuthenticating) ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          {isSpanish ? 'Procesando...' : 'Processing...'}
+                          {isAuthenticating ? texts.signingIn : (isSpanish ? 'Procesando...' : 'Processing...')}
                         </>
                       ) : (
                         <>
@@ -625,7 +640,7 @@ const ReviewerOnboarding = () => {
 
                 <form onSubmit={handleProfileSetup} className="p-8 sm:p-12 space-y-10">
                   
-                  {/* ============ ÁREAS DE ESPECIALIZACIÓN ============ */}
+                  {/* ÁREAS DE ESPECIALIZACIÓN */}
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <div>
@@ -645,7 +660,6 @@ const ReviewerOnboarding = () => {
                       </span>
                     </div>
 
-                    {/* Contenedor de categorías */}
                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                       {Object.entries(areasData).map(([category, areas]) => {
                         const selectedInCategory = areas.filter(area => formData.interests.includes(area)).length;
@@ -654,7 +668,6 @@ const ReviewerOnboarding = () => {
                         
                         return (
                           <div key={category} className="border border-slate-200 rounded-lg overflow-hidden transition-all duration-200 hover:border-[#003b5c]/30">
-                            {/* Header de categoría */}
                             <button
                               type="button"
                               onClick={() => setExpandedCategory(isExpanded ? null : category)}
@@ -675,7 +688,6 @@ const ReviewerOnboarding = () => {
                               )}
                             </button>
                             
-                            {/* Áreas de la categoría */}
                             {isExpanded && (
                               <motion.div
                                 initial={{ opacity: 0, height: 0 }}
@@ -752,7 +764,7 @@ const ReviewerOnboarding = () => {
                     </div>
                   </div>
 
-                  {/* Disponibilidad (Tarjetas Editoriales) */}
+                  {/* Disponibilidad */}
                   <div>
                     <label className="block text-sm font-serif font-bold text-[#003b5c] mb-4">
                       {texts.availability}

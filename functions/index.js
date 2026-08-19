@@ -4081,7 +4081,7 @@ exports.submitArticle = onRequest(
         
         // Datos del autor que envía
         // Datos del usuario que sube (se guardan como submitter)
-submitterName, submitterEmail,  // ← NUEVOS CAMPOS
+submitterName,
         
         // Tipo de artículo y agradecimientos
         articleType, acknowledgments,
