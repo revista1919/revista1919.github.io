@@ -4181,7 +4181,7 @@ if (totalCodes < 2 || totalCodes > 4) {
         authors[0].isCorresponding = true;
       }
 
-      const submitterEmail = decodedToken.email;  // Email del que sube (autenticado)
+      let submitterEmail = decodedToken.email;  // Email del que sube (autenticado)
 const authorEmailToUse = correspondingAuthorData.email;  // Email del autor de correspondencia
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(authorEmailToUse)) {
