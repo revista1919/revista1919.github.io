@@ -20,6 +20,7 @@ const Icons = {
   Send: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>,
   Tag: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>,
   Code: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>,
+  User: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
 };
 
 // Componente para bloques de información estilo panel
@@ -38,14 +39,13 @@ const InfoBlock = ({ icon: Icon, title, children, className = '' }) => (
 );
 
 // ============ FUNCIÓN DE FORMATEO CORREGIDA ============
-// ✅ VERSIÓN SIMPLIFICADA (recomendada)
 const formatKeywords = (keywords, isSpanish) => {
   if (!keywords || (Array.isArray(keywords) && keywords.length === 0)) {
     return <span className="text-slate-400 italic font-sans text-xs">—</span>;
   }
-  
+ 
   const keywordArray = Array.isArray(keywords) ? keywords : [keywords];
-  
+ 
   return (
     <div className="flex flex-wrap gap-1.5">
       {keywordArray.map((kw, idx) => (
@@ -61,16 +61,16 @@ const formatAuthors = (authors, isSpanish) => {
   if (!authors || (Array.isArray(authors) && authors.length === 0)) {
     return <span className="text-slate-400 italic font-sans text-xs">—</span>;
   }
-  
+ 
   const authorArray = Array.isArray(authors) ? authors : [authors];
-  
+ 
   return (
     <div className="space-y-2">
       {authorArray.map((author, idx) => {
         if (typeof author === 'object' && author !== null) {
           const fullName = `${author.firstName || ''} ${author.lastName || ''}`.trim() || author.name || 'Autor sin nombre';
           return (
-            <div key={idx} className="flex items-center gap-2 text-sm">
+            <div key={idx} className="flex items-center gap-2 text-sm flex-wrap">
               <span className="font-serif text-slate-800">{fullName}</span>
               {author.email && <span className="text-xs text-slate-400 font-mono">({author.email})</span>}
               {author.orcid && <span className="text-xs text-[#003b5c] font-mono">ORCID: {author.orcid}</span>}
@@ -88,20 +88,184 @@ const formatAuthors = (authors, isSpanish) => {
   );
 };
 
+// ============ COMPONENTES INTERACTIVOS PARA EDICIÓN ============
+
+/** Input de tags / keywords / códigos */
+const TagInput = ({ value = [], onChange, placeholder, isSpanish }) => {
+  const [input, setInput] = useState('');
+
+  const addTag = (raw) => {
+    const cleaned = raw.trim().replace(/^;+|\;+$/g, '');
+    if (!cleaned) return;
+    const newTags = cleaned.split(/[;]+/).map(t => t.trim()).filter(Boolean);
+    const unique = [...new Set([...value, ...newTags])];
+    onChange(unique);
+    setInput('');
+  };
+
+  const removeTag = (idx) => {
+    onChange(value.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5 min-h-[40px] p-2 bg-white border border-slate-300 rounded-sm">
+        {value.map((tag, idx) => (
+          <span
+            key={idx}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-sans border border-slate-200"
+          >
+            {typeof tag === 'string' ? tag : tag.term || tag.name || String(tag)}
+            <button
+              type="button"
+              onClick={() => removeTag(idx)}
+              className="text-slate-400 hover:text-rose-600 ml-0.5"
+            >
+              <Icons.Cross />
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ';') {
+              e.preventDefault();
+              addTag(input);
+            }
+            if (e.key === 'Backspace' && !input && value.length > 0) {
+              removeTag(value.length - 1);
+            }
+          }}
+          onBlur={() => input && addTag(input)}
+          placeholder={placeholder || (isSpanish ? 'Escribe y presiona Enter o ;' : 'Type and press Enter or ;')}
+          className="flex-1 min-w-[140px] outline-none text-sm font-sans bg-transparent"
+        />
+      </div>
+      <p className="text-[10px] text-slate-500">
+        {isSpanish ? 'Presiona Enter o punto y coma (;) para añadir. Clic en × para eliminar.' : 'Press Enter or semicolon (;) to add. Click × to remove.'}
+      </p>
+    </div>
+  );
+};
+
+/** Editor de lista de autores */
+const AuthorsEditor = ({ value = [], onChange, isSpanish }) => {
+  const authors = Array.isArray(value) ? value : [];
+
+  const updateAuthor = (idx, field, val) => {
+    const updated = [...authors];
+    updated[idx] = { ...updated[idx], [field]: val };
+    onChange(updated);
+  };
+
+  const addAuthor = () => {
+    onChange([
+      ...authors,
+      { firstName: '', lastName: '', email: '', orcid: '', isCorresponding: false }
+    ]);
+  };
+
+  const removeAuthor = (idx) => {
+    onChange(authors.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div className="space-y-4">
+      {authors.map((author, idx) => (
+        <div key={idx} className="bg-white border border-slate-200 rounded-sm p-4 relative">
+          <button
+            type="button"
+            onClick={() => removeAuthor(idx)}
+            className="absolute top-3 right-3 text-slate-400 hover:text-rose-600"
+          >
+            <Icons.Cross />
+          </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                {isSpanish ? 'Nombre' : 'First Name'}
+              </label>
+              <input
+                type="text"
+                value={author.firstName || ''}
+                onChange={(e) => updateAuthor(idx, 'firstName', e.target.value)}
+                className="w-full p-2 border border-slate-300 rounded-sm text-sm font-serif"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                {isSpanish ? 'Apellido' : 'Last Name'}
+              </label>
+              <input
+                type="text"
+                value={author.lastName || ''}
+                onChange={(e) => updateAuthor(idx, 'lastName', e.target.value)}
+                className="w-full p-2 border border-slate-300 rounded-sm text-sm font-serif"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Email</label>
+              <input
+                type="email"
+                value={author.email || ''}
+                onChange={(e) => updateAuthor(idx, 'email', e.target.value)}
+                className="w-full p-2 border border-slate-300 rounded-sm text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">ORCID</label>
+              <input
+                type="text"
+                value={author.orcid || ''}
+                onChange={(e) => updateAuthor(idx, 'orcid', e.target.value)}
+                placeholder="0000-0000-0000-0000"
+                className="w-full p-2 border border-slate-300 rounded-sm text-sm font-mono"
+              />
+            </div>
+            <div className="md:col-span-2 flex items-center gap-2">
+              <input
+                type="checkbox"
+                id={`corr-${idx}`}
+                checked={!!author.isCorresponding}
+                onChange={(e) => updateAuthor(idx, 'isCorresponding', e.target.checked)}
+                className="w-4 h-4 text-[#003b5c]"
+              />
+              <label htmlFor={`corr-${idx}`} className="text-xs font-bold text-slate-700 uppercase tracking-wider cursor-pointer">
+                {isSpanish ? 'Autor de correspondencia' : 'Corresponding author'}
+              </label>
+            </div>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addAuthor}
+        className="w-full py-2.5 border-2 border-dashed border-slate-300 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-sm hover:border-[#003b5c] hover:text-[#003b5c] transition-colors flex items-center justify-center gap-2"
+      >
+        <Icons.Plus />
+        {isSpanish ? 'Añadir autor' : 'Add author'}
+      </button>
+    </div>
+  );
+};
+
 export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
-  const { 
-    loading, 
-    proposeChanges, 
-    applyApprovedChanges, 
+  const {
+    loading,
+    proposeChanges,
+    applyApprovedChanges,
     markAsReadyForPublication,
     error: hookError
   } = useMetadataRefinement(user);
-  
+ 
   const [proposedChanges, setProposedChanges] = useState([]);
   const [currentField, setCurrentField] = useState('');
-  const [fieldValue, setFieldValue] = useState('');
+  const [fieldValue, setFieldValue] = useState(''); // para campos simples (string)
+  const [complexValue, setComplexValue] = useState(null); // para keywords / authors / codes
   const [fieldReason, setFieldReason] = useState('');
   const [requiresConsent, setRequiresConsent] = useState(true);
   const [localError, setLocalError] = useState(null);
@@ -119,18 +283,15 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     if (value === null || value === undefined || value === '') {
       return <span className="text-slate-400 italic font-sans text-xs">—</span>;
     }
-    
-    // Palabras clave (ES/EN)
+   
     if (fieldName === 'keywords' || fieldName === 'keywordsEs' || fieldName === 'keywordsEn') {
       return formatKeywords(value, isSpanish);
     }
-    
-    // Autores
+   
     if (fieldName === 'authors') {
       return formatAuthors(value, isSpanish);
     }
-    
-    // Códigos especializados
+   
     if (fieldName === 'specializedCodes') {
       const codes = Array.isArray(value) ? value : [value];
       return (
@@ -144,8 +305,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
         </div>
       );
     }
-    
-    // Objetos
+   
     if (typeof value === 'object' && value !== null) {
       if (Array.isArray(value)) {
         return value.map((item, idx) => {
@@ -155,13 +315,12 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
           return <span key={idx} className="block mb-1 font-serif text-slate-700">{String(item)}</span>;
         });
       }
-      // Timestamp de Firebase
       if (value.seconds !== undefined) {
         return new Date(value.seconds * 1000).toLocaleString();
       }
       return <span className="font-serif text-slate-700">{JSON.stringify(value)}</span>;
     }
-    
+   
     return <span className="font-serif text-slate-700">{String(value)}</span>;
   };
 
@@ -173,8 +332,8 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     { name: 'keywordsEs', label: isSpanish ? 'Palabras Clave (ES)' : 'Keywords (ES)', type: 'keywords', requiresConsent: true },
     { name: 'keywordsEn', label: isSpanish ? 'Palabras Clave (EN)' : 'Keywords (EN)', type: 'keywords', requiresConsent: true },
     { name: 'keywordsVocabulario', label: isSpanish ? 'Vocabulario Controlado' : 'Controlled Vocabulary', type: 'text', requiresConsent: true },
-    { name: 'specializedCodes', label: isSpanish ? 'Códigos Especializados' : 'Specialized Codes', type: 'text', requiresConsent: true },
-    { name: 'authors', label: isSpanish ? 'Autores' : 'Authors', type: 'textarea', requiresConsent: true },
+    { name: 'specializedCodes', label: isSpanish ? 'Códigos Especializados' : 'Specialized Codes', type: 'codes', requiresConsent: true },
+    { name: 'authors', label: isSpanish ? 'Autores' : 'Authors', type: 'authors', requiresConsent: true },
     { name: 'funding', label: isSpanish ? 'Financiamiento' : 'Funding', type: 'text', requiresConsent: false },
     { name: 'conflictOfInterest', label: isSpanish ? 'Conflicto de Intereses' : 'Conflict of Interest', type: 'textarea', requiresConsent: false },
     { name: 'dataAvailability', label: isSpanish ? 'Disponibilidad de Datos' : 'Data Availability', type: 'textarea', requiresConsent: false }
@@ -190,7 +349,6 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     if (submission[fieldName] !== undefined) {
       return submission[fieldName];
     }
-    // Soporte para keywords legacy
     if (fieldName === 'keywordsEs' && submission.keywords?.length > 0) {
       return submission.keywords;
     }
@@ -200,11 +358,52 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     return '';
   };
 
+  // Normaliza el valor actual a un formato usable por los editores
+  const normalizeForEditor = (fieldName, raw) => {
+    if (fieldName === 'authors') {
+      if (!raw) return [];
+      if (Array.isArray(raw)) {
+        return raw.map(a => {
+          if (typeof a === 'string') {
+            // Intentar parsear "Apellido, Nombre"
+            const parts = a.split(',').map(p => p.trim());
+            return {
+              firstName: parts[1] || '',
+              lastName: parts[0] || a,
+              email: '',
+              orcid: '',
+              isCorresponding: false
+            };
+          }
+          return {
+            firstName: a.firstName || '',
+            lastName: a.lastName || a.name || '',
+            email: a.email || '',
+            orcid: a.orcid || '',
+            isCorresponding: !!a.isCorresponding
+          };
+        });
+      }
+      return [];
+    }
+    if (fieldName === 'keywordsEs' || fieldName === 'keywordsEn' || fieldName === 'specializedCodes') {
+      if (!raw) return [];
+      if (Array.isArray(raw)) {
+        return raw.map(k => (typeof k === 'string' ? k : k.term || k.name || String(k)));
+      }
+      if (typeof raw === 'string') {
+        return raw.split(/[;,]+/).map(s => s.trim()).filter(Boolean);
+      }
+      return [];
+    }
+    // Campos simples
+    return typeof raw === 'string' ? raw : (raw ?? '');
+  };
+
   useEffect(() => {
     if (!submission?.id) return;
     const proposalsRef = collection(db, 'submissions', submission.id, 'metadataProposals');
     const q = query(proposalsRef, orderBy('proposedAt', 'desc'));
-
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const loadedProposals = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -220,17 +419,67 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
       console.error('Error loading proposals:', error);
       setLocalError(isSpanish ? 'Error al cargar propuestas' : 'Error loading proposals');
     });
-
     return () => unsubscribe();
   }, [submission?.id, isSpanish]);
 
-  const handleAddChange = () => {
-    if (!currentField || !fieldValue.trim() || !fieldReason.trim()) {
-      alert(isSpanish ? 'Completa todos los campos obligatorios.' : 'Complete all required fields.');
+  const handleFieldSelect = (fieldName) => {
+    setCurrentField(fieldName);
+    setFieldReason('');
+    setRequiresConsent(true);
+
+    if (!fieldName) {
+      setFieldValue('');
+      setComplexValue(null);
       return;
     }
 
-    const field = fields.find(f => f.name === currentField);
+    const raw = getCurrentValue(fieldName);
+    const fieldMeta = fields.find(f => f.name === fieldName);
+
+    if (fieldMeta?.type === 'keywords' || fieldMeta?.type === 'codes' || fieldMeta?.type === 'authors') {
+      setComplexValue(normalizeForEditor(fieldName, raw));
+      setFieldValue('');
+    } else {
+      setFieldValue(normalizeForEditor(fieldName, raw));
+      setComplexValue(null);
+    }
+  };
+
+  const handleAddChange = () => {
+    if (!currentField || !fieldReason.trim()) {
+      alert(isSpanish ? 'Completa la justificación y selecciona un campo.' : 'Complete the justification and select a field.');
+      return;
+    }
+
+    const fieldMeta = fields.find(f => f.name === currentField);
+    let proposedValue;
+
+    if (fieldMeta?.type === 'keywords' || fieldMeta?.type === 'codes') {
+      if (!Array.isArray(complexValue) || complexValue.length === 0) {
+        alert(isSpanish ? 'Añade al menos un término/código.' : 'Add at least one term/code.');
+        return;
+      }
+      proposedValue = complexValue;
+    } else if (fieldMeta?.type === 'authors') {
+      if (!Array.isArray(complexValue) || complexValue.length === 0) {
+        alert(isSpanish ? 'Añade al menos un autor.' : 'Add at least one author.');
+        return;
+      }
+      // Validación mínima
+      const invalid = complexValue.some(a => !a.lastName?.trim() && !a.firstName?.trim());
+      if (invalid) {
+        alert(isSpanish ? 'Cada autor debe tener al menos nombre o apellido.' : 'Each author needs at least a first or last name.');
+        return;
+      }
+      proposedValue = complexValue;
+    } else {
+      if (!String(fieldValue).trim()) {
+        alert(isSpanish ? 'El valor corregido no puede estar vacío.' : 'Corrected value cannot be empty.');
+        return;
+      }
+      proposedValue = fieldValue;
+    }
+
     const currentValue = getCurrentValue(currentField);
 
     setProposedChanges([
@@ -238,14 +487,16 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
       {
         field: currentField,
         currentValue,
-        proposedValue: fieldValue,
+        proposedValue, // ← ahora es el tipo correcto (array u object o string)
         reason: fieldReason,
-        requiresAuthorConsent: requiresConsent && (field?.requiresConsent || true)
+        requiresAuthorConsent: requiresConsent && (fieldMeta?.requiresConsent ?? true)
       }
     ]);
 
+    // Reset
     setCurrentField('');
     setFieldValue('');
+    setComplexValue(null);
     setFieldReason('');
     setRequiresConsent(true);
   };
@@ -259,10 +510,9 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
       alert(isSpanish ? 'Agrega al menos un cambio a la propuesta.' : 'Add at least one change to the proposal.');
       return;
     }
-
     setLocalError(null);
     const result = await proposeChanges(submission.id, proposedChanges);
-    
+   
     if (result.success) {
       setProposedChanges([]);
       alert(isSpanish ? 'Propuesta enviada al autor exitosamente.' : 'Proposal sent to author successfully.');
@@ -274,7 +524,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   const handleApplyApprovedChanges = async (proposalId) => {
     setLocalError(null);
     const result = await applyApprovedChanges(submission.id, proposalId);
-    
+   
     if (result.success) {
       alert(isSpanish ? 'Cambios aplicados e integrados al manuscrito.' : 'Changes applied and integrated to the manuscript.');
     } else {
@@ -283,13 +533,13 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
   };
 
   const handleMarkAsReady = async () => {
-    if (window.confirm(isSpanish 
+    if (window.confirm(isSpanish
       ? '¿Confirmar que este artículo posee todos los metadatos correctos y está listo para publicación? Se notificará al Director.'
       : 'Confirm this article has all correct metadata and is ready for publication? The Director will be notified.')) {
-      
+     
       setLocalError(null);
       const result = await markAsReadyForPublication(submission.id);
-      
+     
       if (result.success) {
         alert(isSpanish ? 'Artículo listado para publicación.' : 'Article listed for publication.');
         onComplete?.();
@@ -306,7 +556,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
       'rejected': { label: isSpanish ? 'Rechazada' : 'Rejected', colors: 'bg-rose-50 text-rose-700 border-rose-200' }
     };
     const badge = badges[status] || { label: status, colors: 'bg-slate-100 text-slate-700 border-slate-200' };
-    
+   
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-[10px] font-sans font-bold uppercase tracking-wider border ${badge.colors}`}>
         {badge.label}
@@ -325,7 +575,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
           {isSpanish ? 'Metadatos Consolidados' : 'Metadata Consolidated'}
         </h3>
         <p className="text-emerald-700 font-sans max-w-lg mx-auto leading-relaxed">
-          {isSpanish 
+          {isSpanish
             ? 'El proceso de revisión de metadatos ha concluido.'
             : 'The metadata review process has concluded.'}
         </p>
@@ -333,9 +583,11 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
     );
   }
 
+  const currentFieldMeta = fields.find(f => f.name === currentField);
+
   return (
     <div className="space-y-8 font-sans">
-      
+     
       {/* Banner COPE */}
       <div className="bg-white border-l-4 border-[#003b5c] border-y border-r border-slate-200 rounded-sm p-5 shadow-sm flex gap-4 items-start">
         <div className="mt-0.5 text-[#003b5c]"><Icons.ShieldCheck /></div>
@@ -344,7 +596,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
             {isSpanish ? 'Directrices Éticas (COPE)' : 'Ethical Guidelines (COPE)'}
           </h4>
           <p className="text-slate-600 text-sm leading-relaxed">
-            {isSpanish 
+            {isSpanish
               ? 'Toda alteración sustancial requiere el consentimiento explícito del autor.'
               : 'Any substantial alteration requires explicit author consent.'}
           </p>
@@ -376,8 +628,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Abstract / Resumen (EN)</p>
             <div className="font-serif text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-sm border border-slate-100">{formatValue(submission.abstractEn, 'abstractEn')}</div>
           </div>
-          
-          {/* Palabras clave ES */}
+         
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
               <Icons.Tag className="inline w-3 h-3 mr-1" />
@@ -385,8 +636,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
             </p>
             {formatKeywords(submission.keywordsEs || submission.keywords, isSpanish)}
           </div>
-          
-          {/* Palabras clave EN */}
+         
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
               <Icons.Tag className="inline w-3 h-3 mr-1" />
@@ -394,8 +644,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
             </p>
             {formatKeywords(submission.keywordsEn || submission.keywords, isSpanish)}
           </div>
-          
-          {/* Vocabulario controlado */}
+         
           {submission.keywordsVocabulario && (
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
@@ -406,8 +655,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
               </span>
             </div>
           )}
-          
-          {/* Códigos especializados */}
+         
           {submission.specializedCodes && submission.specializedCodes.length > 0 && (
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
@@ -417,7 +665,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
               {formatValue(submission.specializedCodes, 'specializedCodes')}
             </div>
           )}
-          
+         
           <div className="md:col-span-2 pt-4 border-t border-slate-100">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{isSpanish ? 'Registro de Autoría' : 'Authorship Record'}</p>
             <div className="font-sans text-sm text-slate-800">{formatAuthors(submission.authors, isSpanish)}</div>
@@ -427,10 +675,10 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
 
       {/* SECCIÓN 2: Formulario de Nueva Propuesta */}
       <InfoBlock icon={Icons.Edit} title={isSpanish ? 'Formular Ajustes de Metadatos' : 'Formulate Metadata Adjustments'}>
-        
+       
         <AnimatePresence>
           {proposedChanges.length > 0 && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
@@ -447,7 +695,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                         <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-sm mb-2">
                           {fields.find(f => f.name === change.field)?.label || change.field}
                         </span>
-                        
+                       
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
                           <div className="bg-rose-50/50 p-3 rounded-sm border border-rose-100/50">
                             <p className="text-[10px] font-bold text-rose-700/70 uppercase tracking-wider mb-1.5">{isSpanish ? 'Original' : 'Original'}</p>
@@ -475,7 +723,7 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                     </div>
                   ))}
                 </div>
-                
+               
                 <div className="mt-4 flex justify-end">
                   <button
                     onClick={handleSubmitProposal}
@@ -497,18 +745,14 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
 
         {/* Creador de cambios */}
         <div className="bg-slate-50 border border-slate-200 rounded-sm p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2 lg:col-span-1">
+          <div className="grid grid-cols-1 gap-6">
+            <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                 {isSpanish ? 'Seleccionar Campo' : 'Select Field'}
               </label>
               <select
                 value={currentField}
-                onChange={(e) => {
-                  setCurrentField(e.target.value);
-                  const val = getCurrentValue(e.target.value);
-                  setFieldValue(typeof val === 'string' ? val : Array.isArray(val) ? val.join('; ') : '');
-                }}
+                onChange={(e) => handleFieldSelect(e.target.value)}
                 className="w-full p-2.5 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-sans text-sm text-slate-800"
               >
                 <option value="">{isSpanish ? '-- Seleccione un campo --' : '-- Select a field --'}</option>
@@ -520,38 +764,60 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
 
             {currentField && (
               <>
-                <div className="md:col-span-2 lg:col-span-1">
+                {/* Valor existente (solo lectura) */}
+                <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                     {isSpanish ? 'Valor Existente' : 'Existing Value'}
                   </label>
-                  <div className="p-3 bg-slate-100 border border-slate-200 rounded-sm text-sm font-serif text-slate-600 max-h-32 overflow-y-auto">
+                  <div className="p-3 bg-slate-100 border border-slate-200 rounded-sm text-sm font-serif text-slate-600 max-h-40 overflow-y-auto">
                     {formatValue(getCurrentValue(currentField), currentField)}
                   </div>
                 </div>
 
-                <div className="md:col-span-2">
+                {/* Editor según tipo */}
+                <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                     {isSpanish ? 'Valor Corregido' : 'Corrected Value'}
                   </label>
-                  <textarea
-                    value={fieldValue}
-                    onChange={(e) => setFieldValue(e.target.value)}
-                    rows={5}
-                    className="w-full p-3 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm text-slate-800"
-                  />
-                  <p className="text-[10px] text-slate-500 mt-2 font-sans">
-                    {currentField.includes('keywords')
-                      ? (isSpanish ? 'Separe términos con punto y coma (;).' : 'Separate terms with semicolons (;).')
-                      : currentField === 'authors'
-                        ? (isSpanish ? 'Formato: Apellido, Nombre; Apellido2, Nombre2.' : 'Format: LastName, FirstName; LastName2, FirstName2.')
-                        : currentField === 'specializedCodes'
-                          ? (isSpanish ? 'Separe códigos con punto y coma (;).' : 'Separate codes with semicolons (;).')
-                          : ''
-                    }
-                  </p>
+
+                  {currentFieldMeta?.type === 'keywords' && (
+                    <TagInput
+                      value={complexValue || []}
+                      onChange={setComplexValue}
+                      isSpanish={isSpanish}
+                      placeholder={isSpanish ? 'Escribe una palabra clave y Enter' : 'Type a keyword and press Enter'}
+                    />
+                  )}
+
+                  {currentFieldMeta?.type === 'codes' && (
+                    <TagInput
+                      value={complexValue || []}
+                      onChange={setComplexValue}
+                      isSpanish={isSpanish}
+                      placeholder={isSpanish ? 'Escribe un código y Enter' : 'Type a code and press Enter'}
+                    />
+                  )}
+
+                  {currentFieldMeta?.type === 'authors' && (
+                    <AuthorsEditor
+                      value={complexValue || []}
+                      onChange={setComplexValue}
+                      isSpanish={isSpanish}
+                    />
+                  )}
+
+                  {(currentFieldMeta?.type === 'text' || currentFieldMeta?.type === 'textarea') && (
+                    <textarea
+                      value={fieldValue}
+                      onChange={(e) => setFieldValue(e.target.value)}
+                      rows={currentFieldMeta.type === 'textarea' ? 5 : 2}
+                      className="w-full p-3 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-serif text-sm text-slate-800"
+                    />
+                  )}
                 </div>
 
-                <div className="md:col-span-2">
+                {/* Justificación */}
+                <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                     {isSpanish ? 'Justificación Editorial' : 'Editorial Justification'}
                   </label>
@@ -560,10 +826,11 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                     onChange={(e) => setFieldReason(e.target.value)}
                     rows={2}
                     className="w-full p-3 bg-white border border-slate-300 rounded-sm focus:ring-2 focus:ring-[#003b5c] focus:border-transparent font-sans text-sm text-slate-800"
+                    placeholder={isSpanish ? 'Explica por qué se propone este cambio...' : 'Explain why this change is proposed...'}
                   />
                 </div>
 
-                <div className="md:col-span-2 flex items-center justify-between gap-4 pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -575,7 +842,6 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                       {isSpanish ? 'Requerir validación del autor' : 'Require author validation'}
                     </span>
                   </label>
-
                   <button
                     onClick={handleAddChange}
                     className="px-6 py-2.5 bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-slate-700 transition-colors flex items-center gap-2"
@@ -608,7 +874,6 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                   </div>
                   {getStatusBadge(proposal.status)}
                 </div>
-
                 <div className="p-4 space-y-4">
                   {proposal.changes.map((change, idx) => (
                     <div key={idx} className="bg-slate-50/50 p-3 rounded-sm border border-slate-100">
@@ -626,7 +891,6 @@ export const MetadataRefinementTab = ({ submission, user, onComplete }) => {
                     </div>
                   ))}
                 </div>
-
                 {proposal.status === 'approved' && (
                   <div className="bg-slate-50 p-4 border-t border-slate-200 flex justify-end">
                     <button
