@@ -15626,7 +15626,7 @@ exports.verifyReviewerToken = onCall(async (request) => {
   }
 });
 
-/* ===================== COMPLETAR ONBOARDING DEL REVISOR ===================== */
+/* ===================== COMPLETAR ONBOARDING DEL REVISOR (ACTUALIZADO) ===================== */
 exports.completeReviewerOnboarding = onCall(async (request) => {
   const { HttpsError } = require("firebase-functions/v2/https");
   const functionStartTime = Date.now();
@@ -15821,20 +15821,6 @@ exports.completeReviewerOnboarding = onCall(async (request) => {
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
       
-      // Crear/actualizar perfil de revisor
-      const reviewerProfileRef = db.collection('reviewerProfiles').doc(userRecord.uid);
-      transaction.set(reviewerProfileRef, {
-        uid: userRecord.uid,
-        email: sanitizedEmail,
-        name: sanitizedName,
-        institution: institution,
-        position: position,
-        area: area,
-        isExternal: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      
       // Crear asignación de revisión
       if (invitationData.submissionId) {
         const dueDate = new Date();
@@ -15861,7 +15847,7 @@ exports.completeReviewerOnboarding = onCall(async (request) => {
       }
     });
     
-    console.log(`[${requestId}] ✅ Firestore actualizado`);
+    console.log(`[${requestId}] ✅ Firestore actualizado. AssignmentId: ${assignmentId}`);
     
     // --- AUDIT LOG ---
     if (invitationData.submissionId) {
@@ -15891,7 +15877,7 @@ exports.completeReviewerOnboarding = onCall(async (request) => {
       uid: userRecord.uid,
       invitationId: invitationDoc.id,
       submissionId: invitationData.submissionId,
-      assignmentId: assignmentId,
+      assignmentId: assignmentId,  // ← ESTE ES EL ID QUE NECESITAS
       message: isSpanish ? 'Cuenta creada exitosamente' : 'Account created successfully'
     };
     
@@ -15923,7 +15909,7 @@ exports.completeReviewerOnboarding = onCall(async (request) => {
   }
 });
 
-/* ===================== GUARDAR PERFIL DE REVISOR ===================== */
+/* ===================== GUARDAR PERFIL DE REVISOR (ACTUALIZADO - SOLO COLECCIÓN reviewers) ===================== */
 exports.saveReviewerProfile = onCall(async (request) => {
   const { HttpsError } = require("firebase-functions/v2/https");
   
@@ -15958,33 +15944,83 @@ exports.saveReviewerProfile = onCall(async (request) => {
       );
     }
     
-    // Actualizar perfil de revisor
-    const reviewerProfileRef = db.collection('reviewerProfiles').doc(request.auth.uid);
+    const invitationDoc = invitationQuery.docs[0];
+    const invitationData = invitationDoc.data();
     
-    await reviewerProfileRef.set({
+    // Preparar datos de áreas de expertise
+    const areasOfExpertise = (profile.areasOfExpertise || []).slice(0, 5);
+    const availability = profile.availability || 'medium';
+    const maxConcurrentReviews = profile.maxReviews || 2;
+    const reviewedBefore = profile.reviewedBefore || false;
+    const orcid = profile.orcid || '';
+    const preferredLanguage = profile.preferredLanguage || language;
+    const timeAvailablePerReview = profile.timeAvailablePerReview || '2-weeks';
+    const status = profile.status || 'active';
+    const statusReason = profile.statusReason || '';
+    
+    // ============ GUARDAR EN COLECCIÓN `reviewers` ============
+    const reviewerRef = db.collection('reviewers').doc(request.auth.uid);
+    
+    await reviewerRef.set({
       uid: request.auth.uid,
-      availability: profile.availability || 'medium',
-      maxConcurrentReviews: profile.maxReviews || 2,
-      reviewedBefore: profile.reviewedBefore || false,
-      orcid: profile.orcid || '',
-      interests: profile.interests || [],
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      email: invitationData.reviewerEmail || request.auth.token.email,
+      name: invitationData.reviewerName || request.auth.token.name || '',
+      firstName: (invitationData.reviewerName || '').split(' ')[0] || '',
+      lastName: (invitationData.reviewerName || '').split(' ').slice(1).join(' ') || '',
+      displayName: invitationData.reviewerName || '',
+      institution: invitationData.prefillData?.institution || '',
+      position: invitationData.prefillData?.position || '',
+      areasOfExpertise: areasOfExpertise,
+      availability: {
+        maxActiveReviews: maxConcurrentReviews,
+        currentActiveReviews: 1, // La invitación actual
+        preferredLanguage: preferredLanguage,
+        timeAvailablePerReview: timeAvailablePerReview,
+        annualCapacity: availability
+      },
+      publicEmail: invitationData.reviewerEmail || '',
+      orcid: orcid,
+      reviewedBefore: reviewedBefore,
+      status: status,
+      statusReason: statusReason,
+      statusChangedAt: new Date().toISOString(),
+      isExternal: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      stats: {
+        completedAssignments: 0,
+        totalAssignments: 1,
+        onTimeRate: 100,
+        acceptanceRate: 100,
+        averageReviewScore: 0,
+        totalRoundsParticipated: 0
+      }
     }, { merge: true });
     
-    // También actualizar en users
+    console.log(`✅ Perfil guardado en reviewers/${request.auth.uid} con ${areasOfExpertise.length} áreas de expertise`);
+    
+    // ============ ACTUALIZAR EN `users` ============
     await db.collection('users').doc(request.auth.uid).update({
-      reviewerProfile: {
-        availability: profile.availability || 'medium',
-        maxConcurrentReviews: profile.maxReviews || 2,
-        reviewedBefore: profile.reviewedBefore || false,
-        orcid: profile.orcid || ''
-      },
+      institution: invitationData.prefillData?.institution || '',
+      publicEmail: invitationData.reviewerEmail || '',
+      orcid: orcid,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    // ============ ACTUALIZAR INVITACIÓN ============
+    await invitationDoc.ref.update({
+      profileCompleted: true,
+      profileCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+      areasOfExpertise: areasOfExpertise,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     });
     
     return {
       success: true,
-      message: isSpanish ? 'Perfil guardado exitosamente' : 'Profile saved successfully'
+      areasSaved: areasOfExpertise.length,
+      message: isSpanish 
+        ? `Perfil guardado exitosamente con ${areasOfExpertise.length} áreas de especialización` 
+        : `Profile saved successfully with ${areasOfExpertise.length} areas of expertise`
     };
     
   } catch (error) {
@@ -15997,3 +16033,128 @@ exports.saveReviewerProfile = onCall(async (request) => {
     throw new HttpsError('internal', error.message);
   }
 });
+/* ===================== CREAR TAREA EDITORIAL AUTOMÁTICAMENTE ===================== */
+exports.onCreateReviewerInvitationCreateTask = onDocumentCreated(
+  {
+    document: 'reviewerInvitations/{invitationId}',
+    secrets: [],
+    memory: '256MiB'
+  },
+  async (event) => {
+    const invitation = event.data.data();
+    const invitationId = event.params.invitationId;
+    
+    console.log(`📋 [onCreateReviewerInvitationCreateTask] Verificando si crear tarea editorial para invitación ${invitationId}`);
+    
+    try {
+      const db = admin.firestore();
+      
+      // Solo crear tarea si la invitación tiene submissionId y no existe ya una tarea
+      if (!invitation.submissionId) {
+        console.log('⚠️ No hay submissionId, omitiendo');
+        return;
+      }
+      
+      // Verificar si ya existe una tarea editorial para este submission
+      const existingTasks = await db.collection('editorialTasks')
+        .where('submissionId', '==', invitation.submissionId)
+        .where('type', '==', 'reviewer-invitation')
+        .limit(1)
+        .get();
+      
+      if (!existingTasks.empty) {
+        console.log(`✅ Ya existe tarea editorial para submission ${invitation.submissionId}, omitiendo`);
+        return;
+      }
+      
+      // Verificar si el submission existe
+      const submissionRef = db.collection('submissions').doc(invitation.submissionId);
+      const submissionDoc = await submissionRef.get();
+      
+      if (!submissionDoc.exists) {
+        console.log(`⚠️ Submission ${invitation.submissionId} no existe, omitiendo`);
+        return;
+      }
+      
+      const submission = submissionDoc.data();
+      
+      // Obtener el editor asignado al submission
+      let assignedToEmail = null;
+      let assignedToName = null;
+      let assignedBy = invitation.invitedByUid || 'system';
+      
+      // Buscar si hay un editor de sección asignado al submission
+      if (submission.sectionEditorUid) {
+        const editorDoc = await db.collection('users').doc(submission.sectionEditorUid).get();
+        if (editorDoc.exists) {
+          assignedToEmail = editorDoc.data().email;
+          assignedToName = editorDoc.data().displayName || editorDoc.data().firstName || '';
+        }
+      }
+      
+      // Si no hay editor asignado, buscar el primer editor de sección disponible
+      if (!assignedToEmail) {
+        const editorsQuery = await db.collection('users')
+          .where('roles', 'array-contains', 'Editor de Sección')
+          .limit(1)
+          .get();
+        
+        if (!editorsQuery.empty) {
+          const editorData = editorsQuery.docs[0].data();
+          assignedToEmail = editorData.email;
+          assignedToName = editorData.displayName || editorData.firstName || '';
+        } else {
+          console.log('⚠️ No hay editores de sección disponibles');
+          return;
+        }
+      }
+      
+      // Crear la tarea editorial
+      const taskRef = await db.collection('editorialTasks').add({
+        submissionId: invitation.submissionId,
+        type: 'reviewer-invitation',
+        title: invitation.language === 'es' 
+          ? 'Invitación a revisor externo pendiente' 
+          : 'External reviewer invitation pending',
+        description: invitation.language === 'es'
+          ? `Se ha invitado a ${invitation.reviewerName} (${invitation.reviewerEmail}) a revisar el manuscrito "${submission.title}". La invitación está pendiente de respuesta.`
+          : `Reviewer ${invitation.reviewerName} (${invitation.reviewerEmail}) has been invited to review manuscript "${submission.title}". The invitation is pending response.`,
+        status: 'pending',
+        priority: 'normal',
+        assignedToEmail: assignedToEmail,
+        assignedToName: assignedToName,
+        assignedBy: assignedBy,
+        invitationId: invitationId,
+        reviewerEmail: invitation.reviewerEmail,
+        reviewerName: invitation.reviewerName,
+        dueDate: invitation.tokenExpiresAt || null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        metadata: {
+          invitationStatus: invitation.status,
+          reviewerInstitution: invitation.institution || '',
+          reviewerPosition: invitation.position || '',
+          reviewerArea: invitation.area || ''
+        }
+      });
+      
+      console.log(`✅ Tarea editorial creada: ${taskRef.id} para submission ${invitation.submissionId}`);
+      
+      // Actualizar la invitación con la referencia a la tarea
+      await event.data.ref.update({
+        editorialTaskId: taskRef.id,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // También actualizar el submission con la tarea pendiente
+      await submissionRef.update({
+        pendingEditorialTasks: admin.firestore.FieldValue.arrayUnion(taskRef.id),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+    } catch (error) {
+      console.error(`❌ Error en onCreateReviewerInvitationCreateTask:`, error.message);
+      await logSystemError('onCreateReviewerInvitationCreateTask', error, { invitationId });
+    }
+  }
+);
