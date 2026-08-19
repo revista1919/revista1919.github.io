@@ -6649,11 +6649,14 @@ async function sendSectionEditorDeclinedEmail(invitation) {
 /**
  * TRIGGER: Cuando se crea una nueva tarea editorial (asignación a Editor de Sección)
  */
+/**
+ * TRIGGER: Cuando se crea una nueva tarea editorial (asignación a Editor de Sección)
+ */
 exports.onEditorialTaskCreated = onDocumentCreated(
   {
     document: 'editorialTasks/{taskId}',
-    secrets: [], // Los emails se manejan con la extensión
-    memory: '256MiB'
+    secrets: ['OAUTH2_CLIENT_ID', 'OAUTH2_CLIENT_SECRET', 'OAUTH2_REFRESH_TOKEN'], // ✅ AGREGAR SECRETS
+    memory: '512MiB' // ✅ AUMENTAR MEMORIA
   },
   async (event) => {
     const task = event.data.data();
@@ -6679,6 +6682,17 @@ exports.onEditorialTaskCreated = onDocumentCreated(
       const lang = submission.paperLanguage || 'es';
       const isSpanish = lang === 'es';
 
+      // ============================================================
+      // ✅ NUEVO: OTORGAR PERMISOS EN GOOGLE DRIVE AL EDITOR
+      // ============================================================
+      try {
+        await grantEditorDrivePermissions(task, submission);
+        console.log(`✅ Permisos de Drive otorgados al editor: ${task.assignedToEmail}`);
+      } catch (drivePermError) {
+        console.warn(`⚠️ Error otorgando permisos de Drive:`, drivePermError.message);
+        // No es crítico, el email se envía igual
+      }
+
       // Construir email para el Editor de Sección
       const emailTitle = isSpanish
         ? '📋 Nueva tarea de revisión editorial asignada'
@@ -6703,21 +6717,35 @@ exports.onEditorialTaskCreated = onDocumentCreated(
           <p>Se le ha asignado una nueva tarea de revisión editorial.</p>
           ${articleInfo}
           <p>Por favor, acceda al portal editorial para revisar el manuscrito y tomar una decisión.</p>
+          
           <div class="button-container">
             <a href="https://www.revistacienciasestudiantes.com/es/login" class="btn">IR AL PORTAL</a>
             <a href="${submission.driveFolderUrl}" class="btn btn-secondary">VER EN DRIVE</a>
           </div>
+          
           <p><strong>Plazo sugerido:</strong> 7 días para la revisión editorial.</p>
+          
+          ${submission.editorialFolderUrl ? `
+          <div class="info-box" style="background: #e3f2fd; border-left: 4px solid #1976d2; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>📁 Carpeta editorial:</strong> <a href="${submission.editorialFolderUrl}">Acceder aquí</a></p>
+          </div>` : ''}
         `
         : `
           <p>A new editorial review task has been assigned to you.</p>
           ${articleInfo}
           <p>Please access the editorial portal to review the manuscript and make a decision.</p>
+          
           <div class="button-container">
             <a href="https://www.revistacienciasestudiantes.com/en/login" class="btn">GO TO PORTAL</a>
             <a href="${submission.driveFolderUrl}" class="btn btn-secondary">VIEW IN DRIVE</a>
           </div>
+          
           <p><strong>Suggested deadline:</strong> 7 days for editorial review.</p>
+          
+          ${submission.editorialFolderUrl ? `
+          <div class="info-box" style="background: #e3f2fd; border-left: 4px solid #1976d2; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>📁 Editorial folder:</strong> <a href="${submission.editorialFolderUrl}">Access here</a></p>
+          </div>` : ''}
         `;
 
       const htmlBody = getEmailTemplate(
@@ -6735,7 +6763,9 @@ exports.onEditorialTaskCreated = onDocumentCreated(
 
       // Actualizar tarea con timestamp de notificación
       await event.data.ref.update({
-        notificationSentAt: admin.firestore.FieldValue.serverTimestamp()
+        notificationSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        drivePermissionsGranted: true, // ✅ Registrar que se otorgaron permisos
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
     } catch (error) {
@@ -6744,6 +6774,142 @@ exports.onEditorialTaskCreated = onDocumentCreated(
     }
   }
 );
+/**
+ * FUNCIÓN AUXILIAR: Otorgar permisos de Drive al Editor de Sección
+ */
+async function grantEditorDrivePermissions(task, submission) {
+  try {
+    // Inicializar Drive
+    const driveClients = await getDriveClient(`editor-perms-${task.id || task.submissionId}`);
+    const drive = driveClients.drive;
+    
+    if (!drive?.permissions) {
+      throw new Error('Cliente de Google Drive mal inicializado');
+    }
+    
+    const editorEmail = task.assignedToEmail;
+    
+    if (!editorEmail) {
+      throw new Error('Editor sin email asignado');
+    }
+    
+    const permissionsGranted = [];
+    
+    // ===== 1. OTORGAR PERMISO EN CARPETA EDITORIAL (writer) =====
+    if (submission.editorialFolderId) {
+      try {
+        await drive.permissions.create({
+          fileId: submission.editorialFolderId,
+          requestBody: {
+            role: 'writer',
+            type: 'user',
+            emailAddress: editorEmail
+          },
+          sendNotificationEmail: true,
+          emailMessage: submission.paperLanguage === 'es'
+            ? `Se le ha asignado el artículo "${submission.title}" para revisión editorial. Tiene acceso de edición a la carpeta editorial.`
+            : `You have been assigned the article "${submission.title}" for editorial review. You have edit access to the editorial folder.`,
+          fields: 'id'
+        });
+        console.log(`✅ Permiso writer en carpeta editorial otorgado a: ${editorEmail}`);
+        permissionsGranted.push('editorial_folder_writer');
+      } catch (folderPermError) {
+        console.warn(`⚠️ Error permiso carpeta editorial:`, folderPermError.message);
+      }
+    }
+    
+    // ===== 2. OTORGAR PERMISO EN CARPETA DEL AUTOR (reader) =====
+    if (submission.driveFolderId) {
+      try {
+        await drive.permissions.create({
+          fileId: submission.driveFolderId,
+          requestBody: {
+            role: 'reader',
+            type: 'user',
+            emailAddress: editorEmail
+          },
+          sendNotificationEmail: false,
+          fields: 'id'
+        });
+        console.log(`✅ Permiso reader en carpeta de autor otorgado a: ${editorEmail}`);
+        permissionsGranted.push('author_folder_reader');
+      } catch (authorFolderPermError) {
+        console.warn(`⚠️ Error permiso carpeta autor:`, authorFolderPermError.message);
+      }
+    }
+    
+    // ===== 3. OTORGAR PERMISO EN DOCUMENTO FORMATEADO (writer) =====
+    if (submission.formattedDocsFile?.id) {
+      try {
+        await drive.permissions.create({
+          fileId: submission.formattedDocsFile.id,
+          requestBody: {
+            role: 'writer',
+            type: 'user',
+            emailAddress: editorEmail
+          },
+          sendNotificationEmail: false,
+          fields: 'id'
+        });
+        console.log(`✅ Permiso writer en documento formateado otorgado a: ${editorEmail}`);
+        permissionsGranted.push('formatted_doc_writer');
+      } catch (docPermError) {
+        console.warn(`⚠️ Error permiso documento formateado:`, docPermError.message);
+      }
+    }
+    
+    // ===== 4. OTORGAR PERMISO EN PDF FORMATEADO (reader) =====
+    if (submission.formattedPdfFile?.id) {
+      try {
+        await drive.permissions.create({
+          fileId: submission.formattedPdfFile.id,
+          requestBody: {
+            role: 'reader',
+            type: 'user',
+            emailAddress: editorEmail
+          },
+          sendNotificationEmail: false,
+          fields: 'id'
+        });
+        console.log(`✅ Permiso reader en PDF formateado otorgado a: ${editorEmail}`);
+        permissionsGranted.push('formatted_pdf_reader');
+      } catch (pdfPermError) {
+        console.warn(`⚠️ Error permiso PDF formateado:`, pdfPermError.message);
+      }
+    }
+    
+    // ===== 5. OTORGAR PERMISO EN DOCUMENTO ORIGINAL (reader) =====
+    if (submission.originalFileId) {
+      try {
+        await drive.permissions.create({
+          fileId: submission.originalFileId,
+          requestBody: {
+            role: 'reader',
+            type: 'user',
+            emailAddress: editorEmail
+          },
+          sendNotificationEmail: false,
+          fields: 'id'
+        });
+        console.log(`✅ Permiso reader en documento original otorgado a: ${editorEmail}`);
+        permissionsGranted.push('original_file_reader');
+      } catch (originalFilePermError) {
+        console.warn(`⚠️ Error permiso documento original:`, originalFilePermError.message);
+      }
+    }
+    
+    if (permissionsGranted.length === 0) {
+      throw new Error('No se pudo otorgar ningún permiso');
+    }
+    
+    console.log(`✅ ${permissionsGranted.length} permisos otorgados a ${editorEmail}`);
+    return { success: true, permissionsGranted };
+    
+  } catch (error) {
+    console.error(`❌ Error en grantEditorDrivePermissions:`, error.message);
+    throw error;
+  }
+}
 /* ===================== SISTEMA DE PLAZOS (DEADLINES) COMPLETO ===================== */
 
 /**
@@ -8773,8 +8939,77 @@ exports.proceedToFinalDecision = onCall(
         
         // Configurar permisos
         try {
-          await configureEditorPermissions(drive, finalDocId, taskData, assignmentsSnapshot);
+          await configureEditorPermissions(drive, finalDocId, taskData, assignmentsSnapshot, submissionData);
           console.log(`✅ Permisos configurados`);
+          // ✅ NUEVO: Enviar email al autor con el documento final
+try {
+  const authorEmailTitle = submissionData.paperLanguage === 'es'
+    ? `📄 Documento final con revisiones disponible: "${submissionData.title.substring(0, 60)}${submissionData.title.length > 60 ? '...' : ''}"`
+    : `📄 Final document with reviews available: "${submissionData.title.substring(0, 60)}${submissionData.title.length > 60 ? '...' : ''}"`;
+
+  const authorEmailGreeting = submissionData.paperLanguage === 'es'
+    ? `Estimado/a ${submissionData.authorName || 'Autor/a'}:`
+    : `Dear ${submissionData.authorName || 'Author'}:`;
+
+  const authorEmailBody = submissionData.paperLanguage === 'es'
+    ? `
+      <p>El proceso de revisión por pares de tu artículo ha concluido.</p>
+      
+      <div class="highlight-box">
+        <p class="article-title">📚 "${submissionData.title}"</p>
+        <p><strong>ID:</strong> ${submissionData.submissionId}</p>
+        <p><strong>Revisiones recibidas:</strong> ${submittedCount}</p>
+      </div>
+      
+      <p>Hemos preparado un documento consolidado con todos los comentarios de los revisores al final del manuscrito.</p>
+      
+      <div class="button-container">
+        <a href="${finalDocUrl}" class="btn">📄 VER DOCUMENTO CON REVISIONES</a>
+      </div>
+      
+      <p style="color: #666; font-size: 13px; margin-top: 20px;">
+        <em>El equipo editorial te notificará la decisión final próximamente.</em>
+      </p>
+    `
+    : `
+      <p>The peer review process for your article has concluded.</p>
+      
+      <div class="highlight-box">
+        <p class="article-title">📚 "${submissionData.title}"</p>
+        <p><strong>ID:</strong> ${submissionData.submissionId}</p>
+        <p><strong>Reviews received:</strong> ${submittedCount}</p>
+      </div>
+      
+      <p>We have prepared a consolidated document with all reviewer comments at the end of the manuscript.</p>
+      
+      <div class="button-container">
+        <a href="${finalDocUrl}" class="btn">📄 VIEW DOCUMENT WITH REVIEWS</a>
+      </div>
+      
+      <p style="color: #666; font-size: 13px; margin-top: 20px;">
+        <em>The editorial team will notify you of the final decision soon.</em>
+      </p>
+    `;
+
+  const authorHtmlBody = getEmailTemplate(
+    authorEmailTitle,
+    authorEmailGreeting,
+    authorEmailBody,
+    submissionData.paperLanguage === 'es' ? 'Equipo Editorial' : 'Editorial Team',
+    submissionData.paperLanguage === 'es' ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students',
+    submissionData.paperLanguage
+  );
+
+  await sendEmailViaExtension(
+    submissionData.authorEmail,
+    authorEmailTitle,
+    authorHtmlBody
+  );
+  console.log(`✅ Email enviado al autor: ${submissionData.authorEmail}`);
+} catch (authorEmailError) {
+  console.warn(`⚠️ Error enviando email al autor:`, authorEmailError.message);
+  warnings.push('author_email_failed');
+}
         } catch (permError) {
           console.warn(`⚠️ Error configurando permisos:`, permError.message);
           warnings.push('permissions_error');
@@ -9329,12 +9564,13 @@ async function logSystemError(type, error, context) {
     console.error('Error logging to Firestore:', e.message);
   }
 }
+
 // ============================================================
-// FUNCIÓN AUXILIAR: Configurar permisos del editor
+// FUNCIÓN AUXILIAR: Configurar permisos del editor Y AUTOR
 // ============================================================
-async function configureEditorPermissions(drive, fileId, taskData, assignmentsSnapshot) {
+async function configureEditorPermissions(drive, fileId, taskData, assignmentsSnapshot, submissionData) {
   try {
-    // Otorgar permiso al editor asignado
+    // ✅ Otorgar permiso al editor asignado (writer)
     if (taskData.assignedToEmail) {
       const editorPerm = {
         role: 'writer',
@@ -9349,6 +9585,51 @@ async function configureEditorPermissions(drive, fileId, taskData, assignmentsSn
         fields: 'id'
       });
       console.log(`✅ Permiso de editor otorgado a: ${taskData.assignedToEmail}`);
+    }
+    
+    // ✅ NUEVO: Otorgar permiso al AUTOR DE CORRESPONDENCIA (reader)
+    if (submissionData?.authorEmail) {
+      try {
+        const authorPerm = {
+          role: 'reader',
+          type: 'user',
+          emailAddress: submissionData.authorEmail
+        };
+        
+        await drive.permissions.create({
+          fileId: fileId,
+          requestBody: authorPerm,
+          sendNotificationEmail: true,  // ✅ Enviar email al autor
+          emailMessage: submissionData.paperLanguage === 'es'
+            ? `Se ha completado la revisión de tu artículo "${submissionData.title}". Puedes ver el documento con las revisiones aquí.`
+            : `The review of your article "${submissionData.title}" has been completed. You can view the document with reviews here.`,
+          fields: 'id'
+        });
+        console.log(`✅ Permiso de autor otorgado a: ${submissionData.authorEmail}`);
+      } catch (authorPermError) {
+        console.warn(`⚠️ Error otorgando permiso al autor ${submissionData.authorEmail}:`, authorPermError.message);
+      }
+    }
+    
+    // ✅ NUEVO: Otorgar permiso al usuario que subió (si es diferente del autor de correspondencia)
+    if (submissionData?.submitterEmail && submissionData.submitterEmail !== submissionData.authorEmail) {
+      try {
+        const submitterPerm = {
+          role: 'reader',
+          type: 'user',
+          emailAddress: submissionData.submitterEmail
+        };
+        
+        await drive.permissions.create({
+          fileId: fileId,
+          requestBody: submitterPerm,
+          sendNotificationEmail: false,
+          fields: 'id'
+        });
+        console.log(`✅ Permiso de submitter otorgado a: ${submissionData.submitterEmail}`);
+      } catch (submitterPermError) {
+        console.warn(`⚠️ Error otorgando permiso al submitter:`, submitterPermError.message);
+      }
     }
     
     // Eliminar permisos de revisores (no bloqueante)
@@ -14808,21 +15089,37 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
        .fill();
     
     // Marca de agua (IDÉNTICA)
-    const watermarkWidth = cmToPoints(12);
-    doc.save();
-    doc.opacity(0.03);
+    // ==========================================
+// MARCA DE AGUA
+// ==========================================
+const watermarkWidth = cmToPoints(12);
+doc.save();
+doc.opacity(0.03);
+try {
+  const logoUrl = isSpanish 
+    ? 'https://www.revistacienciasestudiantes.com/logo.png' 
+    : 'https://www.revistacienciasestudiantes.com/logoEN.png';
+
+  let logoBuffer = await loadLogoBuffer(logoUrl, requestId);
+
+  if (logoBuffer) {
+    // Optimizar si sharp está disponible
     try {
-      const logoUrl = isSpanish ? 'https://www.revistacienciasestudiantes.com/logo.png' : 'https://www.revistacienciasestudiantes.com/logoEN.png';
-      const response = await fetch(logoUrl);
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer();
-        const logoBuffer = Buffer.from(arrayBuffer);
-        doc.image(logoBuffer, (pageWidth - watermarkWidth) / 2, (pageHeight - watermarkWidth) / 2, { width: watermarkWidth });
-      }
-    } catch(e) {
-      console.log(`[${requestId}] ⚠ Error al cargar marca de agua:`, e.message);
-    }
-    doc.restore();
+      logoBuffer = await optimizeImageBuffer(logoBuffer, {
+        maxWidth: 800,
+        quality: 80,
+        format: 'png'
+      });
+    } catch (_) {}
+
+    doc.image(logoBuffer, (pageWidth - watermarkWidth) / 2, (pageHeight - watermarkWidth) / 2, {
+      width: watermarkWidth
+    });
+  }
+} catch (e) {
+  console.log(`[${requestId}] ⚠ Error al cargar marca de agua:`, e.message);
+}
+doc.restore();
     
     // ==========================================
     // MÁRGENES DE TRABAJO (IDÉNTICOS)
@@ -14834,24 +15131,42 @@ async function generateCertificatePDFWithDocId(data, lang = 'es', requestId = 'u
     // ==========================================
     // CABECERA INSTITUCIONAL (IDÉNTICA)
     // ==========================================
-    let currentY = marginY + cmToPoints(CONFIG.cabecera.extraSpaceCm);
-    const logoWidth = cmToPoints(CONFIG.cabecera.logoWidthCm);
-    
+// ==========================================
+// LOGO DE CABECERA
+// ==========================================
+let currentY = marginY + cmToPoints(CONFIG.cabecera.extraSpaceCm);
+const logoWidth = cmToPoints(CONFIG.cabecera.logoWidthCm);
+
+try {
+  const logoUrl = isSpanish 
+    ? 'https://www.revistacienciasestudiantes.com/logo.png' 
+    : 'https://www.revistacienciasestudiantes.com/logoEN.png';
+
+  let logoBuffer = await loadLogoBuffer(logoUrl, requestId);
+
+  if (logoBuffer) {
+    // Optimizar (muy recomendable, los logos son pesados)
     try {
-      const logoUrl = isSpanish ? 'https://www.revistacienciasestudiantes.com/logo.png' : 'https://www.revistacienciasestudiantes.com/logoEN.png';
-      const response = await fetch(logoUrl);
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer();
-        const logoBuffer = Buffer.from(arrayBuffer);
-        doc.image(logoBuffer, marginX, currentY, { width: logoWidth });
-      } else {
-        doc.rect(marginX, currentY, logoWidth, logoWidth).strokeColor('#CCCCCC').lineWidth(1).stroke();
-        doc.font(fontSans).fontSize(9).fillColor(textGray).text('LOGO', marginX, currentY + logoWidth/2 - 5, { width: logoWidth, align: 'center' });
-      }
-    } catch(e) {
-      doc.rect(marginX, currentY, logoWidth, logoWidth).strokeColor('#CCCCCC').lineWidth(1).stroke();
-      doc.font(fontSans).fontSize(9).fillColor(textGray).text('LOGO', marginX, currentY + logoWidth/2 - 5, { width: logoWidth, align: 'center' });
+      logoBuffer = await optimizeImageBuffer(logoBuffer, {
+        maxWidth: 450,          // más que suficiente para 3.2 cm
+        quality: 85,
+        format: 'png'
+      });
+    } catch (optErr) {
+      console.warn(`[${requestId}] ⚠️ No se pudo optimizar logo:`, optErr.message);
     }
+
+    doc.image(logoBuffer, marginX, currentY, { width: logoWidth });
+    console.log(`[${requestId}] ✅ Logo de cabecera insertado`);
+  } else {
+    // Fallback elegante
+    drawElegantLogoFallback(doc, marginX, currentY, logoWidth, journalBlue, journalOrange);
+    console.log(`[${requestId}] 🎨 Usando fallback elegante (círculo azul + anillo naranja)`);
+  }
+} catch (e) {
+  console.error(`[${requestId}] ❌ Error inesperado con logo:`, e.message);
+  drawElegantLogoFallback(doc, marginX, currentY, logoWidth, journalBlue, journalOrange);
+}
     
     const headerTextX = marginX + cmToPoints(3.8);
     const extraSpace = cmToPoints(CONFIG.cabecera.extraSpaceCm);
@@ -15068,7 +15383,131 @@ async function uploadToDrive(drive, base64Content, fileName, folderId) {
     throw new Error(`Failed to upload file: ${error.message}`);
   }
 }
+/* ===================== HELPER ROBUSTO PARA CARGAR LOGO ===================== */
+/**
+ * Intenta cargar el logo de varias formas robustas, secuencialmente.
+ * Si todas fallan, retorna null.
+ */
+async function loadLogoBuffer(logoUrl, requestId = 'unknown') {
+  const methods = [
+    // Método 1: fetch nativo (Node 18+)
+    async () => {
+      console.log(`[${requestId}] 🖼️ Intentando fetch nativo...`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000); // 10s
 
+      const response = await fetch(logoUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; RNCE-Certificate/1.0)',
+          'Accept': 'image/png,image/jpeg,image/*,*/*'
+        }
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const arrayBuffer = await response.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    },
+
+    // Método 2: https nativo (más compatible en algunos entornos)
+    async () => {
+      console.log(`[${requestId}] 🖼️ Intentando https nativo...`);
+      const https = require('https');
+      const { URL } = require('url');
+
+      return new Promise((resolve, reject) => {
+        const parsed = new URL(logoUrl);
+        const req = https.get({
+          hostname: parsed.hostname,
+          path: parsed.pathname + parsed.search,
+          timeout: 10000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; RNCE-Certificate/1.0)',
+            'Accept': 'image/png,image/jpeg,image/*,*/*'
+          }
+        }, (res) => {
+          if (res.statusCode !== 200) {
+            reject(new Error(`HTTP ${res.statusCode}`));
+            return;
+          }
+          const chunks = [];
+          res.on('data', chunk => chunks.push(chunk));
+          res.on('end', () => resolve(Buffer.concat(chunks)));
+        });
+
+        req.on('error', reject);
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error('Timeout'));
+        });
+      });
+    },
+
+    // Método 3: fetch con redirect manual + cache-bust
+    async () => {
+      console.log(`[${requestId}] 🖼️ Intentando fetch con cache-bust...`);
+      const urlWithBust = `${logoUrl}?t=${Date.now()}`;
+      const response = await fetch(urlWithBust, {
+        redirect: 'follow',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'User-Agent': 'RNCE-Certificate-Generator'
+        }
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return Buffer.from(await response.arrayBuffer());
+    }
+  ];
+
+  for (const [index, method] of methods.entries()) {
+    try {
+      const buffer = await method();
+      if (buffer && buffer.length > 1000) { // sanity check
+        console.log(`[${requestId}] ✅ Logo cargado con método ${index + 1} (${(buffer.length / 1024).toFixed(1)} KB)`);
+        return buffer;
+      }
+    } catch (err) {
+      console.warn(`[${requestId}] ⚠️ Método ${index + 1} falló: ${err.message}`);
+    }
+  }
+
+  console.error(`[${requestId}] ❌ Todos los métodos de carga de logo fallaron`);
+  return null;
+}
+
+/**
+ * Dibuja un fallback elegante: círculo azul con anillo dorado/naranja interno
+ */
+function drawElegantLogoFallback(doc, x, y, size, journalBlue, journalOrange) {
+  const centerX = x + size / 2;
+  const centerY = y + size / 2;
+  const outerRadius = size / 2;
+  const innerRadius = size / 2 * 0.72;
+
+  // Círculo exterior azul
+  doc.circle(centerX, centerY, outerRadius)
+     .fill(journalBlue);
+
+  // Anillo interno dorado/naranja
+  doc.circle(centerX, centerY, innerRadius)
+     .lineWidth(size * 0.06)
+     .strokeColor(journalOrange)
+     .stroke();
+
+  // Círculo más interno (fondo claro sutil)
+  doc.circle(centerX, centerY, innerRadius * 0.85)
+     .fill('#F8FAFC');
+
+  // Iniciales o símbolo simple
+  doc.font('Helvetica-Bold')
+     .fontSize(size * 0.28)
+     .fillColor(journalBlue)
+     .text('RNCE', centerX - size * 0.32, centerY - size * 0.14, {
+       width: size * 0.64,
+       align: 'center'
+     });
+}
 /* ===================== FUNCIÓN: HACER ARCHIVO PÚBLICO ===================== */
 /**
  * Configura un archivo en Drive para que sea público (solo lectura)

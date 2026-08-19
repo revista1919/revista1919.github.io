@@ -272,189 +272,220 @@ export default function DirectorPanel({ user }) {
   };
 
   const importFromSubmission = async (submission) => {
-    if (!submission) return;
-    setIsProcessing(true);
-    setStatus({ type: 'info', msg: 'Importando datos del envío...' });
+  if (!submission) return;
+  setIsProcessing(true);
+  setStatus({ type: 'info', msg: 'Importando datos del envío...' });
 
-    try {
-      const metadata = submission.currentMetadata || {};
-      
-      const getMeta = (field) => {
-        if (submission.currentMetadata && submission.currentMetadata[field] !== undefined && submission.currentMetadata[field] !== null) {
-          return submission.currentMetadata[field];
-        }
-        if (submission[field] !== undefined && submission[field] !== null) {
-          return submission[field];
-        }
-        return null;
-      };
-      
-      const importedAuthors = (getMeta('authors') || []).map(author => ({
-        name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim() || '',
-        email: author.email || '',
-        institution: author.institution || '',
-        orcid: author.orcid || '',
-        authorId: author.uid || author.authorId || null,
-        isCorresponding: author.isCorresponding || false,
-        contribution: author.contribution || '',
-      }));
-
-      if (importedAuthors.length === 0 && getMeta('authorName')) {
-        importedAuthors.push({
-          name: getMeta('authorName') || '',
-          email: getMeta('authorEmail') || '',
-          institution: getMeta('authorInstitution') || '',
-          orcid: getMeta('authorOrcid') || '',
-          authorId: getMeta('authorUID') || getMeta('uid') || null,
-          isCorresponding: true,
-          contribution: '',
-        });
+  try {
+    // ✅ CORREGIDO: getMeta busca en TODAS las ubicaciones posibles
+    const getMeta = (field) => {
+      // 1. Buscar en currentMetadata (prioridad)
+      if (submission.currentMetadata && submission.currentMetadata[field] !== undefined && submission.currentMetadata[field] !== null) {
+        return submission.currentMetadata[field];
       }
-
-      const authorCreditsText = importedAuthors
-        .filter(a => a.contribution)
-        .map(a => `${a.name}: ${a.contribution}`)
-        .join('\n');
-      
-      let fundingText = 'No declarada';
-      const fundingData = getMeta('funding');
-      if (fundingData) {
-        if (typeof fundingData === 'object' && !Array.isArray(fundingData)) {
-          const sources = fundingData.sources || '';
-          const grants = fundingData.grantNumbers || '';
-          fundingText = [sources, grants].filter(Boolean).join(' - ') || 'No declarada';
-        } else if (typeof fundingData === 'string') {
-          fundingText = fundingData;
-        }
+      // 2. Buscar en metadataBeforeConsolidation
+      if (submission.metadataBeforeConsolidation && submission.metadataBeforeConsolidation[field] !== undefined && submission.metadataBeforeConsolidation[field] !== null) {
+        return submission.metadataBeforeConsolidation[field];
       }
-
-      let palabrasClaveStr = '';
-      let keywordsEnglishStr = '';
-      let specializedCodesStr = '';
-      let keywordsVocabularyStr = '';
-
-      const keywordsEs = getMeta('keywordsEs');
-      if (keywordsEs && Array.isArray(keywordsEs) && keywordsEs.length > 0) {
-        palabrasClaveStr = keywordsEs.join('; ');
-      } else {
-        const keywords = getMeta('keywords');
-        if (keywords && Array.isArray(keywords) && keywords.length > 0) {
-          palabrasClaveStr = keywords.join('; ');
-        } else if (typeof keywords === 'string') {
-          palabrasClaveStr = keywords;
-        }
+      // 3. Buscar directamente en submission (nivel raíz)
+      if (submission[field] !== undefined && submission[field] !== null) {
+        return submission[field];
       }
-
-      const keywordsEn = getMeta('keywordsEn');
-      if (keywordsEn && Array.isArray(keywordsEn) && keywordsEn.length > 0) {
-        keywordsEnglishStr = keywordsEn.join('; ');
-      } else if (!keywordsEnglishStr && palabrasClaveStr) {
-        keywordsEnglishStr = palabrasClaveStr;
+      // 4. Buscar en correspondingAuthor
+      if (submission.correspondingAuthor && submission.correspondingAuthor[field] !== undefined && submission.correspondingAuthor[field] !== null) {
+        return submission.correspondingAuthor[field];
       }
+      return null;
+    };
 
-      const specializedCodes = getMeta('specializedCodes');
-      if (specializedCodes && Array.isArray(specializedCodes) && specializedCodes.length > 0) {
-        specializedCodesStr = specializedCodes.join('; ');
-      }
-
-      keywordsVocabularyStr = getMeta('keywordsVocabulario') || getMeta('keywords_vocabulary') || '';
-      
-      const receivedDate = submission.createdAt ? 
-        (submission.createdAt.toDate ? submission.createdAt.toDate().toISOString().split('T')[0] : 
-         new Date(submission.createdAt).toISOString().split('T')[0]) : '';
-      
-      const acceptedDate = submission.publicationReadyAt ? 
-        (submission.publicationReadyAt.toDate ? submission.publicationReadyAt.toDate().toISOString().split('T')[0] : 
-         new Date(submission.publicationReadyAt).toISOString().split('T')[0]) : 
-        (submission.decisionMadeAt ? 
-          (submission.decisionMadeAt.toDate ? submission.decisionMadeAt.toDate().toISOString().split('T')[0] : 
-           new Date(submission.decisionMadeAt).toISOString().split('T')[0]) : '');
-
-      const articleType = getMeta('articleType') || '';
-      const articleTypeMap = {
-        'research': { es: 'Artículo de Investigación', en: 'Research Article' },
-        'review': { es: 'Artículo de Revisión', en: 'Review Article' },
-        'case_study': { es: 'Estudio de Caso', en: 'Case Study' },
-        'essay': { es: 'Ensayo', en: 'Essay' },
-        'letter': { es: 'Carta al Editor', en: 'Letter to the Editor' },
-      };
-      
-      const tipoMapped = articleTypeMap[articleType] || { es: articleType, en: articleType };
-
-      const importedData = {
-        titulo: getMeta('title') || '',
-        tituloEnglish: getMeta('titleEn') || '',
-        autores: importedAuthors,
-        resumen: getMeta('abstract') || '',
-        abstract: getMeta('abstractEn') || '',
-        palabras_clave: palabrasClaveStr,
-        keywords_english: keywordsEnglishStr,
-        specialized_codes: specializedCodesStr,
-        keywords_vocabulary: keywordsVocabularyStr,
-        area: getMeta('area') || '',
-        tipo: tipoMapped.es,
-        type: tipoMapped.en,
-        acknowledgments: getMeta('acknowledgments') || '',
-        acknowledgmentsEnglish: getMeta('acknowledgmentsEn') || '',
-        conflicts: getMeta('conflictOfInterest') || 'Los autores declaran no tener conflictos de interés.',
-        conflictsEnglish: getMeta('conflictsEnglish') || 'The authors declare no conflicts of interest.',
-        funding: fundingText,
-        fundingEnglish: getMeta('fundingEnglish') || fundingText,
-        dataAvailability: getMeta('dataAvailability') || '',
-        dataAvailabilityEnglish: getMeta('dataAvailabilityEn') || '',
-        authorCredits: authorCreditsText,
-        authorCreditsEnglish: getMeta('authorCreditsEnglish') || authorCreditsText,
-        receivedDate: receivedDate,
-        acceptedDate: acceptedDate,
-        submissionId: submission.submissionId || submission.id,
-        lastVersionFileUrl: submission.lastVersionFileUrl || null,
-        driveFolderUrl: submission.driveFolderUrl || null,
-        editorialFolderUrl: submission.editorialFolderUrl || null,
-      };
-
-      setArticleForm(prev => ({ ...prev, ...importedData }));
-
-      const importedFields = [];
-      if (importedData.titulo) importedFields.push('título');
-      if (importedData.tituloEnglish) importedFields.push('título inglés');
-      if (importedData.resumen) importedFields.push('resumen');
-      if (importedData.abstract) importedFields.push('abstract');
-      if (importedData.palabras_clave) importedFields.push('palabras clave');
-      if (importedData.keywords_english) importedFields.push('keywords');
-      if (importedData.specialized_codes) importedFields.push('códigos especializados');
-      if (importedData.keywords_vocabulary) importedFields.push('vocabulario');
-      if (importedData.area) importedFields.push('área');
-      if (importedData.tipo) importedFields.push('tipo de artículo');
-      if (importedData.autores.length > 0) importedFields.push(`autores (${importedData.autores.length})`);
-      if (importedData.authorCredits) importedFields.push('contribuciones');
-      if (importedData.conflicts) importedFields.push('conflictos');
-      if (importedData.funding && importedData.funding !== 'No declarada') importedFields.push('financiamiento');
-      if (importedData.acknowledgments) importedFields.push('agradecimientos');
-      if (importedData.dataAvailability) importedFields.push('disponibilidad de datos');
-      if (importedData.receivedDate) importedFields.push('fecha recepción');
-      if (importedData.acceptedDate) importedFields.push('fecha aceptación');
-      if (importedData.submissionId) importedFields.push('submission ID');
-
-      setImportSummary({
-        fields: importedFields,
-        lastVersionFileUrl: submission.lastVersionFileUrl,
-        driveFolderUrl: submission.driveFolderUrl,
-        editorialFolderUrl: submission.editorialFolderUrl,
-      });
-
-      setStatus({ type: 'success', msg: `Datos importados correctamente. Revise y complete los que faltan.` });
-      
-      setShowSubmissionSelector(false);
-      setSelectedSubmission(submission);
-      setShowArticleModal(true);
-      
-    } catch (error) {
-      console.error("Error importing submission:", error);
-      setStatus({ type: 'error', msg: `Error al importar: ${error.message}` });
-    } finally {
-      setIsProcessing(false);
+    // ✅ CORREGIDO: Obtener autores desde MÚLTIPLES fuentes
+    let authorsSource = getMeta('authors') || [];
+    
+    // Si no hay autores en currentMetadata, buscar en metadataBeforeConsolidation
+    if ((!authorsSource || authorsSource.length === 0) && submission.metadataBeforeConsolidation?.authors) {
+      authorsSource = submission.metadataBeforeConsolidation.authors;
     }
-  };
+    
+    // Si aún no hay autores, buscar en el nivel raíz
+    if ((!authorsSource || authorsSource.length === 0) && submission.authors) {
+      authorsSource = submission.authors;
+    }
+
+    const importedAuthors = (Array.isArray(authorsSource) ? authorsSource : []).map(author => ({
+      name: author.name || `${author.firstName || ''} ${author.lastName || ''}`.trim() || '',
+      email: author.email || '',
+      institution: author.institution || '', // ✅ Institución del autor
+      orcid: author.orcid || '',
+      authorId: author.uid || author.authorId || null,
+      isCorresponding: author.isCorresponding || false,
+      contribution: author.contribution || '',
+    }));
+
+    // ✅ Si no hay autores, usar correspondingAuthor
+    if (importedAuthors.length === 0 && submission.correspondingAuthor) {
+      const ca = submission.correspondingAuthor;
+      importedAuthors.push({
+        name: `${ca.firstName || ''} ${ca.lastName || ''}`.trim(),
+        email: ca.email || '',
+        institution: ca.institution || '', // ✅ Institución del corresponding author
+        orcid: ca.orcid || '',
+        authorId: submission.authorUID || submission.uid || null,
+        isCorresponding: true,
+        contribution: '',
+      });
+    }
+
+    // ✅ CORREGIDO: Keywords Especializadas
+    let specializedCodesStr = '';
+    const specializedCodes = getMeta('specializedCodes') || submission.specializedCodes || [];
+    if (Array.isArray(specializedCodes) && specializedCodes.length > 0) {
+      specializedCodesStr = specializedCodes.join('; ');
+    } else if (typeof specializedCodes === 'string' && specializedCodes.trim()) {
+      specializedCodesStr = specializedCodes;
+    } else if (submission.specializedCodesSerialized) {
+      specializedCodesStr = submission.specializedCodesSerialized;
+    }
+
+    // ✅ CORREGIDO: Vocabulario Controlado
+    const keywordsVocabularyStr = getMeta('keywordsVocabulario') || 
+                                   getMeta('keywords_vocabulary') || 
+                                   submission.keywordsVocabulario || 
+                                   '';
+
+    // ✅ CORREGIDO: Funding
+    let fundingText = 'No declarada';
+    const fundingData = getMeta('funding') || submission.funding;
+    if (fundingData) {
+      if (typeof fundingData === 'object' && !Array.isArray(fundingData)) {
+        const sources = fundingData.sources || '';
+        const grants = fundingData.grantNumbers || '';
+        fundingText = [sources, grants].filter(Boolean).join(' - ') || 'No declarada';
+      } else if (typeof fundingData === 'string') {
+        fundingText = fundingData;
+      }
+    }
+
+    // ✅ CORREGIDO: Keywords ES
+    let palabrasClaveStr = '';
+    const keywordsEs = getMeta('keywordsEs') || submission.keywordsEs || [];
+    if (Array.isArray(keywordsEs) && keywordsEs.length > 0) {
+      palabrasClaveStr = keywordsEs.join('; ');
+    } else if (typeof keywordsEs === 'string' && keywordsEs.trim()) {
+      palabrasClaveStr = keywordsEs;
+    }
+
+    // ✅ CORREGIDO: Keywords EN
+    let keywordsEnglishStr = '';
+    const keywordsEn = getMeta('keywordsEn') || submission.keywordsEn || [];
+    if (Array.isArray(keywordsEn) && keywordsEn.length > 0) {
+      keywordsEnglishStr = keywordsEn.join('; ');
+    } else if (typeof keywordsEn === 'string' && keywordsEn.trim()) {
+      keywordsEnglishStr = keywordsEn;
+    } else if (!keywordsEnglishStr && palabrasClaveStr) {
+      keywordsEnglishStr = palabrasClaveStr;
+    }
+
+    const authorCreditsText = importedAuthors
+      .filter(a => a.contribution)
+      .map(a => `${a.name}: ${a.contribution}`)
+      .join('\n');
+
+    const receivedDate = submission.createdAt ? 
+      (submission.createdAt.toDate ? submission.createdAt.toDate().toISOString().split('T')[0] : 
+       new Date(submission.createdAt).toISOString().split('T')[0]) : '';
+    
+    const acceptedDate = submission.publicationReadyAt ? 
+      (submission.publicationReadyAt.toDate ? submission.publicationReadyAt.toDate().toISOString().split('T')[0] : 
+       new Date(submission.publicationReadyAt).toISOString().split('T')[0]) : 
+      (submission.decisionMadeAt ? 
+        (submission.decisionMadeAt.toDate ? submission.decisionMadeAt.toDate().toISOString().split('T')[0] : 
+         new Date(submission.decisionMadeAt).toISOString().split('T')[0]) : '');
+
+    const articleType = getMeta('articleType') || '';
+    const articleTypeMap = {
+      'research': { es: 'Artículo de Investigación', en: 'Research Article' },
+      'review': { es: 'Artículo de Revisión', en: 'Review Article' },
+      'case': { es: 'Reporte de Caso', en: 'Case Report' },
+      'essay': { es: 'Ensayo Académico', en: 'Academic Essay' },
+      'book_review': { es: 'Reseña de Libros', en: 'Book Review' },
+    };
+    
+    const tipoMapped = articleTypeMap[articleType] || { es: articleType || '', en: articleType || '' };
+
+    const importedData = {
+      titulo: getMeta('title') || '',
+      tituloEnglish: getMeta('titleEn') || '',
+      autores: importedAuthors,
+      resumen: getMeta('abstract') || '',
+      abstract: getMeta('abstractEn') || '',
+      palabras_clave: palabrasClaveStr,
+      keywords_english: keywordsEnglishStr,
+      specialized_codes: specializedCodesStr,  // ✅ Códigos especializados
+      keywords_vocabulary: keywordsVocabularyStr,  // ✅ Vocabulario controlado
+      area: getMeta('area') || '',
+      tipo: tipoMapped.es,
+      type: tipoMapped.en,
+      acknowledgments: getMeta('acknowledgments') || '',
+      acknowledgmentsEnglish: getMeta('acknowledgmentsEn') || getMeta('acknowledgmentsEnglish') || '',
+      conflicts: getMeta('conflictOfInterest') || 'Los autores declaran no tener conflictos de interés.',
+      conflictsEnglish: getMeta('conflictsEnglish') || 'The authors declare no conflicts of interest.',
+      funding: fundingText,
+      fundingEnglish: getMeta('fundingEnglish') || fundingText,
+      dataAvailability: getMeta('dataAvailability') || '',
+      dataAvailabilityEnglish: getMeta('dataAvailabilityEn') || getMeta('dataAvailabilityEnglish') || '',
+      authorCredits: authorCreditsText,
+      authorCreditsEnglish: getMeta('authorCreditsEnglish') || authorCreditsText,
+      receivedDate: receivedDate,
+      acceptedDate: acceptedDate,
+      submissionId: submission.submissionId || submission.id,
+      lastVersionFileUrl: submission.lastVersionFileUrl || null,
+      driveFolderUrl: submission.driveFolderUrl || null,
+      editorialFolderUrl: submission.editorialFolderUrl || null,
+    };
+
+    setArticleForm(prev => ({ ...prev, ...importedData }));
+
+    const importedFields = [];
+    if (importedData.titulo) importedFields.push('título');
+    if (importedData.tituloEnglish) importedFields.push('título inglés');
+    if (importedData.resumen) importedFields.push('resumen');
+    if (importedData.abstract) importedFields.push('abstract');
+    if (importedData.palabras_clave) importedFields.push('palabras clave');
+    if (importedData.keywords_english) importedFields.push('keywords');
+    if (importedData.specialized_codes) importedFields.push('códigos especializados');
+    if (importedData.keywords_vocabulary) importedFields.push('vocabulario controlado');
+    if (importedData.area) importedFields.push('área');
+    if (importedData.tipo) importedFields.push('tipo de artículo');
+    if (importedData.autores.length > 0) importedFields.push(`autores (${importedData.autores.length})`);
+    if (importedData.authorCredits) importedFields.push('contribuciones');
+    if (importedData.conflicts) importedFields.push('conflictos');
+    if (importedData.funding && importedData.funding !== 'No declarada') importedFields.push('financiamiento');
+    if (importedData.acknowledgments) importedFields.push('agradecimientos');
+    if (importedData.dataAvailability) importedFields.push('disponibilidad de datos');
+    if (importedData.receivedDate) importedFields.push('fecha recepción');
+    if (importedData.acceptedDate) importedFields.push('fecha aceptación');
+    if (importedData.submissionId) importedFields.push('submission ID');
+
+    setImportSummary({
+      fields: importedFields,
+      lastVersionFileUrl: submission.lastVersionFileUrl,
+      driveFolderUrl: submission.driveFolderUrl,
+      editorialFolderUrl: submission.editorialFolderUrl,
+    });
+
+    setStatus({ type: 'success', msg: `Datos importados correctamente. Revise y complete los que faltan.` });
+    
+    setShowSubmissionSelector(false);
+    setSelectedSubmission(submission);
+    setShowArticleModal(true);
+    
+  } catch (error) {
+    console.error("Error importing submission:", error);
+    setStatus({ type: 'error', msg: `Error al importar: ${error.message}` });
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const filteredReadySubmissions = useMemo(() => {
     if (!submissionSearchTerm.trim()) return readySubmissions;

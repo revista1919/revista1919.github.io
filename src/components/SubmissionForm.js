@@ -2563,59 +2563,77 @@ const steps = [
                     </select>
 
                     {formData.aiUsed === 'yes' && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
-                        {formData.aiTools.map((tool, index) => (
-                          <div key={index} className="bg-white rounded-lg p-4 ring-1 ring-slate-200">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                                  {isSpanish ? 'Herramienta y versión' : 'Tool and version'}
-                                </label>
-                                <input
-                                  type="text"
-                                  value={tool.name}
-                                  onChange={(e) => handleAIToolChange(index, 'name', e.target.value)}
-                                  placeholder="GPT-4"
-                                  className="w-full p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                                  {isSpanish ? 'Propósito' : 'Purpose'}
-                                </label>
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    value={tool.purpose}
-                                    onChange={(e) => handleAIToolChange(index, 'purpose', e.target.value)}
-                                    placeholder={isSpanish ? 'Análisis de datos' : 'Data analysis'}
-                                    className="flex-1 p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
-                                  />
-                                  {formData.aiTools.length > 1 && (
-                                    <button 
-                                      type="button" 
-                                      onClick={() => removeAITool(index)} 
-                                      className="text-slate-400 hover:text-red-500 p-2 transition-colors"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                      </svg>
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={addAITool}
-                          className="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-[#003b5c] hover:text-[#003b5c] transition-colors font-sans text-sm"
-                        >
-                          + {isSpanish ? 'Agregar otra herramienta' : 'Add another tool'}
-                        </button>
-                      </motion.div>
-                    )}
+  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
+    {formData.aiTools.map((tool, index) => (
+      <div key={index} className="bg-white rounded-lg p-4 ring-1 ring-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Campo 1: Nombre de la herramienta */}
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+              {isSpanish ? 'Herramienta' : 'Tool'} *
+            </label>
+            <input
+              type="text"
+              value={tool.name}
+              onChange={(e) => handleAIToolChange(index, 'name', e.target.value)}
+              placeholder="ChatGPT, Claude, Gemini..."
+              className="w-full p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
+            />
+          </div>
+          
+          {/* Campo 2: Versión (SEPARADO) */}
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+              {isSpanish ? 'Versión' : 'Version'}
+            </label>
+            <input
+              type="text"
+              value={tool.version}
+              onChange={(e) => handleAIToolChange(index, 'version', e.target.value)}
+              placeholder="GPT-4, Claude 3.5, etc."
+              className="w-full p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
+            />
+          </div>
+          
+          {/* Campo 3: Propósito */}
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+              {isSpanish ? 'Propósito' : 'Purpose'} *
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={tool.purpose}
+                onChange={(e) => handleAIToolChange(index, 'purpose', e.target.value)}
+                placeholder={isSpanish ? 'Análisis de datos' : 'Data analysis'}
+                className="flex-1 p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
+              />
+              {formData.aiTools.length > 1 && (
+                <button 
+                  type="button" 
+                  onClick={() => removeAITool(index)} 
+                  className="text-slate-400 hover:text-red-500 p-2 transition-colors flex-shrink-0"
+                  title={isSpanish ? 'Eliminar herramienta' : 'Remove tool'}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    ))}
+    <button
+      type="button"
+      onClick={addAITool}
+      className="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-[#003b5c] hover:text-[#003b5c] transition-colors font-sans text-sm"
+    >
+      + {isSpanish ? 'Agregar otra herramienta' : 'Add another tool'}
+    </button>
+  </motion.div>
+)}
                   </div>
 
                   {/* Disponibilidad de datos */}
