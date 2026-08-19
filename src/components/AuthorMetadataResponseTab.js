@@ -8,19 +8,78 @@ import {
   ChevronRight,
   AlertCircle,
   FileText,
-  ShieldCheck
+  ShieldCheck,
+  Tag,
+  Code
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { useMetadataRefinement } from '../hooks/useMetadataRefinement';
 import { onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 
-// ================= ICONOS SVG INTERNOS (sin dependencia de lucide para los que no existen) =================
+// ================= ICONOS SVG INTERNOS =================
 const Icons = {
   Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
   History: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-  User: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
   ArrowDown: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+};
+
+// ================= FUNCIÓN DE FORMATEO CORREGIDA =================
+const formatKeywords = (value, isSpanish) => {
+  if (!value || (Array.isArray(value) && value.length === 0)) {
+    return <span className="text-slate-400 italic font-serif text-sm">[{isSpanish ? 'Sin valor' : 'No value'}]</span>;
+  }
+  
+  const keywords = Array.isArray(value) ? value : [value];
+  
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-1">
+      {keywords.map((kw, idx) => (
+        <span key={idx} className="inline-block bg-slate-50 border border-slate-200 px-2.5 py-1 text-xs font-serif text-slate-700 rounded-full">
+          {String(kw)}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+const formatSpecializedCodes = (value, isSpanish) => {
+  if (!value || (Array.isArray(value) && value.length === 0)) {
+    return <span className="text-slate-400 italic font-serif text-sm">[{isSpanish ? 'Sin valor' : 'No value'}]</span>;
+  }
+  
+  const codes = Array.isArray(value) ? value : String(value).split(';').map(c => c.trim()).filter(Boolean);
+  
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-1">
+      {codes.map((code, idx) => (
+        <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 text-white rounded-sm text-xs font-mono font-bold">
+          <Code size={12} />
+          {String(code)}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+const formatAuthors = (value, isSpanish) => {
+  if (!value || (Array.isArray(value) && value.length === 0)) {
+    return <span className="text-slate-400 italic font-serif text-sm">[{isSpanish ? 'Sin valor' : 'No value'}]</span>;
+  }
+  
+  const authors = Array.isArray(value) ? value : [value];
+  
+  return (
+    <ul className="list-disc list-inside space-y-1">
+      {authors.map((author, idx) => (
+        <li key={idx} className="font-serif text-sm text-slate-700 leading-relaxed">
+          {typeof author === 'object' 
+            ? `${author.firstName || ''} ${author.lastName || ''}`.trim() || author.name || JSON.stringify(author)
+            : String(author)}
+        </li>
+      ))}
+    </ul>
+  );
 };
 
 export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => {
@@ -34,7 +93,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
   const [localError, setLocalError] = useState(null);
   const [loadingProposals, setLoadingProposals] = useState(true);
 
-  // Mostrar errores del hook
   useEffect(() => {
     if (hookError) {
       setLocalError(hookError);
@@ -42,7 +100,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
     }
   }, [hookError]);
 
-  // Cargar propuestas pendientes para este artículo
   useEffect(() => {
     if (!submission?.id) {
       setLoadingProposals(false);
@@ -100,51 +157,43 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
     }
   };
 
-  // ================= FORMATO DE VALORES =================
+  // ================= FORMATEO CORREGIDO =================
   const formatValue = (value, fieldName = '') => {
     if (value === null || value === undefined || value === '') {
       return <span className="text-slate-400 italic font-serif text-sm">[{isSpanish ? 'Sin valor' : 'No value'}]</span>;
     }
     
-    // Si es array de keywords, detectar formato controlado
-    if ((fieldName === 'keywords' || fieldName === 'keywordsEn') && Array.isArray(value)) {
+    // Keywords libres (ES/EN) - SIN códigos, solo términos
+    if (fieldName === 'keywords' || fieldName === 'keywordsEs' || fieldName === 'keywordsEn') {
+      return formatKeywords(value, isSpanish);
+    }
+    
+    // Códigos especializados - CAMPO SEPARADO
+    if (fieldName === 'specializedCodes') {
+      return formatSpecializedCodes(value, isSpanish);
+    }
+    
+    // Vocabulario controlado - Campo simple
+    if (fieldName === 'keywordsVocabulario') {
       return (
-        <div className="flex flex-wrap gap-1.5 mt-1">
-          {value.map((v, i) => {
-            const match = typeof v === 'string' ? v.match(/^([A-Za-z0-9.]+):\s*(.+)/) : null;
-            if (match) {
-              return (
-                <span key={i} className="inline-flex items-center bg-white border border-slate-200 shadow-sm text-xs text-slate-700 overflow-hidden">
-                  <span className="bg-[#003b5c] text-white px-2 py-1 font-mono text-[10px] uppercase tracking-wider font-bold">
-                    {match[1]}
-                  </span>
-                  <span className="px-2.5 py-1 font-serif text-slate-800">
-                    {match[2]}
-                  </span>
-                </span>
-              );
-            }
-            return (
-              <span key={i} className="inline-block bg-slate-50 border border-slate-200 px-2.5 py-1 text-xs font-serif text-[#003b5c]">
-                {typeof v === 'string' ? v : v.term || String(v)}
-              </span>
-            );
-          })}
-        </div>
+        <span className="px-3 py-1 bg-[#003b5c] text-white rounded-sm text-xs font-sans font-bold">
+          {String(value)}
+        </span>
       );
     }
     
-    // Arrays normales (autores, etc.)
+    // Autores
+    if (fieldName === 'authors') {
+      return formatAuthors(value, isSpanish);
+    }
+    
+    // Arrays genéricos
     if (Array.isArray(value)) {
       return (
         <ul className="list-disc list-inside space-y-1">
           {value.map((v, i) => (
-            <li key={i} className="font-serif text-sm sm:text-base text-slate-700 leading-relaxed">
-              {typeof v === 'object' 
-                ? (v.lastName 
-                    ? `${v.firstName || ''} ${v.lastName}${v.institution ? ` (${v.institution})` : ''}` 
-                    : JSON.stringify(v))
-                : String(v)}
+            <li key={i} className="font-serif text-sm text-slate-700 leading-relaxed">
+              {typeof v === 'object' ? JSON.stringify(v) : String(v)}
             </li>
           ))}
         </ul>
@@ -152,90 +201,101 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
     }
     
     // Valor simple
-    return <span className="font-serif text-sm sm:text-base leading-relaxed text-slate-800">{String(value)}</span>;
+    return <span className="font-serif text-sm leading-relaxed text-slate-800">{String(value)}</span>;
   };
 
   // ================= TARJETA DE CAMBIO =================
-  const ChangeCard = ({ change, index }) => (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="bg-white border border-slate-200 shadow-sm relative overflow-hidden"
-    >
-      {/* Barra lateral decorativa */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C0A86A] to-[#003b5c]"></div>
-      
-      {/* Cabecera del campo */}
-      <div className="p-4 bg-slate-50/80 border-b border-slate-100 flex flex-wrap gap-3 justify-between items-center pl-6">
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 bg-[#C0A86A] rounded-full"></span>
-          <span className="text-xs font-bold uppercase tracking-widest text-[#003b5c]">
-            {change.field.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim()}
-          </span>
-        </div>
-        {change.requiresAuthorConsent && (
-          <span className="flex items-center gap-1.5 text-[10px] font-bold bg-amber-50 text-amber-800 px-3 py-1 uppercase tracking-wider border border-amber-200">
-            <ShieldCheck size={14} className="text-amber-600" />
-            {isSpanish ? 'Requiere su autorización' : 'Requires your authorization'}
-          </span>
-        )}
-      </div>
-      
-      {/* Cuerpo: Original vs Propuesto */}
-      <div className="p-5 sm:p-6 pl-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-[1fr,auto,1fr] gap-4 md:gap-6 items-stretch">
-          
-          {/* Valor Original */}
-          <div className="space-y-2">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest border-b border-slate-100 pb-1.5 block">
-              {isSpanish ? 'Registro Actual' : 'Current Record'}
+  const ChangeCard = ({ change, index }) => {
+    // Determinar el label del campo
+    const fieldLabels = {
+      'title': isSpanish ? 'Título' : 'Title',
+      'titleEn': isSpanish ? 'Título (Inglés)' : 'Title (English)',
+      'abstract': isSpanish ? 'Resumen' : 'Abstract',
+      'abstractEn': isSpanish ? 'Resumen (Inglés)' : 'Abstract (English)',
+      'keywords': isSpanish ? 'Palabras Clave' : 'Keywords',
+      'keywordsEs': isSpanish ? 'Palabras Clave (ES)' : 'Keywords (ES)',
+      'keywordsEn': isSpanish ? 'Palabras Clave (EN)' : 'Keywords (EN)',
+      'keywordsVocabulario': isSpanish ? 'Vocabulario Controlado' : 'Controlled Vocabulary',
+      'specializedCodes': isSpanish ? 'Códigos Especializados' : 'Specialized Codes',
+      'authors': isSpanish ? 'Autores' : 'Authors',
+      'funding': isSpanish ? 'Financiamiento' : 'Funding',
+      'conflictOfInterest': isSpanish ? 'Conflicto de Intereses' : 'Conflict of Interest',
+      'dataAvailability': isSpanish ? 'Disponibilidad de Datos' : 'Data Availability',
+    };
+    
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05 }}
+        className="bg-white border border-slate-200 shadow-sm relative overflow-hidden"
+      >
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C0A86A] to-[#003b5c]"></div>
+        
+        <div className="p-4 bg-slate-50/80 border-b border-slate-100 flex flex-wrap gap-3 justify-between items-center pl-6">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-[#C0A86A] rounded-full"></span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#003b5c]">
+              {fieldLabels[change.field] || change.field}
             </span>
-            <div className="p-4 bg-rose-50/20 border border-rose-100/30 text-slate-500 line-through decoration-rose-300/40 h-full min-h-[60px]">
-              {formatValue(change.currentValue, change.field)}
-            </div>
           </div>
-
-          {/* Flecha */}
-          <div className="flex justify-center items-center py-2 md:py-0">
-            <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400">
-              <ChevronRight size={16} className="hidden md:block" />
-              <Icons.ArrowDown />
-            </div>
-          </div>
-
-          {/* Valor Propuesto */}
-          <div className="space-y-2">
-            <span className="text-[10px] text-[#003b5c] uppercase font-bold tracking-widest border-b border-[#C0A86A]/30 pb-1.5 block">
-              {isSpanish ? 'Enmienda Propuesta' : 'Proposed Amendment'}
+          {change.requiresAuthorConsent && (
+            <span className="flex items-center gap-1.5 text-[10px] font-bold bg-amber-50 text-amber-800 px-3 py-1 uppercase tracking-wider border border-amber-200">
+              <ShieldCheck size={14} className="text-amber-600" />
+              {isSpanish ? 'Requiere su autorización' : 'Requires your authorization'}
             </span>
-            <div className="p-4 bg-blue-50/20 border border-blue-100/40 text-[#003b5c] font-medium h-full min-h-[60px] shadow-inner">
-              {formatValue(change.proposedValue, change.field)}
-            </div>
-          </div>
+          )}
         </div>
+        
+        <div className="p-5 sm:p-6 pl-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr,auto,1fr] gap-4 md:gap-6 items-stretch">
+            
+            <div className="space-y-2">
+              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest border-b border-slate-100 pb-1.5 block">
+                {isSpanish ? 'Registro Actual' : 'Current Record'}
+              </span>
+              <div className="p-4 bg-rose-50/20 border border-rose-100/30 text-slate-500 line-through decoration-rose-300/40 h-full min-h-[60px]">
+                {formatValue(change.currentValue, change.field)}
+              </div>
+            </div>
 
-        {/* Justificación del editor */}
-        {change.reason && (
-          <div className="mt-4 pt-4 border-t border-slate-100">
-            <div className="flex gap-3 items-start bg-slate-50 p-4 border border-slate-100">
-              <Info size={16} className="text-[#C0A86A] shrink-0 mt-0.5" />
-              <div>
-                <p className="font-sans font-bold text-[10px] uppercase tracking-widest text-slate-400 mb-1">
-                  {isSpanish ? 'Justificación Editorial' : 'Editorial Justification'}
-                </p>
-                <p className="text-sm font-serif text-slate-600 italic leading-relaxed">
-                  "{change.reason}"
-                </p>
+            <div className="flex justify-center items-center py-2 md:py-0">
+              <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400">
+                <ChevronRight size={16} className="hidden md:block" />
+                <Icons.ArrowDown />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[10px] text-[#003b5c] uppercase font-bold tracking-widest border-b border-[#C0A86A]/30 pb-1.5 block">
+                {isSpanish ? 'Enmienda Propuesta' : 'Proposed Amendment'}
+              </span>
+              <div className="p-4 bg-blue-50/20 border border-blue-100/40 text-[#003b5c] font-medium h-full min-h-[60px] shadow-inner">
+                {formatValue(change.proposedValue, change.field)}
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </motion.div>
-  );
 
-  // ================= ESTADOS DE CARGA =================
+          {change.reason && (
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <div className="flex gap-3 items-start bg-slate-50 p-4 border border-slate-100">
+                <Info size={16} className="text-[#C0A86A] shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-sans font-bold text-[10px] uppercase tracking-widest text-slate-400 mb-1">
+                    {isSpanish ? 'Justificación Editorial' : 'Editorial Justification'}
+                  </p>
+                  <p className="text-sm font-serif text-slate-600 italic leading-relaxed">
+                    "{change.reason}"
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
   if (loadingProposals) {
     return (
       <div className="flex flex-col items-center justify-center py-16 space-y-6">
@@ -247,7 +307,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
     );
   }
 
-  // ================= ESTADO VACÍO =================
   if (pendingProposals.length === 0) {
     return (
       <motion.div 
@@ -263,18 +322,16 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
         </h3>
         <p className="font-sans text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
           {isSpanish 
-            ? 'El registro bibliográfico no presenta enmiendas pendientes de su revisión. Todos los metadatos se encuentran conformes.'
-            : 'The bibliographic record has no amendments pending your review. All metadata is in order.'}
+            ? 'El registro bibliográfico no presenta enmiendas pendientes de su revisión.'
+            : 'The bibliographic record has no amendments pending your review.'}
         </p>
       </motion.div>
     );
   }
 
-  // ================= VISTA PRINCIPAL =================
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       
-      {/* Selector de propuestas (si hay múltiples) */}
       {pendingProposals.length > 1 && (
         <div className="flex gap-1 sm:gap-2 overflow-x-auto pb-2 border-b-2 border-slate-200">
           {pendingProposals.map((prop, idx) => (
@@ -301,10 +358,8 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
         </div>
       )}
 
-      {/* Área Principal: Cambios + Panel de Acción */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
-        {/* Columna Izquierda: Lista de Cambios */}
         <div className="lg:col-span-2 space-y-6">
           <AnimatePresence mode="wait">
             {selectedProposal && (
@@ -315,7 +370,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
-                {/* Título de sección */}
                 <div className="flex items-center justify-between border-b border-[#003b5c] pb-4">
                   <div>
                     <h3 className="font-serif text-2xl text-[#003b5c]">
@@ -331,7 +385,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
                   </span>
                 </div>
 
-                {/* Tarjetas de cambios */}
                 <div className="space-y-5">
                   {selectedProposal.changes?.map((change, idx) => (
                     <ChangeCard key={idx} change={change} index={idx} />
@@ -342,11 +395,9 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
           </AnimatePresence>
         </div>
 
-        {/* Columna Derecha: Panel de Acción */}
         <div className="lg:col-span-1 lg:sticky lg:top-6">
           <div className="bg-white border border-slate-200 shadow-sm">
             
-            {/* Cabecera del panel */}
             <div className="bg-[#003b5c] px-5 py-4 flex items-center gap-2">
               <ShieldCheck size={16} className="text-[#C0A86A] flex-shrink-0" />
               <h4 className="font-sans font-bold text-xs uppercase tracking-widest text-white">
@@ -356,7 +407,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
             
             <div className="p-5 sm:p-6 space-y-6">
               
-              {/* Información del emisor */}
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
                   {isSpanish ? 'Emitido por' : 'Issued by'}
@@ -376,7 +426,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
                 </div>
               </div>
 
-              {/* Área de comentarios del autor */}
               <div className="space-y-2">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
                   {isSpanish ? 'Sus Observaciones' : 'Your Observations'}
@@ -393,7 +442,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
                 />
               </div>
 
-              {/* Mensaje de error */}
               {localError && (
                 <motion.div 
                   initial={{ opacity: 0, y: -5 }}
@@ -405,7 +453,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
                 </motion.div>
               )}
 
-              {/* Botones de acción */}
               <div className="space-y-3 pt-4 border-t border-slate-100">
                 <button
                   onClick={() => handleResponse(true)}
@@ -432,7 +479,6 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
                 </button>
               </div>
 
-              {/* Aviso legal */}
               <div className="bg-amber-50/80 border border-amber-200/60 p-4">
                 <p className="text-[10px] text-amber-800 uppercase font-bold tracking-widest mb-1.5 flex items-center gap-1.5">
                   <ShieldCheck size={12} className="text-amber-600" />
@@ -440,8 +486,8 @@ export const AuthorMetadataResponseTab = ({ submission, user, onResponded }) => 
                 </p>
                 <p className="text-xs text-amber-900/80 font-serif leading-relaxed">
                   {isSpanish 
-                    ? 'Al autorizar estas modificaciones, los metadatos de su manuscrito se actualizarán permanentemente en los sistemas de indexación y publicación de la revista.'
-                    : 'By authorizing these modifications, your manuscript\'s metadata will be permanently updated in the journal\'s indexing and publication systems.'}
+                    ? 'Al autorizar estas modificaciones, los metadatos de su manuscrito se actualizarán permanentemente.'
+                    : 'By authorizing these modifications, your manuscript\'s metadata will be permanently updated.'}
                 </p>
               </div>
             </div>

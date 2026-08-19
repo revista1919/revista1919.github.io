@@ -1,12 +1,103 @@
 // src/components/ReviewHistoryTab.js
 import React, { useState, useEffect, useCallback } from 'react';
-import { collection, query, where, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
+import { motion, AnimatePresence } from 'framer-motion';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useLanguage } from '../hooks/useLanguage';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+
+// ============ ICONOS SVG (Estilo editorial consistente) ============
+const Icons = {
+  Calendar: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+  CheckCircle: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  Clock: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  DocumentText: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+  ClipboardCheck: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
+  ChevronDown: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
+  ChevronUp: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>,
+  Ban: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>,
+  User: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+  Download: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>,
+  FileSpreadsheet: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+  FilePdf: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+  Activity: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
+  ExternalLink: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>,
+  Message: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>,
+  File: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+  Lock: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>,
+};
+
+// ============ TRADUCCIONES ============
+const translateAction = (action, isSpanish) => {
+  const translations = {
+    'submission_created': isSpanish ? 'Envío Creado' : 'Submission Created',
+    'assigned_to_section_editor': isSpanish ? 'Asignado a Editor' : 'Assigned to Editor',
+    'peer_review_started': isSpanish ? 'Revisión por Pares Iniciada' : 'Peer Review Started',
+    'review_submitted': isSpanish ? 'Revisión Enviada' : 'Review Submitted',
+    'review_added_to_submission': isSpanish ? 'Revisión Agregada' : 'Review Added',
+    'editor_notified_new_round': isSpanish ? 'Editor Notificado' : 'Editor Notified',
+    'new_round_created_with_new_task': isSpanish ? 'Nueva Ronda Creada' : 'New Round Created',
+    'revision_submitted': isSpanish ? 'Revisión del Autor' : 'Author Revision',
+    'marked_ready_for_publication': isSpanish ? 'Listo para Publicar' : 'Ready to Publish',
+    'metadata_changes_applied': isSpanish ? 'Metadatos Actualizados' : 'Metadata Updated',
+    'external_reviewer_invited': isSpanish ? 'Revisor Externo Invitado' : 'External Reviewer Invited',
+    'external_reviewer_onboarded': isSpanish ? 'Revisor Externo Registrado' : 'External Reviewer Onboarded',
+  };
+  return translations[action] || action;
+};
+
+const translateDecision = (decision, isSpanish) => {
+  const translations = {
+    'accept': isSpanish ? 'Aceptar' : 'Accept',
+    'reject': isSpanish ? 'Rechazar' : 'Reject',
+    'minor-revision': isSpanish ? 'Revisión Menor' : 'Minor Revision',
+    'minor-revisions': isSpanish ? 'Revisiones Menores' : 'Minor Revisions',
+    'major-revision': isSpanish ? 'Revisión Mayor' : 'Major Revision',
+    'major-revisions': isSpanish ? 'Revisiones Mayores' : 'Major Revisions',
+    'revision-required': isSpanish ? 'Enviar a Pares' : 'Send to Review',
+  };
+  return translations[decision] || decision || '—';
+};
+
+const formatDate = (timestamp, isSpanish) => {
+  if (!timestamp) return '—';
+  const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleDateString(isSpanish ? 'es-ES' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+// ============ FORMATEAR DETALLES DEL LOG ============
+const formatLogDetails = (log, isSpanish) => {
+  const { action, details, by, byEmail, to, toEmail, timestamp, round, recommendation, notes, fileName } = log;
+  const lines = [];
+  
+  if (by && by !== 'system') {
+    lines.push({ label: isSpanish ? 'Realizado por' : 'Performed by', value: byEmail || by });
+  }
+  
+  if (details && typeof details === 'object') {
+    if (details.reviewerEmail) {
+      lines.push({ label: isSpanish ? 'Revisor' : 'Reviewer', value: details.reviewerEmail });
+    }
+    if (details.reviewerName) {
+      lines.push({ label: isSpanish ? 'Nombre' : 'Name', value: details.reviewerName });
+    }
+  }
+  
+  if (recommendation) {
+    lines.push({ label: isSpanish ? 'Recomendación' : 'Recommendation', value: translateDecision(recommendation, isSpanish) });
+  }
+  
+  return lines;
+};
 
 // ============ FUNCIÓN PARA EXPORTAR A EXCEL DIRECTO ============
 const exportToExcel = (auditLogs, rounds, submissionTitle, isSpanish) => {
@@ -428,389 +519,234 @@ const exportToWord = (auditLogs, rounds, submissionTitle, isSpanish) => {
   saveAs(blob, `historial_${submissionTitle || 'submission'}.doc`);
 };
 
-// ============ ICONOS SVG ============
-const Icons = {
-  Calendar: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
-  CheckCircle: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-  Clock: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-  DocumentText: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
-  Edit: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
-  ClipboardCheck: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
-  ChevronDown: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
-  ChevronUp: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>,
-  Ban: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>,
-  User: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
-  Download: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>,
-  FileSpreadsheet: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
-  FilePdf: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
-  Activity: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
-  Info: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-  ExternalLink: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>,
-  Message: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>,
-  File: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
-};
-
-// ============ TRADUCCIONES DE ACCIONES ============
-const translateAction = (action, isSpanish) => {
-  const actionTranslations = {
-    'submission_created': isSpanish ? 'Envío Creado' : 'Submission Created',
-    'assigned_to_section_editor': isSpanish ? 'Asignado a Editor de Sección' : 'Assigned to Section Editor',
-    'peer_review_started': isSpanish ? 'Revisión por Pares Iniciada' : 'Peer Review Started',
-    'review_submitted': isSpanish ? 'Revisión Enviada' : 'Review Submitted',
-    'review_added_to_submission': isSpanish ? 'Revisión Agregada al Envío' : 'Review Added to Submission',
-    'editor_notified_new_round': isSpanish ? 'Editor Notificado - Nueva Ronda' : 'Editor Notified - New Round',
-    'editor_notified_decision_pending': isSpanish ? 'Editor Notificado - Decisión Pendiente' : 'Editor Notified - Decision Pending',
-    'new_round_created_with_new_task': isSpanish ? 'Nueva Ronda Creada' : 'New Round Created',
-    'revision_submitted': isSpanish ? 'Revisión del Autor Enviada' : 'Author Revision Submitted',
-    'marked_ready_for_publication': isSpanish ? 'Marcado Listo para Publicación' : 'Marked Ready for Publication',
-    'director_notified_publication_ready': isSpanish ? 'Director Notificado - Listo para Publicar' : 'Director Notified - Ready to Publish',
-    'metadata_changes_proposed': isSpanish ? 'Cambios de Metadatos Propuestos' : 'Metadata Changes Proposed',
-    'metadata_changes_applied': isSpanish ? 'Cambios de Metadatos Aplicados' : 'Metadata Changes Applied',
-    'reviewer_copy_created': isSpanish ? 'Copia para Revisor Creada' : 'Reviewer Copy Created',
-    'additional_reviewer_accepted': isSpanish ? 'Revisor Adicional Aceptó' : 'Additional Reviewer Accepted',
-    'document_formatted_retroactively': isSpanish ? 'Documento Formateado Retroactivamente' : 'Document Formatted Retroactively',
-  };
-  return actionTranslations[action] || action;
-};
-
-// ============ TRADUCCIONES DE DECISIONES ============
-const translateDecision = (decision, isSpanish) => {
-  const translations = {
-    'accept': isSpanish ? 'Aceptar' : 'Accept',
-    'reject': isSpanish ? 'Rechazar' : 'Reject',
-    'minor-revision': isSpanish ? 'Revisión Menor' : 'Minor Revision',
-    'major-revision': isSpanish ? 'Revisión Mayor' : 'Major Revision',
-    'major-revisions': isSpanish ? 'Revisiones Mayores' : 'Major Revisions',
-    'revision-required': isSpanish ? 'Enviar a Pares' : 'Send to Review',
-    'awaiting-review': isSpanish ? 'En Revisión' : 'Under Review',
-    'in-review': isSpanish ? 'En Revisión' : 'In Review',
-  };
-  return translations[decision] || decision || '—';
-};
-
-// ============ COLORES POR ACCIÓN ============
-const getActionColor = (action) => {
-  const colors = {
-    'submission_created': 'bg-blue-50 text-blue-700 border-blue-200',
-    'assigned_to_section_editor': 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    'peer_review_started': 'bg-sky-50 text-sky-700 border-sky-200',
-    'review_submitted': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'review_added_to_submission': 'bg-teal-50 text-teal-700 border-teal-200',
-    'editor_notified_new_round': 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    'editor_notified_decision_pending': 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    'new_round_created_with_new_task': 'bg-purple-50 text-purple-700 border-purple-200',
-    'revision_submitted': 'bg-amber-50 text-amber-700 border-amber-200',
-    'marked_ready_for_publication': 'bg-lime-50 text-lime-700 border-lime-200',
-    'director_notified_publication_ready': 'bg-green-50 text-green-700 border-green-200',
-    'metadata_changes_proposed': 'bg-orange-50 text-orange-700 border-orange-200',
-    'metadata_changes_applied': 'bg-orange-50 text-orange-700 border-orange-200',
-    'reviewer_copy_created': 'bg-slate-50 text-slate-600 border-slate-200',
-    'additional_reviewer_accepted': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'document_formatted_retroactively': 'bg-slate-50 text-slate-600 border-slate-200',
-  };
-  return colors[action] || 'bg-slate-50 text-slate-600 border-slate-200';
-};
-
-// ============ FORMATO DE FECHA ============
-const formatDate = (timestamp, isSpanish) => {
-  if (!timestamp) return '—';
-  const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
-  return date.toLocaleDateString(isSpanish ? 'es-ES' : 'en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-};
-
-// ============ FORMATEAR DETALLES DEL LOG ============
-const formatLogDetails = (log, isSpanish) => {
-  const { action, details, by, byEmail, to, toEmail, timestamp, round, recommendation, notes, fileName } = log;
-  
-  const lines = [];
-  
-  lines.push({
-    label: isSpanish ? 'Acción' : 'Action',
-    value: translateAction(action, isSpanish),
-  });
-  
-  if (round) {
-    lines.push({
-      label: isSpanish ? 'Ronda' : 'Round',
-      value: round,
-    });
-  }
-  
-  if (by && by !== 'system') {
-    lines.push({
-      label: isSpanish ? 'Realizado por' : 'Performed by',
-      value: byEmail || by,
-    });
-  } else if (by === 'system') {
-    lines.push({
-      label: isSpanish ? 'Realizado por' : 'Performed by',
-      value: isSpanish ? 'Sistema' : 'System',
-    });
-  }
-  
-  if (to) {
-    lines.push({
-      label: isSpanish ? 'Asignado a' : 'Assigned to',
-      value: toEmail || to,
-    });
-  }
-  
-  if (details) {
-    if (typeof details === 'string') {
-      lines.push({
-        label: isSpanish ? 'Detalles' : 'Details',
-        value: details,
-      });
-    } else if (typeof details === 'object') {
-      const detailMap = details;
-      const detailLines = [];
-      
-      if (detailMap.currentCount !== undefined && detailMap.requiredCount !== undefined) {
-        detailLines.push(`${isSpanish ? 'Progreso' : 'Progress'}: ${detailMap.currentCount}/${detailMap.requiredCount}`);
-      }
-      
-      if (detailMap.reviewerEmail) {
-        detailLines.push(`${isSpanish ? 'Revisor' : 'Reviewer'}: ${detailMap.reviewerEmail}`);
-      }
-      
-      if (detailMap.fileUrl || detailMap.reviewerFileUrl) {
-        detailLines.push(`${isSpanish ? 'Archivo' : 'File'}: ${isSpanish ? 'Disponible' : 'Available'}`);
-      }
-      
-      if (detailMap.formattedAt) {
-        detailLines.push(`${isSpanish ? 'Formateado' : 'Formatted'}: ${formatDate(detailMap.formattedAt, isSpanish)}`);
-      }
-      
-      if (detailLines.length > 0) {
-        lines.push({
-          label: isSpanish ? 'Detalles' : 'Details',
-          value: detailLines.join(' · '),
-        });
-      }
-    }
-  }
-  
-  if (recommendation) {
-    lines.push({
-      label: isSpanish ? 'Recomendación' : 'Recommendation',
-      value: translateDecision(recommendation, isSpanish),
-    });
-  }
-  
-  if (notes) {
-    lines.push({
-      label: isSpanish ? 'Notas' : 'Notes',
-      value: notes,
-    });
-  }
-  
-  if (fileName) {
-    lines.push({
-      label: isSpanish ? 'Archivo' : 'File',
-      value: fileName,
-    });
-  }
-  
-  if (timestamp) {
-    lines.push({
-      label: isSpanish ? 'Fecha' : 'Date',
-      value: formatDate(timestamp, isSpanish),
-    });
-  }
-  
-  return lines;
-};
-
-// ============ COMPONENTE: LOG INDIVIDUAL ============
-const AuditLogItem = ({ log, isSpanish, isExpanded, onToggle }) => {
-  const details = formatLogDetails(log, isSpanish);
-  
-  return (
-    <div className="bg-white rounded-sm border border-gray-200 shadow-sm mb-2 overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 sm:px-4 py-2.5 hover:bg-slate-50 transition-colors"
-      >
-        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getActionColor(log.action).split(' ')[0]}`}></span>
-          <div className="text-left flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-sans font-bold text-slate-800 text-xs sm:text-sm">
-                {translateAction(log.action, isSpanish)}
-              </span>
-              {log.round && (
-                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-sm">
-                  R{log.round}
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] sm:text-xs text-slate-500 block truncate">
-              {formatDate(log.timestamp, isSpanish)}
-            </span>
-          </div>
-        </div>
-        {isExpanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
-      </button>
-      
-      {isExpanded && (
-        <div className="border-t border-gray-100 px-3 sm:px-4 py-3 bg-slate-50/50">
-          <div className="space-y-2">
-            {details.map((detail, idx) => (
-              <div key={idx} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 sm:w-32 flex-shrink-0 sm:pt-0.5">
-                  {detail.label}
-                </span>
-                <span className="text-sm text-slate-700 font-serif leading-relaxed break-words flex-1">
-                  {detail.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ============ COMPONENTE: VERSIÓN DEL MANUSCRITO ============
-const VersionCard = ({ version, isSpanish }) => {
+// ============ COMPONENTE: TARJETA DE REVISOR ============
+const ReviewerFeedbackCard = ({ review, index, isSpanish }) => {
   const [expanded, setExpanded] = useState(false);
   
+  const recommendationColors = {
+    'accept': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    'minor-revisions': 'bg-sky-50 text-sky-700 border-sky-200',
+    'major-revisions': 'bg-amber-50 text-amber-700 border-amber-200',
+    'reject': 'bg-red-50 text-red-700 border-red-200',
+  };
+  
   return (
-    <div className="bg-blue-50/50 rounded-sm border border-blue-200 overflow-hidden">
+    <div className="bg-white rounded-sm border border-slate-200 shadow-sm overflow-hidden">
+      {/* Encabezado del revisor */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 sm:px-4 py-3 hover:bg-blue-50 transition-colors"
+        className="w-full flex items-center justify-between px-4 sm:px-5 py-3 hover:bg-slate-50 transition-colors"
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-8 h-8 bg-blue-600 rounded-sm flex items-center justify-center flex-shrink-0">
-            <Icons.File className="w-4 h-4 text-white" />
+          <div className="w-10 h-10 bg-[#003b5c] text-white rounded-sm flex items-center justify-center font-serif text-base font-bold flex-shrink-0">
+            {review.reviewerName?.charAt(0) || `R${index + 1}`}
           </div>
           <div className="text-left flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-sans font-bold text-slate-800 text-sm">
-                {isSpanish ? 'Versión' : 'Version'} {version.version || '—'}
-              </span>
-              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-sm">
-                {version.type === 'revision' ? (isSpanish ? 'Revisión' : 'Revision') : (isSpanish ? 'Original' : 'Original')}
-              </span>
-            </div>
-            <span className="text-xs text-slate-500 block truncate">
-              {version.fileName || '—'}
+            <span className="font-serif font-bold text-slate-800 text-sm block truncate">
+              {review.reviewerName || `${isSpanish ? 'Revisor' : 'Reviewer'} ${index + 1}`}
             </span>
+            {review.reviewerEmail && (
+              <span className="text-xs text-slate-400 font-mono block truncate">
+                {review.reviewerEmail}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {version.fileUrl && (
-            <a
-              href={version.fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
-            >
-              <Icons.ExternalLink />
-              <span className="hidden sm:inline">{isSpanish ? 'Ver' : 'View'}</span>
-            </a>
+          {review.recommendation && (
+            <span className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider border ${recommendationColors[review.recommendation] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+              {translateDecision(review.recommendation, isSpanish)}
+            </span>
           )}
           {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
         </div>
       </button>
       
-      {expanded && (
-        <div className="border-t border-blue-200 px-3 sm:px-4 py-3 space-y-3">
-          {version.uploadedAt && (
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Icons.Calendar />
-              <span>
-                {isSpanish ? 'Subido:' : 'Uploaded:'} {formatDate(version.uploadedAt, isSpanish)}
-              </span>
+      {/* Contenido expandido */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-slate-100 p-4 sm:p-5 space-y-4 bg-slate-50/30">
+              {/* Scores */}
+              {review.scores && Object.keys(review.scores).length > 0 && (
+                <div>
+                  <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-2 block">
+                    {isSpanish ? 'Rúbrica Cuantitativa' : 'Quantitative Rubric'}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(review.scores).map(([key, value]) => (
+                      <div key={key} className="flex items-center justify-between bg-white px-3 py-2 rounded-sm border border-slate-100">
+                        <span className="text-[10px] text-slate-500 uppercase tracking-wider">{key}</span>
+                        <span className="text-xs font-bold text-[#003b5c]">{value}/5</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Comentarios al autor */}
+              {review.commentsToAuthor && (
+                <div>
+                  <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 mb-1.5 block flex items-center gap-1">
+                    <Icons.Message />
+                    {isSpanish ? 'Comentarios al Autor' : 'Comments to Author'}
+                  </label>
+                  <div 
+                    className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed bg-white p-3 rounded-sm border border-slate-100"
+                    dangerouslySetInnerHTML={{ __html: review.commentsToAuthor }}
+                  />
+                </div>
+              )}
+              
+              {/* Comentarios confidenciales */}
+              {review.commentsToEditor && (
+                <div>
+                  <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-amber-600 mb-1.5 block flex items-center gap-1">
+                    <Icons.Lock />
+                    {isSpanish ? 'Comentarios Confidenciales al Editor' : 'Confidential Comments to Editor'}
+                  </label>
+                  <div 
+                    className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-amber-800 leading-relaxed bg-amber-50/50 p-3 rounded-sm border border-amber-100"
+                    dangerouslySetInnerHTML={{ __html: review.commentsToEditor }}
+                  />
+                </div>
+              )}
+              
+              {/* Documento del revisor */}
+              {review.reviewerFileUrl && (
+                <a
+                  href={review.reviewerFileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#003b5c] hover:text-[#e86125] transition-colors"
+                >
+                  <Icons.File />
+                  {isSpanish ? 'Ver documento marcado' : 'View marked document'}
+                  <Icons.ExternalLink />
+                </a>
+              )}
+              
+              {/* Fecha */}
+              {review.submittedAt && (
+                <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-400">
+                  <Icons.Calendar />
+                  {formatDate(review.submittedAt, isSpanish)}
+                </div>
+              )}
             </div>
-          )}
-          
-          {version.uploadedByEmail && (
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Icons.User />
-              <span>{version.uploadedByEmail}</span>
-            </div>
-          )}
-          
-          {version.fileSize && (
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Icons.DocumentText />
-              <span>
-                {isSpanish ? 'Tamaño:' : 'Size:'} {(version.fileSize / 1024).toFixed(2)} KB
-              </span>
-            </div>
-          )}
-          
-          {/* Notas del autor - LO MÁS DESTACADO */}
-          {version.notes && (
-            <div className="bg-white rounded-sm p-3 border border-blue-100">
-              <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-blue-600 mb-1 block flex items-center gap-1">
-                <Icons.Message />
-                {isSpanish ? 'Notas del Autor' : 'Author Notes'}
-              </label>
-              <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-serif">
-                {version.notes}
-              </p>
-            </div>
-          )}
-          
-          {/* Comentario de revisión */}
-          {version.revisionComment && (
-            <div className="bg-white rounded-sm p-3 border border-blue-100">
-              <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-blue-600 mb-1 block flex items-center gap-1">
-                <Icons.ClipboardCheck />
-                {isSpanish ? 'Comentario de Revisión' : 'Revision Comment'}
-              </label>
-              <div 
-                className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: version.revisionComment }}
-              />
-            </div>
-          )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ============ COMPONENTE: DESK REVIEW ============
+const DeskReviewCard = ({ deskReview, isSpanish }) => {
+  const [expanded, setExpanded] = useState(true);
+  
+  return (
+    <div className="bg-white rounded-sm border border-slate-200 shadow-sm overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#003b5c] text-white"
+      >
+        <div className="flex items-center gap-2">
+          <Icons.ClipboardCheck className="w-5 h-5" />
+          <span className="font-serif font-bold text-sm uppercase tracking-wider">
+            {isSpanish ? 'Desk Review' : 'Desk Review'}
+          </span>
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          {deskReview.decision && (
+            <span className="px-2 py-0.5 bg-white/15 text-white text-[10px] font-bold uppercase tracking-wider rounded-sm">
+              {translateDecision(deskReview.decision, isSpanish)}
+            </span>
+          )}
+          {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+        </div>
+      </button>
+      
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 sm:p-5 space-y-4">
+              {deskReview.feedback && (
+                <div>
+                  <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 mb-1.5 block">
+                    {isSpanish ? 'Retroalimentación al Autor' : 'Feedback to Author'}
+                  </label>
+                  <div 
+                    className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: deskReview.feedback }}
+                  />
+                </div>
+              )}
+              
+              {deskReview.commentsToEditorial && (
+                <div className="border-t border-slate-100 pt-3">
+                  <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-amber-600 mb-1.5 block flex items-center gap-1">
+                    <Icons.Lock />
+                    {isSpanish ? 'Notas Internas' : 'Internal Notes'}
+                  </label>
+                  <div 
+                    className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-600 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: deskReview.commentsToEditorial }}
+                  />
+                </div>
+              )}
+              
+              {deskReview.editorName && (
+                <div className="flex items-center gap-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
+                  <Icons.User />
+                  {deskReview.editorName}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
 // ============ COMPONENTE: RONDA ============
-const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLogs, versions }) => {
+const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLogs, versions, peerReviews }) => {
   const [expanded, setExpanded] = useState(isCurrentRound);
   const [expandedLogs, setExpandedLogs] = useState({});
   
-  const toggleLog = (logId) => {
-    setExpandedLogs(prev => ({
-      ...prev,
-      [logId]: !prev[logId]
-    }));
-  };
-  
   const roundLogs = auditLogs.filter(log => log.round === roundNumber || (log.round === undefined && roundNumber === 1));
   const roundVersions = versions.filter(v => v.round === roundNumber);
+  const roundPeerReviews = peerReviews.filter(r => r.round === roundNumber);
   
   return (
-    <div className={`bg-white rounded-sm border-2 shadow-sm mb-4 ${isCurrentRound ? 'border-[#003b5c]' : 'border-gray-200'}`}>
+    <div className={`bg-white rounded-sm border-2 shadow-sm mb-4 ${isCurrentRound ? 'border-[#003b5c]' : 'border-slate-200'}`}>
+      {/* Encabezado de ronda */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 hover:bg-slate-50 transition-colors"
+        className="w-full flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 hover:bg-slate-50 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-sans font-bold text-sm ${isCurrentRound ? 'bg-[#003b5c] text-white' : 'bg-slate-100 text-slate-600'}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-serif font-bold text-sm ${
+            isCurrentRound ? 'bg-[#003b5c] text-white' : 'bg-slate-100 text-slate-600'
+          }`}>
             R{roundNumber}
           </div>
           <div className="text-left">
-            <div className="flex items-center gap-2">
-              <span className="font-sans font-bold text-slate-800 text-sm sm:text-base">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-serif font-bold text-slate-800 text-sm sm:text-base">
                 {isSpanish ? 'Ronda' : 'Round'} {roundNumber}
               </span>
               {isCurrentRound && (
@@ -819,274 +755,148 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
                   {isSpanish ? 'Actual' : 'Current'}
                 </span>
               )}
-              <span className="text-xs text-slate-400">
-                {roundLogs.length} {isSpanish ? 'eventos' : 'events'}
-                {roundVersions.length > 0 && ` · ${roundVersions.length} ${isSpanish ? 'versiones' : 'versions'}`}
-              </span>
             </div>
-            <span className="text-xs text-slate-500">
-              {roundData.startedAt ? (
-                <>Iniciada: {formatDate(roundData.startedAt, isSpanish)}</>
-              ) : '—'}
-              {roundData.completedAt && (
-                <> · Completada: {formatDate(roundData.completedAt, isSpanish)}</>
-              )}
+            <span className="text-xs text-slate-400 font-sans">
+              {roundLogs.length} {isSpanish ? 'eventos' : 'events'}
+              {roundVersions.length > 0 && ` · ${roundVersions.length} ${isSpanish ? 'versiones' : 'versions'}`}
+              {roundPeerReviews.length > 0 && ` · ${roundPeerReviews.length} ${isSpanish ? 'revisiones' : 'reviews'}`}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {roundData.status && (
-            <span className={`px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider border ${getActionColor(roundData.status)}`}>
-              {translateDecision(roundData.status, isSpanish)}
+            <span className="px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600">
+              {roundData.status}
             </span>
           )}
           {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
         </div>
       </button>
 
-      {expanded && (
-        <div className="border-t border-gray-200 p-4 sm:p-6 space-y-6">
-          {/* Versiones del manuscrito */}
-          {roundVersions.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-1 h-5 bg-blue-500 rounded-full"></span>
-                <h4 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider">
-                  <Icons.File className="inline w-4 h-4 mr-1" />
-                  {isSpanish ? 'Versiones del Manuscrito' : 'Manuscript Versions'} ({roundVersions.length})
-                </h4>
-              </div>
-
-              <div className="space-y-3">
-                {roundVersions
-                  .sort((a, b) => {
-                    const dateA = a.uploadedAt?.toDate ? a.uploadedAt.toDate() : new Date(a.uploadedAt || 0);
-                    const dateB = b.uploadedAt?.toDate ? b.uploadedAt.toDate() : new Date(b.uploadedAt || 0);
-                    return dateB - dateA;
-                  })
-                  .map((version, idx) => (
-                    <VersionCard
-                      key={version.id || idx}
-                      version={version}
-                      isSpanish={isSpanish}
-                    />
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {/* Desk Review */}
-          {roundData.deskReview && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-1 h-5 bg-[#003b5c] rounded-full"></span>
-                <h4 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider">
-                  {isSpanish ? 'Desk Review' : 'Desk Review'}
-                </h4>
-                {roundData.deskReview.decision && (
-                  <span className={`px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider border ${getActionColor(roundData.deskReview.decision)}`}>
-                    {translateDecision(roundData.deskReview.decision, isSpanish)}
-                  </span>
-                )}
-              </div>
-
-              <div className="bg-slate-50 rounded-sm p-4 space-y-3">
-                {roundData.deskReview.feedback && (
-                  <div>
-                    <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-1 block">
-                      {isSpanish ? 'Retroalimentación al Autor' : 'Feedback to Author'}
-                    </label>
-                    <div className="review-content prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed">
-                      <div dangerouslySetInnerHTML={{ __html: roundData.deskReview.feedback }} />
-                    </div>
+      {/* Contenido expandido */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-slate-200 p-4 sm:p-6 space-y-8">
+              
+              {/* ============ DESK REVIEW (SEPARADO) ============ */}
+              {roundData.deskReview && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-1 h-5 bg-[#003b5c] rounded-full"></span>
+                    <h4 className="font-serif font-bold text-slate-800 text-sm uppercase tracking-wider">
+                      {isSpanish ? 'Desk Review' : 'Desk Review'}
+                    </h4>
                   </div>
-                )}
-
-                {roundData.deskReview.commentsToEditorial && (
-                  <div className="border-t border-slate-200 pt-3">
-                    <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-amber-600 mb-1 block">
-                      {isSpanish ? 'Notas Internas (Solo Editores)' : 'Internal Notes (Editors Only)'}
-                    </label>
-                    <div className="review-content prose prose-sm max-w-none font-serif text-slate-600 leading-relaxed">
-                      <div dangerouslySetInnerHTML={{ __html: roundData.deskReview.commentsToEditorial }} />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-200">
-                  {roundData.deskReview.completedAt && (
-                    <span className="text-xs text-slate-500 flex items-center gap-1">
-                      <Icons.CheckCircle />
-                      {isSpanish ? 'Completado:' : 'Completed:'} {formatDate(roundData.deskReview.completedAt, isSpanish)}
-                    </span>
-                  )}
-                  {roundData.deskReview.editorName && (
-                    <span className="text-xs text-slate-500 flex items-center gap-1">
-                      <Icons.User />
-                      {roundData.deskReview.editorName}
-                    </span>
-                  )}
+                  <DeskReviewCard deskReview={roundData.deskReview} isSpanish={isSpanish} />
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Retroalimentaciones de revisores */}
-          {roundData.reviews && roundData.reviews.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-1 h-5 bg-sky-500 rounded-full"></span>
-                <h4 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider">
-                  {isSpanish ? 'Retroalimentaciones de Revisores' : 'Reviewer Feedbacks'} ({roundData.reviews.length})
-                </h4>
-              </div>
+              {/* ============ REVISIONES DE PARES (SEPARADO) ============ */}
+              {roundPeerReviews.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-1 h-5 bg-sky-500 rounded-full"></span>
+                    <h4 className="font-serif font-bold text-slate-800 text-sm uppercase tracking-wider">
+                      {isSpanish ? 'Revisiones de Pares' : 'Peer Reviews'} ({roundPeerReviews.length})
+                    </h4>
+                  </div>
+                  <div className="space-y-3">
+                    {roundPeerReviews.map((review, idx) => (
+                      <ReviewerFeedbackCard
+                        key={review.id || idx}
+                        review={review}
+                        index={idx}
+                        isSpanish={isSpanish}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-              <div className="space-y-3">
-                {roundData.reviews.map((review, idx) => (
-                  <div key={idx} className="bg-slate-50 rounded-sm p-4 border border-slate-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 bg-sky-100 text-sky-700 rounded-sm flex items-center justify-center text-xs font-bold">
-                          {idx + 1}
-                        </span>
-                        <span className="font-sans font-bold text-slate-700 text-sm">
-                          {review.reviewerName || `${isSpanish ? 'Revisor' : 'Reviewer'} ${idx + 1}`}
-                        </span>
-                      </div>
-                      {review.decision && (
-                        <span className={`px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider border ${getActionColor(review.decision)}`}>
-                          {translateDecision(review.decision, isSpanish)}
-                        </span>
-                      )}
-                    </div>
-
-                    {review.feedbackToAuthor && (
-                      <div className="mb-3">
-                        <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 mb-1 block">
-                          {isSpanish ? 'Retroalimentación al Autor' : 'Feedback to Author'}
-                        </label>
-                        <div className="review-content prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed max-h-40 overflow-y-auto">
-                          <div dangerouslySetInnerHTML={{ __html: review.feedbackToAuthor }} />
+              {/* ============ VERSIONES ============ */}
+              {roundVersions.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-1 h-5 bg-blue-500 rounded-full"></span>
+                    <h4 className="font-serif font-bold text-slate-800 text-sm uppercase tracking-wider">
+                      {isSpanish ? 'Versiones del Manuscrito' : 'Manuscript Versions'} ({roundVersions.length})
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    {roundVersions.map((version, idx) => (
+                      <div key={version.id || idx} className="bg-blue-50/30 rounded-sm p-3 border border-blue-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Icons.File />
+                          <div>
+                            <span className="text-sm font-serif text-slate-700 block">{version.fileName || `Versión ${idx + 1}`}</span>
+                            {version.notes && (
+                              <span className="text-xs text-slate-500 italic">{version.notes.substring(0, 80)}...</span>
+                            )}
+                          </div>
                         </div>
+                        {version.fileUrl && (
+                          <a
+                            href={version.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-bold uppercase tracking-wider text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                          >
+                            <Icons.ExternalLink />
+                            {isSpanish ? 'Ver' : 'View'}
+                          </a>
+                        )}
                       </div>
-                    )}
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                    {review.commentsToEditorial && (
-                      <div className="border-t border-slate-200 pt-3">
-                        <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-amber-600 mb-1 block">
-                          {isSpanish ? 'Comentarios al Editor' : 'Comments to Editor'}
-                        </label>
-                        <div className="review-content prose prose-sm max-w-none font-serif text-slate-600 leading-relaxed max-h-32 overflow-y-auto">
-                          <div dangerouslySetInnerHTML={{ __html: review.commentsToEditorial }} />
+              {/* ============ REGISTRO DE ACTIVIDAD ============ */}
+              {roundLogs.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-1 h-5 bg-purple-500 rounded-full"></span>
+                    <h4 className="font-serif font-bold text-slate-800 text-sm uppercase tracking-wider">
+                      <Icons.Activity className="inline w-4 h-4 mr-1" />
+                      {isSpanish ? 'Registro de Actividad' : 'Activity Log'} ({roundLogs.length})
+                    </h4>
+                  </div>
+                  <div className="space-y-1.5">
+                    {roundLogs
+                      .sort((a, b) => {
+                        const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+                        const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+                        return dateB - dateA;
+                      })
+                      .map((log, idx) => (
+                        <div key={idx} className="flex items-center gap-3 px-3 py-2 bg-slate-50 rounded-sm text-xs">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            log.action.includes('review') ? 'bg-sky-500' :
+                            log.action.includes('desk') ? 'bg-[#003b5c]' :
+                            log.action.includes('revision') ? 'bg-amber-500' : 'bg-slate-400'
+                          }`}></span>
+                          <span className="font-sans font-bold text-slate-700 flex-shrink-0">
+                            {translateAction(log.action, isSpanish)}
+                          </span>
+                          <span className="text-slate-400 flex-1 truncate">
+                            {formatDate(log.timestamp, isSpanish)}
+                          </span>
                         </div>
-                      </div>
-                    )}
-
-                    {review.completedAt && (
-                      <div className="mt-2 pt-2 border-t border-slate-200">
-                        <span className="text-xs text-slate-500 flex items-center gap-1">
-                          <Icons.CheckCircle />
-                          {isSpanish ? 'Completado:' : 'Completed:'} {formatDate(review.completedAt, isSpanish)}
-                        </span>
-                      </div>
-                    )}
+                      ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
-          )}
-
-          {/* Decisión Final */}
-          {roundData.finalDecision && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-1 h-5 bg-emerald-600 rounded-full"></span>
-                <h4 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider">
-                  {isSpanish ? 'Decisión Final' : 'Final Decision'}
-                </h4>
-                {roundData.finalDecision.decision && (
-                  <span className={`px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider border ${getActionColor(roundData.finalDecision.decision)}`}>
-                    {translateDecision(roundData.finalDecision.decision, isSpanish)}
-                  </span>
-                )}
-              </div>
-
-              <div className="bg-emerald-50/50 rounded-sm p-4 border border-emerald-100 space-y-3">
-                {roundData.finalDecision.feedback && (
-                  <div>
-                    <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-emerald-700 mb-1 block">
-                      {isSpanish ? 'Retroalimentación Final al Autor' : 'Final Feedback to Author'}
-                    </label>
-                    <div className="review-content prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed">
-                      <div dangerouslySetInnerHTML={{ __html: roundData.finalDecision.feedback }} />
-                    </div>
-                  </div>
-                )}
-
-                {roundData.finalDecision.comments && (
-                  <div className="border-t border-emerald-100 pt-3">
-                    <label className="text-[10px] font-sans font-bold uppercase tracking-wider text-emerald-600 mb-1 block">
-                      {isSpanish ? 'Comentarios Finales' : 'Final Comments'}
-                    </label>
-                    <div className="review-content prose prose-sm max-w-none font-serif text-slate-600 leading-relaxed">
-                      <div dangerouslySetInnerHTML={{ __html: roundData.finalDecision.comments }} />
-                    </div>
-                  </div>
-                )}
-
-                {roundData.finalDecision.completedAt && (
-                  <div className="pt-2 border-t border-emerald-100">
-                    <span className="text-xs text-slate-500 flex items-center gap-1">
-                      <Icons.CheckCircle />
-                      {isSpanish ? 'Decisión tomada:' : 'Decision made:'} {formatDate(roundData.finalDecision.completedAt, isSpanish)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Audit Logs de esta ronda */}
-          {roundLogs.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-1 h-5 bg-purple-500 rounded-full"></span>
-                <h4 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider">
-                  <Icons.Activity className="inline w-4 h-4 mr-1" />
-                  {isSpanish ? 'Registro de Actividad' : 'Activity Log'} ({roundLogs.length})
-                </h4>
-              </div>
-
-              <div className="space-y-2">
-                {roundLogs
-                  .sort((a, b) => {
-                    const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
-                    const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
-                    return dateB - dateA;
-                  })
-                  .map((log, idx) => (
-                    <AuditLogItem
-                      key={idx}
-                      log={log}
-                      isSpanish={isSpanish}
-                      isExpanded={expandedLogs[`${roundNumber}-${idx}`]}
-                      onToggle={() => toggleLog(`${roundNumber}-${idx}`)}
-                    />
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {!roundData.deskReview && !roundData.reviews?.length && !roundData.finalDecision && roundLogs.length === 0 && roundVersions.length === 0 && (
-            <div className="text-center py-6">
-              <Icons.DocumentText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-500 text-sm italic">
-                {isSpanish ? 'No hay retroalimentaciones registradas para esta ronda.' : 'No feedback recorded for this round.'}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -1096,9 +906,9 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
   const [rounds, setRounds] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [versions, setVersions] = useState([]);
+  const [peerReviews, setPeerReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');
   
   useEffect(() => {
     const loadHistory = async () => {
@@ -1111,67 +921,77 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
       setError(null);
 
       try {
-        // Cargar todos los editorialTasks para esta submission
-        const tasksRef = collection(db, 'editorialTasks');
+        // Cargar editorialTasks
         const tasksQuery = query(
-          tasksRef,
+          collection(db, 'editorialTasks'),
           where('submissionId', '==', submissionId),
           orderBy('round', 'asc')
         );
         const tasksSnapshot = await getDocs(tasksQuery);
 
-        // Cargar todos los editorialReviews para esta submission
-        const reviewsRef = collection(db, 'editorialReviews');
-        const reviewsQuery = query(
-          reviewsRef,
+        // Cargar reviewerAssignments (PEER REVIEWS - separado)
+        const assignmentsQuery = query(
+          collection(db, 'reviewerAssignments'),
           where('submissionId', '==', submissionId),
-          orderBy('round', 'asc')
+          where('status', '==', 'submitted')
         );
-        const reviewsSnapshot = await getDocs(reviewsQuery);
-
-        // Cargar auditLogs de la subcollection
-        const auditLogsRef = collection(db, 'submissions', submissionId, 'auditLogs');
-        const auditLogsQuery = query(auditLogsRef, orderBy('timestamp', 'asc'));
-        const auditLogsSnapshot = await getDocs(auditLogsQuery);
+        const assignmentsSnapshot = await getDocs(assignmentsQuery);
         
-        const logs = [];
-        auditLogsSnapshot.forEach((doc) => {
-          logs.push({
+        const peerReviewsData = [];
+        assignmentsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          peerReviewsData.push({
             id: doc.id,
-            ...doc.data()
+            reviewerName: data.reviewerName || '',
+            reviewerEmail: data.reviewerEmail || '',
+            commentsToAuthor: data.commentsToAuthor || '',
+            commentsToEditor: data.commentsToEditor || '',
+            recommendation: data.recommendation || '',
+            scores: data.scores || {},
+            reviewerFileUrl: data.reviewerFileUrl || '',
+            round: data.round || 1,
+            submittedAt: data.submittedAt || null,
           });
         });
+        setPeerReviews(peerReviewsData);
+
+        // Cargar auditLogs (subcollection)
+        const auditLogsQuery = query(
+          collection(db, 'submissions', submissionId, 'auditLogs'),
+          orderBy('timestamp', 'asc')
+        );
+        const auditLogsSnapshot = await getDocs(auditLogsQuery);
+        const logs = [];
+        auditLogsSnapshot.forEach((doc) => logs.push({ id: doc.id, ...doc.data() }));
         setAuditLogs(logs);
 
-        // Cargar versiones del manuscrito
-        const versionsRef = collection(db, 'submissions', submissionId, 'versions');
-        const versionsQuery = query(versionsRef, orderBy('uploadedAt', 'asc'));
+        // Cargar versiones (subcollection)
+        const versionsQuery = query(
+          collection(db, 'submissions', submissionId, 'versions'),
+          orderBy('uploadedAt', 'asc')
+        );
         const versionsSnapshot = await getDocs(versionsQuery);
-        
         const versionsData = [];
         versionsSnapshot.forEach((doc) => {
           const data = doc.data();
-          versionsData.push({
-            id: doc.id,
-            ...data,
-            round: data.round || data.version || 1,
-          });
+          versionsData.push({ id: doc.id, ...data, round: data.round || 1 });
         });
         setVersions(versionsData);
 
-        // Cargar roundHistory si existe (nuevo sistema)
+        // Cargar roundHistory (subcollection - NUEVO SISTEMA)
         let roundHistoryData = {};
         try {
-          const roundHistoryRef = collection(db, 'submissions', submissionId, 'roundHistory');
-          const roundHistorySnapshot = await getDocs(roundHistoryRef);
+          const roundHistorySnapshot = await getDocs(
+            collection(db, 'submissions', submissionId, 'roundHistory')
+          );
           roundHistorySnapshot.forEach((doc) => {
             roundHistoryData[doc.id] = doc.data();
           });
-        } catch (roundHistoryError) {
-          console.log('No roundHistory collection found, using legacy data structure');
+        } catch (err) {
+          console.log('No roundHistory collection found');
         }
 
-        // Organizar datos por ronda
+        // Organizar rondas
         const roundsMap = new Map();
 
         // Procesar editorialTasks
@@ -1183,124 +1003,53 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
             roundsMap.set(round, {
               roundNumber: round,
               status: data.status || 'pending',
-              startedAt: data.startedAt || data.createdAt,
-              completedAt: data.completedAt || null,
               deskReview: null,
-              reviews: [],
-              finalDecision: null,
             });
           }
-
+          
           const roundData = roundsMap.get(round);
-          roundData.status = data.status || roundData.status;
-          roundData.startedAt = data.startedAt || data.createdAt || roundData.startedAt;
-          roundData.completedAt = data.completedAt || roundData.completedAt;
-
+          
+          // Desk Review (separado de peer reviews)
           if (data.deskReviewDecision || data.deskReviewFeedback || data.deskReviewComments) {
             roundData.deskReview = {
               decision: data.deskReviewDecision || null,
               feedback: data.deskReviewFeedback || null,
               commentsToEditorial: data.deskReviewComments || null,
-              completedAt: data.deskReviewCompletedAt || null,
-              editorName: data.deskReviewEditor || data.assignedToName || null,
+              editorName: data.assignedToName || null,
             };
-          }
-
-          if (data.finalDecision || data.finalFeedbackToAuthor || data.finalComments || 
-              (data.status === 'completed' && (data.deskReviewDecision === 'accept' || data.deskReviewDecision === 'reject'))) {
-            
-            const finalDecisionData = {
-              decision: data.finalDecision || (data.status === 'completed' ? data.deskReviewDecision : null),
-              feedback: data.finalFeedbackToAuthor || (data.status === 'completed' ? data.deskReviewFeedback : null),
-              comments: data.finalComments || null,
-              completedAt: data.finalCompletedAt || data.completedAt || null,
-            };
-            
-            roundData.finalDecision = finalDecisionData;
           }
         });
 
-        // Procesar editorialReviews
-        reviewsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          const round = data.round || 1;
-          
-          if (!roundsMap.has(round)) {
-            roundsMap.set(round, {
-              roundNumber: round,
-              status: data.status || 'pending',
-              startedAt: data.createdAt,
-              completedAt: data.completedAt || null,
-              deskReview: null,
-              reviews: [],
-              finalDecision: null,
-            });
-          }
-
-          const roundData = roundsMap.get(round);
-          
-          if (data.feedbackToAuthor || data.commentsToEditorial || data.decision) {
-            roundData.reviews.push({
-              reviewerName: data.reviewerName || data.editorName || data.editorUid || null,
-              feedbackToAuthor: data.feedbackToAuthor || null,
-              commentsToEditorial: data.commentsToEditorial || null,
-              decision: data.decision || null,
-              completedAt: data.completedAt || data.updatedAt || null,
-              status: data.status || null,
-            });
-          }
-        });
-
-        // Procesar roundHistory (nuevo sistema) para completar datos faltantes
+        // Procesar roundHistory para completar datos
         Object.entries(roundHistoryData).forEach(([docId, historyData]) => {
           const roundMatch = docId.match(/round_(\d+)/);
           if (roundMatch) {
             const roundNumber = parseInt(roundMatch[1]);
-            
             if (!roundsMap.has(roundNumber)) {
               roundsMap.set(roundNumber, {
-                roundNumber: roundNumber,
+                roundNumber,
                 status: 'completed',
-                startedAt: null,
-                completedAt: historyData.roundCompletedAt || null,
                 deskReview: null,
-                reviews: [],
-                finalDecision: null,
               });
             }
             
             const roundData = roundsMap.get(roundNumber);
-            
-            if (!roundData.deskReview && (historyData.deskReviewDecision || historyData.deskReviewFeedback)) {
+            if (!roundData.deskReview && historyData.deskReviewFeedback) {
               roundData.deskReview = {
                 decision: historyData.deskReviewDecision || null,
                 feedback: historyData.deskReviewFeedback || null,
                 commentsToEditorial: historyData.deskReviewComments || null,
-                completedAt: historyData.deskReviewCompletedAt || null,
                 editorName: historyData.deskReviewEditor || null,
-              };
-            }
-            
-            if (!roundData.finalDecision && (historyData.finalDecision || historyData.finalFeedback)) {
-              roundData.finalDecision = {
-                decision: historyData.finalDecision || null,
-                feedback: historyData.finalFeedback || null,
-                comments: historyData.finalComments || null,
-                completedAt: historyData.finalCompletedAt || null,
               };
             }
           }
         });
 
-        // Convertir Map a array ordenado
-        const roundsArray = Array.from(roundsMap.entries())
-          .sort((a, b) => a[0] - b[0])
-          .map(([roundNumber, data]) => ({
-            roundNumber,
-            ...data,
-          }));
+        if (roundsMap.size === 0) {
+          roundsMap.set(1, { roundNumber: 1, status: 'active', deskReview: null });
+        }
 
-        setRounds(roundsArray);
+        setRounds(Array.from(roundsMap.values()).sort((a, b) => a.roundNumber - b.roundNumber));
       } catch (err) {
         console.error('Error loading review history:', err);
         setError(err.message);
@@ -1330,16 +1079,16 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
 
   return (
     <div className="space-y-6 pb-8">
-      {/* Encabezado */}
-      <div className="bg-[#003b5c] text-white rounded-sm p-4 sm:p-6">
+      {/* Encabezado editorial */}
+      <div className="bg-[#003b5c] text-white rounded-sm p-4 sm:p-6 shadow-sm">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <Icons.ClipboardCheck className="w-6 h-6" />
             <div>
-              <h3 className="font-sans font-bold text-lg uppercase tracking-wider">
+              <h3 className="font-serif text-lg sm:text-xl font-bold">
                 {isSpanish ? 'Historial de Retroalimentaciones' : 'Feedback History'}
               </h3>
-              <p className="text-sky-200 text-sm mt-1">
+              <p className="text-sky-200 text-sm mt-1 font-sans">
                 {submissionTitle || submissionId}
               </p>
             </div>
@@ -1347,33 +1096,17 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
           
           {/* Botones de exportación */}
           <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => exportToExcel(auditLogs, rounds, submissionTitle, isSpanish)}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
-            >
-              <Icons.FileSpreadsheet />
-              Excel
+            <button onClick={() => exportToExcel(auditLogs, rounds, submissionTitle, isSpanish)} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider">
+              <Icons.FileSpreadsheet /> Excel
             </button>
-            <button
-              onClick={() => exportToPDF(auditLogs, rounds, submissionTitle, isSpanish)}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
-            >
-              <Icons.FilePdf />
-              PDF
+            <button onClick={() => exportToPDF(auditLogs, rounds, submissionTitle, isSpanish)} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider">
+              <Icons.FilePdf /> PDF
             </button>
-            <button
-              onClick={() => exportToWord(auditLogs, rounds, submissionTitle, isSpanish)}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
-            >
-              <Icons.DocumentText />
-              Word
+            <button onClick={() => exportToWord(auditLogs, rounds, submissionTitle, isSpanish)} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider">
+              <Icons.DocumentText /> Word
             </button>
-            <button
-              onClick={() => exportToCSV(auditLogs, rounds, submissionTitle, isSpanish)}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider"
-            >
-              <Icons.Download />
-              CSV
+            <button onClick={() => exportToCSV(auditLogs, rounds, submissionTitle, isSpanish)} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider">
+              <Icons.Download /> CSV
             </button>
           </div>
         </div>
@@ -1391,27 +1124,18 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
               isSpanish={isSpanish}
               auditLogs={auditLogs}
               versions={versions}
+              peerReviews={peerReviews}
             />
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 bg-white rounded-sm border border-gray-200">
+        <div className="text-center py-12 bg-white rounded-sm border border-slate-200">
           <Icons.DocumentText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-500 font-serif">
-            {isSpanish ? 'No hay historial disponible para esta submission.' : 'No history available for this submission.'}
+            {isSpanish ? 'No hay historial disponible.' : 'No history available.'}
           </p>
         </div>
       )}
-
-      {/* Nota de solo lectura */}
-      <div className="bg-amber-50 border border-amber-200 rounded-sm p-4 flex items-start gap-3">
-        <Icons.Ban className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-amber-800 font-serif leading-relaxed">
-          {isSpanish 
-            ? 'Este historial es de solo lectura. Para realizar modificaciones, utiliza la pestaña "Revisión" cuando la ronda actual esté en estado de desk review.'
-            : 'This history is read-only. To make changes, use the "Review" tab when the current round is in desk review status.'}
-        </p>
-      </div>
     </div>
   );
 };
