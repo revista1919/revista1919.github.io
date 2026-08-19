@@ -1579,6 +1579,7 @@ const steps = [
   abstractEn: formData.abstractEn,
   keywordsEs: formData.keywordsEs,  // ✅ Nombre correcto
   keywordsEn: formData.keywordsEn,  // ✅ Nombre correcto
+  keywordsVocabulario: vocabularyConfig?.vocabulario || 'unknown',  // ✅ AGREGAR
   specializedCodes: formData.specializedCodes,  // ✅ Nombre correcto (si el backend lo espera así)
   area: formData.area,
         paperLanguage: formData.paperLanguage,
