@@ -1299,11 +1299,13 @@ export const DeskReviewTab = ({
                 submittedReviews={submittedReviews}
               />
 
-              {/* Modal de invitación externa */}
+                            {/* Modal de invitación externa */}
               <ExternalReviewerInviteModal
                 isOpen={showExternalInvite}
                 onClose={() => toggleInviteModal(false)}
                 submissionId={submission.submissionId || task.submissionId}
+                editorialTaskId={task.id}           // ✅ AGREGAR ESTA LÍNEA
+                round={task.round || 1}              // ✅ AGREGAR ESTA LÍNEA
                 currentUser={user}
                 onSuccess={(invitationId) => {
                   console.log('Invitación externa creada:', invitationId);

@@ -15235,16 +15235,7 @@ function sanitizeText(text) {
     .replace(/\//g, '&#x2F;');
 }
 
-
-/* ===================== FUNCIÓN: HACER ARCHIVO PÚBLICO ===================== */
-/**
- * Configura un archivo en Drive para que sea público (solo lectura)
- * @param {Object} drive - Cliente de Google Drive
- * @param {string} fileId - ID del archivo
- * @returns {Promise<Object>} - Resultado de la operación
- */
-
-/* ===================== INVITAR REVISOR EXTERNO ===================== */
+/* ===================== INVITAR REVISOR EXTERNO (CORREGIDO CON EDITORIAL TASK ID) ===================== */
 exports.createExternalReviewerInvitation = onCall(async (request) => {
   const { HttpsError } = require("firebase-functions/v2/https");
   const functionStartTime = Date.now();
@@ -15272,7 +15263,9 @@ exports.createExternalReviewerInvitation = onCall(async (request) => {
       position = '', 
       area = '', 
       message = '',
-      language = 'es'
+      language = 'es',
+      editorialTaskId = null,  // ✅ NUEVO: Recibir editorialTaskId
+      round = 1                 // ✅ NUEVO: Recibir round
     } = request.data;
     
     const isSpanish = language === 'es';
@@ -15306,6 +15299,8 @@ exports.createExternalReviewerInvitation = onCall(async (request) => {
     
     console.log(`[${requestId}] 📝 Datos:`, {
       submissionId,
+      editorialTaskId,
+      round,
       reviewerName: sanitizedName,
       reviewerEmail: sanitizedEmail,
       language
@@ -15385,8 +15380,10 @@ exports.createExternalReviewerInvitation = onCall(async (request) => {
     console.log(`[${requestId}] 🔐 Tokens generados`);
     
     // --- CREAR DOCUMENTO DE INVITACIÓN ---
-    const invitationRef = await db.collection('reviewerInvitations').add({
+    const invitationData = {
       submissionId,
+      editorialTaskId: editorialTaskId || null,  // ✅ AGREGAR
+      round: round || 1,                           // ✅ AGREGAR
       reviewerEmail: sanitizedEmail,
       reviewerName: sanitizedName,
       institution: sanitizedInstitution,
@@ -15410,9 +15407,12 @@ exports.createExternalReviewerInvitation = onCall(async (request) => {
         position: sanitizedPosition,
         area: sanitizedArea
       }
-    });
+    };
+    
+    const invitationRef = await db.collection('reviewerInvitations').add(invitationData);
     
     console.log(`[${requestId}] ✅ Invitación creada: ${invitationRef.id}`);
+    console.log(`[${requestId}] 📋 editorialTaskId: ${editorialTaskId || 'NO ASIGNADO'}`);
     
     // --- CONSTRUIR LINK ---
     const baseUrl = 'https://www.revistacienciasestudiantes.com';
@@ -15525,6 +15525,8 @@ exports.createExternalReviewerInvitation = onCall(async (request) => {
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
       details: {
         invitationId: invitationRef.id,
+        editorialTaskId: editorialTaskId || null,  // ✅ AGREGAR
+        round: round || 1,                           // ✅ AGREGAR
         reviewerEmail: sanitizedEmail,
         reviewerName: sanitizedName,
         institution: sanitizedInstitution,
@@ -15541,6 +15543,8 @@ exports.createExternalReviewerInvitation = onCall(async (request) => {
       success: true,
       invitationId: invitationRef.id,
       onboardingLink,
+      editorialTaskId: editorialTaskId || null,  // ✅ AGREGAR
+      round: round || 1,                           // ✅ AGREGAR
       message: isSpanish ? 'Invitación enviada exitosamente' : 'Invitation sent successfully'
     };
     
@@ -15556,7 +15560,6 @@ exports.createExternalReviewerInvitation = onCall(async (request) => {
     throw new HttpsError('internal', error.message);
   }
 });
-
 /* ===================== VERIFICAR TOKEN DE INVITACIÓN ===================== */
 exports.verifyReviewerToken = onCall(async (request) => {
   const { HttpsError } = require("firebase-functions/v2/https");
@@ -15625,8 +15628,7 @@ exports.verifyReviewerToken = onCall(async (request) => {
     throw new HttpsError('internal', error.message);
   }
 });
-
-/* ===================== COMPLETAR ONBOARDING DEL REVISOR (ACTUALIZADO) ===================== */
+/* ===================== COMPLETAR ONBOARDING DEL REVISOR (CORREGIDO) ===================== */
 exports.completeReviewerOnboarding = onCall(async (request) => {
   const { HttpsError } = require("firebase-functions/v2/https");
   const functionStartTime = Date.now();
@@ -15700,6 +15702,12 @@ exports.completeReviewerOnboarding = onCall(async (request) => {
     const invitationData = invitationDoc.data();
     
     console.log(`[${requestId}] ✅ Invitación encontrada: ${invitationDoc.id}`);
+    console.log(`[${requestId}] 📋 Datos de invitación:`, {
+      submissionId: invitationData.submissionId,
+      editorialTaskId: invitationData.editorialTaskId || 'NO TIENE',
+      round: invitationData.round || 1,
+      type: invitationData.type || 'internal'
+    });
     
     // --- PASO 2: Verificar expiración ---
     if (invitationData.tokenExpiresAt) {
@@ -15829,7 +15837,8 @@ exports.completeReviewerOnboarding = onCall(async (request) => {
         const assignmentRef = db.collection('reviewerAssignments').doc();
         assignmentId = assignmentRef.id;
         
-        transaction.set(assignmentRef, {
+        // ✅ CORRECCIÓN CLAVE: Propagar editorialTaskId desde la invitación
+        const assignmentData = {
           submissionId: invitationData.submissionId,
           round: invitationData.round || 1,
           reviewerUid: userRecord.uid,
@@ -15843,7 +15852,17 @@ exports.completeReviewerOnboarding = onCall(async (request) => {
           isExternal: true,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        };
+        
+        // ✅ AGREGAR editorialTaskId si existe en la invitación
+        if (invitationData.editorialTaskId) {
+          assignmentData.editorialTaskId = invitationData.editorialTaskId;
+          console.log(`[${requestId}] ✅ editorialTaskId propagado: ${invitationData.editorialTaskId}`);
+        } else {
+          console.warn(`[${requestId}] ⚠️ La invitación NO tiene editorialTaskId`);
+        }
+        
+        transaction.set(assignmentRef, assignmentData);
       }
     });
     
@@ -15862,6 +15881,7 @@ exports.completeReviewerOnboarding = onCall(async (request) => {
           details: {
             invitationId: invitationDoc.id,
             assignmentId: assignmentId,
+            editorialTaskId: invitationData.editorialTaskId || null,
             reviewerEmail: sanitizedEmail,
             reviewerName: sanitizedName
           }
@@ -15877,7 +15897,8 @@ exports.completeReviewerOnboarding = onCall(async (request) => {
       uid: userRecord.uid,
       invitationId: invitationDoc.id,
       submissionId: invitationData.submissionId,
-      assignmentId: assignmentId,  // ← ESTE ES EL ID QUE NECESITAS
+      assignmentId: assignmentId,
+      editorialTaskId: invitationData.editorialTaskId || null,
       message: isSpanish ? 'Cuenta creada exitosamente' : 'Account created successfully'
     };
     
@@ -16033,128 +16054,3 @@ exports.saveReviewerProfile = onCall(async (request) => {
     throw new HttpsError('internal', error.message);
   }
 });
-/* ===================== CREAR TAREA EDITORIAL AUTOMÁTICAMENTE ===================== */
-exports.onCreateReviewerInvitationCreateTask = onDocumentCreated(
-  {
-    document: 'reviewerInvitations/{invitationId}',
-    secrets: [],
-    memory: '256MiB'
-  },
-  async (event) => {
-    const invitation = event.data.data();
-    const invitationId = event.params.invitationId;
-    
-    console.log(`📋 [onCreateReviewerInvitationCreateTask] Verificando si crear tarea editorial para invitación ${invitationId}`);
-    
-    try {
-      const db = admin.firestore();
-      
-      // Solo crear tarea si la invitación tiene submissionId y no existe ya una tarea
-      if (!invitation.submissionId) {
-        console.log('⚠️ No hay submissionId, omitiendo');
-        return;
-      }
-      
-      // Verificar si ya existe una tarea editorial para este submission
-      const existingTasks = await db.collection('editorialTasks')
-        .where('submissionId', '==', invitation.submissionId)
-        .where('type', '==', 'reviewer-invitation')
-        .limit(1)
-        .get();
-      
-      if (!existingTasks.empty) {
-        console.log(`✅ Ya existe tarea editorial para submission ${invitation.submissionId}, omitiendo`);
-        return;
-      }
-      
-      // Verificar si el submission existe
-      const submissionRef = db.collection('submissions').doc(invitation.submissionId);
-      const submissionDoc = await submissionRef.get();
-      
-      if (!submissionDoc.exists) {
-        console.log(`⚠️ Submission ${invitation.submissionId} no existe, omitiendo`);
-        return;
-      }
-      
-      const submission = submissionDoc.data();
-      
-      // Obtener el editor asignado al submission
-      let assignedToEmail = null;
-      let assignedToName = null;
-      let assignedBy = invitation.invitedByUid || 'system';
-      
-      // Buscar si hay un editor de sección asignado al submission
-      if (submission.sectionEditorUid) {
-        const editorDoc = await db.collection('users').doc(submission.sectionEditorUid).get();
-        if (editorDoc.exists) {
-          assignedToEmail = editorDoc.data().email;
-          assignedToName = editorDoc.data().displayName || editorDoc.data().firstName || '';
-        }
-      }
-      
-      // Si no hay editor asignado, buscar el primer editor de sección disponible
-      if (!assignedToEmail) {
-        const editorsQuery = await db.collection('users')
-          .where('roles', 'array-contains', 'Editor de Sección')
-          .limit(1)
-          .get();
-        
-        if (!editorsQuery.empty) {
-          const editorData = editorsQuery.docs[0].data();
-          assignedToEmail = editorData.email;
-          assignedToName = editorData.displayName || editorData.firstName || '';
-        } else {
-          console.log('⚠️ No hay editores de sección disponibles');
-          return;
-        }
-      }
-      
-      // Crear la tarea editorial
-      const taskRef = await db.collection('editorialTasks').add({
-        submissionId: invitation.submissionId,
-        type: 'reviewer-invitation',
-        title: invitation.language === 'es' 
-          ? 'Invitación a revisor externo pendiente' 
-          : 'External reviewer invitation pending',
-        description: invitation.language === 'es'
-          ? `Se ha invitado a ${invitation.reviewerName} (${invitation.reviewerEmail}) a revisar el manuscrito "${submission.title}". La invitación está pendiente de respuesta.`
-          : `Reviewer ${invitation.reviewerName} (${invitation.reviewerEmail}) has been invited to review manuscript "${submission.title}". The invitation is pending response.`,
-        status: 'pending',
-        priority: 'normal',
-        assignedToEmail: assignedToEmail,
-        assignedToName: assignedToName,
-        assignedBy: assignedBy,
-        invitationId: invitationId,
-        reviewerEmail: invitation.reviewerEmail,
-        reviewerName: invitation.reviewerName,
-        dueDate: invitation.tokenExpiresAt || null,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        metadata: {
-          invitationStatus: invitation.status,
-          reviewerInstitution: invitation.institution || '',
-          reviewerPosition: invitation.position || '',
-          reviewerArea: invitation.area || ''
-        }
-      });
-      
-      console.log(`✅ Tarea editorial creada: ${taskRef.id} para submission ${invitation.submissionId}`);
-      
-      // Actualizar la invitación con la referencia a la tarea
-      await event.data.ref.update({
-        editorialTaskId: taskRef.id,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-      
-      // También actualizar el submission con la tarea pendiente
-      await submissionRef.update({
-        pendingEditorialTasks: admin.firestore.FieldValue.arrayUnion(taskRef.id),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-      
-    } catch (error) {
-      console.error(`❌ Error en onCreateReviewerInvitationCreateTask:`, error.message);
-      await logSystemError('onCreateReviewerInvitationCreateTask', error, { invitationId });
-    }
-  }
-);

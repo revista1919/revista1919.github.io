@@ -442,12 +442,12 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
         </svg>
         <div>
           <p className="text-xs font-medium text-emerald-800">
-            {isSpanish ? 'Documento exclusivo para revisión' : 'Exclusive review document'}
+            {isSpanish ? 'Documento exclusivo para revisión.' : 'Exclusive review document'}
           </p>
           <p className="text-xs text-emerald-600 mt-1">
             {isSpanish 
-              ? 'Este documento es solo para ti. Puedes comentar pero no editar.'
-              : 'This document is for your eyes only. You can comment but not edit.'
+              ? 'Este documento es solo para ti. Puedes comentar pero no editar. Si no le deja abrirlo por favor espere un momento y vuelva a ingresar al sitio, a veces puede tardar un poco'
+              : 'This document is for your eyes only. You can comment but not edit. If you cannot open it, please wait a moment and try accessing the site again, as it may take a little while.'
             }
           </p>
         </div>

@@ -1,4 +1,4 @@
-// src/components/ExternalReviewerInvite.jsx
+// src/components/ExternalReviewerInviteModal.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -20,6 +20,8 @@ const ExternalReviewerInviteModal = ({
   isOpen, 
   onClose, 
   submissionId, 
+  editorialTaskId,  // ✅ NUEVO: Recibir editorialTaskId
+  round,             // ✅ NUEVO: Recibir round
   currentUser,
   onSuccess 
 }) => {
@@ -114,15 +116,25 @@ const ExternalReviewerInviteModal = ({
         'createExternalReviewerInvitation'
       );
       
+      console.log('📤 Enviando invitación externa con:', {
+        submissionId,
+        editorialTaskId,
+        round,
+        reviewerName: formData.name.trim(),
+        reviewerEmail: formData.email.trim().toLowerCase()
+      });
+      
       const result = await createExternalInvitation({
         submissionId,
+        editorialTaskId: editorialTaskId || null,  // ✅ PASAR editorialTaskId
+        round: round || 1,                           // ✅ PASAR round
         reviewerName: formData.name.trim(),
         reviewerEmail: formData.email.trim().toLowerCase(),
         institution: formData.institution.trim(),
         position: formData.position.trim(),
         area: formData.area.trim(),
         message: formData.message.trim(),
-        language: language, // Enviar idioma actual
+        language: language,
         invitedBy: {
           name: currentUser.displayName,
           email: currentUser.email,
@@ -131,6 +143,12 @@ const ExternalReviewerInviteModal = ({
       });
 
       if (result.data.success) {
+        console.log('✅ Invitación creada exitosamente:', {
+          invitationId: result.data.invitationId,
+          editorialTaskId: result.data.editorialTaskId,
+          round: result.data.round
+        });
+        
         setSuccess(true);
         setTimeout(() => {
           onSuccess?.(result.data.invitationId);
@@ -141,7 +159,7 @@ const ExternalReviewerInviteModal = ({
         throw new Error(result.data.error || texts.generalError);
       }
     } catch (err) {
-      console.error('Error:', err);
+      console.error('❌ Error al invitar revisor externo:', err);
       setError(err.message || texts.generalError);
     } finally {
       setIsSubmitting(false);
