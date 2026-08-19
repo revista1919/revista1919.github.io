@@ -1953,7 +1953,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                         <div className="bg-slate-50 p-4 border border-slate-100">
                            <div 
                           className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: activePortal.deskReviewFeedback }}
+                          dangerouslySetInnerHTML={{ __html: activePortal.editorComment }}  
                         />
                         </div>
                       </section>

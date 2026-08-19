@@ -12,7 +12,7 @@ setGlobalOptions({
   timeoutSeconds: 540,    // ← 9 minutos (máximo permitido)
   memory: "512MiB"
 });
-
+const { Readable } = require('stream'); 
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 
@@ -30,6 +30,7 @@ if (!admin.apps.length) {
 // Cargamos las dependencias pesadas de forma diferida para evitar fallos en el healthcheck
 let GoogleGenAI, Octokit, FormData, fetch, google, http, https;
 let docxLib = null; // ← NUEVO
+let jszipLib = null;
 // Función para cargar dependencias bajo demanda
 // Función para cargar dependencias bajo demanda - VERSIÓN MEJORADA
 async function loadDependencies() {
@@ -44,8 +45,10 @@ async function loadDependencies() {
       import('googleapis').then(m => m.google).catch(e => { console.error('Error cargando googleapis:', e.message); return null; }),
       import('http').then(m => m.default).catch(e => { console.error('Error cargando http:', e.message); return null; }),
            import('https').then(m => m.default).catch(e => { console.error('Error cargando https:', e.message); return null; }),
-      import('docx').then(m => m).catch(e => { console.error('Error cargando docx:', e.message); return null; })
+            import('docx').then(m => m).catch(e => { console.error('Error cargando docx:', e.message); return null; }),
+      import('jszip').then(m => m.default || m).catch(e => { console.error('Error cargando jszip:', e.message); return null; })
     ]);
+  
     
     GoogleGenAI = modules[0].status === 'fulfilled' ? modules[0].value : null;
     Octokit = modules[1].status === 'fulfilled' ? modules[1].value : null;
@@ -54,7 +57,8 @@ async function loadDependencies() {
     google = modules[4].status === 'fulfilled' ? modules[4].value : null;
     http = modules[5].status === 'fulfilled' ? modules[5].value : null;
     https = modules[6].status === 'fulfilled' ? modules[6].value : null;
-    docxLib = modules[7].status === 'fulfilled' ? modules[7].value : null; // ← NUEVO
+        docxLib = modules[7].status === 'fulfilled' ? modules[7].value : null;
+    jszipLib = modules[8].status === 'fulfilled' ? modules[8].value : null; // ← NUEVO
       console.log("📦 Estado de dependencias:", {
       GoogleGenAI: !!GoogleGenAI,
       Octokit: !!Octokit,
@@ -63,7 +67,8 @@ async function loadDependencies() {
       google: !!google,
       http: !!http,
       https: !!https,
-      docx: !!docxLib // ← NUEVO
+      docx: !!docxLib, // ← NUEVO
+      jszip: !!jszipLib 
     });
     
     // Inicializar agentes si es posible
@@ -3093,8 +3098,9 @@ async function createDriveFolder(drive, folderName, parentId = null) {
     throw new Error(`Failed to create folder: ${error.message}`);
   }
 }
-/* ===================== NUEVO: GENERAR DOCUMENTO PREMIUM CON LIBRERÍA DOCX ===================== */
+/* ===================== NUEVO: GENERAR DOCUMENTO PREMIUM CON LIBRERÍA DOCX + FUSIÓN ===================== */
 
+// ===================== CONFIGURACIÓN =====================
 const COLORS = {
   primary: "003B5C",
   accent: "E86125",
@@ -3104,6 +3110,51 @@ const COLORS = {
   bgLight: "F8FAFC"
 };
 
+// Configuración de tipografía estandarizada
+const TYPOGRAPHY = {
+  body: {
+    font: "Georgia",
+    size: 22, // 11pt
+    color: COLORS.textDark,
+    lineSpacing: 360, // 1.5
+    alignment: "both"
+  },
+  heading1: {
+    font: "Helvetica",
+    size: 32, // 16pt
+    color: COLORS.primary,
+    bold: true,
+    spacingBefore: 400,
+    spacingAfter: 200
+  },
+  heading2: {
+    font: "Helvetica",
+    size: 28, // 14pt
+    color: COLORS.primary,
+    bold: true,
+    spacingBefore: 300,
+    spacingAfter: 150
+  },
+  heading3: {
+    font: "Helvetica",
+    size: 24, // 12pt
+    color: COLORS.primary,
+    bold: true,
+    italic: true,
+    spacingBefore: 250,
+    spacingAfter: 100
+  },
+  heading4: {
+    font: "Georgia",
+    size: 22, // 11pt
+    color: COLORS.textDark,
+    bold: true,
+    spacingBefore: 200,
+    spacingAfter: 80
+  }
+};
+
+// ===================== FUNCIONES AUXILIARES =====================
 async function getLogoBuffer(language = 'es') {
   try {
     const logoUrl = language === 'es' 
@@ -3123,60 +3174,83 @@ async function getLogoBuffer(language = 'es') {
     return null;
   }
 }
-
 function createMetadataTable(submissionData, docxElements) {
   const { Table, TableRow, TableCell, Paragraph, TextRun, 
           BorderStyle, WidthType, VerticalAlign } = docxElements;
   
-  const borderThick = { style: BorderStyle.SINGLE, size: 12, color: COLORS.primary };
-  const borderThin = { style: BorderStyle.SINGLE, size: 4, color: COLORS.border };
-  const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  // Bordes definidos como strings planos para máxima estabilidad
+  const borderThick = { style: "single", size: 12, color: COLORS.primary };
+  const borderNormal = { style: "single", size: 4, color: COLORS.border };
 
-  const tableBorders = {
-    top: borderThick,
-    bottom: borderThick,
-    left: noBorder,
-    right: noBorder,
-    insideHorizontal: borderThin,
-    insideVertical: noBorder,
+  const formatDate = () => {
+    return new Date().toLocaleDateString('es-CL', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    });
   };
 
-  const createRow = (label, value, isMonospace = false) => {
+  const formatKeywords = (kw) => {
+    if (Array.isArray(kw)) {
+      return kw.join('; ');
+    }
+    return kw || '';
+  };
+
+  const createRow = (label, value, isMonospace = false, isHeader = false) => {
     return new TableRow({
+      tableHeader: isHeader,
       children: [
+        // 1. CELDA DE LA ETIQUETA
         new TableCell({
-          width: { size: 35, type: WidthType.PERCENTAGE },
-          borders: { top: noBorder, bottom: borderThin, left: noBorder, right: noBorder },
-          shading: { fill: COLORS.bgLight },
+          width: { size: 3159, type: WidthType.DXA },
+          borders: {
+            top: isHeader ? borderThick : borderNormal,
+            bottom: borderNormal,
+            left: borderNormal,
+            right: borderNormal,
+          },
+          shading: {
+            type: "solid", // ✅ Evita bug de fondo negro en Google Docs
+            fill: isHeader ? COLORS.primary : COLORS.bgLight,
+          },
           verticalAlign: VerticalAlign.CENTER,
-          margins: { top: 150, bottom: 150, left: 150, right: 150 },
           children: [
             new Paragraph({
+              spacing: { before: 120, after: 120 }, // ✅ Padding vertical compatible
               children: [
                 new TextRun({
                   text: label.toUpperCase(),
                   bold: true,
-                  color: COLORS.primary,
-                  size: 18,
-                  font: "Helvetica",
+                  color: isHeader ? "FFFFFF" : COLORS.primary,
+                  size: 16,
+                  font: "Arial", // ✅ Fuente 100% compatible con Google Docs
                 }),
               ],
             }),
           ],
         }),
+        // 2. CELDA DEL VALOR
         new TableCell({
-          width: { size: 65, type: WidthType.PERCENTAGE },
-          borders: { top: noBorder, bottom: borderThin, left: noBorder, right: noBorder },
+          width: { size: 5867, type: WidthType.DXA },
+          borders: {
+            top: isHeader ? borderThick : borderNormal,
+            bottom: borderNormal,
+            left: borderNormal,
+            right: borderNormal,
+          },
+          shading: {
+            type: "solid", // ✅ Consistencia de color
+            fill: isHeader ? COLORS.primary : "FFFFFF",
+          },
           verticalAlign: VerticalAlign.CENTER,
-          margins: { top: 150, bottom: 150, left: 150, right: 150 },
           children: [
             new Paragraph({
+              spacing: { before: 120, after: 120 }, // ✅ Padding vertical
               children: [
                 new TextRun({
                   text: value || 'No especificado',
-                  color: COLORS.textDark,
-                  size: 20,
-                  font: isMonospace ? "Courier New" : "Georgia",
+                  color: isHeader ? "FFFFFF" : COLORS.textDark,
+                  size: 18,
+                  font: isMonospace ? "Courier New" : "Arial", // ✅ Arial evita desconfiguración
                 }),
               ],
             }),
@@ -3186,18 +3260,14 @@ function createMetadataTable(submissionData, docxElements) {
     });
   };
 
-  const formatDate = () => {
-    return new Date().toLocaleDateString('es-CL', {
-      year: 'numeric', month: 'long', day: 'numeric'
-    });
-  };
-
-  const formatKeywords = (kw) => Array.isArray(kw) ? kw.join('; ') : '';
-
+  // ✅ TABLA COMPATIBLE: Sin borders global para evitar herencia rota
   return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: tableBorders,
+    width: { size: 9026, type: WidthType.DXA },
+    columnWidths: [3159, 5867],
     rows: [
+      // Fila de encabezado
+      createRow("Metadato", "Valor", false, true),
+      // Filas de datos
       createRow("ID del Manuscrito", submissionData.submissionId, true),
       createRow("Fecha de Recepción", formatDate()),
       createRow("Área Temática", submissionData.area),
@@ -3209,215 +3279,490 @@ function createMetadataTable(submissionData, docxElements) {
     ],
   });
 }
-
-async function createPremiumDocument(submissionData, requestId) {
+// ===================== GENERAR PORTADA PREMIUM =====================
+async function generateCoverDocx(submissionData, requestId) {
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
+          ImageRun, AlignmentType, BorderStyle, WidthType, HeadingLevel,
+          VerticalAlign, PageBreak, PageOrientation } = docxLib;
+  
+  const docxElements = {
+    Table, TableRow, TableCell, Paragraph, TextRun,
+    BorderStyle, WidthType, VerticalAlign
+  };
+  
+  const children = [];
+  
+  // Descargar logo
+  let logoBuffer = null;
   try {
-    if (!docxLib) {
-      throw new Error('docx lib no disponible');
-    }
-    
-    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
-            ImageRun, AlignmentType, BorderStyle, WidthType, HeadingLevel,
-            VerticalAlign, PageBreak, PageOrientation } = docxLib;
-    
-    const docxElements = {
-      Table, TableRow, TableCell, Paragraph, TextRun,
-      BorderStyle, WidthType, VerticalAlign
-    };
-    
-    const logoBuffer = await getLogoBuffer(submissionData.paperLanguage || 'es');
-    const children = [];
-
-    // ========== PORTADA EDITORIAL ==========
-    if (logoBuffer) {
-      children.push(
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          spacing: { before: 400, after: 400 },
-          children: [
-            new ImageRun({
-              data: logoBuffer,
-              transformation: { width: 140, height: 140 },
-            }),
-          ],
-        })
-      );
-    }
-
+    logoBuffer = await getLogoBuffer(submissionData.paperLanguage || 'es');
+  } catch (error) {
+    console.warn(`[${requestId}] ⚠️ No se pudo descargar el logo:`, error.message);
+  }
+  
+  // Logo
+  if (logoBuffer) {
     children.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 200 },
+        spacing: { before: 400, after: 200 },
         children: [
-          new TextRun({
-            text: submissionData.paperLanguage === 'es' 
-              ? "REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES"
-              : "THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS",
-            bold: true,
-            color: COLORS.primary,
-            size: 24,
-            font: "Helvetica",
+          new ImageRun({
+            data: logoBuffer,
+            transformation: { width: 140, height: 140 },
           }),
         ],
-      }),
+      })
+    );
+  }
+  
+  // Título de la revista
+  children.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 100 },
+      children: [
+        new TextRun({
+          text: submissionData.paperLanguage === 'es' 
+            ? "REVISTA NACIONAL DE LAS CIENCIAS PARA ESTUDIANTES"
+            : "THE NATIONAL REVIEW OF SCIENCES FOR STUDENTS",
+          bold: true,
+          color: COLORS.primary,
+          size: 22,
+          font: "Helvetica",
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 300 },
+      children: [
+        new TextRun({
+          text: submissionData.paperLanguage === 'es'
+            ? "National Review of Sciences for Students"
+            : "Revista Nacional de las Ciencias para Estudiantes",
+          color: COLORS.textMuted,
+          size: 16,
+          font: "Helvetica",
+          italics: true,
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 500 },
+      children: [
+        new TextRun({
+          text: "─────────",
+          color: COLORS.accent,
+          size: 20,
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+      children: [
+        new TextRun({
+          text: submissionData.title,
+          bold: true,
+          color: COLORS.primary,
+          size: 28,
+          font: "Georgia",
+        }),
+      ],
+    })
+  );
+  
+  if (submissionData.titleEn) {
+    children.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 600 },
         children: [
           new TextRun({
-            text: "REPORTE OFICIAL DE METADATOS DEL MANUSCRITO",
-            color: COLORS.textMuted,
-            size: 18,
-            font: "Helvetica",
+            text: submissionData.titleEn,
             italics: true,
-          }),
-        ],
-      }),
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 800 },
-        children: [
-          new TextRun({
-            text: "─────────",
-            color: COLORS.accent,
-            size: 24,
-          }),
-        ],
-      })
-    );
-
-    children.push(
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { after: submissionData.titleEn ? 200 : 800 },
-        children: [
-          new TextRun({
-            text: submissionData.title,
-            bold: true,
-            color: COLORS.primary,
-            size: 36,
+            color: COLORS.textMuted,
+            size: 20,
             font: "Georgia",
           }),
         ],
       })
     );
-
-    if (submissionData.titleEn) {
+  }
+  
+  // Tabla de metadatos
+  children.push(createMetadataTable(submissionData, docxElements));
+  
+  // Salto de página
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+  
+  // ========== RESUMEN ==========
+  children.push(
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 400, after: 200 },
+      borders: {
+        bottom: { style: BorderStyle.SINGLE, size: 6, color: COLORS.primary, space: 4 }
+      },
+      children: [
+        new TextRun({
+          text: submissionData.paperLanguage === 'es' ? "RESUMEN" : "ABSTRACT",
+          bold: true,
+          color: COLORS.primary,
+          size: 24,
+          font: "Helvetica",
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { after: 300, line: 360 },
+      children: [
+        new TextRun({
+          text: submissionData.abstract,
+          color: COLORS.textDark,
+          size: 22,
+          font: "Georgia",
+        }),
+      ],
+    })
+  );
+  
+  if (Array.isArray(submissionData.keywordsEs) && submissionData.keywordsEs.length > 0) {
+    children.push(
+      new Paragraph({
+        spacing: { after: 600 },
+        children: [
+          new TextRun({
+            text: "Palabras clave: ",
+            bold: true,
+            color: COLORS.primary,
+            size: 20,
+            font: "Helvetica",
+          }),
+          new TextRun({
+            text: submissionData.keywordsEs.join(" · "),
+            color: COLORS.textDark,
+            size: 20,
+            italics: true,
+            font: "Georgia",
+          }),
+        ],
+      })
+    );
+  }
+  
+  // ========== ABSTRACT ==========
+  if (submissionData.abstractEn) {
+    children.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400, after: 200 },
+        borders: {
+          bottom: { style: BorderStyle.SINGLE, size: 6, color: COLORS.primary, space: 4 }
+        },
+        children: [
+          new TextRun({
+            text: "ABSTRACT",
+            bold: true,
+            color: COLORS.primary,
+            size: 24,
+            font: "Helvetica",
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 300, line: 360 },
+        children: [
+          new TextRun({
+            text: submissionData.abstractEn,
+            color: COLORS.textDark,
+            size: 22,
+            font: "Georgia",
+          }),
+        ],
+      })
+    );
+    
+    if (Array.isArray(submissionData.keywordsEn) && submissionData.keywordsEn.length > 0) {
       children.push(
         new Paragraph({
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 800 },
+          spacing: { after: 600 },
           children: [
             new TextRun({
-              text: submissionData.titleEn,
+              text: "Keywords: ",
+              bold: true,
+              color: COLORS.primary,
+              size: 20,
+              font: "Helvetica",
+            }),
+            new TextRun({
+              text: submissionData.keywordsEn.join(" · "),
+              color: COLORS.textDark,
+              size: 20,
               italics: true,
-              color: COLORS.textMuted,
-              size: 28,
               font: "Georgia",
             }),
           ],
         })
       );
     }
-
-    children.push(createMetadataTable(submissionData, docxElements));
-    children.push(new Paragraph({ children: [new PageBreak()] }));
-
-    // ========== SEGUNDA PÁGINA: CUERPO ACADÉMICO ==========
-    const addAbstractSection = (title, content, keywordsLabel, keywordsArray) => {
-      if (!content) return;
-
-      children.push(
-        new Paragraph({
-          heading: HeadingLevel.HEADING_1,
-          spacing: { before: 400, after: 200 },
-          borders: {
-            bottom: { style: BorderStyle.SINGLE, size: 6, color: COLORS.primary, space: 4 }
-          },
-          children: [
-            new TextRun({
-              text: title,
-              bold: true,
-              color: COLORS.primary,
-              size: 24,
-              font: "Helvetica",
-            }),
-          ],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.JUSTIFIED,
-          spacing: { after: 300, line: 360 },
-          children: [
-            new TextRun({
-              text: content,
-              color: COLORS.textDark,
-              size: 22,
-              font: "Georgia",
-            }),
-          ],
-        })
-      );
-
-      if (Array.isArray(keywordsArray) && keywordsArray.length > 0) {
-        children.push(
-          new Paragraph({
-            spacing: { after: 600 },
-            children: [
-              new TextRun({
-                text: `${keywordsLabel}: `,
-                bold: true,
-                color: COLORS.primary,
-                size: 20,
-                font: "Helvetica",
-              }),
-              new TextRun({
-                text: keywordsArray.join(" · "),
-                color: COLORS.textDark,
-                size: 20,
-                italics: true,
-                font: "Georgia",
-              }),
-            ],
-          })
-        );
-      }
-    };
-
-    addAbstractSection(
-      submissionData.paperLanguage === 'es' ? "RESUMEN" : "ABSTRACT", 
-      submissionData.abstract, 
-      "Palabras clave", 
-      submissionData.keywordsEs
-    );
-
-    addAbstractSection(
-      "ABSTRACT", 
-      submissionData.abstractEn, 
-      "Keywords", 
-      submissionData.keywordsEn
-    );
-
-    const doc = new Document({
-      styles: {
-        default: {
-          document: {
-            run: { font: "Georgia", size: 22, color: COLORS.textDark },
-          },
+  }
+  
+  // Salto de página antes del contenido original
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+  
+  // Generar documento
+  const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: { font: "Georgia", size: 22, color: COLORS.textDark },
         },
       },
-      sections: [{
-        properties: {
-          page: {
-            size: { orientation: PageOrientation.PORTRAIT },
-            margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 },
-          },
+    },
+    sections: [{
+      properties: {
+        page: {
+          size: { orientation: PageOrientation.PORTRAIT },
+          margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 },
         },
-        children: children,
-      }],
-    });
+      },
+      children: children,
+    }],
+  });
+  
+  return await Packer.toBuffer(doc);
+}
 
-    return await Packer.toBuffer(doc);
+// ===================== ESTANDARIZAR ESTILOS =====================
+async function standardizeStyles(originalZip) {
+  console.log('🎨 Estandarizando tipografía...');
+  
+  try {
+    const stylesPath = 'word/styles.xml';
+    
+    if (!originalZip.file(stylesPath)) {
+      console.warn('⚠️ No se encontró styles.xml');
+      return;
+    }
+    
+    let stylesXml = await originalZip.file(stylesPath).async('string');
+    
+    // Estilo Normal
+    stylesXml = stylesXml.replace(
+      /<w:style w:type="paragraph" w:default="1" w:styleId="Normal">[\s\S]*?<\/w:style>/,
+      `<w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+        <w:name w:val="Normal"/>
+        <w:qFormat/>
+        <w:pPr>
+          <w:spacing w:line="360" w:lineRule="auto"/>
+          <w:jc w:val="both"/>
+        </w:pPr>
+        <w:rPr>
+          <w:rFonts w:ascii="${TYPOGRAPHY.body.font}" w:hAnsi="${TYPOGRAPHY.body.font}" w:eastAsia="${TYPOGRAPHY.body.font}" w:cs="${TYPOGRAPHY.body.font}"/>
+          <w:color w:val="${TYPOGRAPHY.body.color}"/>
+          <w:sz w:val="${TYPOGRAPHY.body.size}"/>
+          <w:szCs w:val="${TYPOGRAPHY.body.size}"/>
+        </w:rPr>
+      </w:style>`
+    );
+    
+    // Heading 1
+    stylesXml = stylesXml.replace(
+      /<w:style w:type="paragraph" w:styleId="Heading1">[\s\S]*?<\/w:style>/,
+      `<w:style w:type="paragraph" w:styleId="Heading1">
+        <w:name w:val="heading 1"/>
+        <w:basedOn w:val="Normal"/>
+        <w:next w:val="Normal"/>
+        <w:qFormat/>
+        <w:pPr>
+          <w:spacing w:before="${TYPOGRAPHY.heading1.spacingBefore}" w:after="${TYPOGRAPHY.heading1.spacingAfter}"/>
+          <w:keepNext/>
+        </w:pPr>
+        <w:rPr>
+          <w:rFonts w:ascii="${TYPOGRAPHY.heading1.font}" w:hAnsi="${TYPOGRAPHY.heading1.font}" w:eastAsia="${TYPOGRAPHY.heading1.font}" w:cs="${TYPOGRAPHY.heading1.font}"/>
+          <w:b/>
+          <w:color w:val="${TYPOGRAPHY.heading1.color}"/>
+          <w:sz w:val="${TYPOGRAPHY.heading1.size}"/>
+          <w:szCs w:val="${TYPOGRAPHY.heading1.size}"/>
+        </w:rPr>
+      </w:style>`
+    );
+    
+    // Heading 2
+    stylesXml = stylesXml.replace(
+      /<w:style w:type="paragraph" w:styleId="Heading2">[\s\S]*?<\/w:style>/,
+      `<w:style w:type="paragraph" w:styleId="Heading2">
+        <w:name w:val="heading 2"/>
+        <w:basedOn w:val="Normal"/>
+        <w:next w:val="Normal"/>
+        <w:qFormat/>
+        <w:pPr>
+          <w:spacing w:before="${TYPOGRAPHY.heading2.spacingBefore}" w:after="${TYPOGRAPHY.heading2.spacingAfter}"/>
+          <w:keepNext/>
+        </w:pPr>
+        <w:rPr>
+          <w:rFonts w:ascii="${TYPOGRAPHY.heading2.font}" w:hAnsi="${TYPOGRAPHY.heading2.font}" w:eastAsia="${TYPOGRAPHY.heading2.font}" w:cs="${TYPOGRAPHY.heading2.font}"/>
+          <w:b/>
+          <w:color w:val="${TYPOGRAPHY.heading2.color}"/>
+          <w:sz w:val="${TYPOGRAPHY.heading2.size}"/>
+          <w:szCs w:val="${TYPOGRAPHY.heading2.size}"/>
+        </w:rPr>
+      </w:style>`
+    );
+    
+    // Heading 3
+    stylesXml = stylesXml.replace(
+      /<w:style w:type="paragraph" w:styleId="Heading3">[\s\S]*?<\/w:style>/,
+      `<w:style w:type="paragraph" w:styleId="Heading3">
+        <w:name w:val="heading 3"/>
+        <w:basedOn w:val="Normal"/>
+        <w:next w:val="Normal"/>
+        <w:qFormat/>
+        <w:pPr>
+          <w:spacing w:before="${TYPOGRAPHY.heading3.spacingBefore}" w:after="${TYPOGRAPHY.heading3.spacingAfter}"/>
+          <w:keepNext/>
+        </w:pPr>
+        <w:rPr>
+          <w:rFonts w:ascii="${TYPOGRAPHY.heading3.font}" w:hAnsi="${TYPOGRAPHY.heading3.font}" w:eastAsia="${TYPOGRAPHY.heading3.font}" w:cs="${TYPOGRAPHY.heading3.font}"/>
+          <w:b/>
+          <w:i/>
+          <w:color w:val="${TYPOGRAPHY.heading3.color}"/>
+          <w:sz w:val="${TYPOGRAPHY.heading3.size}"/>
+          <w:szCs w:val="${TYPOGRAPHY.heading3.size}"/>
+        </w:rPr>
+      </w:style>`
+    );
+    
+    // Heading 4
+    stylesXml = stylesXml.replace(
+      /<w:style w:type="paragraph" w:styleId="Heading4">[\s\S]*?<\/w:style>/,
+      `<w:style w:type="paragraph" w:styleId="Heading4">
+        <w:name w:val="heading 4"/>
+        <w:basedOn w:val="Normal"/>
+        <w:next w:val="Normal"/>
+        <w:qFormat/>
+        <w:pPr>
+          <w:spacing w:before="${TYPOGRAPHY.heading4.spacingBefore}" w:after="${TYPOGRAPHY.heading4.spacingAfter}"/>
+          <w:keepNext/>
+        </w:pPr>
+        <w:rPr>
+          <w:rFonts w:ascii="${TYPOGRAPHY.heading4.font}" w:hAnsi="${TYPOGRAPHY.heading4.font}" w:eastAsia="${TYPOGRAPHY.heading4.font}" w:cs="${TYPOGRAPHY.heading4.font}"/>
+          <w:b/>
+          <w:color w:val="${TYPOGRAPHY.heading4.color}"/>
+          <w:sz w:val="${TYPOGRAPHY.heading4.size}"/>
+          <w:szCs w:val="${TYPOGRAPHY.heading4.size}"/>
+        </w:rPr>
+      </w:style>`
+    );
+    
+    originalZip.file(stylesPath, stylesXml);
+    console.log('✅ Tipografía estandarizada');
+    
   } catch (error) {
+    console.warn('⚠️ Error estandarizando estilos:', error.message);
+  }
+}
+
+// ===================== FUSIONAR DOCX =====================
+async function mergeDocxWithOriginal(coverDocxBuffer, originalBuffer, originalZip) {
+  try {
+    if (!jszipLib) {
+      throw new Error('jszip no disponible');
+    }
+    
+    console.log('📖 Leyendo portada premium...');
+    const coverZip = await jszipLib.loadAsync(coverDocxBuffer);
+    // ===================== FUSIONAR MEDIA =====================
+    console.log('🖼️ Fusionando imágenes...');
+    const coverMediaFolder = coverZip.folder('word/media');
+    const originalMediaFolder = originalZip.folder('word/media');
+    
+    if (coverMediaFolder && originalMediaFolder) {
+      const coverMediaFiles = Object.keys(coverMediaFolder.files);
+      for (const filePath of coverMediaFiles) {
+        if (coverMediaFolder.files[filePath].dir) continue;
+        const fileName = filePath.split('/').pop();
+        if (!originalZip.file(`word/media/${fileName}`)) {
+          const content = await coverMediaFolder.files[filePath].async('nodebuffer');
+          originalZip.file(`word/media/${fileName}`, content);
+          console.log(`   ✅ ${fileName} copiado`);
+        }
+      }
+    }
+    
+    // ===================== FUSIONAR RELACIONES =====================
+    console.log('🔗 Fusionando relaciones...');
+    const coverRelsPath = 'word/_rels/document.xml.rels';
+    const originalRelsPath = 'word/_rels/document.xml.rels';
+    
+    const coverRels = await coverZip.file(coverRelsPath).async('string');
+    let originalRels = await originalZip.file(originalRelsPath).async('string');
+    
+    const coverImageRels = coverRels.match(/<Relationship[^>]*Type="[^"]*\/image"[^>]*>/g) || [];
+    
+    let maxRId = 0;
+    const allRIds = originalRels.match(/Id="rId(\d+)"/g) || [];
+    for (const rId of allRIds) {
+      const num = parseInt(rId.match(/\d+/)[0]);
+      if (num > maxRId) maxRId = num;
+    }
+    
+    const rIdMap = {};
+    for (let i = 0; i < coverImageRels.length; i++) {
+      const oldRId = coverImageRels[i].match(/Id="([^"]+)"/)[1];
+      const newRId = `rId${maxRId + i + 1}`;
+      rIdMap[oldRId] = newRId;
+      
+      const target = coverImageRels[i].match(/Target="([^"]+)"/)[1];
+      const newRel = `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${target}"/>`;
+      originalRels = originalRels.replace('</Relationships>', `${newRel}</Relationships>`);
+    }
+    
+    await originalZip.file(originalRelsPath, originalRels);
+    
+    // ===================== FUSIONAR DOCUMENT.XML =====================
+    console.log('📄 Fusionando contenido...');
+    const coverDocumentXml = await coverZip.file('word/document.xml').async('string');
+    const originalDocumentXml = await originalZip.file('word/document.xml').async('string');
+    
+    let mergedCoverXml = coverDocumentXml;
+    for (const [oldRId, newRId] of Object.entries(rIdMap)) {
+      mergedCoverXml = mergedCoverXml.replace(new RegExp(`r:embed="${oldRId}"`, 'g'), `r:embed="${newRId}"`);
+    }
+    
+    const coverBodyMatch = mergedCoverXml.match(/<w:body[^>]*>([\s\S]*?)<\/w:body>/);
+    if (!coverBodyMatch) {
+      throw new Error('No se encontró <w:body> en la portada');
+    }
+    
+    const coverBodyContent = coverBodyMatch[1];
+    
+    const originalBodyMatch = originalDocumentXml.match(/(<w:body[^>]*>)/);
+    if (!originalBodyMatch) {
+      throw new Error('No se encontró <w:body> en el original');
+    }
+    
+    const insertPosition = originalBodyMatch.index + originalBodyMatch[1].length;
+    
+    const newDocumentXml = 
+      originalDocumentXml.substring(0, insertPosition) + 
+      coverBodyContent + 
+      originalDocumentXml.substring(insertPosition);
+    
+    await originalZip.file('word/document.xml', newDocumentXml);
+    
+    // ===================== ESTANDARIZAR ESTILOS =====================
+    await standardizeStyles(originalZip);
+    
+    return originalZip;
+    
+  } catch (error) {
+    console.error('❌ Error fusionando documentos:', error);
     throw error;
   }
 }
@@ -3454,47 +3799,44 @@ async function uploadToDrive(drive, fileBase64, fileName, folderId) {
     if (!fileBase64 || !fileName || !folderId) {
       throw new Error('Parámetros requeridos faltantes');
     }
-    
+
     if (fileBase64.includes('base64,')) {
       fileBase64 = fileBase64.split('base64,')[1];
     }
-    
+
     const fileBuffer = Buffer.from(fileBase64, 'base64');
-    
     const maxSize = 10 * 1024 * 1024;
+
     if (fileBuffer.length > maxSize) {
       throw new Error(`Archivo demasiado grande: ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB`);
     }
-    
-    const mimeType = fileName.endsWith('.docx') 
-      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      : fileName.endsWith('.doc')
-        ? 'application/msword'
-        : 'application/octet-stream';
-    
+
+    const mimeType = fileName.endsWith('.docx') ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 
+                     fileName.endsWith('.doc') ? 'application/msword' : 'application/octet-stream';
+
     const fileMetadata = {
       name: fileName,
       parents: [folderId]
     };
-    
-    const { Readable } = require('stream');
-    const stream = Readable.from(fileBuffer);
-    
+
+    // 2. Crea el stream directamente desde el buffer usando Readable
+    const stream = Readable.from(fileBuffer); 
+
     const media = {
       mimeType: mimeType,
       body: stream
     };
-    
+
     const response = await drive.files.create({
       resource: fileMetadata,
       media: media,
       fields: 'id, webViewLink, size, name'
     });
-    
+
     if (!response.data.id) {
       throw new Error('No se recibió ID del archivo');
     }
-    
+
     try {
       await drive.permissions.create({
         fileId: response.data.id,
@@ -3506,17 +3848,15 @@ async function uploadToDrive(drive, fileBase64, fileName, folderId) {
     } catch (permError) {
       console.log(`⚠️ No se pudieron configurar permisos públicos`);
     }
-    
+
     console.log(`✅ Archivo subido: ${fileName} (${(fileBuffer.length / 1024).toFixed(2)}KB)`);
-    
     return response.data;
-    
+
   } catch (error) {
     console.error(`❌ Error subiendo archivo:`, error.message);
     throw new Error(`Failed to upload file: ${error.message}`);
   }
 }
-
 async function sendEmailViaExtension(to, subject, htmlBody) {
   try {
     if (!to || !subject || !htmlBody) {
@@ -3740,7 +4080,8 @@ exports.submitArticle = onRequest(
         manuscriptBase64, manuscriptName,
         
         // Datos del autor que envía
-        authorEmail, authorName,
+        // Datos del usuario que sube (se guardan como submitter)
+submitterName, submitterEmail,  // ← NUEVOS CAMPOS
         
         // Tipo de artículo y agradecimientos
         articleType, acknowledgments,
@@ -3827,14 +4168,7 @@ if (totalCodes < 2 || totalCodes > 4) {
         missingFields: ['specializedCodes']
     });
 }
-      const missingFields = Object.entries(requiredFields)
-        .filter(([_, value]) => !value)
-        .map(([key]) => key);
       
-      if (missingFields.length > 0) {
-        return res.status(400).json({ error: 'Faltan campos requeridos', missingFields });
-      }
-
       if (!Array.isArray(authors) || authors.length === 0) {
         return res.status(400).json({ error: 'Debe incluir al menos un autor' });
       }
@@ -3847,7 +4181,8 @@ if (totalCodes < 2 || totalCodes > 4) {
         authors[0].isCorresponding = true;
       }
 
-      const authorEmailToUse = authorEmail || decodedToken.email;
+      const submitterEmail = decodedToken.email;  // Email del que sube (autenticado)
+const authorEmailToUse = correspondingAuthorData.email;  // Email del autor de correspondencia
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(authorEmailToUse)) {
         return res.status(400).json({ error: 'Email de autor inválido' });
@@ -4181,12 +4516,17 @@ try {
 
       // --- CONSTRUCCIÓN DEL DOCUMENTO PRINCIPAL DE FIRESTORE ---
       const submissionData = {
-        submissionId,
-        uid,
-        authorUID: uid,
-        authorEmail: authorEmailToUse,
-        authorName: authorName || `${processedAuthors[0].firstName} ${processedAuthors[0].lastName}`.trim(),
-        
+  submissionId,
+  uid,
+  authorUID: uid,
+  
+  // NUEVO: Datos del usuario que sube (solo para registro/auditoría)
+  submitterEmail: decodedToken.email,  // Email del usuario autenticado
+  submitterName: authorName || `${processedAuthors[0].firstName} ${processedAuthors[0].lastName}`.trim(),
+  
+  // NUEVO: Datos del autor de correspondencia (SE USAN PARA ENVIAR CORREOS)
+  authorEmail: correspondingAuthorData.email,  // ← CAMBIO: Ahora es el email del autor de correspondencia
+  authorName: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`.trim(), 
         // Datos del artículo
         title: sanitizeText(title),
         titleEn: titleEn ? sanitizeText(titleEn) : null,
@@ -4278,9 +4618,11 @@ keywordsVocabulario: keywordsVocabulario || 'unknown',
         ipAddress: clientIp,
         requestId
       };
-
 // ============================================================
-// NUEVO FLUJO: GENERAR DOCX PREMIUM Y SUBIR A DRIVE
+// NUEVO FLUJO: GENERAR DOCX PREMIUM FUSIONADO Y SUBIR A DRIVE
+// ============================================================
+// ============================================================
+// NUEVO FLUJO: GENERAR DOCX PREMIUM FUSIONADO Y SUBIR A DRIVE
 // ============================================================
 let formattedDocsFile = null;
 let formattedPdfFile = null;
@@ -4288,7 +4630,7 @@ let formattedPdfFile = null;
 try {
   console.log(`[${requestId}] 🎨 Generando documento premium...`);
   
-  // 1. Verificar que docx esté disponible
+  // 1. Verificar dependencias
   if (!docxLib) {
     console.log(`[${requestId}] ⏳ Cargando librería docx...`);
     await loadDependencies();
@@ -4298,14 +4640,49 @@ try {
     throw new Error('docx lib no disponible');
   }
   
-  // 2. Generar el buffer del documento premium
-  const premiumDocBuffer = await createPremiumDocument(submissionData, requestId);
+  // Verificar JSZip
+  if (!jszipLib) {
+    console.log(`[${requestId}] ⏳ Cargando jszip...`);
+    await loadDependencies();
+  }
   
-  // 3. Subir DOCX a carpeta editorial (editores)
+  if (!jszipLib) {
+    throw new Error('jszip no disponible');
+  }
+  // 2. Generar portada premium
+  const coverDocxBuffer = await generateCoverDocx(submissionData, requestId);
+  console.log(`[${requestId}] ✅ Portada premium generada`);
+  
+  // 3. Usar el base64 del manuscrito original que ya tenemos en memoria
+  console.log(`[${requestId}] 📖 Leyendo documento original desde base64...`);
+  
+  // Limpiar el base64 si tiene prefijo
+  let cleanManuscriptBase64 = manuscriptBase64;
+  if (cleanManuscriptBase64.includes('base64,')) {
+    cleanManuscriptBase64 = cleanManuscriptBase64.split('base64,')[1];
+  }
+  
+  const originalBuffer = Buffer.from(cleanManuscriptBase64, 'base64');
+  const originalZip = await jszipLib.loadAsync(originalBuffer);
+  
+  console.log(`[${requestId}] ✅ Documento original leído: ${(originalBuffer.length / 1024).toFixed(2)} KB`);
+  
+  // 4. Fusionar portada con original
+  const mergedZip = await mergeDocxWithOriginal(coverDocxBuffer, originalBuffer, originalZip);
+  
+  // 5. Generar DOCX final
+  const finalDocxBuffer = await mergedZip.generateAsync({ 
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 }
+  });
+  
+  console.log(`[${requestId}] ✅ DOCX premium fusionado: ${(finalDocxBuffer.length / 1024).toFixed(2)} KB`);
+  
+  // 6. Subir DOCX a carpeta editorial
   if (editorialFolder) {
     try {
-      const { Readable } = require('stream');
-      const docStream = Readable.from(premiumDocBuffer);
+      const docStream = Readable.from(finalDocxBuffer);
       
       const docxUpload = await drive.files.create({
         requestBody: {
@@ -4327,7 +4704,7 @@ try {
       
       console.log(`[${requestId}] ✅ DOCX premium subido a carpeta editorial`);
       
-      // 4. Convertir DOCX a Google Docs temporalmente para exportar PDF
+      // 7. Convertir a PDF para el autor
       try {
         const tempDocsFile = await drive.files.copy({
           fileId: docxUpload.data.id,
@@ -4340,7 +4717,6 @@ try {
         
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // 5. Exportar como PDF
         const pdfExport = await drive.files.export({
           fileId: tempDocsFile.data.id,
           mimeType: 'application/pdf'
@@ -4349,7 +4725,6 @@ try {
         const pdfBuffer = Buffer.from(pdfExport.data);
         const pdfStream = Readable.from(pdfBuffer);
         
-        // 6. Subir PDF a carpeta del autor (autor ve esto)
         const pdfUpload = await drive.files.create({
           requestBody: {
             name: `FORMATTED_${submissionId}.pdf`,
@@ -4368,7 +4743,7 @@ try {
           url: pdfUpload.data.webViewLink
         };
         
-        // 7. Crear acceso directo al PDF en carpeta editorial
+        // Acceso directo al PDF en carpeta editorial
         if (editorialFolder) {
           await drive.files.create({
             resource: {
@@ -4383,7 +4758,7 @@ try {
           });
         }
         
-        // 8. Permisos del PDF para el autor
+        // Permisos del PDF
         try {
           await drive.permissions.create({
             fileId: pdfUpload.data.id,
@@ -4398,7 +4773,6 @@ try {
           console.error(`⚠️ Error permiso PDF para autor:`, permErr.message);
         }
         
-        // 9. Permisos del PDF para editores
         for (const email of editorEmailsForPermissions) {
           try {
             await drive.permissions.create({
@@ -4415,7 +4789,6 @@ try {
           }
         }
         
-        // 10. Eliminar temporal
         try {
           await drive.files.delete({
             fileId: tempDocsFile.data.id
@@ -4424,13 +4797,13 @@ try {
           console.warn(`⚠️ No se pudo eliminar temporal:`, deleteErr.message);
         }
         
-        console.log(`[${requestId}] ✅ PDF comprimido generado y subido`);
+        console.log(`[${requestId}] ✅ PDF generado y subido`);
         
       } catch (pdfError) {
         console.warn(`[${requestId}] ⚠️ Error generando PDF:`, pdfError.message);
       }
       
-      // 11. Permisos del DOCX para editores
+      // Permisos del DOCX para editores
       for (const email of editorEmailsForPermissions) {
         try {
           await drive.permissions.create({
@@ -4460,7 +4833,6 @@ try {
 submissionData.formattedDocsFile = formattedDocsFile;
 submissionData.formattedPdfFile = formattedPdfFile;
 submissionData.documentStatus = formattedDocsFile ? 'processed' : 'submitted';
-
       // --- TRANSACCIÓN EN FIRESTORE ---
       await db.runTransaction(async (transaction) => {
         // Documento principal del envío
@@ -4482,11 +4854,15 @@ submissionData.documentStatus = formattedDocsFile ? 'processed' : 'submitted';
         
         // Log de auditoría
         transaction.set(db.collection('submissions').doc(submissionId).collection('auditLogs').doc(), {
-          action: 'submission_created',
-          by: uid,
-          byEmail: decodedToken.email,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-          details: {
+  action: 'submission_created',
+  by: uid,
+  byEmail: decodedToken.email,  // Usuario autenticado
+  timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  details: {
+    submitterEmail: decodedToken.email,
+    submitterName: submitterName,
+    correspondingAuthorEmail: correspondingAuthorData.email,
+    correspondingAuthorName: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`,
             articleType,
             area,
             paperLanguage,
@@ -4510,11 +4886,12 @@ editorCommentPreview: editorComment
         });
         
         // Actualizar contador del usuario
-        transaction.update(db.collection('users').doc(uid), {
-          totalSubmissions: admin.firestore.FieldValue.increment(1),
-          lastSubmissionAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        // Actualizar contador del usuario que sube (uid autenticado)
+transaction.update(db.collection('users').doc(uid), {
+  totalSubmissions: admin.firestore.FieldValue.increment(1),
+  lastSubmissionAt: admin.firestore.FieldValue.serverTimestamp(),
+  updatedAt: admin.firestore.FieldValue.serverTimestamp()
+});
       });
       
       console.log(`✅ Datos guardados en Firestore`);
@@ -4582,25 +4959,28 @@ const keywordsInfo = `
           ${codeAvailability ? `<p><strong>💻 Disponibilidad de código:</strong> ${codeAvailability}</p>` : ''}
         `;
 
-        const articleInfo = `
-          <div class="highlight-box">
-            <p class="article-title">"${sanitizeText(title)}"</p>
-            ${minorInfo}
-            <p><strong>ID:</strong> ${submissionId}</p>
-            <p><strong>Autor de envío:</strong> ${sanitizeText(authorName || 'No especificado')}</p>
-            <p><strong>Email:</strong> ${authorEmailToUse}</p>
-            <p><strong>📧 Autor de correspondencia:</strong> ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName} (${correspondingAuthorData.email})</p>
-            <p><strong>Área:</strong> ${sanitizeText(area)}</p>
-            <p><strong>Tipo de artículo:</strong> ${articleType ? articleType.toUpperCase() : 'No especificado'}</p>
-            <p><strong>Idioma:</strong> ${paperLanguage === 'es' ? 'Español' : 'Inglés'}</p>
-            ${fundingInfo}
-            ${ethicsInfo}
-            ${aiInfo}
-            ${availabilityInfo}
-            ${keywordsInfo}
-            <p><strong>Autores (${processedAuthors.length}):</strong><br>${authorsList}</p>
-          </div>
-          
+        // En el correo a editores, distinguir claramente:
+const articleInfo = `
+  <div class="highlight-box">
+    <p class="article-title">"${sanitizeText(title)}"</p>
+    ${minorInfo}
+    <p><strong>ID:</strong> ${submissionId}</p>
+    
+    <p><strong>👤 Subido por:</strong> ${sanitizeText(submitterName || 'No especificado')}</p>
+    <p><strong>📧 Email del que sube:</strong> ${submitterEmail}</p>
+    
+    <p><strong>📧 Autor de correspondencia:</strong> ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName} (${correspondingAuthorData.email})</p>
+    
+    <p><strong>Área:</strong> ${sanitizeText(area)}</p>
+    <p><strong>Tipo de artículo:</strong> ${articleType ? articleType.toUpperCase() : 'No especificado'}</p>
+    <p><strong>Idioma:</strong> ${paperLanguage === 'es' ? 'Español' : 'Inglés'}</p>
+    ${fundingInfo}
+    ${ethicsInfo}
+    ${aiInfo}
+    ${availabilityInfo}
+    ${keywordsInfo}
+    <p><strong>Autores (${processedAuthors.length}):</strong><br>${authorsList}</p>
+  </div>
           <div class="button-container">
             <a href="https://www.revistacienciasestudiantes.com/es/login" class="btn">VER EN PORTAL</a>
             <a href="${authorFolder.webViewLink}" class="btn btn-secondary">CARPETA AUTOR</a>
@@ -4622,13 +5002,14 @@ const keywordsInfo = `
           'es'
         );
 
-        emailPromises.push(
-          sendEmailViaExtension(
-            editor.email,
-            `📄 Nuevo artículo: ${title.substring(0, 50)}${title.length > 50 ? '...' : ''}`,
-            htmlBody
-          ).catch(err => console.log(`⚠️ Error email to ${editor.email}:`, err.message))
-        );
+        // El correo de confirmación va al autor de correspondencia
+emailPromises.push(
+  sendEmailViaExtension(
+    authorEmailToUse,  // ← Este es el email del autor de correspondencia
+    paperLanguage === 'es' ? 'Confirmación de envío' : 'Submission confirmation',
+    authorHtmlBody
+  ).catch(err => console.log(`⚠️ Error email to corresponding author:`, err.message))
+);
       }
 
       // Correo al autor
@@ -4637,9 +5018,15 @@ const keywordsInfo = `
         : '✅ Submission confirmation';
 
       const authorGreeting = paperLanguage === 'es'
-        ? `Estimado/a ${authorName || processedAuthors[0].firstName}:`
-        : `Dear ${authorName || processedAuthors[0].firstName}:`;
+  ? `Estimado/a ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}:`
+  : `Dear ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}:`;
 
+// En el cuerpo del correo, aclarar si es diferente al que sube
+if (submitterEmail !== correspondingAuthorData.email) {
+  authorBody += paperLanguage === 'es'
+    ? `<p><em>Nota: Este artículo fue subido por ${submitterName} (${submitterEmail}).</em></p>`
+    : `<p><em>Note: This article was submitted by ${submitterName} (${submitterEmail}).</em></p>`;
+}
       let minorMessage = '';
       if (processedAuthors.some(a => a.isMinor)) {
         minorMessage = paperLanguage === 'es'
@@ -4774,20 +5161,26 @@ const keywordsInfo = `
 
       // NUEVO: Respuesta más completa
       return res.status(201).json({
-        success: true,
-        submissionId,
-        driveFolderId: authorFolder.id,
-        driveFolderUrl: authorFolder.webViewLink,
-        editorialFolderUrl: editorialFolder ? editorialFolder.webViewLink : null,
-        correspondingAuthor: {
-          name: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`,
-          email: correspondingAuthorData.email
-        },
-        message: paperLanguage === 'es' 
-          ? 'Artículo enviado correctamente. Revisa tu correo para más detalles.'
-          : 'Article submitted successfully. Check your email for more details.',
-        requestId
-      });
+  success: true,
+  submissionId,
+  driveFolderId: authorFolder.id,
+  driveFolderUrl: authorFolder.webViewLink,
+  editorialFolderUrl: editorialFolder ? editorialFolder.webViewLink : null,
+  
+  // Información clara de quién subió y quién es correspondencia
+  submitter: {
+    name: submitterName,
+    email: submitterEmail
+  },
+  correspondingAuthor: {
+    name: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`,
+    email: correspondingAuthorData.email
+  },
+  message: paperLanguage === 'es' 
+    ? 'Artículo enviado correctamente. Se enviará confirmación al autor de correspondencia.'
+    : 'Article submitted successfully. Confirmation will be sent to the corresponding author.',
+  requestId
+});
 
     } catch (error) {
       console.error(`[${requestId}] ❌ Error:`, error.message);

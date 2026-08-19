@@ -1570,7 +1570,8 @@ const steps = [
     try {
       const token = await auth.currentUser.getIdToken();
       const manuscriptBase64 = await toBase64(formData.manuscript);
-      
+      const correspondingAuthor = formData.authors.find(a => a.isCorresponding) || formData.authors[0];
+
       const payload = {
   title: formData.title,
   titleEn: formData.titleEn,
@@ -1618,9 +1619,24 @@ const steps = [
         manuscriptName: formData.manuscript.name,
         wantsToBeReviewer: formData.wantsToBeReviewer,
         reviewerAreas: formData.wantsToBeReviewer ? formData.reviewerAreas : [],
-        authorUID: user.uid,
-        authorEmail: user.email,
-        authorName: user.displayName || `${formData.authors[0].firstName} ${formData.authors[0].lastName}`.trim()
+         authorUID: user.uid,
+  submitterEmail: user.email,  // ← NUEVO: Email del que sube
+  submitterName: user.displayName || `${correspondingAuthor.firstName} ${correspondingAuthor.lastName}`.trim(),  // ← NUEVO: Nombre del que sube
+  
+  // Datos del autor de correspondencia (para correos)
+  authorEmail: correspondingAuthor.email,  // ← CAMBIADO: Email del autor de correspondencia
+  authorName: `${correspondingAuthor.firstName} ${correspondingAuthor.lastName}`.trim(),  // ← CAMBIADO: Nombre del autor de correspondencia
+  
+  // También enviar la información completa del autor de correspondencia
+  correspondingAuthor: {
+    firstName: correspondingAuthor.firstName,
+    lastName: correspondingAuthor.lastName,
+    email: correspondingAuthor.email,
+    institution: correspondingAuthor.institution,
+    orcid: correspondingAuthor.orcid || null,
+    isCorresponding: true
+  }
+
       };
 
       const response = await fetch('https://submitarticle-ggqsq2kkua-uc.a.run.app', {
