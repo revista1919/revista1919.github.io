@@ -464,7 +464,7 @@ export const ReviewerWorkspace = ({ assignmentId, onClose, readOnly = false }) =
         </svg>
         <div>
           <p className="text-xs font-medium text-yellow-800">
-            {isSpanish ? 'Documento de revisión no disponible' : 'Review document not available'}
+            {isSpanish ? 'Documento de revisión no disponible. Por favor salga de esta plataforma de envío y vuelva a entrar' : 'Review document not available. Please exit this platform and re-enter.'}
           </p>
           <p className="text-xs text-yellow-600 mt-1">
             {isSpanish 
