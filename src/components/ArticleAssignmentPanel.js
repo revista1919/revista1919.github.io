@@ -138,12 +138,13 @@ const ArticleAssignmentPanel = ({ user }) => {
   }, [getSectionEditors]);
 
   // Actualizar checklist cuando cambia el submission seleccionado
+    // Actualizar checklist cuando cambia el submission seleccionado
   useEffect(() => {
     if (selectedSubmission) {
       const sub = selectedSubmission;
       setFormChecklist({
         hasAbstract: !!(sub.abstract || sub.abstractEn),
-        hasKeywords: !!(sub.keywords?.length > 0 || sub.keywordsEn?.length > 0),
+        hasKeywords: !!(sub.keywordsEs?.length > 0 || sub.keywordsEn?.length > 0), // ✅ CAMBIADO
         hasConflictOfInterest: !!sub.conflictOfInterest,
         hasFundingInfo: sub.funding ? true : false,
         hasAuthorInstitution: !!(sub.authors?.[0]?.institution),
@@ -153,6 +154,7 @@ const ArticleAssignmentPanel = ({ user }) => {
       });
     }
   }, [selectedSubmission]);
+ 
 
   const handleAssign = async () => {
     if (!selectedSubmission || !selectedEditor) {
@@ -432,7 +434,7 @@ const ArticleAssignmentPanel = ({ user }) => {
                     </div>
                   </div>
 
-                  {/* PALABRAS CLAVE Y FINANCIAMIENTO */}
+                                   {/* PALABRAS CLAVE Y FINANCIAMIENTO */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white border border-slate-200 rounded-sm shadow-sm p-6">
                       <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -440,7 +442,11 @@ const ArticleAssignmentPanel = ({ user }) => {
                         {isSpanish ? 'Palabras Clave' : 'Keywords'}
                       </h3>
                       <div className="flex flex-wrap gap-2">
-                        {(isSpanish ? selectedSubmission.keywords : selectedSubmission.keywordsEn || selectedSubmission.keywords)?.map((keyword, index) => (
+                        {/* ✅ CAMBIADO: keywordsEs en lugar de keywords */}
+                        {(isSpanish 
+                          ? selectedSubmission.keywordsEs 
+                          : selectedSubmission.keywordsEn || selectedSubmission.keywordsEs
+                        )?.map((keyword, index) => (
                           <span key={index} className="px-2.5 py-1 bg-[#F5F7F9] border border-slate-200 text-slate-700 rounded-sm text-xs">
                             {keyword}
                           </span>
