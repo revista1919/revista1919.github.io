@@ -5358,10 +5358,10 @@ exports.checkSubmissionStatus = onCall(async (request) => {
     throw new HttpsError('internal', error.message);
   }
 });
-
 /**
  * 🔒 Maneja la creación de invitaciones de revisor con protecciones contra saturación
  * Reemplaza a onReviewerInvitationCreated con mejores prácticas de resiliencia
+ * ✅ CORREGIDO: Omite email interno para invitaciones externas (type === 'external')
  */
 exports.handleReviewerInvitationCreated = onDocumentCreated(
   { 
@@ -5393,8 +5393,21 @@ exports.handleReviewerInvitationCreated = onDocumentCreated(
     }
 
     console.log(`📧 Procesando invitación ${invitationId} para ${invitation.reviewerEmail}`);
+    console.log(`📋 Tipo: ${invitation.type || 'internal'}`);
+    console.log(`📋 Tiene onboardingToken: ${!!invitation.onboardingToken}`);
+    console.log(`📋 Tiene inviteHash: ${!!invitation.inviteHash}`);
 
-    // ===== PROTECCIÓN 2: Circuit Breaker simple =====
+    // ===== ✅ PROTECCIÓN 2: OMITIR SI ES INVITACIÓN EXTERNA =====
+    // Las invitaciones externas ya envían su propio email en createExternalReviewerInvitation
+    if (invitation.type === 'external' || invitation.onboardingToken) {
+      console.log('⏭️ Invitación EXTERNA detectada. Omitiendo email interno.');
+      console.log('✅ El email de onboarding ya fue enviado por createExternalReviewerInvitation.');
+      console.log(`🏁 [handleReviewerInvitationCreated] FIN (omitido por ser externa) - ${Date.now() - functionStartTime}ms`);
+      console.log('='.repeat(60));
+      return;
+    }
+
+    // ===== PROTECCIÓN 3: Circuit Breaker simple =====
     const circuitBreakerKey = `invitation_processing_${invitationId}`;
     if (isCircuitBroken(circuitBreakerKey)) {
       console.warn(`⚠️ Circuito abierto para ${invitationId}, esperando reset...`);
@@ -5405,7 +5418,7 @@ exports.handleReviewerInvitationCreated = onDocumentCreated(
       }
     }
 
-    // ===== PROTECCIÓN 3: Timeout global de función =====
+    // ===== PROTECCIÓN 4: Timeout global de función =====
     const functionTimeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('TIMEOUT_GLOBAL')), FUNCTION_TIMEOUT_MS)
     );
@@ -5456,7 +5469,6 @@ exports.handleReviewerInvitationCreated = onDocumentCreated(
     }
   }
 );
-
 /**
  * Procesa la invitación con múltiples capas de protección
  */

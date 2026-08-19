@@ -15,7 +15,9 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ShieldCheckIcon,
-  SparklesIcon
+  SparklesIcon,
+  EyeIcon,       // ✅ AGREGAR
+  EyeSlashIcon   // ✅ AGREGAR
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as SolidCheck } from '@heroicons/react/24/solid';
 import { httpsCallable } from 'firebase/functions';
@@ -117,7 +119,9 @@ const ReviewerOnboarding = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
+    const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);          // ✅ AGREGAR
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // ✅ AGREGAR
   const [expandedCategory, setExpandedCategory] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -559,33 +563,62 @@ const ReviewerOnboarding = () => {
                   </div>
 
                   <div className="border-t border-slate-100 pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="group">
+                                        <div className="group">
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c]">
                         {texts.password}
                       </label>
                       <div className="relative">
                         <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[#003b5c] transition-colors" />
                         <input 
-                          type="password" 
+                          type={showPassword ? "text" : "password"} 
                           value={formData.password} 
                           onChange={(e) => setFormData({...formData, password: e.target.value})} 
                           placeholder={texts.passwordPlaceholder} 
                           required
-                          className="w-full pl-12 pr-4 py-3.5 bg-slate-50/50 border-0 ring-1 ring-slate-200 rounded-xl text-sm font-sans text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm" 
+                          className="w-full pl-12 pr-12 py-3.5 bg-slate-50/50 border-0 ring-1 ring-slate-200 rounded-xl text-sm font-sans text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm" 
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#003b5c] transition-colors"
+                          tabIndex="-1"
+                          aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        >
+                          {showPassword ? (
+                            <EyeSlashIcon className="w-5 h-5" />
+                          ) : (
+                            <EyeIcon className="w-5 h-5" />
+                          )}
+                        </button>
                       </div>
                     </div>
                     <div className="group">
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c]">
                         {texts.confirmPassword}
                       </label>
-                      <input 
-                        type="password" 
-                        value={formData.confirmPassword} 
-                        onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} 
-                        required
-                        className="w-full px-4 py-3.5 bg-slate-50/50 border-0 ring-1 ring-slate-200 rounded-xl text-sm font-sans text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm" 
-                      />
+                      <div className="relative">
+                        <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[#003b5c] transition-colors" />
+                        <input 
+                          type={showConfirmPassword ? "text" : "password"} 
+                          value={formData.confirmPassword} 
+                          onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} 
+                          required
+                          className="w-full pl-12 pr-12 py-3.5 bg-slate-50/50 border-0 ring-1 ring-slate-200 rounded-xl text-sm font-sans text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm" 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#003b5c] transition-colors"
+                          tabIndex="-1"
+                          aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeSlashIcon className="w-5 h-5" />
+                          ) : (
+                            <EyeIcon className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
