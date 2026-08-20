@@ -178,234 +178,580 @@ const cleanHtml = (html) => {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 };
 
-const exportToExcel = (auditLogs, rounds, peerReviews, metadataProposals, submissionTitle, isSpanish) => {
-  const data = [];
-  
-  auditLogs
-    .sort((a, b) => {
-      const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
-      const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
-      return dateA - dateB;
-    })
-    .forEach(log => {
-      data.push({
-        [isSpanish ? 'Fecha' : 'Date']: formatDate(log.timestamp, isSpanish),
-        [isSpanish ? 'Acción' : 'Action']: translateAction(log.action, isSpanish),
-        [isSpanish ? 'Ronda' : 'Round']: log.round || '1',
-        [isSpanish ? 'Realizado por' : 'Performed by']: log.byEmail || log.by || (isSpanish ? 'Sistema' : 'System'),
-        [isSpanish ? 'Datos Completos' : 'Complete Data']: JSON.stringify(log, null, 2),
-      });
-    });
+// ============ FUNCIONES DE EXPORTACIÓN PREMIUM ============
 
-  const ws = XLSX.utils.json_to_sheet(data);
-  
-  const colWidths = [
-    { wch: 25 }, { wch: 30 }, { wch: 8 }, { wch: 30 }, { wch: 80 },
-  ];
-  ws['!cols'] = colWidths;
-  
+// Utilidades para exportación
+const getSortedLogs = (auditLogs) => {
+  return [...auditLogs].sort((a, b) => {
+    const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+    const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+    return dateA - dateB;
+  });
+};
+
+const getRoundLogs = (sortedLogs, roundNumber) => {
+  return sortedLogs.filter(log => 
+    log.round === roundNumber || (log.round === undefined && roundNumber === 1)
+  );
+};
+
+// ============ EXPORTAR A EXCEL ============
+const exportToExcel = (auditLogs, rounds, peerReviews, metadataProposals, submissionTitle, isSpanish) => {
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, isSpanish ? 'Historial' : 'History');
+  
+  // ===== HOJA 1: RESUMEN GENERAL =====
+  const summaryData = [
+    {
+      [isSpanish ? 'Documento' : 'Document']: submissionTitle || 'Submission',
+      [isSpanish ? 'Fecha de Exportación' : 'Export Date']: new Date().toLocaleString(isSpanish ? 'es-ES' : 'en-US'),
+      [isSpanish ? 'Total de Rondas' : 'Total Rounds']: rounds.length,
+      [isSpanish ? 'Total de Eventos' : 'Total Events']: auditLogs.length,
+      [isSpanish ? 'Revisiones de Pares' : 'Peer Reviews']: peerReviews.length,
+      [isSpanish ? 'Propuestas de Metadatos' : 'Metadata Proposals']: metadataProposals.length,
+    }
+  ];
+  
+  const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+  wsSummary['!cols'] = Object.keys(summaryData[0]).map(key => ({ wch: Math.max(key.length + 5, 25) }));
+  XLSX.utils.book_append_sheet(wb, wsSummary, isSpanish ? 'Resumen' : 'Summary');
+  
+  // ===== HOJA 2: LÍNEA DE TIEMPO =====
+  const sortedLogs = getSortedLogs(auditLogs);
+  const timelineData = sortedLogs.map(log => ({
+    [isSpanish ? 'Fecha' : 'Date']: formatDate(log.timestamp, isSpanish),
+    [isSpanish ? 'Acción' : 'Action']: translateAction(log.action, isSpanish),
+    [isSpanish ? 'Ronda' : 'Round']: log.round || '1',
+    [isSpanish ? 'Realizado por' : 'Performed by']: log.byEmail || log.by || (isSpanish ? 'Sistema' : 'System'),
+    [isSpanish ? 'Email' : 'Email']: log.byEmail || log.toEmail || '',
+  }));
+  
+  const wsTimeline = XLSX.utils.json_to_sheet(timelineData);
+  wsTimeline['!cols'] = [
+    { wch: 25 }, { wch: 30 }, { wch: 8 }, { wch: 30 }, { wch: 35 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsTimeline, isSpanish ? 'Línea de Tiempo' : 'Timeline');
+  
+  // ===== HOJA 3: DETALLE COMPLETO =====
+  const detailData = sortedLogs.map(log => ({
+    [isSpanish ? 'Fecha' : 'Date']: formatDate(log.timestamp, isSpanish),
+    [isSpanish ? 'Acción' : 'Action']: translateAction(log.action, isSpanish),
+    [isSpanish ? 'Ronda' : 'Round']: log.round || '1',
+    [isSpanish ? 'Realizado por' : 'Performed by']: log.byEmail || log.by || (isSpanish ? 'Sistema' : 'System'),
+    [isSpanish ? 'Datos Completos' : 'Complete Data']: JSON.stringify(log, null, 2),
+  });
+  
+  const wsDetail = XLSX.utils.json_to_sheet(detailData);
+  wsDetail['!cols'] = [
+    { wch: 25 }, { wch: 30 }, { wch: 8 }, { wch: 30 }, { wch: 100 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsDetail, isSpanish ? 'Detalle Completo' : 'Complete Detail');
+  
+  // ===== HOJA 4: DECISIONES =====
+  const decisionsData = [];
+  rounds.forEach(round => {
+    if (round.deskReview) {
+      decisionsData.push({
+        [isSpanish ? 'Ronda' : 'Round']: round.roundNumber,
+        [isSpanish ? 'Tipo' : 'Type']: isSpanish ? 'Desk Review' : 'Desk Review',
+        [isSpanish ? 'Decisión' : 'Decision']: round.deskReview.decision ? translateDecision(round.deskReview.decision, isSpanish) : '—',
+        [isSpanish ? 'Feedback' : 'Feedback']: round.deskReview.feedback ? cleanHtml(round.deskReview.feedback) : '—',
+        [isSpanish ? 'Editor' : 'Editor']: round.deskReview.editorName || '—',
+      });
+    }
+    if (round.finalDecision) {
+      decisionsData.push({
+        [isSpanish ? 'Ronda' : 'Round']: round.roundNumber,
+        [isSpanish ? 'Tipo' : 'Type']: isSpanish ? 'Decisión Final' : 'Final Decision',
+        [isSpanish ? 'Decisión' : 'Decision']: round.finalDecision.decision ? translateDecision(round.finalDecision.decision, isSpanish) : '—',
+        [isSpanish ? 'Feedback' : 'Feedback']: round.finalDecision.feedback ? cleanHtml(round.finalDecision.feedback) : '—',
+        [isSpanish ? 'Editor' : 'Editor']: round.finalDecision.editorName || '—',
+      });
+    }
+  });
+  
+  if (decisionsData.length > 0) {
+    const wsDecisions = XLSX.utils.json_to_sheet(decisionsData);
+    wsDecisions['!cols'] = [
+      { wch: 8 }, { wch: 20 }, { wch: 20 }, { wch: 60 }, { wch: 30 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsDecisions, isSpanish ? 'Decisiones' : 'Decisions');
+  }
+  
+  // ===== HOJA 5: REVISIONES DE PARES =====
+  if (peerReviews.length > 0) {
+    const peerReviewData = peerReviews.map(review => ({
+      [isSpanish ? 'Ronda' : 'Round']: review.round || 1,
+      [isSpanish ? 'Revisor' : 'Reviewer']: review.reviewerName || '—',
+      [isSpanish ? 'Email' : 'Email']: review.reviewerEmail || '—',
+      [isSpanish ? 'Recomendación' : 'Recommendation']: review.recommendation ? translateDecision(review.recommendation, isSpanish) : '—',
+      [isSpanish ? 'Fecha' : 'Date']: review.submittedAt ? formatDate(review.submittedAt, isSpanish) : '—',
+      [isSpanish ? 'Comentarios al Autor' : 'Comments to Author']: review.commentsToAuthor ? cleanHtml(review.commentsToAuthor) : '—',
+      [isSpanish ? 'Comentarios al Editor' : 'Comments to Editor']: review.commentsToEditor ? cleanHtml(review.commentsToEditor) : '—',
+    }));
+    
+    const wsPeerReviews = XLSX.utils.json_to_sheet(peerReviewData);
+    wsPeerReviews['!cols'] = [
+      { wch: 8 }, { wch: 25 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 50 }, { wch: 50 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsPeerReviews, isSpanish ? 'Revisiones de Pares' : 'Peer Reviews');
+  }
+  
+  // ===== HOJA 6: PROPUESTAS DE METADATOS =====
+  if (metadataProposals.length > 0) {
+    const metadataProposalData = metadataProposals.map(proposal => ({
+      [isSpanish ? 'Ronda' : 'Round']: proposal.round || 1,
+      [isSpanish ? 'Propuesto por' : 'Proposed by']: proposal.proposedByEmail || '—',
+      [isSpanish ? 'Fecha' : 'Date']: proposal.proposedAt ? formatDate(proposal.proposedAt, isSpanish) : '—',
+      [isSpanish ? 'Estado' : 'Status']: proposal.status || '—',
+      [isSpanish ? 'Cambios' : 'Changes']: proposal.changes ? JSON.stringify(proposal.changes, null, 2) : '—',
+      [isSpanish ? 'Respuesta del Autor' : 'Author Response']: proposal.authorResponse ? JSON.stringify(proposal.authorResponse, null, 2) : '—',
+    }));
+    
+    const wsMetadataProposals = XLSX.utils.json_to_sheet(metadataProposalData);
+    wsMetadataProposals['!cols'] = [
+      { wch: 8 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 60 }, { wch: 60 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsMetadataProposals, isSpanish ? 'Propuestas de Metadatos' : 'Metadata Proposals');
+  }
   
   const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   saveAs(blob, `historial_${submissionTitle || 'submission'}.xlsx`);
 };
 
+// ============ EXPORTAR A PDF ============
 const exportToPDF = (auditLogs, rounds, peerReviews, metadataProposals, submissionTitle, isSpanish) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
+  const margin = 25;
   let yPosition = margin;
+  
+  // Colores
+  const oxfordBlue = [0, 33, 71];
+  const accentOrange = [255, 108, 12];
+  const slateGray = [100, 116, 139];
+  const lightGray = [226, 232, 240];
+  const emeraldGreen = [5, 150, 105];
+  const white = [255, 255, 255];
 
   const checkPageBreak = (neededSpace) => {
-    if (yPosition + neededSpace > pageHeight - margin) {
+    if (yPosition + neededSpace > pageHeight - margin - 15) {
       doc.addPage();
       yPosition = margin;
+      // Re-dibujar header en nueva página
+      drawHeader();
     }
   };
-
-  doc.setFontSize(24);
-  doc.setTextColor(0, 33, 71);
-  doc.setFont('helvetica', 'bold');
-  doc.text(isSpanish ? 'Historial de Auditoría' : 'Audit History', margin, yPosition);
   
-  yPosition += 10;
+  const drawHeader = () => {
+    // Fondo del header
+    doc.setFillColor(...oxfordBlue);
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    
+    // Barra de acento
+    doc.setFillColor(...accentOrange);
+    doc.rect(0, 30, pageWidth, 3, 'F');
+    
+    // Título
+    doc.setFontSize(14);
+    doc.setTextColor(...white);
+    doc.setFont('helvetica', 'bold');
+    doc.text(isSpanish ? 'HISTORIAL DE AUDITORÍA' : 'AUDIT HISTORY', margin, 20);
+    
+    yPosition = 45;
+  };
   
-  doc.setDrawColor(0, 33, 71);
-  doc.setLineWidth(0.5);
-  doc.line(margin, yPosition, pageWidth - margin, yPosition);
-  
-  yPosition += 8;
-  
-  if (submissionTitle) {
-    doc.setFontSize(12);
-    doc.setTextColor(100, 116, 139);
+  const drawFooter = (pageNumber, totalPages) => {
+    doc.setFontSize(7);
+    doc.setTextColor(...slateGray);
     doc.setFont('helvetica', 'normal');
-    doc.text(submissionTitle, margin, yPosition);
-    yPosition += 15;
-  }
-
-  const sortedLogs = [...auditLogs].sort((a, b) => {
-    const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
-    const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
-    return dateA - dateB;
-  });
-
-  rounds.forEach((round, roundIndex) => {
-    const roundLogs = sortedLogs.filter(log => 
-      log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1)
+    
+    // Línea separadora
+    doc.setDrawColor(...lightGray);
+    doc.setLineWidth(0.3);
+    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+    
+    doc.text(
+      isSpanish ? 'Sistema Editorial - Revista Nacional de las Ciencias para Estudiantes' : 'Editorial System - National Journal of Sciences for Students',
+      margin,
+      pageHeight - 8
     );
     
+    doc.text(
+      `${pageNumber} / ${totalPages}`,
+      pageWidth - margin,
+      pageHeight - 8,
+      { align: 'right' }
+    );
+  };
+  
+  const drawSectionTitle = (title, color = oxfordBlue) => {
+    checkPageBreak(30);
+    
+    // Fondo del título
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, yPosition - 12, pageWidth - 2 * margin, 16, 'F');
+    
+    // Barra lateral de color
+    doc.setFillColor(...color);
+    doc.rect(margin, yPosition - 12, 3, 16, 'F');
+    
+    // Texto
+    doc.setFontSize(11);
+    doc.setTextColor(...color);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title.toUpperCase(), margin + 10, yPosition - 1);
+    
+    yPosition += 10;
+  };
+  
+  const drawInfoBox = (label, value, labelColor = slateGray, valueColor = [30, 41, 59]) => {
+    doc.setFontSize(8);
+    doc.setTextColor(...labelColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text(label.toUpperCase() + ':', margin + 10, yPosition);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(...valueColor);
+    doc.setFont('helvetica', 'normal');
+    
+    const cleanValue = cleanHtml(String(value));
+    const lines = doc.splitTextToSize(cleanValue, pageWidth - 2 * margin - 30);
+    doc.text(lines, margin + 10, yPosition + 4);
+    yPosition += 4 + (lines.length * 4) + 4;
+  };
+  
+  const drawLogCard = (log) => {
     checkPageBreak(40);
     
-    doc.setFillColor(248, 250, 252);
-    doc.rect(margin, yPosition - 6, pageWidth - 2 * margin, 12, 'F');
+    // Fondo del card
+    doc.setFillColor(...white);
+    const cardHeight = 30;
+    doc.rect(margin, yPosition - 8, pageWidth - 2 * margin, cardHeight, 'F');
     
-    doc.setFillColor(0, 33, 71);
-    doc.rect(margin, yPosition - 6, 4, 12, 'F');
+    // Borde
+    doc.setDrawColor(...lightGray);
+    doc.setLineWidth(0.3);
+    doc.rect(margin, yPosition - 8, pageWidth - 2 * margin, cardHeight);
     
-    doc.setFontSize(14);
-    doc.setTextColor(0, 33, 71);
+    // Barra lateral según acción
+    const actionColor = log.action.includes('decision') || log.action.includes('accept') 
+      ? emeraldGreen 
+      : log.action.includes('review') 
+        ? accentOrange 
+        : oxfordBlue;
+    
+    doc.setFillColor(...actionColor);
+    doc.rect(margin, yPosition - 8, 2, cardHeight, 'F');
+    
+    // Acción
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
     doc.setFont('helvetica', 'bold');
-    const roundTitle = `${isSpanish ? 'Ronda' : 'Round'} ${round.roundNumber}`;
-    doc.text(roundTitle, margin + 10, yPosition + 2);
+    doc.text(translateAction(log.action, isSpanish), margin + 10, yPosition);
     
-    yPosition += 15;
-
+    // Fecha
+    doc.setFontSize(8);
+    doc.setTextColor(...slateGray);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formatDate(log.timestamp, isSpanish), margin + 10, yPosition + 5);
+    
+    // Realizado por
+    const performer = log.byEmail || log.by || (isSpanish ? 'Sistema' : 'System');
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184);
+    doc.text(performer, margin + 10, yPosition + 10);
+    
+    yPosition += cardHeight + 5;
+  };
+  
+  // ===== INICIO DEL DOCUMENTO =====
+  drawHeader();
+  
+  // Información del documento
+  if (submissionTitle) {
+    doc.setFontSize(12);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont('helvetica', 'bold');
+    doc.text(submissionTitle, margin, yPosition);
+    yPosition += 8;
+  }
+  
+  doc.setFontSize(8);
+  doc.setTextColor(...slateGray);
+  doc.setFont('helvetica', 'normal');
+  doc.text(
+    `${isSpanish ? 'Generado' : 'Generated'}: ${new Date().toLocaleString(isSpanish ? 'es-ES' : 'en-US')}`,
+    margin,
+    yPosition
+  );
+  yPosition += 12;
+  
+  const sortedLogs = getSortedLogs(auditLogs);
+  
+  rounds.forEach((round, roundIndex) => {
+    const roundLogs = getRoundLogs(sortedLogs, round.roundNumber);
+    
+    // Título de ronda
+    drawSectionTitle(
+      `${isSpanish ? 'RONDA' : 'ROUND'} ${round.roundNumber}`,
+      oxfordBlue
+    );
+    
+    // Desk Review
     if (round.deskReview) {
-      checkPageBreak(30);
-      
-      doc.setFontSize(11);
-      doc.setTextColor(0, 33, 71);
-      doc.setFont('helvetica', 'bold');
-      doc.text(isSpanish ? 'Desk Review' : 'Desk Review', margin, yPosition);
-      
-      yPosition += 6;
-      
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      doc.setFont('helvetica', 'normal');
-      
-      if (round.deskReview.feedback) {
-        const cleanText = cleanHtml(round.deskReview.feedback);
-        const lines = doc.splitTextToSize(cleanText, pageWidth - 2 * margin - 20);
-        checkPageBreak(lines.length * 5 + 10);
-        doc.text(lines, margin + 10, yPosition);
-        yPosition += lines.length * 5 + 5;
-      }
+      drawSectionTitle(isSpanish ? 'Desk Review' : 'Desk Review', oxfordBlue);
       
       if (round.deskReview.decision) {
-        doc.text(`${isSpanish ? 'Decisión' : 'Decision'}: ${translateDecision(round.deskReview.decision, isSpanish)}`, margin + 10, yPosition);
-        yPosition += 5;
+        drawInfoBox(
+          isSpanish ? 'Decisión' : 'Decision',
+          translateDecision(round.deskReview.decision, isSpanish),
+          slateGray,
+          oxfordBlue
+        );
       }
       
-      yPosition += 10;
+      if (round.deskReview.feedback) {
+        drawInfoBox(
+          isSpanish ? 'Feedback' : 'Feedback',
+          round.deskReview.feedback
+        );
+      }
+      
+      if (round.deskReview.commentsToEditorial) {
+        drawInfoBox(
+          isSpanish ? 'Notas Internas' : 'Internal Notes',
+          round.deskReview.commentsToEditorial,
+          [148, 163, 184]
+        );
+      }
     }
-
+    
+    // Decisión Final
     if (round.finalDecision) {
-      checkPageBreak(30);
-      
-      doc.setFontSize(11);
-      doc.setTextColor(5, 150, 105);
-      doc.setFont('helvetica', 'bold');
-      doc.text(isSpanish ? 'Decisión Final' : 'Final Decision', margin, yPosition);
-      
-      yPosition += 6;
-      
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      doc.setFont('helvetica', 'normal');
-      
-      if (round.finalDecision.feedback) {
-        const cleanText = cleanHtml(round.finalDecision.feedback);
-        const lines = doc.splitTextToSize(cleanText, pageWidth - 2 * margin - 20);
-        checkPageBreak(lines.length * 5 + 10);
-        doc.text(lines, margin + 10, yPosition);
-        yPosition += lines.length * 5 + 5;
-      }
+      drawSectionTitle(isSpanish ? 'Decisión Final' : 'Final Decision', emeraldGreen);
       
       if (round.finalDecision.decision) {
-        doc.text(`${isSpanish ? 'Decisión' : 'Decision'}: ${translateDecision(round.finalDecision.decision, isSpanish)}`, margin + 10, yPosition);
-        yPosition += 5;
+        drawInfoBox(
+          isSpanish ? 'Decisión' : 'Decision',
+          translateDecision(round.finalDecision.decision, isSpanish),
+          slateGray,
+          emeraldGreen
+        );
       }
       
-      yPosition += 10;
+      if (round.finalDecision.feedback) {
+        drawInfoBox(
+          isSpanish ? 'Resolución' : 'Resolution',
+          round.finalDecision.feedback
+        );
+      }
     }
-
-    roundLogs.forEach((log, logIndex) => {
-      checkPageBreak(30);
+    
+    // Revisiones de Pares de esta ronda
+    const roundPeerReviews = peerReviews.filter(r => r.round === round.roundNumber);
+    if (roundPeerReviews.length > 0) {
+      drawSectionTitle(isSpanish ? 'Revisiones de Pares' : 'Peer Reviews', accentOrange);
       
-      doc.setFillColor(255, 255, 255);
-      doc.rect(margin, yPosition - 5, pageWidth - 2 * margin, 25, 'F');
+      roundPeerReviews.forEach((review, idx) => {
+        checkPageBreak(30);
+        
+        doc.setFillColor(248, 250, 252);
+        doc.rect(margin, yPosition - 8, pageWidth - 2 * margin, 20, 'F');
+        
+        doc.setFontSize(9);
+        doc.setTextColor(...oxfordBlue);
+        doc.setFont('helvetica', 'bold');
+        doc.text(
+          `${isSpanish ? 'Revisor' : 'Reviewer'} ${idx + 1}: ${review.reviewerName || '—'}`,
+          margin + 10,
+          yPosition
+        );
+        
+        if (review.recommendation) {
+          doc.setFontSize(8);
+          doc.setTextColor(...slateGray);
+          doc.setFont('helvetica', 'normal');
+          doc.text(
+            `${isSpanish ? 'Recomendación' : 'Recommendation'}: ${translateDecision(review.recommendation, isSpanish)}`,
+            margin + 10,
+            yPosition + 6
+          );
+        }
+        
+        yPosition += 25;
+        
+        if (review.commentsToAuthor) {
+          drawInfoBox(
+            isSpanish ? 'Comentarios al Autor' : 'Comments to Author',
+            review.commentsToAuthor
+          );
+        }
+        
+        if (review.commentsToEditor) {
+          drawInfoBox(
+            isSpanish ? 'Comentarios al Editor' : 'Comments to Editor',
+            review.commentsToEditor,
+            [148, 163, 184]
+          );
+        }
+      });
+    }
+    
+    // Eventos de la ronda
+    if (roundLogs.length > 0) {
+      drawSectionTitle(isSpanish ? 'Registro de Actividad' : 'Activity Log', slateGray);
       
-      doc.setDrawColor(226, 232, 240);
+      roundLogs.forEach(log => {
+        drawLogCard(log);
+      });
+    }
+    
+    yPosition += 10;
+  });
+  
+  // Propuestas de Metadatos (al final)
+  if (metadataProposals.length > 0) {
+    doc.addPage();
+    drawHeader();
+    drawSectionTitle(isSpanish ? 'Propuestas de Metadatos' : 'Metadata Proposals', accentOrange);
+    
+    metadataProposals.forEach(proposal => {
+      checkPageBreak(40);
+      
+      // Card de propuesta
+      doc.setFillColor(...white);
+      doc.rect(margin, yPosition - 8, pageWidth - 2 * margin, 25, 'F');
+      doc.setDrawColor(...lightGray);
       doc.setLineWidth(0.3);
-      doc.rect(margin, yPosition - 5, pageWidth - 2 * margin, 25);
-      
-      doc.setFontSize(11);
-      doc.setTextColor(30, 41, 59);
-      doc.setFont('helvetica', 'bold');
-      doc.text(translateAction(log.action, isSpanish), margin + 10, yPosition);
+      doc.rect(margin, yPosition - 8, pageWidth - 2 * margin, 25);
       
       doc.setFontSize(9);
-      doc.setTextColor(100, 116, 139);
+      doc.setTextColor(...oxfordBlue);
+      doc.setFont('helvetica', 'bold');
+      doc.text(
+        `${isSpanish ? 'Propuesta' : 'Proposal'} - ${formatDate(proposal.proposedAt, isSpanish)}`,
+        margin + 10,
+        yPosition
+      );
+      
+      doc.setFontSize(8);
+      doc.setTextColor(...slateGray);
       doc.setFont('helvetica', 'normal');
-      doc.text(formatDate(log.timestamp, isSpanish), pageWidth - margin - 10, yPosition, { align: 'right' });
+      doc.text(
+        `${isSpanish ? 'Por' : 'By'}: ${proposal.proposedByEmail || '—'}`,
+        margin + 10,
+        yPosition + 6
+      );
       
-      yPosition += 8;
+      if (proposal.status) {
+        doc.text(
+          `${isSpanish ? 'Estado' : 'Status'}: ${proposal.status}`,
+          margin + 10,
+          yPosition + 11
+        );
+      }
       
-      const logData = JSON.stringify(log, null, 2);
-      const dataLines = doc.splitTextToSize(logData, pageWidth - 2 * margin - 20);
-      doc.setFontSize(7);
-      doc.setTextColor(148, 163, 184);
-      doc.text(dataLines.slice(0, 10), margin + 10, yPosition);
+      yPosition += 30;
       
-      yPosition += 20;
+      if (proposal.changes) {
+        proposal.changes.forEach(change => {
+          checkPageBreak(25);
+          
+          doc.setFontSize(8);
+          doc.setTextColor(...slateGray);
+          doc.setFont('helvetica', 'bold');
+          doc.text(
+            `${isSpanish ? 'Campo' : 'Field'}: ${change.field}`,
+            margin + 10,
+            yPosition
+          );
+          
+          yPosition += 5;
+          
+          // Valor original
+          doc.setFontSize(7);
+          doc.setTextColor(200, 50, 50);
+          doc.setFont('helvetica', 'normal');
+          const originalValue = typeof change.currentValue === 'object' 
+            ? JSON.stringify(change.currentValue) 
+            : String(change.currentValue);
+          const originalLines = doc.splitTextToSize(
+            `${isSpanish ? 'Original' : 'Original'}: ${originalValue}`,
+            pageWidth - 2 * margin - 20
+          );
+          doc.text(originalLines, margin + 10, yPosition);
+          yPosition += originalLines.length * 4 + 3;
+          
+          // Valor propuesto
+          doc.setTextColor(5, 150, 105);
+          const proposedValue = typeof change.proposedValue === 'object' 
+            ? JSON.stringify(change.proposedValue) 
+            : String(change.proposedValue);
+          const proposedLines = doc.splitTextToSize(
+            `${isSpanish ? 'Propuesto' : 'Proposed'}: ${proposedValue}`,
+            pageWidth - 2 * margin - 20
+          );
+          doc.text(proposedLines, margin + 10, yPosition);
+          yPosition += proposedLines.length * 4 + 8;
+        });
+      }
     });
-    
-    yPosition += 15;
-  });
-
+  }
+  
+  // Footer en todas las páginas
   const totalPages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(148, 163, 184);
-    doc.setFont('helvetica', 'normal');
-    const footerText = isSpanish 
-      ? 'Documento generado automáticamente por el sistema editorial' 
-      : 'Document automatically generated by the editorial system';
-    doc.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' });
-    doc.text(`${i} / ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+    drawFooter(i, totalPages);
   }
-
+  
   doc.save(`historial_${submissionTitle || 'submission'}.pdf`);
 };
 
+// ============ EXPORTAR A CSV ============
 const exportToCSV = (auditLogs, rounds, peerReviews, metadataProposals, submissionTitle, isSpanish) => {
+  const sortedLogs = getSortedLogs(auditLogs);
+  
   const headers = [
     isSpanish ? 'Fecha' : 'Date',
     isSpanish ? 'Acción' : 'Action',
     isSpanish ? 'Ronda' : 'Round',
     isSpanish ? 'Realizado por' : 'Performed by',
-    isSpanish ? 'Datos Completos (JSON)' : 'Complete Data (JSON)',
+    isSpanish ? 'Email' : 'Email',
+    isSpanish ? 'Detalles' : 'Details',
   ];
   
-  const rows = auditLogs
-    .sort((a, b) => {
-      const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
-      const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
-      return dateA - dateB;
-    })
-    .map(log => [
+  const rows = sortedLogs.map(log => {
+    // Extraer detalles relevantes
+    const details = [];
+    if (log.details && typeof log.details === 'object') {
+      Object.entries(log.details).forEach(([key, value]) => {
+        if (typeof value !== 'object') {
+          details.push(`${key}: ${value}`);
+        }
+      });
+    }
+    if (log.recommendation) {
+      details.push(`${isSpanish ? 'recomendación' : 'recommendation'}: ${translateDecision(log.recommendation, isSpanish)}`);
+    }
+    if (log.notes) {
+      details.push(`${isSpanish ? 'notas' : 'notes'}: ${log.notes}`);
+    }
+    if (log.changes) {
+      details.push(`${isSpanish ? 'cambios' : 'changes'}: ${JSON.stringify(log.changes)}`);
+    }
+    
+    return [
       formatDate(log.timestamp, isSpanish),
       translateAction(log.action, isSpanish),
       log.round || '1',
       log.byEmail || log.by || (isSpanish ? 'Sistema' : 'System'),
-      JSON.stringify(log),
-    ]);
+      log.byEmail || log.toEmail || '',
+      details.join('; ') || JSON.stringify(log),
+    ];
+  });
   
   const csvContent = [
     headers.join(','),
@@ -416,12 +762,9 @@ const exportToCSV = (auditLogs, rounds, peerReviews, metadataProposals, submissi
   saveAs(blob, `historial_${submissionTitle || 'submission'}.csv`);
 };
 
+// ============ EXPORTAR A WORD ============
 const exportToWord = (auditLogs, rounds, peerReviews, metadataProposals, submissionTitle, isSpanish) => {
-  const sortedLogs = [...auditLogs].sort((a, b) => {
-    const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
-    const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
-    return dateA - dateB;
-  });
+  const sortedLogs = getSortedLogs(auditLogs);
 
   let htmlContent = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office" 
@@ -431,69 +774,384 @@ const exportToWord = (auditLogs, rounds, peerReviews, metadataProposals, submiss
       <meta charset="UTF-8">
       <title>${isSpanish ? 'Historial de Auditoría' : 'Audit History'}</title>
       <style>
-        body { font-family: 'Georgia', serif; color: #1a202c; }
-        h1 { font-family: Arial, sans-serif; font-size: 24px; color: #002147; }
-        .round-header { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; color: #002147; background: #f8fafc; padding: 8px; margin-top: 20px; }
-        .log-item { margin: 10px 0; padding: 8px; border: 1px solid #e2e8f0; }
-        .log-action { font-weight: bold; color: #1e293b; }
-        .log-date { color: #64748b; font-size: 11px; }
-        .log-data { font-family: 'Courier New', monospace; font-size: 9px; color: #94a3b8; white-space: pre-wrap; }
-        .decision-box { margin: 10px 0; padding: 10px; border: 2px solid #002147; background: #f0f9ff; }
+        @page {
+          margin: 2.5cm;
+          @top-center {
+            content: "${isSpanish ? 'HISTORIAL DE AUDITORÍA' : 'AUDIT HISTORY'}";
+            font-family: Arial, sans-serif;
+            font-size: 9pt;
+            color: #94a3b8;
+          }
+          @bottom-center {
+            content: "${isSpanish ? 'Sistema Editorial' : 'Editorial System'} - ${new Date().toLocaleDateString()}";
+            font-family: Arial, sans-serif;
+            font-size: 8pt;
+            color: #94a3b8;
+          }
+        }
+        
+        body { 
+          font-family: 'Georgia', serif; 
+          color: #1a202c; 
+          line-height: 1.6;
+        }
+        
+        .document-header {
+          background: #002147;
+          color: white;
+          padding: 30px 40px;
+          margin-bottom: 30px;
+          border-bottom: 4px solid #FF6C0C;
+        }
+        
+        .document-header h1 {
+          font-family: Arial, sans-serif;
+          font-size: 28px;
+          margin: 0 0 10px 0;
+          color: white;
+        }
+        
+        .document-header .subtitle {
+          font-family: Arial, sans-serif;
+          font-size: 12px;
+          color: #cbd5e1;
+          margin: 0;
+        }
+        
+        .round-header {
+          font-family: Arial, sans-serif;
+          font-size: 18px;
+          font-weight: bold;
+          color: #002147;
+          background: #f8fafc;
+          padding: 12px 20px;
+          margin-top: 30px;
+          margin-bottom: 20px;
+          border-left: 4px solid #002147;
+        }
+        
+        .section-header {
+          font-family: Arial, sans-serif;
+          font-size: 14px;
+          font-weight: bold;
+          color: #475569;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-top: 25px;
+          margin-bottom: 15px;
+          border-bottom: 1px solid #e2e8f0;
+          padding-bottom: 8px;
+        }
+        
+        .log-item {
+          margin: 15px 0;
+          padding: 15px 20px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          border-left: 3px solid #002147;
+          page-break-inside: avoid;
+        }
+        
+        .log-item.review {
+          border-left-color: #FF6C0C;
+        }
+        
+        .log-item.decision {
+          border-left-color: #059669;
+        }
+        
+        .log-action {
+          font-family: Arial, sans-serif;
+          font-weight: bold;
+          color: #1e293b;
+          font-size: 13px;
+        }
+        
+        .log-date {
+          color: #64748b;
+          font-size: 10px;
+          font-family: 'Courier New', monospace;
+        }
+        
+        .log-performer {
+          color: #94a3b8;
+          font-size: 10px;
+          font-family: Arial, sans-serif;
+        }
+        
+        .log-data {
+          font-family: 'Courier New', monospace;
+          font-size: 8px;
+          color: #94a3b8;
+          white-space: pre-wrap;
+          background: #f8fafc;
+          padding: 10px;
+          margin-top: 10px;
+          border: 1px solid #e2e8f0;
+          max-height: 200px;
+          overflow: hidden;
+        }
+        
+        .decision-box {
+          margin: 15px 0;
+          padding: 20px;
+          border: 2px solid #002147;
+          background: #f0f9ff;
+          border-radius: 4px;
+          page-break-inside: avoid;
+        }
+        
+        .decision-box.final {
+          border-color: #059669;
+          background: #ecfdf5;
+        }
+        
+        .decision-box .decision-title {
+          font-family: Arial, sans-serif;
+          font-weight: bold;
+          font-size: 14px;
+          margin-bottom: 10px;
+        }
+        
+        .decision-box .decision-value {
+          display: inline-block;
+          padding: 4px 12px;
+          background: white;
+          border: 1px solid #cbd5e1;
+          border-radius: 3px;
+          font-family: Arial, sans-serif;
+          font-weight: bold;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        
+        .peer-review-box {
+          margin: 15px 0;
+          padding: 20px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          border-radius: 4px;
+          page-break-inside: avoid;
+        }
+        
+        .peer-review-box .reviewer-name {
+          font-family: Arial, sans-serif;
+          font-weight: bold;
+          color: #002147;
+          font-size: 13px;
+          margin-bottom: 10px;
+        }
+        
+        .metadata-proposal-box {
+          margin: 15px 0;
+          padding: 20px;
+          border: 1px solid #FF6C0C;
+          background: #fffaf5;
+          border-radius: 4px;
+          page-break-inside: avoid;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 10px 0;
+        }
+        
+        table th {
+          background: #002147;
+          color: white;
+          font-family: Arial, sans-serif;
+          font-size: 10px;
+          text-align: left;
+          padding: 8px 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        
+        table td {
+          padding: 8px 12px;
+          border-bottom: 1px solid #e2e8f0;
+          font-size: 11px;
+          vertical-align: top;
+        }
+        
+        table tr:nth-child(even) {
+          background: #f8fafc;
+        }
       </style>
     </head>
     <body>
-      <h1>${isSpanish ? 'Historial de Auditoría' : 'Audit History'}</h1>
-      <p>${submissionTitle || ''}</p>
+      <div class="document-header">
+        <h1>${isSpanish ? 'Historial de Auditoría' : 'Audit History'}</h1>
+        <p class="subtitle">${submissionTitle || submissionId || ''}</p>
+        <p class="subtitle">${isSpanish ? 'Generado' : 'Generated'}: ${new Date().toLocaleString(isSpanish ? 'es-ES' : 'en-US')}</p>
+      </div>
+      
+      <div class="section-header">${isSpanish ? 'Resumen Ejecutivo' : 'Executive Summary'}</div>
+      <table>
+        <tr>
+          <th>${isSpanish ? 'Métrica' : 'Metric'}</th>
+          <th>${isSpanish ? 'Valor' : 'Value'}</th>
+        </tr>
+        <tr>
+          <td>${isSpanish ? 'Total de Rondas' : 'Total Rounds'}</td>
+          <td>${rounds.length}</td>
+        </tr>
+        <tr>
+          <td>${isSpanish ? 'Total de Eventos' : 'Total Events'}</td>
+          <td>${auditLogs.length}</td>
+        </tr>
+        <tr>
+          <td>${isSpanish ? 'Revisiones de Pares' : 'Peer Reviews'}</td>
+          <td>${peerReviews.length}</td>
+        </tr>
+        <tr>
+          <td>${isSpanish ? 'Propuestas de Metadatos' : 'Metadata Proposals'}</td>
+          <td>${metadataProposals.length}</td>
+        </tr>
+      </table>
   `;
 
   rounds.forEach(round => {
-    const roundLogs = sortedLogs.filter(log => 
-      log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1)
-    );
+    const roundLogs = getRoundLogs(sortedLogs, round.roundNumber);
+    const roundPeerReviews = peerReviews.filter(r => r.round === round.roundNumber);
+    const roundMetadataProposals = metadataProposals.filter(p => p.round === round.roundNumber);
     
     htmlContent += `
-      <div class="round-header">${isSpanish ? 'Ronda' : 'Round'} ${round.roundNumber}</div>
+      <div class="round-header">${isSpanish ? 'RONDA' : 'ROUND'} ${round.roundNumber}</div>
     `;
     
+    // Desk Review
     if (round.deskReview) {
       htmlContent += `
         <div class="decision-box">
-          <div class="log-action">${isSpanish ? 'Desk Review' : 'Desk Review'}</div>
-          ${round.deskReview.decision ? `<p><strong>${isSpanish ? 'Decisión' : 'Decision'}:</strong> ${translateDecision(round.deskReview.decision, isSpanish)}</p>` : ''}
+          <div class="decision-title" style="color: #002147;">${isSpanish ? 'DESK REVIEW' : 'DESK REVIEW'}</div>
+          ${round.deskReview.decision ? `<span class="decision-value">${translateDecision(round.deskReview.decision, isSpanish)}</span>` : ''}
           ${round.deskReview.feedback ? `<p>${cleanHtml(round.deskReview.feedback)}</p>` : ''}
+          ${round.deskReview.commentsToEditorial ? `
+            <div style="margin-top: 10px; padding: 10px; background: #fef3c7; border-left: 3px solid #f59e0b;">
+              <strong style="font-family: Arial, sans-serif; font-size: 10px; color: #92400e;">${isSpanish ? 'NOTAS INTERNAS' : 'INTERNAL NOTES'}</strong>
+              <p style="margin: 5px 0 0 0;">${cleanHtml(round.deskReview.commentsToEditorial)}</p>
+            </div>
+          ` : ''}
         </div>
       `;
     }
     
+    // Decisión Final
     if (round.finalDecision) {
       htmlContent += `
-        <div class="decision-box" style="border-color: #059669; background: #ecfdf5;">
-          <div class="log-action" style="color: #059669;">${isSpanish ? 'Decisión Final' : 'Final Decision'}</div>
-          ${round.finalDecision.decision ? `<p><strong>${isSpanish ? 'Decisión' : 'Decision'}:</strong> ${translateDecision(round.finalDecision.decision, isSpanish)}</p>` : ''}
+        <div class="decision-box final">
+          <div class="decision-title" style="color: #059669;">${isSpanish ? 'DECISIÓN FINAL' : 'FINAL DECISION'}</div>
+          ${round.finalDecision.decision ? `<span class="decision-value" style="border-color: #059669; color: #059669;">${translateDecision(round.finalDecision.decision, isSpanish)}</span>` : ''}
           ${round.finalDecision.feedback ? `<p>${cleanHtml(round.finalDecision.feedback)}</p>` : ''}
         </div>
       `;
     }
     
-    roundLogs.forEach(log => {
+    // Revisiones de Pares
+    if (roundPeerReviews.length > 0) {
       htmlContent += `
-        <div class="log-item">
-          <div>
-            <span class="log-action">${translateAction(log.action, isSpanish)}</span>
-            <span class="log-date"> - ${formatDate(log.timestamp, isSpanish)}</span>
-          </div>
-          <div class="log-data">${JSON.stringify(log, null, 2).replace(/</g, '&lt;')}</div>
-        </div>
+        <div class="section-header">${isSpanish ? 'Revisiones de Pares' : 'Peer Reviews'}</div>
       `;
-    });
+      
+      roundPeerReviews.forEach((review, idx) => {
+        htmlContent += `
+          <div class="peer-review-box">
+            <div class="reviewer-name">
+              ${isSpanish ? 'Revisor' : 'Reviewer'} ${idx + 1}: ${review.reviewerName || '—'}
+              ${review.reviewerEmail ? ` (${review.reviewerEmail})` : ''}
+            </div>
+            ${review.recommendation ? `
+              <span class="decision-value" style="display: inline-block; margin-bottom: 10px;">${translateDecision(review.recommendation, isSpanish)}</span>
+            ` : ''}
+            ${review.commentsToAuthor ? `
+              <div style="margin-top: 10px;">
+                <strong style="font-family: Arial, sans-serif; font-size: 10px; color: #475569;">${isSpanish ? 'COMENTARIOS AL AUTOR' : 'COMMENTS TO AUTHOR'}</strong>
+                <p style="margin: 5px 0 0 0;">${cleanHtml(review.commentsToAuthor)}</p>
+              </div>
+            ` : ''}
+            ${review.commentsToEditor ? `
+              <div style="margin-top: 10px; padding: 10px; background: #fef3c7; border-left: 3px solid #f59e0b;">
+                <strong style="font-family: Arial, sans-serif; font-size: 10px; color: #92400e;">${isSpanish ? 'COMENTARIOS CONFIDENCIALES' : 'CONFIDENTIAL COMMENTS'}</strong>
+                <p style="margin: 5px 0 0 0;">${cleanHtml(review.commentsToEditor)}</p>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+    }
+    
+    // Propuestas de Metadatos
+    if (roundMetadataProposals.length > 0) {
+      htmlContent += `
+        <div class="section-header">${isSpanish ? 'Propuestas de Metadatos' : 'Metadata Proposals'}</div>
+      `;
+      
+      roundMetadataProposals.forEach(proposal => {
+        htmlContent += `
+          <div class="metadata-proposal-box">
+            <div style="font-family: Arial, sans-serif; font-weight: bold; color: #FF6C0C; font-size: 12px; margin-bottom: 10px;">
+              ${isSpanish ? 'Propuesta de' : 'Proposal from'}: ${proposal.proposedByEmail || '—'}
+              <span style="font-weight: normal; color: #64748b; font-size: 10px;">(${formatDate(proposal.proposedAt, isSpanish)})</span>
+            </div>
+            ${proposal.status ? `
+              <span class="decision-value" style="border-color: #FF6C0C; color: #FF6C0C;">${proposal.status}</span>
+            ` : ''}
+            ${proposal.changes ? proposal.changes.map(change => `
+              <div style="margin-top: 10px; padding: 10px; background: white; border: 1px solid #e2e8f0;">
+                <strong style="font-family: Arial, sans-serif; font-size: 11px; color: #475569;">${change.field}</strong>
+                <div style="margin-top: 5px; font-size: 10px;">
+                  <span style="color: #dc2626; text-decoration: line-through;">${typeof change.currentValue === 'object' ? JSON.stringify(change.currentValue) : change.currentValue}</span>
+                  <span style="color: #059669; margin-left: 10px;">→ ${typeof change.proposedValue === 'object' ? JSON.stringify(change.proposedValue) : change.proposedValue}</span>
+                </div>
+                ${change.reason ? `<div style="margin-top: 5px; font-style: italic; color: #64748b; font-size: 10px;">"${change.reason}"</div>` : ''}
+              </div>
+            `).join('') : ''}
+          </div>
+        `;
+      });
+    }
+    
+    // Registro de Actividad
+    if (roundLogs.length > 0) {
+      htmlContent += `
+        <div class="section-header">${isSpanish ? 'Registro de Actividad' : 'Activity Log'}</div>
+      `;
+      
+      roundLogs.forEach(log => {
+        const logClass = log.action.includes('decision') ? 'decision' : log.action.includes('review') ? 'review' : '';
+        htmlContent += `
+          <div class="log-item ${logClass}">
+            <div>
+              <span class="log-action">${translateAction(log.action, isSpanish)}</span>
+              <span class="log-date"> · ${formatDate(log.timestamp, isSpanish)}</span>
+            </div>
+            <div class="log-performer">${log.byEmail || log.by || (isSpanish ? 'Sistema' : 'System')}</div>
+            <details>
+              <summary style="cursor: pointer; font-family: Arial, sans-serif; font-size: 9px; color: #64748b; margin-top: 8px;">
+                ${isSpanish ? 'Ver datos completos' : 'View complete data'}
+              </summary>
+              <div class="log-data">${JSON.stringify(log, null, 2).replace(/</g, '&lt;')}</div>
+            </details>
+          </div>
+        `;
+      });
+    }
   });
 
-  htmlContent += '</body></html>';
+  htmlContent += `
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; font-family: Arial, sans-serif; font-size: 9px; color: #94a3b8;">
+        ${isSpanish ? 'Documento generado automáticamente por el sistema editorial' : 'Document automatically generated by the editorial system'}<br>
+        ${isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'National Journal of Sciences for Students'}
+      </div>
+    </body></html>
+  `;
 
   const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
   saveAs(blob, `historial_${submissionTitle || 'submission'}.doc`);
 };
-
 const exportToJSON = (auditLogs, rounds, peerReviews, metadataProposals, submissionTitle, isSpanish) => {
   const exportData = {
     submissionTitle: submissionTitle || '',
