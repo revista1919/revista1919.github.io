@@ -37,7 +37,8 @@ const Icons = {
   Edit: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
   ClipboardCheck: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
   Refresh: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
-  Info: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+  Info: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  Clock: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
 };
 
 // Componente auxiliar para etiquetas de estado booleanas
@@ -381,71 +382,90 @@ export const DeskReviewTab = ({
               )}
               
               {/* ===== ALERTA DE NUEVA REVISIÓN (SI EXISTE) ===== */}
-              {latestRevision && (
-                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-sm shadow-lg border-2 border-emerald-400 overflow-hidden">
-                  <div className="px-4 sm:px-6 py-4 sm:py-5">
-                    <div className="flex items-start gap-3 sm:gap-4">
-                      <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-full flex items-center justify-center">
-                        <Icons.DocumentText />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-sm">
-                            <Icons.Refresh />
-                            {isSpanish ? 'Nueva Revisión Recibida' : 'New Revision Received'}
-                          </span>
-                          {latestRevisionUploadedAt && (
-                            <span className="text-[10px] font-mono text-emerald-100">
-                              {latestRevisionUploadedAt.toDate ? latestRevisionUploadedAt.toDate().toLocaleString() : latestRevisionUploadedAt}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {/* Notas del autor - LO PRIMERO QUE SE VE */}
-                        {latestRevisionNotes && (
-                          <div className="mt-3 bg-white/15 rounded-sm p-3 sm:p-4 border border-white/20">
-                            <h4 className="font-sans font-bold text-white text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
-                              <Icons.Message />
-                              {isSpanish ? 'Notas del Autor' : 'Author Notes'}
-                            </h4>
-                            <p className="text-white text-sm leading-relaxed whitespace-pre-wrap font-serif">
-                              {latestRevisionNotes}
-                            </p>
-                          </div>
-                        )}
-                        
-                        {/* Comentario de revisión */}
-                        {latestRevisionComment && (
-                          <div className="mt-3 bg-white/15 rounded-sm p-3 sm:p-4 border border-white/20">
-                            <h4 className="font-sans font-bold text-white text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
-                              <Icons.ClipboardCheck />
-                              {isSpanish ? 'Comentario de Revisión' : 'Revision Comment'}
-                            </h4>
-                            <div 
-                              className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-white leading-relaxed"
-                              dangerouslySetInnerHTML={{ __html: latestRevisionComment }}
-                            />
-                          </div>
-                        )}
-                        
-                        {/* Botón para ver el documento */}
-                        {latestRevision?.fileUrl && (
-                          <a 
-                            href={latestRevision.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-3 inline-flex items-center gap-2 bg-white text-emerald-700 px-4 py-2 rounded-sm transition-colors text-xs font-bold uppercase tracking-wider hover:bg-emerald-50"
-                          >
-                            <Icons.File />
-                            {isSpanish ? 'Ver Documento Revisado' : 'View Revised Document'}
-                            <Icons.ExternalLink />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+{latestRevision && (
+  <div className="bg-white border border-slate-200 shadow-sm rounded-sm border-l-4 border-l-[#FF6C0C] mb-8 overflow-hidden">
+    <div className="px-6 py-6 sm:px-8 sm:py-7">
+      
+      {/* Encabezado del estado */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-[#f0f4f8] text-[#002147] rounded-full flex items-center justify-center flex-shrink-0">
+            <Icons.Refresh className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-[#002147] mb-1">
+              {isSpanish ? 'Nueva Revisión de Autor Recibida' : 'New Author Revision Received'}
+            </h3>
+            {latestRevisionUploadedAt && (
+              <div className="text-xs font-mono text-slate-500 flex items-center gap-1.5">
+                <Icons.Clock className="w-3.5 h-3.5" />
+                {latestRevisionUploadedAt.toDate ? latestRevisionUploadedAt.toDate().toLocaleString() : latestRevisionUploadedAt}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Botón de documento destacado (Desktop) */}
+        {latestRevision?.fileUrl && (
+          <a 
+            href={latestRevision.fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex items-center gap-2 bg-[#002147] text-white px-5 py-2.5 rounded-sm hover:bg-[#00152e] transition-colors text-xs font-bold uppercase tracking-wider shadow-sm"
+          >
+            <Icons.File className="w-4 h-4" />
+            {isSpanish ? 'Descargar Manuscrito Revisado' : 'Download Revised Manuscript'}
+          </a>
+        )}
+      </div>
+      
+      <div className="space-y-6">
+        {/* Notas del autor al editor */}
+        {latestRevisionNotes && (
+          <div className="bg-[#f8fafc] border border-slate-100 rounded-sm p-6">
+            <h4 className="font-sans font-bold text-[#FF6C0C] text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
+              <Icons.Message className="w-4 h-4" />
+              {isSpanish ? 'Notas del Autor al Editor' : 'Author Notes to Editor'}
+            </h4>
+            <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-serif">
+              {latestRevisionNotes}
+            </p>
+          </div>
+        )}
+        
+        {/* Comentario de revisión (Rebuttal letter) */}
+        {latestRevisionComment && (
+          <div className="bg-[#f8fafc] border border-slate-100 rounded-sm p-6">
+            <h4 className="font-sans font-bold text-[#002147] text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
+              <Icons.ClipboardCheck className="w-4 h-4" />
+              {isSpanish ? 'Respuesta a los Revisores (Rebuttal)' : 'Response to Reviewers (Rebuttal)'}
+            </h4>
+            <div 
+              className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: latestRevisionComment }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Botón de documento (Móvil) */}
+      {latestRevision?.fileUrl && (
+        <div className="mt-6 sm:hidden">
+          <a 
+            href={latestRevision.fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full inline-flex items-center justify-center gap-2 bg-[#002147] text-white px-5 py-3 rounded-sm hover:bg-[#00152e] transition-colors text-xs font-bold uppercase tracking-wider shadow-sm"
+          >
+            <Icons.File className="w-4 h-4" />
+            {isSpanish ? 'Descargar Manuscrito' : 'Download Manuscript'}
+          </a>
+        </div>
+      )}
+      
+    </div>
+  </div>
+)}
               
               {/* Encabezado editorial */}
               <div className="bg-[#003b5c] text-white rounded-sm p-4 sm:p-6 lg:p-8 shadow-sm">
