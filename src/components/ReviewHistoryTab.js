@@ -1,5 +1,5 @@
 // src/components/ReviewHistoryTab.js
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -9,7 +9,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
-// ============ ICONOS SVG ============
+// ============ ICONOS SVG PROFESIONALES ============
 const Icons = {
   Calendar: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
   CheckCircle: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
@@ -28,207 +28,56 @@ const Icons = {
   Message: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>,
   File: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
   Lock: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>,
-  ChevronRight: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
+  Gavel: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>,
   Code: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>,
   Tag: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>,
+  FileJson: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7v10M8 7a2 2 0 100-4 2 2 0 000 4zm0 10a2 2 0 100 4 2 2 0 000-4zm8-10v10m0-10a2 2 0 100-4 2 2 0 000 4zm0 10a2 2 0 100 4 2 2 0 000-4z" /></svg>,
 };
 
 // ============ TRADUCCIONES ============
-const translations = {
-  es: {
-    submissionCreated: 'Envío Creado',
-    assignedToEditor: 'Asignado a Editor',
-    peerReviewStarted: 'Revisión por Pares Iniciada',
-    reviewSubmitted: 'Revisión Enviada',
-    reviewAdded: 'Revisión Agregada',
-    editorNotified: 'Editor Notificado',
-    newRoundCreated: 'Nueva Ronda Creada',
-    authorRevision: 'Revisión del Autor',
-    readyToPublish: 'Listo para Publicar',
-    metadataUpdated: 'Metadatos Actualizados',
-    externalReviewerInvited: 'Revisor Externo Invitado',
-    externalReviewerOnboarded: 'Revisor Externo Registrado',
-    metadataChangesProposed: 'Cambios de Metadatos Propuestos',
-    metadataProposalEmailSent: 'Email de Propuesta Enviado',
-    metadataProposalResponseNotified: 'Respuesta de Propuesta Notificada',
-    publicationReadyComplete: 'Publicación Completada',
-    certificateGenerated: 'Certificado Generado',
-    proceededToDecision: 'Procedió a Decisión',
-    reviewerCopyCreated: 'Copia de Revisor Creada',
-    additionalReviewerAccepted: 'Revisor Adicional Aceptado',
-    date: 'Fecha',
-    action: 'Acción',
-    round: 'Ronda',
-    performedBy: 'Realizado por',
-    details: 'Detalles',
-    recommendation: 'Recomendación',
-    notes: 'Notas',
-    file: 'Archivo',
-    auditHistory: 'Historial de Auditoría',
-    feedbackHistory: 'Historial de Retroalimentaciones',
-    noHistory: 'No hay historial disponible',
-    loading: 'Cargando historial...',
-    error: 'Error al cargar el historial',
-    current: 'Actual',
-    events: 'eventos',
-    versions: 'versiones',
-    reviews: 'revisiones',
-    deskReview: 'Desk Review',
-    peerReviews: 'Revisiones de Pares',
-    manuscriptVersions: 'Versiones del Manuscrito',
-    activityLog: 'Registro de Actividad',
-    roundTitle: 'Ronda',
-    finalDecision: 'Decisión Final',
-    feedbackToAuthor: 'Retroalimentación al Autor',
-    internalNotes: 'Notas Internas',
-    commentsToAuthor: 'Comentarios al Autor',
-    confidentialComments: 'Comentarios Confidenciales al Editor',
-    viewMarkedDocument: 'Ver documento marcado',
-    quantitativeRubric: 'Rúbrica Cuantitativa',
-    system: 'Sistema',
-    export: 'Exportar',
-    excel: 'Excel',
-    pdf: 'PDF',
-    word: 'Word',
-    csv: 'CSV',
-    fullLogDetails: 'Detalles completos del registro',
-    rawData: 'Datos crudos',
-    showRawData: 'Ver datos crudos',
-    hideRawData: 'Ocultar datos crudos',
-    logDetails: 'Detalles del Registro',
-    accept: 'Aceptar',
-    reject: 'Rechazar',
-    minorRevision: 'Revisión Menor',
-    minorRevisions: 'Revisiones Menores',
-    majorRevision: 'Revisión Mayor',
-    majorRevisions: 'Revisiones Mayores',
-    revisionRequired: 'Enviar a Pares',
-    performedByLabel: 'Realizado por',
-    reviewerLabel: 'Revisor',
-    nameLabel: 'Nombre',
-    recommendationLabel: 'Recomendación',
-  },
-  en: {
-    submissionCreated: 'Submission Created',
-    assignedToEditor: 'Assigned to Editor',
-    peerReviewStarted: 'Peer Review Started',
-    reviewSubmitted: 'Review Submitted',
-    reviewAdded: 'Review Added',
-    editorNotified: 'Editor Notified',
-    newRoundCreated: 'New Round Created',
-    authorRevision: 'Author Revision',
-    readyToPublish: 'Ready to Publish',
-    metadataUpdated: 'Metadata Updated',
-    externalReviewerInvited: 'External Reviewer Invited',
-    externalReviewerOnboarded: 'External Reviewer Onboarded',
-    metadataChangesProposed: 'Metadata Changes Proposed',
-    metadataProposalEmailSent: 'Proposal Email Sent',
-    metadataProposalResponseNotified: 'Proposal Response Notified',
-    publicationReadyComplete: 'Publication Ready Complete',
-    certificateGenerated: 'Certificate Generated',
-    proceededToDecision: 'Proceeded to Decision',
-    reviewerCopyCreated: 'Reviewer Copy Created',
-    additionalReviewerAccepted: 'Additional Reviewer Accepted',
-    date: 'Date',
-    action: 'Action',
-    round: 'Round',
-    performedBy: 'Performed by',
-    details: 'Details',
-    recommendation: 'Recommendation',
-    notes: 'Notes',
-    file: 'File',
-    auditHistory: 'Audit History',
-    feedbackHistory: 'Feedback History',
-    noHistory: 'No history available',
-    loading: 'Loading history...',
-    error: 'Error loading history',
-    current: 'Current',
-    events: 'events',
-    versions: 'versions',
-    reviews: 'reviews',
-    deskReview: 'Desk Review',
-    peerReviews: 'Peer Reviews',
-    manuscriptVersions: 'Manuscript Versions',
-    activityLog: 'Activity Log',
-    roundTitle: 'Round',
-    finalDecision: 'Final Decision',
-    feedbackToAuthor: 'Feedback to Author',
-    internalNotes: 'Internal Notes',
-    commentsToAuthor: 'Comments to Author',
-    confidentialComments: 'Confidential Comments to Editor',
-    viewMarkedDocument: 'View marked document',
-    quantitativeRubric: 'Quantitative Rubric',
-    system: 'System',
-    export: 'Export',
-    excel: 'Excel',
-    pdf: 'PDF',
-    word: 'Word',
-    csv: 'CSV',
-    fullLogDetails: 'Full log details',
-    rawData: 'Raw data',
-    showRawData: 'Show raw data',
-    hideRawData: 'Hide raw data',
-    logDetails: 'Log Details',
-    accept: 'Accept',
-    reject: 'Reject',
-    minorRevision: 'Minor Revision',
-    minorRevisions: 'Minor Revisions',
-    majorRevision: 'Major Revision',
-    majorRevisions: 'Major Revisions',
-    revisionRequired: 'Send to Review',
-    performedByLabel: 'Performed by',
-    reviewerLabel: 'Reviewer',
-    nameLabel: 'Name',
-    recommendationLabel: 'Recommendation',
-  }
-};
-
-// ============ UTILIDADES DE TRADUCCIÓN ============
 const translateAction = (action, isSpanish) => {
-  const t = translations[isSpanish ? 'es' : 'en'];
-  const actionMap = {
-    'submission_created': t.submissionCreated,
-    'assigned_to_section_editor': t.assignedToEditor,
-    'peer_review_started': t.peerReviewStarted,
-    'review_submitted': t.reviewSubmitted,
-    'review_added_to_submission': t.reviewAdded,
-    'editor_notified_new_round': t.editorNotified,
-    'new_round_created_with_new_task': t.newRoundCreated,
-    'revision_submitted': t.authorRevision,
-    'marked_ready_for_publication': t.readyToPublish,
-    'metadata_changes_applied': t.metadataUpdated,
-    'external_reviewer_invited': t.externalReviewerInvited,
-    'external_reviewer_onboarded': t.externalReviewerOnboarded,
-    'metadata_changes_proposed': t.metadataChangesProposed,
-    'metadata_proposal_email_sent': t.metadataProposalEmailSent,
-    'metadata_proposal_response_notified': t.metadataProposalResponseNotified,
-    'publication_ready_complete': t.publicationReadyComplete,
-    'certificate_generated': t.certificateGenerated,
-    'proceeded_to_decision': t.proceededToDecision,
-    'reviewer_copy_created': t.reviewerCopyCreated,
-    'additional_reviewer_accepted': t.additionalReviewerAccepted,
+  const translations = {
+    'submission_created': isSpanish ? 'Envío Creado' : 'Submission Created',
+    'assigned_to_section_editor': isSpanish ? 'Asignado a Editor de Sección' : 'Assigned to Section Editor',
+    'peer_review_started': isSpanish ? 'Revisión por Pares Iniciada' : 'Peer Review Started',
+    'review_submitted': isSpanish ? 'Revisión Enviada' : 'Review Submitted',
+    'review_added_to_submission': isSpanish ? 'Revisión Agregada al Manuscrito' : 'Review Added to Submission',
+    'editor_notified_new_round': isSpanish ? 'Editor Notificado de Nueva Ronda' : 'Editor Notified of New Round',
+    'new_round_created_with_new_task': isSpanish ? 'Nueva Ronda de Revisión Creada' : 'New Review Round Created',
+    'revision_submitted': isSpanish ? 'Revisión del Autor Enviada' : 'Author Revision Submitted',
+    'marked_ready_for_publication': isSpanish ? 'Marcado Listo para Publicación' : 'Marked Ready for Publication',
+    'metadata_changes_applied': isSpanish ? 'Cambios de Metadatos Aplicados' : 'Metadata Changes Applied',
+    'external_reviewer_invited': isSpanish ? 'Revisor Externo Invitado' : 'External Reviewer Invited',
+    'external_reviewer_onboarded': isSpanish ? 'Revisor Externo Registrado' : 'External Reviewer Onboarded',
+    'metadata_changes_proposed': isSpanish ? 'Cambios de Metadatos Propuestos' : 'Metadata Changes Proposed',
+    'metadata_proposal_email_sent': isSpanish ? 'Email de Propuesta de Metadatos Enviado' : 'Metadata Proposal Email Sent',
+    'metadata_proposal_response_notified': isSpanish ? 'Respuesta de Propuesta Notificada' : 'Proposal Response Notified',
+    'proceeded_to_decision': isSpanish ? 'Procedió a Decisión Final' : 'Proceeded to Final Decision',
+    'publication_ready_complete': isSpanish ? 'Proceso de Publicación Completado' : 'Publication Process Completed',
+    'certificate_generated': isSpanish ? 'Certificado Generado' : 'Certificate Generated',
+    'reviewer_copy_created': isSpanish ? 'Copia para Revisor Creada' : 'Reviewer Copy Created',
+    'additional_reviewer_accepted': isSpanish ? 'Revisor Adicional Aceptó' : 'Additional Reviewer Accepted',
   };
-  return actionMap[action] || action;
+  return translations[action] || (typeof action === 'string' ? action.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : action);
 };
 
 const translateDecision = (decision, isSpanish) => {
-  const t = translations[isSpanish ? 'es' : 'en'];
-  const decisionMap = {
-    'accept': t.accept,
-    'reject': t.reject,
-    'minor-revision': t.minorRevision,
-    'minor-revisions': t.minorRevisions,
-    'major-revision': t.majorRevision,
-    'major-revisions': t.majorRevisions,
-    'revision-required': t.revisionRequired,
+  const translations = {
+    'accept': isSpanish ? 'Aceptar' : 'Accept',
+    'reject': isSpanish ? 'Rechazar' : 'Reject',
+    'minor-revision': isSpanish ? 'Revisión Menor' : 'Minor Revision',
+    'minor-revisions': isSpanish ? 'Revisiones Menores' : 'Minor Revisions',
+    'major-revision': isSpanish ? 'Revisión Mayor' : 'Major Revision',
+    'major-revisions': isSpanish ? 'Revisiones Mayores' : 'Major Revisions',
+    'revision-required': isSpanish ? 'Requiere Revisión' : 'Revision Required',
+    'accept-with-minor': isSpanish ? 'Aceptar con Cambios Menores' : 'Accept with Minor Changes',
   };
-  return decisionMap[decision] || decision || '—';
+  return translations[decision] || decision || '—';
 };
 
 const formatDate = (timestamp, isSpanish) => {
   if (!timestamp) return '—';
   const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
-  if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString(isSpanish ? 'es-ES' : 'en-US', {
     year: 'numeric',
     month: 'long',
@@ -238,130 +87,208 @@ const formatDate = (timestamp, isSpanish) => {
   });
 };
 
-// ============ FUNCIÓN PARA NORMALIZAR CAMPOS DINÁMICOS ============
-const normalizeLogFields = (log) => {
-  const fields = {};
-  
-  Object.entries(log).forEach(([key, value]) => {
-    if (key === 'id' || key === 'timestamp' || key === 'action' || key === 'round') return;
-    
-    if (value !== null && value !== undefined && value !== '') {
-      if (typeof value === 'object' && !Array.isArray(value)) {
-        // Si es un timestamp de Firebase
-        if (value.seconds && value.nanoseconds !== undefined) {
-          fields[key] = value;
-        } else {
-          // Objeto anidado
-          fields[key] = value;
-        }
-      } else {
-        fields[key] = value;
-      }
-    }
-  });
-  
-  return fields;
-};
-
-// ============ FUNCIÓN PARA FORMATEAR VALORES ============
-const formatValue = (value) => {
-  if (value === null || value === undefined) return '—';
-  
-  if (typeof value === 'object') {
-    // Timestamp de Firebase
-    if (value.seconds && value.nanoseconds !== undefined) {
-      const date = value.toDate();
-      return date.toLocaleString();
-    }
-    
-    // Array
-    if (Array.isArray(value)) {
-      if (value.length === 0) return '[]';
-      return value.map((item, idx) => {
-        if (typeof item === 'object') {
-          return JSON.stringify(item, null, 2);
-        }
-        return String(item);
-      }).join(', ');
-    }
-    
-    // Objeto genérico
-    return JSON.stringify(value, null, 2);
+// ============ FUNCIÓN PARA FORMATEAR VALORES DINÁMICOS ============
+const formatValue = (value, label = '') => {
+  if (value === null || value === undefined || value === '') {
+    return <span className="text-slate-400 italic">—</span>;
   }
   
-  return String(value);
+  if (typeof value === 'object' && value !== null) {
+    if (value.toDate) {
+      return <span className="font-mono text-xs">{value.toDate().toLocaleString()}</span>;
+    }
+    if (value.seconds !== undefined) {
+      return <span className="font-mono text-xs">{new Date(value.seconds * 1000).toLocaleString()}</span>;
+    }
+    if (Array.isArray(value)) {
+      return (
+        <div className="space-y-2">
+          {value.map((item, idx) => (
+            <div key={idx} className="bg-slate-50 p-3 rounded border border-slate-200">
+              {typeof item === 'object' ? (
+                <div className="space-y-1">
+                  {Object.entries(item).map(([key, val]) => (
+                    <div key={key} className="flex items-start gap-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase min-w-[80px] pt-0.5">{key}:</span>
+                      <span className="text-sm text-slate-700">{formatValue(val)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-sm">{String(item)}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-1">
+        {Object.entries(value).map(([key, val]) => (
+          <div key={key} className="flex items-start gap-2">
+            <span className="text-[10px] font-bold text-slate-500 uppercase min-w-[80px] pt-0.5">{key}:</span>
+            <span className="text-sm text-slate-700">{formatValue(val)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  
+  return <span className="text-sm">{String(value)}</span>;
 };
 
-// ============ EXPORTACIONES ============
-const exportToExcel = (allData, submissionTitle, isSpanish) => {
-  const t = translations[isSpanish ? 'es' : 'en'];
+// ============ EXPORTACIÓN A JSON ============
+const exportToJSON = (auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish) => {
+  const exportData = {
+    submissionTitle: submissionTitle || '',
+    exportedAt: new Date().toISOString(),
+    rounds: rounds.map(round => ({
+      roundNumber: round.roundNumber,
+      status: round.status || 'unknown',
+      deskReview: round.deskReview ? {
+        decision: round.deskReview.decision || null,
+        feedback: round.deskReview.feedback || '',
+        commentsToEditorial: round.deskReview.commentsToEditorial || '',
+        editorName: round.deskReview.editorName || ''
+      } : null,
+      finalDecision: round.finalDecision ? {
+        decision: round.finalDecision.decision || null,
+        feedback: round.finalDecision.feedback || '',
+        editorName: round.finalDecision.editorName || ''
+      } : null,
+      peerReviews: peerReviews.filter(r => r.round === round.roundNumber).map(review => ({
+        reviewerName: review.reviewerName || '',
+        reviewerEmail: review.reviewerEmail || '',
+        recommendation: review.recommendation || '',
+        scores: review.scores || {},
+        commentsToAuthor: review.commentsToAuthor || '',
+        commentsToEditor: review.commentsToEditor || '',
+        submittedAt: review.submittedAt ? (review.submittedAt.toDate ? review.submittedAt.toDate().toISOString() : review.submittedAt) : null
+      })),
+      versions: versions.filter(v => v.round === round.roundNumber).map(version => ({
+        fileName: version.fileName || '',
+        notes: version.notes || '',
+        uploadedAt: version.uploadedAt ? (version.uploadedAt.toDate ? version.uploadedAt.toDate().toISOString() : version.uploadedAt) : null
+      })),
+      auditLogs: auditLogs.filter(log => log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1)).map(log => ({
+        action: log.action || '',
+        by: log.by || '',
+        byEmail: log.byEmail || '',
+        timestamp: log.timestamp ? (log.timestamp.toDate ? log.timestamp.toDate().toISOString() : log.timestamp) : null,
+        ...log.details ? { details: log.details } : {},
+        ...log.changes ? { changes: log.changes } : {},
+        ...log.recommendation ? { recommendation: log.recommendation } : {},
+        ...log.notes ? { notes: log.notes } : {},
+        ...log.fileName ? { fileName: log.fileName } : {}
+      }))
+    }))
+  };
+  
+  const jsonString = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  saveAs(blob, `historial_${submissionTitle || 'submission'}.json`);
+};
+
+// ============ EXPORTACIÓN A EXCEL ============
+const exportToExcel = (auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish) => {
   const data = [];
   
-  allData.forEach(round => {
-    // Exportar audit logs de la ronda
-    round.auditLogs.forEach(log => {
-      const row = {
-        [t.round]: round.roundNumber,
-        [t.date]: formatDate(log.timestamp, isSpanish),
-        [t.action]: translateAction(log.action, isSpanish),
-        [t.performedBy]: log.byEmail || log.by || t.system,
-      };
-      
-      // Agregar todos los campos dinámicos
-      const fields = normalizeLogFields(log);
-      Object.entries(fields).forEach(([key, value]) => {
-        row[key] = formatValue(value);
+  // Hoja de auditoría
+  auditLogs
+    .sort((a, b) => {
+      const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+      const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+      return dateA - dateB;
+    })
+    .forEach(log => {
+      data.push({
+        'Fecha': formatDate(log.timestamp, isSpanish),
+        'Acción': translateAction(log.action, isSpanish),
+        'Ronda': log.round || '1',
+        'Realizado por': log.by === 'system' ? (isSpanish ? 'Sistema' : 'System') : (log.byEmail || log.by || ''),
+        'Email': log.byEmail || log.toEmail || '',
+        'Detalles': JSON.stringify(log.details || log.changes || ''),
+        'Recomendación': log.recommendation ? translateDecision(log.recommendation, isSpanish) : '',
+        'Notas': log.notes || '',
+        'Archivo': log.fileName || '',
       });
-      
-      data.push(row);
     });
-    
-    // Exportar desk review
-    if (round.deskReview) {
-      const deskRow = {
-        [t.round]: round.roundNumber,
-        [t.action]: t.deskReview,
-        [t.date]: formatDate(round.deskReview.completedAt, isSpanish),
-      };
-      Object.entries(round.deskReview).forEach(([key, value]) => {
-        if (key !== 'completedAt') {
-          deskRow[key] = formatValue(value);
-        }
-      });
-      data.push(deskRow);
-    }
-    
-    // Exportar decisión final
-    if (round.finalDecision) {
-      const finalRow = {
-        [t.round]: round.roundNumber,
-        [t.action]: t.finalDecision,
-        [t.date]: formatDate(round.finalDecision.completedAt, isSpanish),
-      };
-      Object.entries(round.finalDecision).forEach(([key, value]) => {
-        if (key !== 'completedAt') {
-          finalRow[key] = formatValue(value);
-        }
-      });
-      data.push(finalRow);
-    }
-  });
 
   const ws = XLSX.utils.json_to_sheet(data);
+  
+  // Hoja de decisiones
+  const decisionsData = [];
+  rounds.forEach(round => {
+    if (round.deskReview) {
+      decisionsData.push({
+        'Ronda': round.roundNumber,
+        'Tipo': isSpanish ? 'Desk Review' : 'Desk Review',
+        'Decisión': translateDecision(round.deskReview.decision, isSpanish),
+        'Feedback': round.deskReview.feedback || '',
+        'Editor': round.deskReview.editorName || ''
+      });
+    }
+    if (round.finalDecision) {
+      decisionsData.push({
+        'Ronda': round.roundNumber,
+        'Tipo': isSpanish ? 'Decisión Final' : 'Final Decision',
+        'Decisión': translateDecision(round.finalDecision.decision, isSpanish),
+        'Feedback': round.finalDecision.feedback || '',
+        'Editor': round.finalDecision.editorName || ''
+      });
+    }
+  });
+  const wsDecisions = XLSX.utils.json_to_sheet(decisionsData);
+  
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, isSpanish ? 'Historial' : 'History');
+  XLSX.utils.book_append_sheet(wb, ws, isSpanish ? 'Auditoría' : 'Audit');
+  XLSX.utils.book_append_sheet(wb, wsDecisions, isSpanish ? 'Decisiones' : 'Decisions');
   
   const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   saveAs(blob, `historial_${submissionTitle || 'submission'}.xlsx`);
 };
 
-const exportToPDF = (allData, submissionTitle, isSpanish) => {
-  const t = translations[isSpanish ? 'es' : 'en'];
+// ============ EXPORTACIÓN A CSV ============
+const exportToCSV = (auditLogs, submissionTitle, isSpanish) => {
+  const headers = [
+    'Fecha', 'Acción', 'Ronda', 'Realizado por', 'Email', 
+    'Detalles', 'Recomendación', 'Notas', 'Archivo'
+  ];
+  
+  const rows = auditLogs
+    .sort((a, b) => {
+      const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+      const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+      return dateA - dateB;
+    })
+    .map(log => [
+      formatDate(log.timestamp, isSpanish),
+      translateAction(log.action, isSpanish),
+      log.round || '1',
+      log.by === 'system' ? (isSpanish ? 'Sistema' : 'System') : (log.byEmail || log.by || ''),
+      log.byEmail || log.toEmail || '',
+      JSON.stringify(log.details || log.changes || ''),
+      log.recommendation ? translateDecision(log.recommendation, isSpanish) : '',
+      log.notes || '',
+      log.fileName || '',
+    ]);
+  
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+  ].join('\n');
+  
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  saveAs(blob, `historial_${submissionTitle || 'submission'}.csv`);
+};
+
+// ============ EXPORTACIÓN A PDF ============
+const exportToPDF = (auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 15;
+  const margin = 20;
   let yPosition = margin;
 
   const checkPageBreak = (neededSpace) => {
@@ -371,235 +298,319 @@ const exportToPDF = (allData, submissionTitle, isSpanish) => {
     }
   };
 
-  // Título
-  doc.setFontSize(20);
+  // Header
+  doc.setFontSize(24);
   doc.setTextColor(0, 33, 71);
   doc.setFont('helvetica', 'bold');
-  doc.text(t.auditHistory, margin, yPosition);
+  doc.text(isSpanish ? 'Historial de Revisión Completo' : 'Complete Review History', margin, yPosition);
+  
+  yPosition += 10;
+  doc.setDrawColor(0, 33, 71);
+  doc.setLineWidth(0.5);
+  doc.line(margin, yPosition, pageWidth - margin, yPosition);
+  
   yPosition += 8;
   
   if (submissionTitle) {
-    doc.setFontSize(10);
+    doc.setFontSize(12);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'normal');
     doc.text(submissionTitle, margin, yPosition);
-    yPosition += 12;
+    yPosition += 15;
   }
 
-  allData.forEach(round => {
-    checkPageBreak(30);
+  rounds.forEach((round, roundIndex) => {
+    checkPageBreak(40);
     
-    // Encabezado de ronda
+    // Round Header
     doc.setFillColor(0, 33, 71);
-    doc.rect(margin, yPosition - 6, pageWidth - 2 * margin, 10, 'F');
-    doc.setFontSize(12);
+    doc.rect(margin, yPosition - 6, pageWidth - 2 * margin, 12, 'F');
+    doc.setFontSize(14);
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${t.roundTitle} ${round.roundNumber}`, margin + 5, yPosition + 1);
+    doc.text(`${isSpanish ? 'Ronda' : 'Round'} ${round.roundNumber}`, margin + 10, yPosition + 2);
     yPosition += 15;
-    
+
     // Desk Review
     if (round.deskReview) {
-      checkPageBreak(20);
-      doc.setFontSize(11);
+      checkPageBreak(50);
+      doc.setFontSize(12);
       doc.setTextColor(0, 33, 71);
       doc.setFont('helvetica', 'bold');
-      doc.text(t.deskReview, margin, yPosition);
-      yPosition += 6;
-      
-      doc.setFontSize(9);
-      doc.setTextColor(51, 65, 85);
-      doc.setFont('helvetica', 'normal');
-      Object.entries(round.deskReview).forEach(([key, value]) => {
-        checkPageBreak(10);
-        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-        const formattedValue = formatValue(value).substring(0, 100);
-        doc.text(`${label}: ${formattedValue}`, margin + 10, yPosition);
-        yPosition += 5;
-      });
-      yPosition += 8;
-    }
-    
-    // Decisión final
-    if (round.finalDecision) {
-      checkPageBreak(20);
-      doc.setFontSize(11);
-      doc.setTextColor(5, 150, 105);
-      doc.setFont('helvetica', 'bold');
-      doc.text(t.finalDecision, margin, yPosition);
-      yPosition += 6;
-      
-      doc.setFontSize(9);
-      doc.setTextColor(51, 65, 85);
-      doc.setFont('helvetica', 'normal');
-      Object.entries(round.finalDecision).forEach(([key, value]) => {
-        checkPageBreak(10);
-        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-        const formattedValue = formatValue(value).substring(0, 100);
-        doc.text(`${label}: ${formattedValue}`, margin + 10, yPosition);
-        yPosition += 5;
-      });
-      yPosition += 8;
-    }
-    
-    // Audit logs
-    round.auditLogs.forEach(log => {
-      checkPageBreak(30);
+      doc.text(isSpanish ? 'Desk Review' : 'Desk Review', margin, yPosition);
+      yPosition += 7;
       
       doc.setFontSize(10);
-      doc.setTextColor(30, 41, 59);
-      doc.setFont('helvetica', 'bold');
-      doc.text(translateAction(log.action, isSpanish), margin, yPosition);
-      
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139);
+      doc.setTextColor(71, 85, 105);
       doc.setFont('helvetica', 'normal');
-      doc.text(formatDate(log.timestamp, isSpanish), pageWidth - margin, yPosition, { align: 'right' });
-      yPosition += 5;
       
-      const fields = normalizeLogFields(log);
-      Object.entries(fields).forEach(([key, value]) => {
-        checkPageBreak(8);
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184);
+      if (round.deskReview.decision) {
+        doc.text(`${isSpanish ? 'Decisión' : 'Decision'}: ${translateDecision(round.deskReview.decision, isSpanish)}`, margin + 10, yPosition);
+        yPosition += 6;
+      }
+      
+      if (round.deskReview.feedback) {
+        const cleanText = round.deskReview.feedback.replace(/<[^>]*>/g, '');
+        const lines = doc.splitTextToSize(cleanText, pageWidth - 2 * margin - 20);
+        checkPageBreak(lines.length * 5 + 10);
+        doc.text(lines, margin + 10, yPosition);
+        yPosition += lines.length * 5 + 5;
+      }
+      yPosition += 10;
+    }
+
+    // Peer Reviews
+    const roundPeerReviews = peerReviews.filter(r => r.round === round.roundNumber);
+    if (roundPeerReviews.length > 0) {
+      checkPageBreak(30);
+      doc.setFontSize(12);
+      doc.setTextColor(0, 33, 71);
+      doc.setFont('helvetica', 'bold');
+      doc.text(isSpanish ? 'Revisiones de Pares' : 'Peer Reviews', margin, yPosition);
+      yPosition += 8;
+      
+      roundPeerReviews.forEach((review, idx) => {
+        checkPageBreak(40);
+        doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'bold');
-        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-        doc.text(label.toUpperCase(), margin + 5, yPosition);
+        doc.text(`${isSpanish ? 'Revisor' : 'Reviewer'} ${idx + 1}: ${review.reviewerName || 'N/A'}`, margin + 10, yPosition);
+        yPosition += 6;
         
-        doc.setTextColor(51, 65, 85);
-        doc.setFont('helvetica', 'normal');
-        const valueStr = formatValue(value).substring(0, 80);
-        doc.text(valueStr, margin + 50, yPosition);
-        yPosition += 4;
+        if (review.recommendation) {
+          doc.setFontSize(9);
+          doc.setTextColor(71, 85, 105);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`${isSpanish ? 'Recomendación' : 'Recommendation'}: ${translateDecision(review.recommendation, isSpanish)}`, margin + 15, yPosition);
+          yPosition += 6;
+        }
+        
+        if (review.commentsToAuthor) {
+          const cleanComments = review.commentsToAuthor.replace(/<[^>]*>/g, '');
+          const lines = doc.splitTextToSize(cleanComments, pageWidth - 2 * margin - 25);
+          checkPageBreak(lines.length * 5 + 5);
+          doc.text(lines, margin + 15, yPosition);
+          yPosition += lines.length * 5 + 5;
+        }
+        yPosition += 8;
       });
+    }
+
+    // Final Decision
+    if (round.finalDecision) {
+      checkPageBreak(40);
+      doc.setFillColor(255, 108, 12);
+      doc.rect(margin, yPosition - 6, pageWidth - 2 * margin, 12, 'F');
+      doc.setFontSize(12);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.text(isSpanish ? 'Decisión Final' : 'Final Decision', margin + 10, yPosition + 2);
+      yPosition += 15;
       
-      yPosition += 6;
-    });
+      if (round.finalDecision.decision) {
+        doc.setFontSize(10);
+        doc.setTextColor(71, 85, 105);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${isSpanish ? 'Decisión' : 'Decision'}: ${translateDecision(round.finalDecision.decision, isSpanish)}`, margin + 10, yPosition);
+        yPosition += 6;
+      }
+      
+      if (round.finalDecision.feedback) {
+        const cleanText = round.finalDecision.feedback.replace(/<[^>]*>/g, '');
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105);
+        doc.setFont('helvetica', 'normal');
+        const lines = doc.splitTextToSize(cleanText, pageWidth - 2 * margin - 20);
+        checkPageBreak(lines.length * 5 + 10);
+        doc.text(lines, margin + 10, yPosition);
+        yPosition += lines.length * 5 + 5;
+      }
+      yPosition += 10;
+    }
+
+    // Audit Logs
+    const roundLogs = auditLogs.filter(log => log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1));
+    if (roundLogs.length > 0) {
+      checkPageBreak(30);
+      doc.setFontSize(12);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'bold');
+      doc.text(isSpanish ? 'Registro de Actividad' : 'Activity Log', margin, yPosition);
+      yPosition += 8;
+      
+      roundLogs
+        .sort((a, b) => {
+          const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+          const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+          return dateA - dateB;
+        })
+        .forEach((log, idx) => {
+          checkPageBreak(25);
+          
+          doc.setFontSize(10);
+          doc.setTextColor(30, 41, 59);
+          doc.setFont('helvetica', 'bold');
+          doc.text(translateAction(log.action, isSpanish), margin + 10, yPosition);
+          
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184);
+          doc.setFont('helvetica', 'normal');
+          doc.text(formatDate(log.timestamp, isSpanish), pageWidth - margin - 10, yPosition, { align: 'right' });
+          
+          yPosition += 6;
+          
+          if (log.byEmail || log.by) {
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`${isSpanish ? 'Por' : 'By'}: ${log.byEmail || log.by}`, margin + 15, yPosition);
+            yPosition += 5;
+          }
+          
+          if (log.details) {
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139);
+            const detailsStr = JSON.stringify(log.details);
+            const lines = doc.splitTextToSize(detailsStr, pageWidth - 2 * margin - 25);
+            checkPageBreak(lines.length * 4 + 5);
+            doc.text(lines, margin + 15, yPosition);
+            yPosition += lines.length * 4 + 3;
+          }
+          
+          if (log.changes) {
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139);
+            const changesStr = JSON.stringify(log.changes);
+            const lines = doc.splitTextToSize(changesStr, pageWidth - 2 * margin - 25);
+            checkPageBreak(lines.length * 4 + 5);
+            doc.text(lines, margin + 15, yPosition);
+            yPosition += lines.length * 4 + 3;
+          }
+          
+          yPosition += 8;
+        });
+    }
     
-    yPosition += 10;
+    yPosition += 20;
   });
 
-  // Pie de página
+  // Footer
   const totalPages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
-    doc.text(`${i} / ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    const footerText = isSpanish 
+      ? 'Documento generado automáticamente por el sistema editorial' 
+      : 'Document automatically generated by the editorial system';
+    doc.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text(`${i} / ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
   }
 
   doc.save(`historial_${submissionTitle || 'submission'}.pdf`);
 };
 
-const exportToCSV = (allData, submissionTitle, isSpanish) => {
-  const t = translations[isSpanish ? 'es' : 'en'];
-  const rows = [];
-  
-  allData.forEach(round => {
-    round.auditLogs.forEach(log => {
-      const row = {
-        [t.round]: round.roundNumber,
-        [t.date]: formatDate(log.timestamp, isSpanish),
-        [t.action]: translateAction(log.action, isSpanish),
-        [t.performedBy]: log.byEmail || log.by || t.system,
-      };
-      
-      const fields = normalizeLogFields(log);
-      Object.entries(fields).forEach(([key, value]) => {
-        row[key] = formatValue(value);
-      });
-      
-      rows.push(row);
-    });
+// ============ EXPORTACIÓN A WORD ============
+const exportToWord = (auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish) => {
+  const sortedLogs = [...auditLogs].sort((a, b) => {
+    const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+    const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+    return dateA - dateB;
   });
 
-  if (rows.length === 0) return;
-  
-  const headers = Object.keys(rows[0]);
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(row => headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(','))
-  ].join('\n');
-  
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-  saveAs(blob, `historial_${submissionTitle || 'submission'}.csv`);
-};
-
-const exportToWord = (allData, submissionTitle, isSpanish) => {
-  const t = translations[isSpanish ? 'es' : 'en'];
-  
   let htmlContent = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office" 
           xmlns:w="urn:schemas-microsoft-com:office:word" 
           xmlns="http://www.w3.org/TR/REC-html40">
     <head>
       <meta charset="UTF-8">
-      <title>${t.auditHistory}</title>
+      <title>${isSpanish ? 'Historial de Revisión' : 'Review History'}</title>
       <style>
-        body { font-family: 'Georgia', serif; color: #1a202c; margin: 40px; }
-        h1 { font-family: Arial, sans-serif; font-size: 24px; color: #002147; border-bottom: 3px solid #002147; padding-bottom: 10px; }
-        .subtitle { color: #64748b; font-size: 12px; margin-bottom: 30px; }
-        .round-header { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; color: white; background: #002147; padding: 10px; margin-top: 20px; }
-        .section { margin: 15px 0; padding: 10px; border-left: 4px solid #002147; background: #f8fafc; }
-        .section-title { font-weight: bold; color: #002147; margin-bottom: 8px; }
-        .log-item { margin: 10px 0; padding: 10px; border: 1px solid #e2e8f0; background: white; }
+        body { font-family: 'Georgia', serif; color: #1a202c; }
+        h1 { font-family: Arial, sans-serif; font-size: 24px; color: #002147; }
+        .round-header { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; color: #ffffff; background: #002147; padding: 10px; }
+        .decision-header { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; color: #ffffff; background: #FF6C0C; padding: 8px; }
+        .log-item { margin: 10px 0; padding: 8px; border: 1px solid #e2e8f0; }
         .log-action { font-weight: bold; color: #1e293b; }
-        .log-date { color: #64748b; font-size: 10px; float: right; }
-        .field-row { display: flex; margin: 4px 0; }
-        .field-label { font-weight: bold; color: #94a3b8; width: 150px; font-size: 10px; text-transform: uppercase; }
-        .field-value { color: #334155; font-size: 11px; flex: 1; word-break: break-word; }
+        .log-date { color: #64748b; font-size: 11px; }
+        .detail-label { font-weight: bold; color: #94a3b8; font-size: 10px; text-transform: uppercase; }
+        .detail-value { color: #334155; }
+        .version-item { margin: 10px 0; padding: 8px; border: 1px solid #bfdbfe; background: #eff6ff; }
+        .review-item { margin: 10px 0; padding: 10px; border: 1px solid #e2e8f0; background: #f8fafc; }
       </style>
     </head>
     <body>
-      <h1>${t.auditHistory}</h1>
-      ${submissionTitle ? `<div class="subtitle">${submissionTitle}</div>` : ''}
+      <h1>${isSpanish ? 'Historial de Revisión Completo' : 'Complete Review History'}</h1>
+      <p>${submissionTitle || ''}</p>
   `;
 
-  allData.forEach(round => {
-    htmlContent += `<div class="round-header">${t.roundTitle} ${round.roundNumber}</div>`;
+  rounds.forEach(round => {
+    const roundLogs = sortedLogs.filter(log => 
+      log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1)
+    );
+    const roundPeerReviews = peerReviews.filter(r => r.round === round.roundNumber);
+    const roundVersions = versions.filter(v => v.round === round.roundNumber);
     
+    htmlContent += `
+      <div class="round-header">${isSpanish ? 'Ronda' : 'Round'} ${round.roundNumber}</div>
+    `;
+    
+    // Desk Review
     if (round.deskReview) {
       htmlContent += `
-        <div class="section">
-          <div class="section-title">${t.deskReview}</div>
-          ${Object.entries(round.deskReview).map(([key, value]) => `
-            <div class="field-row">
-              <span class="field-label">${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
-              <span class="field-value">${formatValue(value)}</span>
-            </div>
-          `).join('')}
-        </div>
+        <div class="decision-header">${isSpanish ? 'Desk Review' : 'Desk Review'}</div>
+        ${round.deskReview.decision ? `<p><strong>${isSpanish ? 'Decisión' : 'Decision'}:</strong> ${translateDecision(round.deskReview.decision, isSpanish)}</p>` : ''}
+        ${round.deskReview.feedback ? `<p>${round.deskReview.feedback.replace(/<[^>]*>/g, '')}</p>` : ''}
+        ${round.deskReview.commentsToEditorial ? `<p><strong>${isSpanish ? 'Notas Internas' : 'Internal Notes'}:</strong> ${round.deskReview.commentsToEditorial.replace(/<[^>]*>/g, '')}</p>` : ''}
       `;
     }
     
+    // Peer Reviews
+    roundPeerReviews.forEach((review, idx) => {
+      htmlContent += `
+        <div class="review-item">
+          <div class="log-action">${isSpanish ? 'Revisor' : 'Reviewer'} ${idx + 1}: ${review.reviewerName || 'N/A'}</div>
+          ${review.recommendation ? `<p><strong>${isSpanish ? 'Recomendación' : 'Recommendation'}:</strong> ${translateDecision(review.recommendation, isSpanish)}</p>` : ''}
+          ${review.commentsToAuthor ? `<p><strong>${isSpanish ? 'Comentarios al Autor' : 'Comments to Author'}:</strong> ${review.commentsToAuthor.replace(/<[^>]*>/g, '')}</p>` : ''}
+          ${review.commentsToEditor ? `<p><strong>${isSpanish ? 'Comentarios al Editor' : 'Comments to Editor'}:</strong> ${review.commentsToEditor.replace(/<[^>]*>/g, '')}</p>` : ''}
+        </div>
+      `;
+    });
+    
+    // Final Decision
     if (round.finalDecision) {
       htmlContent += `
-        <div class="section">
-          <div class="section-title">${t.finalDecision}</div>
-          ${Object.entries(round.finalDecision).map(([key, value]) => `
-            <div class="field-row">
-              <span class="field-label">${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
-              <span class="field-value">${formatValue(value)}</span>
-            </div>
-          `).join('')}
-        </div>
+        <div class="decision-header">${isSpanish ? 'Decisión Final' : 'Final Decision'}</div>
+        ${round.finalDecision.decision ? `<p><strong>${isSpanish ? 'Decisión' : 'Decision'}:</strong> ${translateDecision(round.finalDecision.decision, isSpanish)}</p>` : ''}
+        ${round.finalDecision.feedback ? `<p>${round.finalDecision.feedback.replace(/<[^>]*>/g, '')}</p>` : ''}
       `;
     }
     
-    round.auditLogs.forEach(log => {
-      const fields = normalizeLogFields(log);
+    // Versions
+    if (roundVersions.length > 0) {
+      roundVersions.forEach((version, vIdx) => {
+        htmlContent += `
+          <div class="version-item">
+            <div class="log-action">${isSpanish ? 'Versión' : 'Version'} ${vIdx + 1}</div>
+            ${version.fileName ? `<p><strong>${isSpanish ? 'Archivo' : 'File'}:</strong> ${version.fileName}</p>` : ''}
+            ${version.notes ? `<p><strong>${isSpanish ? 'Notas' : 'Notes'}:</strong> ${version.notes}</p>` : ''}
+          </div>
+        `;
+      });
+    }
+    
+    // Audit Logs
+    roundLogs.forEach(log => {
       htmlContent += `
         <div class="log-item">
           <div>
             <span class="log-action">${translateAction(log.action, isSpanish)}</span>
-            <span class="log-date">${formatDate(log.timestamp, isSpanish)}</span>
+            <span class="log-date"> - ${formatDate(log.timestamp, isSpanish)}</span>
           </div>
-          ${Object.entries(fields).map(([key, value]) => `
-            <div class="field-row">
-              <span class="field-label">${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
-              <span class="field-value">${formatValue(value)}</span>
-            </div>
-          `).join('')}
+          ${log.byEmail ? `<p><span class="detail-label">${isSpanish ? 'Por' : 'By'}:</span> <span class="detail-value">${log.byEmail}</span></p>` : ''}
+          ${log.details ? `<p><span class="detail-label">${isSpanish ? 'Detalles' : 'Details'}:</span> <span class="detail-value">${JSON.stringify(log.details)}</span></p>` : ''}
+          ${log.changes ? `<p><span class="detail-label">${isSpanish ? 'Cambios' : 'Changes'}:</span> <span class="detail-value">${JSON.stringify(log.changes)}</span></p>` : ''}
+          ${log.recommendation ? `<p><span class="detail-label">${isSpanish ? 'Recomendación' : 'Recommendation'}:</span> <span class="detail-value">${translateDecision(log.recommendation, isSpanish)}</span></p>` : ''}
         </div>
       `;
     });
@@ -611,80 +622,270 @@ const exportToWord = (allData, submissionTitle, isSpanish) => {
   saveAs(blob, `historial_${submissionTitle || 'submission'}.doc`);
 };
 
-// ============ COMPONENTE: VISOR DE DATOS CRUDOS ============
-const RawDataViewer = ({ data, isSpanish }) => {
-  const [showRaw, setShowRaw] = useState(false);
-  const t = translations[isSpanish ? 'es' : 'en'];
+// ============ COMPONENTE: TARJETA DE REVISOR ============
+const ReviewerFeedbackCard = ({ review, index, isSpanish }) => {
+  const [expanded, setExpanded] = useState(false);
+  
+  const recommendationColors = {
+    'accept': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    'minor-revisions': 'bg-sky-50 text-sky-700 border-sky-200',
+    'minor-revision': 'bg-sky-50 text-sky-700 border-sky-200',
+    'major-revisions': 'bg-amber-50 text-amber-700 border-amber-200',
+    'major-revision': 'bg-amber-50 text-amber-700 border-amber-200',
+    'reject': 'bg-red-50 text-red-700 border-red-200',
+  };
   
   return (
-    <div className="mt-2">
+    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden mb-3 transition-shadow hover:shadow-md">
       <button
-        onClick={() => setShowRaw(!showRaw)}
-        className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors"
       >
-        <Icons.Code className="w-3 h-3" />
-        {showRaw ? t.hideRawData : t.showRawData}
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="w-10 h-10 bg-[#002147] text-white rounded flex items-center justify-center font-serif text-base font-bold flex-shrink-0 shadow-inner">
+            {review.reviewerName?.charAt(0) || `R${index + 1}`}
+          </div>
+          <div className="text-left flex-1 min-w-0">
+            <span className="font-serif font-bold text-[#002147] text-sm block truncate">
+              {review.reviewerName || `${isSpanish ? 'Revisor' : 'Reviewer'} ${index + 1}`}
+            </span>
+            {review.reviewerEmail && (
+              <span className="text-xs text-slate-500 font-mono block truncate">
+                {review.reviewerEmail}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {review.recommendation && (
+            <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${recommendationColors[review.recommendation] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+              {translateDecision(review.recommendation, isSpanish)}
+            </span>
+          )}
+          <div className="text-slate-400">
+            {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+          </div>
+        </div>
       </button>
       
       <AnimatePresence>
-        {showRaw && (
-          <motion.pre
+        {expanded && (
+          <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="mt-2 p-3 bg-slate-900 text-slate-300 text-xs rounded-sm overflow-x-auto font-mono max-h-64 overflow-y-auto"
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
           >
-            {JSON.stringify(data, null, 2)}
-          </motion.pre>
+            <div className="border-t border-slate-100 p-6 space-y-6 bg-slate-50">
+              
+              {review.scores && Object.keys(review.scores).length > 0 && (
+                <div>
+                  <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#FF6C0C] mb-3 block border-b border-slate-200 pb-1">
+                    {isSpanish ? 'Rúbrica Cuantitativa' : 'Quantitative Rubric'}
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {Object.entries(review.scores).map(([key, value]) => (
+                      <div key={key} className="flex items-center justify-between bg-white px-4 py-2.5 rounded border border-slate-200 shadow-sm">
+                        <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">{key}</span>
+                        <span className="text-sm font-bold text-[#002147] bg-slate-100 px-2 py-0.5 rounded">{value}/5</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {review.commentsToAuthor && (
+                <div>
+                  <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#FF6C0C] mb-3 block border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                    <Icons.Message />
+                    {isSpanish ? 'Comentarios al Autor' : 'Comments to Author'}
+                  </label>
+                  <div 
+                    className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed bg-white p-5 rounded border border-slate-200 shadow-sm"
+                    dangerouslySetInnerHTML={{ __html: review.commentsToAuthor }}
+                  />
+                </div>
+              )}
+              
+              {review.commentsToEditor && (
+                <div>
+                  <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-amber-600 mb-3 block border-b border-amber-200 pb-1 flex items-center gap-1.5">
+                    <Icons.Lock />
+                    {isSpanish ? 'Comentarios Confidenciales al Editor' : 'Confidential Comments to Editor'}
+                  </label>
+                  <div 
+                    className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-amber-900 leading-relaxed bg-[#fff9ed] p-5 rounded border border-amber-200 shadow-sm"
+                    dangerouslySetInnerHTML={{ __html: review.commentsToEditor }}
+                  />
+                </div>
+              )}
+              
+              <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                {review.reviewerFileUrl ? (
+                  <a
+                    href={review.reviewerFileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white bg-[#002147] hover:bg-[#00152e] px-4 py-2 rounded transition-colors"
+                  >
+                    <Icons.File />
+                    {isSpanish ? 'Ver Documento del Revisor' : 'View Reviewer File'}
+                    <Icons.ExternalLink />
+                  </a>
+                ) : <span />}
+                
+                {review.submittedAt && (
+                  <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
+                    <Icons.Calendar />
+                    {formatDate(review.submittedAt, isSpanish)}
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 };
 
-// ============ COMPONENTE: TARJETA DE LOG DINÁMICO ============
-const DynamicLogCard = ({ log, isSpanish }) => {
-  const [expanded, setExpanded] = useState(false);
-  const t = translations[isSpanish ? 'es' : 'en'];
-  
-  const fields = useMemo(() => normalizeLogFields(log), [log]);
-  const fieldEntries = Object.entries(fields);
-  
-  // Determinar color según acción
-  const actionColor = useMemo(() => {
-    const action = log.action || '';
-    if (action.includes('reject') || action.includes('desk')) return 'bg-red-50 border-red-200';
-    if (action.includes('accept') || action.includes('complete') || action.includes('ready')) return 'bg-emerald-50 border-emerald-200';
-    if (action.includes('review') || action.includes('revision')) return 'bg-sky-50 border-sky-200';
-    if (action.includes('metadata')) return 'bg-purple-50 border-purple-200';
-    if (action.includes('reviewer') || action.includes('assign')) return 'bg-amber-50 border-amber-200';
-    return 'bg-white border-slate-200';
-  }, [log.action]);
-  
-  const actionDotColor = useMemo(() => {
-    const action = log.action || '';
-    if (action.includes('reject') || action.includes('desk')) return 'bg-red-500';
-    if (action.includes('accept') || action.includes('complete') || action.includes('ready')) return 'bg-emerald-500';
-    if (action.includes('review') || action.includes('revision')) return 'bg-sky-500';
-    if (action.includes('metadata')) return 'bg-purple-500';
-    if (action.includes('reviewer') || action.includes('assign')) return 'bg-amber-500';
-    return 'bg-slate-400';
-  }, [log.action]);
+// ============ COMPONENTE: DESK REVIEW ============
+const DeskReviewCard = ({ deskReview, isSpanish }) => {
+  const [expanded, setExpanded] = useState(true);
   
   return (
-    <div className={`border rounded-sm overflow-hidden ${actionColor} transition-all hover:shadow-sm`}>
+    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden mb-6">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/50 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3.5 bg-slate-100 text-[#002147] border-b border-slate-200 hover:bg-slate-200 transition-colors"
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${actionDotColor}`}></span>
-          <span className="font-sans font-bold text-slate-700 text-xs sm:text-sm truncate">
-            {translateAction(log.action, isSpanish)}
+        <div className="flex items-center gap-2">
+          <Icons.ClipboardCheck className="w-5 h-5 text-[#FF6C0C]" />
+          <span className="font-sans font-bold text-sm uppercase tracking-widest">
+            {isSpanish ? 'Desk Review (Evaluación Inicial)' : 'Desk Review (Initial Evaluation)'}
           </span>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-[10px] text-slate-400 font-sans">
+        <div className="flex items-center gap-3">
+          {deskReview.decision && (
+            <span className="px-3 py-1 bg-white text-[#002147] text-[10px] font-bold uppercase tracking-widest rounded border border-slate-300">
+              {translateDecision(deskReview.decision, isSpanish)}
+            </span>
+          )}
+          <div className="text-slate-500">
+            {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+          </div>
+        </div>
+      </button>
+      
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-6 space-y-5">
+              {deskReview.feedback && (
+                <div>
+                  <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#FF6C0C] mb-2 block">
+                    {isSpanish ? 'Retroalimentación al Autor' : 'Feedback to Author'}
+                  </label>
+                  <div 
+                    className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-800 leading-relaxed bg-slate-50 p-4 rounded border border-slate-200"
+                    dangerouslySetInnerHTML={{ __html: deskReview.feedback }}
+                  />
+                </div>
+              )}
+              
+              {deskReview.commentsToEditorial && (
+                <div>
+                  <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-slate-500 mb-2 block flex items-center gap-1.5">
+                    <Icons.Lock />
+                    {isSpanish ? 'Notas Internas del Equipo Editorial' : 'Internal Editorial Notes'}
+                  </label>
+                  <div 
+                    className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-600 leading-relaxed bg-slate-100 p-4 rounded border border-slate-200"
+                    dangerouslySetInnerHTML={{ __html: deskReview.commentsToEditorial }}
+                  />
+                </div>
+              )}
+              
+              {deskReview.editorName && (
+                <div className="flex items-center gap-2 text-xs font-mono text-slate-500 pt-3 border-t border-slate-100">
+                  <Icons.User />
+                  {isSpanish ? 'Editor Asignado:' : 'Assigned Editor:'} {deskReview.editorName}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ============ COMPONENTE: FINAL DECISION ============
+const FinalDecisionCard = ({ decisionData, isSpanish }) => {
+  const isAccepted = decisionData.decision === 'accept';
+  
+  return (
+    <div className={`rounded border-2 shadow-sm overflow-hidden mb-6 ${isAccepted ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-[#FF6C0C]'}`}>
+      <div className={`px-5 py-4 ${isAccepted ? 'bg-emerald-600' : 'bg-[#FF6C0C]'} text-white flex justify-between items-center`}>
+        <div className="flex items-center gap-3">
+          <Icons.Gavel className="w-5 h-5" />
+          <span className="font-sans font-bold text-sm uppercase tracking-widest">
+            {isSpanish ? 'Decisión Final Editorial' : 'Final Editorial Decision'}
+          </span>
+        </div>
+        <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-widest rounded shadow-sm border border-white/30">
+          {translateDecision(decisionData.decision, isSpanish)}
+        </span>
+      </div>
+      
+      <div className="p-6">
+        {decisionData.feedback && (
+          <div>
+            <label className={`text-[10px] font-sans font-bold uppercase tracking-widest mb-2 block ${isAccepted ? 'text-emerald-700' : 'text-[#FF6C0C]'}`}>
+              {isSpanish ? 'Resolución al Autor' : 'Resolution to Author'}
+            </label>
+            <div 
+              className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-800 leading-relaxed bg-white p-5 rounded border border-slate-200 shadow-sm"
+              dangerouslySetInnerHTML={{ __html: decisionData.feedback }}
+            />
+          </div>
+        )}
+        
+        {decisionData.editorName && (
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-500 pt-4 mt-4 border-t border-slate-200">
+            <Icons.User />
+            {isSpanish ? 'Emitido por:' : 'Issued by:'} {decisionData.editorName}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============ COMPONENTE: METADATA PROPOSAL ============
+const MetadataProposalCard = ({ log, isSpanish }) => {
+  const [expanded, setExpanded] = useState(false);
+  
+  return (
+    <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Icons.Tag className="w-4 h-4 text-[#FF6C0C]" />
+          <span className="font-sans font-bold text-sm text-[#002147]">
+            {isSpanish ? 'Propuesta de Metadatos' : 'Metadata Proposal'}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono text-slate-500">
             {formatDate(log.timestamp, isSpanish)}
           </span>
           {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
@@ -697,50 +898,34 @@ const DynamicLogCard = ({ log, isSpanish }) => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-3 pb-3 pt-1 space-y-2">
-              {fieldEntries.length > 0 ? (
-                <div className="space-y-1.5">
-                  {fieldEntries.map(([key, value]) => {
-                    const isComplexValue = typeof value === 'object' && value !== null;
-                    const displayValue = isComplexValue 
-                      ? (Array.isArray(value) 
-                          ? `${value.length} elemento(s)` 
-                          : '{ objeto }')
-                      : formatValue(value);
-                    
-                    return (
-                      <div key={key} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 bg-white/60 rounded-sm px-2 py-1.5">
-                        <span className="font-mono text-[10px] text-slate-400 uppercase tracking-wider sm:w-28 flex-shrink-0 pt-0.5">
-                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+            <div className="border-t border-slate-100 p-5 space-y-4 bg-slate-50">
+              {log.changes && Array.isArray(log.changes) && (
+                <div className="space-y-3">
+                  {log.changes.map((change, idx) => (
+                    <div key={idx} className="bg-white border border-slate-200 rounded p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                          {change.field || `Change ${idx + 1}`}
                         </span>
-                        <span className="text-xs text-slate-700 font-sans flex-1 break-words">
-                          {isComplexValue ? (
-                            <details>
-                              <summary className="cursor-pointer text-slate-500 hover:text-slate-700 text-xs">
-                                {displayValue}
-                              </summary>
-                              <pre className="mt-1 p-2 bg-slate-50 rounded-sm text-[10px] overflow-x-auto font-mono">
-                                {JSON.stringify(value, null, 2)}
-                              </pre>
-                            </details>
-                          ) : (
-                            displayValue
-                          )}
-                        </span>
+                        {change.reason && (
+                          <span className="text-xs text-slate-500 italic max-w-xs text-right">
+                            "{change.reason}"
+                          </span>
+                        )}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <p className="text-xs text-slate-400 italic">
-                  {isSpanish ? 'Sin campos adicionales' : 'No additional fields'}
-                </p>
               )}
               
-              <RawDataViewer data={log} isSpanish={isSpanish} />
+              {log.byEmail && (
+                <div className="flex items-center gap-2 text-xs font-mono text-slate-500 pt-2 border-t border-slate-200">
+                  <Icons.User />
+                  {log.byEmail}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -749,52 +934,139 @@ const DynamicLogCard = ({ log, isSpanish }) => {
   );
 };
 
-// ============ COMPONENTE: TARJETA DE RONDA ============
-const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish }) => {
-  const [expanded, setExpanded] = useState(isCurrentRound);
-  const t = translations[isSpanish ? 'es' : 'en'];
+// ============ COMPONENTE: AUDIT LOG ITEM ============
+const AuditLogItem = ({ log, isSpanish, index }) => {
+  const [expanded, setExpanded] = useState(false);
   
-  const deskReview = roundData.deskReview;
-  const finalDecision = roundData.finalDecision;
-  const auditLogs = roundData.auditLogs || [];
+  // Extraer todas las claves dinámicamente
+  const logKeys = Object.entries(log).filter(([key]) => 
+    !['id', 'action', 'timestamp', 'round'].includes(key)
+  );
+  
+  const isMetadataProposal = log.action === 'metadata_changes_proposed';
   
   return (
-    <div className={`bg-white rounded-sm border-2 shadow-sm mb-4 ${isCurrentRound ? 'border-[#002147]' : 'border-slate-200'}`}>
-      {/* Encabezado de ronda */}
+    <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 sm:px-5 py-3 hover:bg-slate-50 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors"
       >
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+            log.action?.includes('review') ? 'bg-sky-500' :
+            log.action?.includes('metadata') ? 'bg-purple-500' :
+            log.action?.includes('decision') ? 'bg-orange-500' :
+            log.action?.includes('publication') ? 'bg-emerald-500' : 'bg-slate-400'
+          }`}></span>
+          <div className="text-left flex-1 min-w-0">
+            <span className="font-sans font-bold text-sm text-[#002147] block">
+              {translateAction(log.action, isSpanish)}
+            </span>
+            <span className="text-xs text-slate-500 font-mono">
+              {formatDate(log.timestamp, isSpanish)}
+            </span>
+          </div>
+        </div>
         <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-serif font-bold text-sm ${
-            isCurrentRound ? 'bg-[#002147] text-white' : 'bg-slate-100 text-slate-600'
+          {log.byEmail && (
+            <span className="text-xs text-slate-500 font-mono hidden sm:block">
+              {log.byEmail}
+            </span>
+          )}
+          {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+        </div>
+      </button>
+      
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-slate-100 p-5 bg-slate-50">
+              {isMetadataProposal && log.changes ? (
+                <MetadataProposalCard log={log} isSpanish={isSpanish} />
+              ) : (
+                <div className="space-y-3">
+                  {logKeys.map(([key, value]) => {
+                    if (value === null || value === undefined) return null;
+                    
+                    return (
+                      <div key={key} className="flex items-start gap-3">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider min-w-[100px] pt-1">
+                          {key}:
+                        </span>
+                        <div className="flex-1 bg-white border border-slate-200 rounded p-3">
+                          {formatValue(value)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ============ COMPONENTE: RONDA ============
+const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLogs, versions, peerReviews }) => {
+  const [expanded, setExpanded] = useState(isCurrentRound);
+  
+  const roundLogs = auditLogs.filter(log => log.round === roundNumber || (log.round === undefined && roundNumber === 1));
+  const roundVersions = versions.filter(v => v.round === roundNumber);
+  const roundPeerReviews = peerReviews.filter(r => r.round === roundNumber);
+  
+  return (
+    <div className={`bg-white rounded border shadow-sm mb-6 overflow-hidden ${isCurrentRound ? 'border-l-4 border-[#FF6C0C] border-y-slate-200 border-r-slate-200' : 'border-slate-200'}`}>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-5 sm:px-8 py-5 hover:bg-slate-50 transition-colors"
+      >
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded flex items-center justify-center font-serif font-bold text-lg shadow-inner ${
+            isCurrentRound ? 'bg-[#002147] text-white' : 'bg-slate-100 text-[#002147]'
           }`}>
             R{roundNumber}
           </div>
           <div className="text-left">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-serif font-bold text-slate-800 text-sm sm:text-base">
-                {t.roundTitle} {roundNumber}
+            <div className="flex items-center gap-3 flex-wrap mb-1">
+              <span className="font-serif font-bold text-[#002147] text-lg sm:text-xl">
+                {isSpanish ? 'Ronda' : 'Round'} {roundNumber}
               </span>
               {isCurrentRound && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#002147] text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
-                  {t.current}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#FF6C0C] text-white text-[10px] font-bold uppercase tracking-widest rounded">
+                  <Icons.Clock />
+                  {isSpanish ? 'Fase Actual' : 'Current Phase'}
                 </span>
               )}
             </div>
-            <span className="text-xs text-slate-400 font-sans">
-              {auditLogs.length} {t.events}
-              {deskReview && ` · Desk Review`}
-              {finalDecision && ` · ${t.finalDecision}`}
+            <span className="text-xs text-slate-500 font-sans tracking-wide uppercase">
+              {roundLogs.length} {isSpanish ? 'eventos' : 'events'}
+              {roundVersions.length > 0 && ` • ${roundVersions.length} ${isSpanish ? 'versiones' : 'versions'}`}
+              {roundPeerReviews.length > 0 && ` • ${roundPeerReviews.length} ${isSpanish ? 'revisiones' : 'reviews'}`}
+              {roundData.deskReview && ` • Desk Review`}
+              {roundData.finalDecision && ` • ${isSpanish ? 'Decisión Final' : 'Final Decision'}`}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+        <div className="flex items-center gap-4">
+          {roundData.status && (
+            <span className="px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest bg-slate-100 text-slate-600 border border-slate-200 hidden sm:inline-block">
+              {roundData.status}
+            </span>
+          )}
+          <div className={`p-2 rounded-full ${expanded ? 'bg-slate-100' : ''}`}>
+            {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+          </div>
         </div>
       </button>
 
-      {/* Contenido expandido */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -804,74 +1076,112 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish }) => {
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="border-t border-slate-200 p-3 sm:p-5 space-y-4">
+            <div className="border-t border-slate-200 p-5 sm:p-8 space-y-10 bg-slate-50/50">
               
-              {/* Desk Review */}
-              {deskReview && (
-                <div className="border border-[#002147]/20 rounded-sm overflow-hidden">
-                  <div className="bg-[#002147] text-white px-3 py-2 flex items-center gap-2">
-                    <Icons.ClipboardCheck className="w-4 h-4" />
-                    <span className="font-serif font-bold text-xs uppercase tracking-wider">
-                      {t.deskReview}
-                    </span>
-                  </div>
-                  <div className="p-3 space-y-2 bg-slate-50/50">
-                    {Object.entries(deskReview).map(([key, value]) => (
-                      <div key={key} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                        <span className="font-mono text-[10px] text-slate-400 uppercase tracking-wider sm:w-28 flex-shrink-0">
-                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                        </span>
-                        <span className="text-xs text-slate-700 flex-1">
-                          {formatValue(value)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Decisión Final */}
-              {finalDecision && (
-                <div className="border border-emerald-200 rounded-sm overflow-hidden">
-                  <div className="bg-emerald-600 text-white px-3 py-2 flex items-center gap-2">
-                    <Icons.CheckCircle className="w-4 h-4" />
-                    <span className="font-serif font-bold text-xs uppercase tracking-wider">
-                      {t.finalDecision}
-                    </span>
-                  </div>
-                  <div className="p-3 space-y-2 bg-emerald-50/50">
-                    {Object.entries(finalDecision).map(([key, value]) => (
-                      <div key={key} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                        <span className="font-mono text-[10px] text-slate-400 uppercase tracking-wider sm:w-28 flex-shrink-0">
-                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                        </span>
-                        <span className="text-xs text-slate-700 flex-1">
-                          {formatValue(value)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Audit Logs */}
-              {auditLogs.length > 0 && (
+              {/* DESK REVIEW */}
+              {roundData.deskReview && (
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Icons.Activity className="w-4 h-4 text-slate-400" />
-                    <h4 className="font-serif font-bold text-slate-700 text-xs uppercase tracking-wider">
-                      {t.activityLog} ({auditLogs.length})
-                    </h4>
+                  <h4 className="font-sans font-bold text-[#002147] text-sm uppercase tracking-widest border-b-2 border-[#FF6C0C] pb-2 mb-4 inline-block">
+                    <Icons.ClipboardCheck className="inline w-4 h-4 mr-2" />
+                    {isSpanish ? 'Desk Review' : 'Desk Review'}
+                  </h4>
+                  <DeskReviewCard deskReview={roundData.deskReview} isSpanish={isSpanish} />
+                </div>
+              )}
+
+              {/* REVISIONES DE PARES */}
+              {roundPeerReviews.length > 0 && (
+                <div>
+                  <h4 className="font-sans font-bold text-[#002147] text-sm uppercase tracking-widest border-b-2 border-[#FF6C0C] pb-2 mb-4 inline-block">
+                    <Icons.User className="inline w-4 h-4 mr-2" />
+                    {isSpanish ? 'Revisiones de Pares' : 'Peer Reviews'}
+                  </h4>
+                  <div className="space-y-4">
+                    {roundPeerReviews.map((review, idx) => (
+                      <ReviewerFeedbackCard
+                        key={review.id || idx}
+                        review={review}
+                        index={idx}
+                        isSpanish={isSpanish}
+                      />
+                    ))}
                   </div>
-                  <div className="space-y-1.5">
-                    {auditLogs
+                </div>
+              )}
+
+              {/* DECISIÓN FINAL */}
+              {roundData.finalDecision && (
+                <div>
+                  <h4 className="font-sans font-bold text-[#002147] text-sm uppercase tracking-widest border-b-2 border-[#FF6C0C] pb-2 mb-4 inline-block">
+                    <Icons.Gavel className="inline w-4 h-4 mr-2" />
+                    {isSpanish ? 'Decisión Final' : 'Final Decision'}
+                  </h4>
+                  <FinalDecisionCard decisionData={roundData.finalDecision} isSpanish={isSpanish} />
+                </div>
+              )}
+
+              {/* VERSIONES */}
+              {roundVersions.length > 0 && (
+                <div>
+                  <h4 className="font-sans font-bold text-[#002147] text-sm uppercase tracking-widest border-b-2 border-[#002147] pb-2 mb-4 inline-block">
+                    <Icons.File className="inline w-4 h-4 mr-2" />
+                    {isSpanish ? 'Versiones del Manuscrito' : 'Manuscript Versions'}
+                  </h4>
+                  <div className="space-y-3">
+                    {roundVersions.map((version, idx) => (
+                      <div key={version.id || idx} className="bg-white rounded p-4 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1 text-[#002147]">
+                            <Icons.File />
+                          </div>
+                          <div>
+                            <span className="text-sm font-sans font-bold text-[#002147] block">
+                              {version.fileName || `${isSpanish ? 'Versión' : 'Version'} ${idx + 1}`}
+                            </span>
+                            {version.notes && (
+                              <span className="text-sm text-slate-600 font-serif mt-1 block">
+                                {version.notes.substring(0, 100)}{version.notes.length > 100 ? '...' : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {version.fileUrl && (
+                          <a
+                            href={version.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-shrink-0 text-[10px] font-bold uppercase tracking-widest text-[#FF6C0C] border border-[#FF6C0C] hover:bg-[#FF6C0C] hover:text-white px-4 py-2 rounded transition-colors self-start sm:self-center"
+                          >
+                            {isSpanish ? 'Descargar PDF' : 'Download PDF'}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* REGISTRO DE ACTIVIDAD */}
+              {roundLogs.length > 0 && (
+                <div>
+                  <h4 className="font-sans font-bold text-slate-600 text-sm uppercase tracking-widest border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+                    <Icons.Activity />
+                    {isSpanish ? 'Registro de Actividad Completo' : 'Complete Activity Log'}
+                  </h4>
+                  <div className="space-y-2">
+                    {roundLogs
                       .sort((a, b) => {
                         const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
                         const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
                         return dateB - dateA;
                       })
                       .map((log, idx) => (
-                        <DynamicLogCard key={idx} log={log} isSpanish={isSpanish} />
+                        <AuditLogItem
+                          key={log.id || idx}
+                          log={log}
+                          isSpanish={isSpanish}
+                          index={idx}
+                        />
                       ))}
                   </div>
                 </div>
@@ -887,9 +1197,11 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish }) => {
 // ============ COMPONENTE PRINCIPAL ============
 export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, isSpanish }) => {
   const [rounds, setRounds] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [versions, setVersions] = useState([]);
+  const [peerReviews, setPeerReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const t = translations[isSpanish ? 'es' : 'en'];
   
   useEffect(() => {
     const loadHistory = async () => {
@@ -902,7 +1214,77 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
       setError(null);
 
       try {
-        // 1. Cargar roundHistory (subcollection principal)
+        // Cargar editorialTasks
+        const tasksQuery = query(
+          collection(db, 'editorialTasks'),
+          where('submissionId', '==', submissionId),
+          orderBy('round', 'asc')
+        );
+        const tasksSnapshot = await getDocs(tasksQuery);
+
+        // Cargar reviewerAssignments
+        const assignmentsQuery = query(
+          collection(db, 'reviewerAssignments'),
+          where('submissionId', '==', submissionId),
+          where('status', '==', 'submitted')
+        );
+        const assignmentsSnapshot = await getDocs(assignmentsQuery);
+        
+        const peerReviewsData = [];
+        assignmentsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          peerReviewsData.push({
+            id: doc.id,
+            reviewerName: data.reviewerName || '',
+            reviewerEmail: data.reviewerEmail || '',
+            commentsToAuthor: data.commentsToAuthor || '',
+            commentsToEditor: data.commentsToEditor || '',
+            recommendation: data.recommendation || '',
+            scores: data.scores || {},
+            reviewerFileUrl: data.reviewerFileUrl || '',
+            round: data.round || 1,
+            submittedAt: data.submittedAt || null,
+          });
+        });
+        setPeerReviews(peerReviewsData);
+
+        // Cargar auditLogs
+        const auditLogsQuery = query(
+          collection(db, 'submissions', submissionId, 'auditLogs'),
+          orderBy('timestamp', 'asc')
+        );
+        const auditLogsSnapshot = await getDocs(auditLogsQuery);
+        const logs = [];
+        auditLogsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          logs.push({ 
+            id: doc.id, 
+            ...data,
+            // Normalizar timestamp
+            timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : data.timestamp
+          });
+        });
+        setAuditLogs(logs);
+
+        // Cargar versiones
+        const versionsQuery = query(
+          collection(db, 'submissions', submissionId, 'versions'),
+          orderBy('uploadedAt', 'asc')
+        );
+        const versionsSnapshot = await getDocs(versionsQuery);
+        const versionsData = [];
+        versionsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          versionsData.push({ 
+            id: doc.id, 
+            ...data, 
+            round: data.round || 1,
+            uploadedAt: data.uploadedAt?.toDate ? data.uploadedAt.toDate() : data.uploadedAt
+          });
+        });
+        setVersions(versionsData);
+
+        // Cargar roundHistory
         let roundHistoryData = {};
         try {
           const roundHistorySnapshot = await getDocs(
@@ -915,79 +1297,90 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
           console.log('No roundHistory collection found');
         }
 
-        // 2. Cargar auditLogs (subcollection)
-        let auditLogsData = [];
-        try {
-          const auditLogsQuery = query(
-            collection(db, 'submissions', submissionId, 'auditLogs'),
-            orderBy('timestamp', 'asc')
-          );
-          const auditLogsSnapshot = await getDocs(auditLogsQuery);
-          auditLogsSnapshot.forEach((doc) => {
-            auditLogsData.push({ id: doc.id, ...doc.data() });
-          });
-        } catch (err) {
-          console.log('No auditLogs collection found');
-        }
-
-        // 3. Organizar por rondas
+        // Organizar rondas
         const roundsMap = new Map();
 
-        // Función para obtener o crear ronda
-        const getOrCreateRound = (roundNumber) => {
-          if (!roundsMap.has(roundNumber)) {
-            roundsMap.set(roundNumber, {
-              roundNumber,
+        // Procesar editorialTasks
+        tasksSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const round = data.round || 1;
+          
+          if (!roundsMap.has(round)) {
+            roundsMap.set(round, {
+              roundNumber: round,
+              status: data.status || 'pending',
               deskReview: null,
-              finalDecision: null,
-              auditLogs: [],
+              finalDecision: null
             });
           }
-          return roundsMap.get(roundNumber);
-        };
-
-        // Procesar roundHistory
-        Object.entries(roundHistoryData).forEach(([docId, data]) => {
-          const roundMatch = docId.match(/round_(\d+)/i);
-          const roundNumber = roundMatch ? parseInt(roundMatch[1]) : (data.round || 1);
-          const roundData = getOrCreateRound(roundNumber);
           
-          // Desk Review
-          if (data.deskReviewFeedback || data.deskReviewDecision || data.deskReviewComments) {
+          const roundData = roundsMap.get(round);
+          
+          if (data.deskReviewDecision || data.deskReviewFeedback || data.deskReviewComments) {
             roundData.deskReview = {
-              feedback: data.deskReviewFeedback || data.deskReviewComments || null,
               decision: data.deskReviewDecision || null,
-              editor: data.deskReviewEditor || null,
-              completedAt: data.deskReviewCompletedAt || null,
+              feedback: data.deskReviewFeedback || null,
+              commentsToEditorial: data.deskReviewComments || null,
+              editorName: data.assignedToName || null,
             };
           }
           
-          // Decisión Final
-          if (data.finalFeedback || data.finalDecision) {
+          if (data.finalDecision || data.finalDecisionFeedback) {
             roundData.finalDecision = {
-              feedback: data.finalFeedback || null,
               decision: data.finalDecision || null,
-              editor: data.finalEditor || null,
-              completedAt: data.finalCompletedAt || null,
+              feedback: data.finalDecisionFeedback || null,
+              editorName: data.assignedToName || null,
             };
           }
         });
 
-        // Procesar auditLogs
-        auditLogsData.forEach(log => {
-          const roundNumber = log.round || 1;
-          const roundData = getOrCreateRound(roundNumber);
-          roundData.auditLogs.push(log);
+        // Procesar roundHistory para completar datos
+        Object.entries(roundHistoryData).forEach(([docId, historyData]) => {
+          const roundMatch = docId.match(/round_(\d+)/);
+          if (roundMatch) {
+            const roundNumber = parseInt(roundMatch[1]);
+            if (!roundsMap.has(roundNumber)) {
+              roundsMap.set(roundNumber, {
+                roundNumber,
+                status: 'completed',
+                deskReview: null,
+                finalDecision: null
+              });
+            }
+            
+            const roundData = roundsMap.get(roundNumber);
+            
+            // Desk Review desde roundHistory
+            if (historyData.deskReviewFeedback || historyData.deskReviewDecision) {
+              roundData.deskReview = {
+                decision: historyData.deskReviewDecision || null,
+                feedback: historyData.deskReviewFeedback || null,
+                commentsToEditorial: historyData.deskReviewComments || null,
+                editorName: historyData.deskReviewEditor || null,
+              };
+            }
+
+            // Final Decision desde roundHistory
+            if (historyData.finalDecision || historyData.finalFeedback) {
+              roundData.finalDecision = {
+                decision: historyData.finalDecision || historyData.decision || null,
+                feedback: historyData.finalFeedback || historyData.feedback || null,
+                editorName: historyData.finalEditor || historyData.editorName || null,
+              };
+            }
+          }
         });
 
-        // Si no hay rondas, crear una por defecto
         if (roundsMap.size === 0) {
-          getOrCreateRound(1);
+          roundsMap.set(1, { 
+            roundNumber: 1, 
+            status: 'active', 
+            deskReview: null, 
+            finalDecision: null 
+          });
         }
 
-        // Ordenar y establecer
-        const sortedRounds = Array.from(roundsMap.values()).sort((a, b) => a.roundNumber - b.roundNumber);
-        setRounds(sortedRounds);
+        setRounds(Array.from(roundsMap.values()).sort((a, b) => a.roundNumber - b.roundNumber));
       } catch (err) {
         console.error('Error loading review history:', err);
         setError(err.message);
@@ -999,94 +1392,79 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
     loadHistory();
   }, [submissionId]);
 
-  const handleExport = (format) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel(rounds, submissionTitle, isSpanish);
-        break;
-      case 'pdf':
-        exportToPDF(rounds, submissionTitle, isSpanish);
-        break;
-      case 'word':
-        exportToWord(rounds, submissionTitle, isSpanish);
-        break;
-      case 'csv':
-        exportToCSV(rounds, submissionTitle, isSpanish);
-        break;
-      default:
-        break;
-    }
-  };
-
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="w-10 h-10 border-4 border-t-[#002147] border-slate-200 rounded-full animate-spin mb-4"></div>
-        <p className="text-sm text-slate-500 font-sans">{t.loading}</p>
+      <div className="flex items-center justify-center py-20">
+        <div className="w-12 h-12 border-4 border-t-[#FF6C0C] border-slate-200 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-sm font-sans text-sm font-medium">
-        {t.error}: {error}
+      <div className="bg-red-50 border-l-4 border-red-600 text-red-800 px-6 py-4 rounded shadow-sm font-sans text-sm font-medium">
+        <strong className="block font-bold mb-1">{isSpanish ? 'Error del Sistema' : 'System Error'}</strong>
+        {isSpanish ? 'No se pudo cargar el historial: ' : 'Could not load history: '} {error}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* Encabezado editorial con exportaciones */}
-      <div className="bg-[#002147] text-white rounded-sm p-4 sm:p-6 shadow-sm">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/10 rounded-sm flex items-center justify-center">
-              <Icons.ClipboardCheck className="w-5 h-5" />
+    <div className="space-y-8 pb-12 max-w-6xl mx-auto">
+      {/* Header Dashboard Premium */}
+      <div className="bg-[#002147] text-white rounded-lg p-6 sm:p-8 shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-1/4 w-32 h-32 bg-[#FF6C0C] opacity-10 rounded-full blur-2xl pointer-events-none"></div>
+        
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="bg-[#00152e] p-3 rounded-lg border border-[#003b5c]">
+              <Icons.ClipboardCheck className="w-8 h-8 text-[#FF6C0C]" />
             </div>
             <div>
-              <h3 className="font-serif text-lg sm:text-xl font-bold">
-                {t.feedbackHistory}
-              </h3>
-              <p className="text-slate-300 text-sm mt-0.5 font-sans">
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight mb-1">
+                {isSpanish ? 'Historial de Revisión Completo' : 'Complete Review History'}
+              </h2>
+              <p className="text-slate-400 text-sm font-sans max-w-xl">
                 {submissionTitle || submissionId}
+              </p>
+              <p className="text-slate-500 text-xs font-sans mt-2">
+                {rounds.length} {isSpanish ? 'rondas' : 'rounds'} • {auditLogs.length} {isSpanish ? 'eventos' : 'events'} • {peerReviews.length} {isSpanish ? 'revisiones' : 'reviews'}
               </p>
             </div>
           </div>
           
-          {/* Botones de exportación */}
-          <div className="flex gap-1.5 flex-wrap">
+          <div className="flex flex-wrap gap-3">
             <button 
-              onClick={() => handleExport('excel')} 
-              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-[10px] font-bold uppercase tracking-wider"
-              title="Excel"
+              onClick={() => exportToJSON(auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish)} 
+              className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm"
+              title="JSON"
             >
-              <Icons.FileSpreadsheet className="w-3.5 h-3.5" />
-              Excel
+              <Icons.FileJson /> JSON
             </button>
             <button 
-              onClick={() => handleExport('pdf')} 
-              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-[10px] font-bold uppercase tracking-wider"
-              title="PDF"
+              onClick={() => exportToPDF(auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish)} 
+              className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm"
             >
-              <Icons.FilePdf className="w-3.5 h-3.5" />
-              PDF
+              <Icons.FilePdf /> PDF
             </button>
             <button 
-              onClick={() => handleExport('word')} 
-              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-[10px] font-bold uppercase tracking-wider"
-              title="Word"
+              onClick={() => exportToWord(auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish)} 
+              className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm"
             >
-              <Icons.DocumentText className="w-3.5 h-3.5" />
-              Word
+              <Icons.DocumentText /> Word
             </button>
             <button 
-              onClick={() => handleExport('csv')} 
-              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-sm transition-colors text-[10px] font-bold uppercase tracking-wider"
-              title="CSV"
+              onClick={() => exportToExcel(auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish)} 
+              className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm"
             >
-              <Icons.Download className="w-3.5 h-3.5" />
-              CSV
+              <Icons.FileSpreadsheet /> Excel
+            </button>
+            <button 
+              onClick={() => exportToCSV(auditLogs, submissionTitle, isSpanish)} 
+              className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm"
+            >
+              <Icons.Download /> CSV
             </button>
           </div>
         </div>
@@ -1094,7 +1472,7 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
 
       {/* Lista de rondas */}
       {rounds.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-6">
           {rounds.map((round) => (
             <RoundCard
               key={round.roundNumber}
@@ -1102,13 +1480,18 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
               roundData={round}
               isCurrentRound={round.roundNumber === currentRound}
               isSpanish={isSpanish}
+              auditLogs={auditLogs}
+              versions={versions}
+              peerReviews={peerReviews}
             />
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 bg-white rounded-sm border border-slate-200">
-          <Icons.DocumentText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 font-serif">{t.noHistory}</p>
+        <div className="text-center py-20 bg-white rounded border border-slate-200 shadow-sm">
+          <Icons.DocumentText className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+          <p className="text-slate-500 font-serif text-lg">
+            {isSpanish ? 'No se han registrado eventos de revisión aún.' : 'No review events have been recorded yet.'}
+          </p>
         </div>
       )}
     </div>
