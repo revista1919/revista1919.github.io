@@ -1,5 +1,5 @@
 // src/components/ReviewHistoryTab.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -9,7 +9,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
-// ============ ICONOS SVG PROFESIONALES ============
+// ============ ICONOS SVG (Estilo editorial consistente) ============
 const Icons = {
   Calendar: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
   CheckCircle: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
@@ -29,171 +29,183 @@ const Icons = {
   File: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
   Lock: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>,
   Gavel: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>,
-  Code: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>,
   Tag: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>,
-  FileJson: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7v10M8 7a2 2 0 100-4 2 2 0 000 4zm0 10a2 2 0 100 4 2 2 0 000-4zm8-10v10m0-10a2 2 0 100-4 2 2 0 000 4zm0 10a2 2 0 100 4 2 2 0 000-4z" /></svg>,
+  Code: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>,
+  Json: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
 };
 
 // ============ TRADUCCIONES ============
+const translations = {
+  actions: {
+    es: {
+      'submission_created': 'Envío Creado',
+      'assigned_to_section_editor': 'Asignado a Editor',
+      'peer_review_started': 'Revisión por Pares Iniciada',
+      'review_submitted': 'Revisión Enviada',
+      'review_added_to_submission': 'Revisión Agregada',
+      'editor_notified_new_round': 'Editor Notificado',
+      'new_round_created_with_new_task': 'Nueva Ronda Creada',
+      'revision_submitted': 'Revisión del Autor',
+      'marked_ready_for_publication': 'Listo para Publicar',
+      'metadata_changes_applied': 'Metadatos Actualizados',
+      'external_reviewer_invited': 'Revisor Externo Invitado',
+      'external_reviewer_onboarded': 'Revisor Externo Registrado',
+      'metadata_changes_proposed': 'Cambios de Metadatos Propuestos',
+      'metadata_proposal_email_sent': 'Correo de Propuesta de Metadatos Enviado',
+      'metadata_proposal_response_notified': 'Respuesta de Propuesta de Metadatos Notificada',
+      'proceeded_to_decision': 'Avanzó a Decisión Final',
+      'publication_ready_complete': 'Publicación Lista Completada',
+      'certificate_generated': 'Certificado Generado',
+      'reviewer_copy_created': 'Copia para Revisor Creada',
+      'additional_reviewer_accepted': 'Revisor Adicional Aceptado',
+    },
+    en: {
+      'submission_created': 'Submission Created',
+      'assigned_to_section_editor': 'Assigned to Editor',
+      'peer_review_started': 'Peer Review Started',
+      'review_submitted': 'Review Submitted',
+      'review_added_to_submission': 'Review Added',
+      'editor_notified_new_round': 'Editor Notified',
+      'new_round_created_with_new_task': 'New Round Created',
+      'revision_submitted': 'Author Revision',
+      'marked_ready_for_publication': 'Ready to Publish',
+      'metadata_changes_applied': 'Metadata Updated',
+      'external_reviewer_invited': 'External Reviewer Invited',
+      'external_reviewer_onboarded': 'External Reviewer Onboarded',
+      'metadata_changes_proposed': 'Metadata Changes Proposed',
+      'metadata_proposal_email_sent': 'Metadata Proposal Email Sent',
+      'metadata_proposal_response_notified': 'Metadata Proposal Response Notified',
+      'proceeded_to_decision': 'Proceeded to Final Decision',
+      'publication_ready_complete': 'Publication Ready Complete',
+      'certificate_generated': 'Certificate Generated',
+      'reviewer_copy_created': 'Reviewer Copy Created',
+      'additional_reviewer_accepted': 'Additional Reviewer Accepted',
+    }
+  },
+  decisions: {
+    es: {
+      'accept': 'Aceptar', 'reject': 'Rechazar',
+      'minor-revision': 'Revisión Menor', 'minor-revisions': 'Revisiones Menores',
+      'major-revision': 'Revisión Mayor', 'major-revisions': 'Revisiones Mayores',
+      'revision-required': 'Enviar a Pares',
+    },
+    en: {
+      'accept': 'Accept', 'reject': 'Reject',
+      'minor-revision': 'Minor Revision', 'minor-revisions': 'Minor Revisions',
+      'major-revision': 'Major Revision', 'major-revisions': 'Major Revisions',
+      'revision-required': 'Send to Review',
+    }
+  }
+};
+
 const translateAction = (action, isSpanish) => {
-  const translations = {
-    'submission_created': isSpanish ? 'Envío Creado' : 'Submission Created',
-    'assigned_to_section_editor': isSpanish ? 'Asignado a Editor de Sección' : 'Assigned to Section Editor',
-    'peer_review_started': isSpanish ? 'Revisión por Pares Iniciada' : 'Peer Review Started',
-    'review_submitted': isSpanish ? 'Revisión Enviada' : 'Review Submitted',
-    'review_added_to_submission': isSpanish ? 'Revisión Agregada al Manuscrito' : 'Review Added to Submission',
-    'editor_notified_new_round': isSpanish ? 'Editor Notificado de Nueva Ronda' : 'Editor Notified of New Round',
-    'new_round_created_with_new_task': isSpanish ? 'Nueva Ronda de Revisión Creada' : 'New Review Round Created',
-    'revision_submitted': isSpanish ? 'Revisión del Autor Enviada' : 'Author Revision Submitted',
-    'marked_ready_for_publication': isSpanish ? 'Marcado Listo para Publicación' : 'Marked Ready for Publication',
-    'metadata_changes_applied': isSpanish ? 'Cambios de Metadatos Aplicados' : 'Metadata Changes Applied',
-    'external_reviewer_invited': isSpanish ? 'Revisor Externo Invitado' : 'External Reviewer Invited',
-    'external_reviewer_onboarded': isSpanish ? 'Revisor Externo Registrado' : 'External Reviewer Onboarded',
-    'metadata_changes_proposed': isSpanish ? 'Cambios de Metadatos Propuestos' : 'Metadata Changes Proposed',
-    'metadata_proposal_email_sent': isSpanish ? 'Email de Propuesta de Metadatos Enviado' : 'Metadata Proposal Email Sent',
-    'metadata_proposal_response_notified': isSpanish ? 'Respuesta de Propuesta Notificada' : 'Proposal Response Notified',
-    'proceeded_to_decision': isSpanish ? 'Procedió a Decisión Final' : 'Proceeded to Final Decision',
-    'publication_ready_complete': isSpanish ? 'Proceso de Publicación Completado' : 'Publication Process Completed',
-    'certificate_generated': isSpanish ? 'Certificado Generado' : 'Certificate Generated',
-    'reviewer_copy_created': isSpanish ? 'Copia para Revisor Creada' : 'Reviewer Copy Created',
-    'additional_reviewer_accepted': isSpanish ? 'Revisor Adicional Aceptó' : 'Additional Reviewer Accepted',
-  };
-  return translations[action] || (typeof action === 'string' ? action.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : action);
+  return translations.actions[isSpanish ? 'es' : 'en'][action] || action;
 };
 
 const translateDecision = (decision, isSpanish) => {
-  const translations = {
-    'accept': isSpanish ? 'Aceptar' : 'Accept',
-    'reject': isSpanish ? 'Rechazar' : 'Reject',
-    'minor-revision': isSpanish ? 'Revisión Menor' : 'Minor Revision',
-    'minor-revisions': isSpanish ? 'Revisiones Menores' : 'Minor Revisions',
-    'major-revision': isSpanish ? 'Revisión Mayor' : 'Major Revision',
-    'major-revisions': isSpanish ? 'Revisiones Mayores' : 'Major Revisions',
-    'revision-required': isSpanish ? 'Requiere Revisión' : 'Revision Required',
-    'accept-with-minor': isSpanish ? 'Aceptar con Cambios Menores' : 'Accept with Minor Changes',
-  };
-  return translations[decision] || decision || '—';
+  if (!decision) return '—';
+  return translations.decisions[isSpanish ? 'es' : 'en'][decision] || decision;
 };
 
 const formatDate = (timestamp, isSpanish) => {
   if (!timestamp) return '—';
   const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
   return date.toLocaleDateString(isSpanish ? 'es-ES' : 'en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 };
 
-// ============ FUNCIÓN PARA FORMATEAR VALORES DINÁMICOS ============
-const formatValue = (value, label = '') => {
+const formatValue = (value, fieldName = '') => {
   if (value === null || value === undefined || value === '') {
-    return <span className="text-slate-400 italic">—</span>;
+    return <span className="text-slate-400 italic font-sans text-xs">—</span>;
   }
-  
-  if (typeof value === 'object' && value !== null) {
-    if (value.toDate) {
-      return <span className="font-mono text-xs">{value.toDate().toLocaleString()}</span>;
-    }
-    if (value.seconds !== undefined) {
-      return <span className="font-mono text-xs">{new Date(value.seconds * 1000).toLocaleString()}</span>;
-    }
-    if (Array.isArray(value)) {
-      return (
-        <div className="space-y-2">
-          {value.map((item, idx) => (
-            <div key={idx} className="bg-slate-50 p-3 rounded border border-slate-200">
-              {typeof item === 'object' ? (
-                <div className="space-y-1">
-                  {Object.entries(item).map(([key, val]) => (
-                    <div key={key} className="flex items-start gap-2">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase min-w-[80px] pt-0.5">{key}:</span>
-                      <span className="text-sm text-slate-700">{formatValue(val)}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-sm">{String(item)}</span>
-              )}
-            </div>
-          ))}
-        </div>
-      );
-    }
+
+  if (fieldName === 'keywords' || fieldName === 'keywordsEs' || fieldName === 'keywordsEn') {
+    const keywords = Array.isArray(value) ? value : [value];
     return (
-      <div className="space-y-1">
-        {Object.entries(value).map(([key, val]) => (
-          <div key={key} className="flex items-start gap-2">
-            <span className="text-[10px] font-bold text-slate-500 uppercase min-w-[80px] pt-0.5">{key}:</span>
-            <span className="text-sm text-slate-700">{formatValue(val)}</span>
-          </div>
+      <div className="flex flex-wrap gap-1.5">
+        {keywords.map((kw, idx) => (
+          <span key={idx} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-sans border border-slate-200">
+            {typeof kw === 'string' ? kw : kw.term || kw.name || String(kw)}
+          </span>
         ))}
       </div>
     );
   }
-  
-  return <span className="text-sm">{String(value)}</span>;
+
+  if (fieldName === 'authors') {
+    const authors = Array.isArray(value) ? value : [value];
+    return (
+      <div className="space-y-2">
+        {authors.map((author, idx) => {
+          if (typeof author === 'object' && author !== null) {
+            const fullName = `${author.firstName || ''} ${author.lastName || ''}`.trim() || author.name || 'Autor sin nombre';
+            return (
+              <div key={idx} className="flex items-center gap-2 text-sm flex-wrap">
+                <span className="font-serif text-slate-800">{fullName}</span>
+                {author.email && <span className="text-xs text-slate-400 font-mono">({author.email})</span>}
+                {author.orcid && <span className="text-xs text-[#002147] font-mono">ORCID: {author.orcid}</span>}
+                {author.isCorresponding && (
+                  <span className="px-2 py-0.5 bg-[#EBF4F7] text-[#004B7F] text-[10px] font-bold uppercase tracking-wider rounded-sm">
+                    {isSpanish ? 'Correspondencia' : 'Corresponding'}
+                  </span>
+                )}
+              </div>
+            );
+          }
+          return <span key={idx} className="block font-serif text-slate-800">{String(author)}</span>;
+        })}
+      </div>
+    );
+  }
+
+  if (fieldName === 'specializedCodes') {
+    const codes = Array.isArray(value) ? value : [value];
+    return (
+      <div className="flex flex-wrap gap-2">
+        {codes.map((code, idx) => (
+          <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 text-white rounded-sm text-xs font-mono font-bold">
+            <Icons.Code />
+            {code}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    if (Array.isArray(value)) {
+      return (
+        <div className="space-y-1">
+          {value.map((item, idx) => {
+            if (typeof item === 'object' && item !== null) {
+              return <div key={idx} className="font-mono text-xs text-slate-700 bg-slate-50 p-1 rounded border border-slate-200">{JSON.stringify(item)}</div>;
+            }
+            return <span key={idx} className="block font-serif text-slate-700">{String(item)}</span>;
+          })}
+        </div>
+      );
+    }
+    if (value.seconds !== undefined) {
+      return new Date(value.seconds * 1000).toLocaleString();
+    }
+    return <pre className="font-mono text-xs text-slate-700 bg-slate-50 p-2 rounded border border-slate-200 overflow-x-auto">{JSON.stringify(value, null, 2)}</pre>;
+  }
+
+  return <span className="font-serif text-slate-700">{String(value)}</span>;
 };
 
-// ============ EXPORTACIÓN A JSON ============
-const exportToJSON = (auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish) => {
-  const exportData = {
-    submissionTitle: submissionTitle || '',
-    exportedAt: new Date().toISOString(),
-    rounds: rounds.map(round => ({
-      roundNumber: round.roundNumber,
-      status: round.status || 'unknown',
-      deskReview: round.deskReview ? {
-        decision: round.deskReview.decision || null,
-        feedback: round.deskReview.feedback || '',
-        commentsToEditorial: round.deskReview.commentsToEditorial || '',
-        editorName: round.deskReview.editorName || ''
-      } : null,
-      finalDecision: round.finalDecision ? {
-        decision: round.finalDecision.decision || null,
-        feedback: round.finalDecision.feedback || '',
-        editorName: round.finalDecision.editorName || ''
-      } : null,
-      peerReviews: peerReviews.filter(r => r.round === round.roundNumber).map(review => ({
-        reviewerName: review.reviewerName || '',
-        reviewerEmail: review.reviewerEmail || '',
-        recommendation: review.recommendation || '',
-        scores: review.scores || {},
-        commentsToAuthor: review.commentsToAuthor || '',
-        commentsToEditor: review.commentsToEditor || '',
-        submittedAt: review.submittedAt ? (review.submittedAt.toDate ? review.submittedAt.toDate().toISOString() : review.submittedAt) : null
-      })),
-      versions: versions.filter(v => v.round === round.roundNumber).map(version => ({
-        fileName: version.fileName || '',
-        notes: version.notes || '',
-        uploadedAt: version.uploadedAt ? (version.uploadedAt.toDate ? version.uploadedAt.toDate().toISOString() : version.uploadedAt) : null
-      })),
-      auditLogs: auditLogs.filter(log => log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1)).map(log => ({
-        action: log.action || '',
-        by: log.by || '',
-        byEmail: log.byEmail || '',
-        timestamp: log.timestamp ? (log.timestamp.toDate ? log.timestamp.toDate().toISOString() : log.timestamp) : null,
-        ...log.details ? { details: log.details } : {},
-        ...log.changes ? { changes: log.changes } : {},
-        ...log.recommendation ? { recommendation: log.recommendation } : {},
-        ...log.notes ? { notes: log.notes } : {},
-        ...log.fileName ? { fileName: log.fileName } : {}
-      }))
-    }))
-  };
-  
-  const jsonString = JSON.stringify(exportData, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
-  saveAs(blob, `historial_${submissionTitle || 'submission'}.json`);
+// ============ FUNCIONES DE EXPORTACIÓN ============
+const getCleanText = (html) => {
+  if (!html) return '';
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || div.innerText || '';
 };
 
-// ============ EXPORTACIÓN A EXCEL ============
-const exportToExcel = (auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish) => {
+const exportToExcel = (auditLogs, rounds, submissionTitle, isSpanish) => {
   const data = [];
   
-  // Hoja de auditoría
   auditLogs
     .sort((a, b) => {
       const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
@@ -201,90 +213,29 @@ const exportToExcel = (auditLogs, rounds, peerReviews, versions, submissionTitle
       return dateA - dateB;
     })
     .forEach(log => {
-      data.push({
-        'Fecha': formatDate(log.timestamp, isSpanish),
-        'Acción': translateAction(log.action, isSpanish),
-        'Ronda': log.round || '1',
-        'Realizado por': log.by === 'system' ? (isSpanish ? 'Sistema' : 'System') : (log.byEmail || log.by || ''),
-        'Email': log.byEmail || log.toEmail || '',
-        'Detalles': JSON.stringify(log.details || log.changes || ''),
-        'Recomendación': log.recommendation ? translateDecision(log.recommendation, isSpanish) : '',
-        'Notas': log.notes || '',
-        'Archivo': log.fileName || '',
-      });
+      const row = {
+        [isSpanish ? 'Fecha' : 'Date']: formatDate(log.timestamp, isSpanish),
+        [isSpanish ? 'Acción' : 'Action']: translateAction(log.action, isSpanish),
+        [isSpanish ? 'Ronda' : 'Round']: log.round || '1',
+        [isSpanish ? 'Realizado por' : 'Performed by']: log.by === 'system' ? (isSpanish ? 'Sistema' : 'System') : (log.byEmail || log.by || ''),
+        [isSpanish ? 'Email' : 'Email']: log.byEmail || log.toEmail || '',
+        [isSpanish ? 'Detalles' : 'Details']: JSON.stringify(log.details || {}),
+        [isSpanish ? 'Recomendación' : 'Recommendation']: log.recommendation ? translateDecision(log.recommendation, isSpanish) : '',
+        [isSpanish ? 'Notas' : 'Notes']: log.notes || '',
+        [isSpanish ? 'Archivo' : 'File']: log.fileName || '',
+      };
+      data.push(row);
     });
 
   const ws = XLSX.utils.json_to_sheet(data);
-  
-  // Hoja de decisiones
-  const decisionsData = [];
-  rounds.forEach(round => {
-    if (round.deskReview) {
-      decisionsData.push({
-        'Ronda': round.roundNumber,
-        'Tipo': isSpanish ? 'Desk Review' : 'Desk Review',
-        'Decisión': translateDecision(round.deskReview.decision, isSpanish),
-        'Feedback': round.deskReview.feedback || '',
-        'Editor': round.deskReview.editorName || ''
-      });
-    }
-    if (round.finalDecision) {
-      decisionsData.push({
-        'Ronda': round.roundNumber,
-        'Tipo': isSpanish ? 'Decisión Final' : 'Final Decision',
-        'Decisión': translateDecision(round.finalDecision.decision, isSpanish),
-        'Feedback': round.finalDecision.feedback || '',
-        'Editor': round.finalDecision.editorName || ''
-      });
-    }
-  });
-  const wsDecisions = XLSX.utils.json_to_sheet(decisionsData);
-  
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, isSpanish ? 'Auditoría' : 'Audit');
-  XLSX.utils.book_append_sheet(wb, wsDecisions, isSpanish ? 'Decisiones' : 'Decisions');
-  
   const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   saveAs(blob, `historial_${submissionTitle || 'submission'}.xlsx`);
 };
 
-// ============ EXPORTACIÓN A CSV ============
-const exportToCSV = (auditLogs, submissionTitle, isSpanish) => {
-  const headers = [
-    'Fecha', 'Acción', 'Ronda', 'Realizado por', 'Email', 
-    'Detalles', 'Recomendación', 'Notas', 'Archivo'
-  ];
-  
-  const rows = auditLogs
-    .sort((a, b) => {
-      const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
-      const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
-      return dateA - dateB;
-    })
-    .map(log => [
-      formatDate(log.timestamp, isSpanish),
-      translateAction(log.action, isSpanish),
-      log.round || '1',
-      log.by === 'system' ? (isSpanish ? 'Sistema' : 'System') : (log.byEmail || log.by || ''),
-      log.byEmail || log.toEmail || '',
-      JSON.stringify(log.details || log.changes || ''),
-      log.recommendation ? translateDecision(log.recommendation, isSpanish) : '',
-      log.notes || '',
-      log.fileName || '',
-    ]);
-  
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-  ].join('\n');
-  
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-  saveAs(blob, `historial_${submissionTitle || 'submission'}.csv`);
-};
-
-// ============ EXPORTACIÓN A PDF ============
-const exportToPDF = (auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish) => {
+const exportToPDF = (auditLogs, rounds, submissionTitle, isSpanish) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -298,19 +249,16 @@ const exportToPDF = (auditLogs, rounds, peerReviews, versions, submissionTitle, 
     }
   };
 
-  // Header
   doc.setFontSize(24);
-  doc.setTextColor(0, 33, 71);
+  doc.setTextColor(0, 33, 71); // Oxford Blue
   doc.setFont('helvetica', 'bold');
-  doc.text(isSpanish ? 'Historial de Revisión Completo' : 'Complete Review History', margin, yPosition);
-  
+  doc.text(isSpanish ? 'Historial de Auditoría' : 'Audit History', margin, yPosition);
   yPosition += 10;
   doc.setDrawColor(0, 33, 71);
   doc.setLineWidth(0.5);
   doc.line(margin, yPosition, pageWidth - margin, yPosition);
-  
   yPosition += 8;
-  
+
   if (submissionTitle) {
     doc.setFontSize(12);
     doc.setTextColor(100, 116, 139);
@@ -319,76 +267,81 @@ const exportToPDF = (auditLogs, rounds, peerReviews, versions, submissionTitle, 
     yPosition += 15;
   }
 
+  const sortedLogs = [...auditLogs].sort((a, b) => {
+    const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+    const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+    return dateA - dateB;
+  });
+
   rounds.forEach((round, roundIndex) => {
+    const roundLogs = sortedLogs.filter(log => 
+      log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1)
+    );
+    
+    if (roundLogs.length === 0 && !round.deskReview && !round.finalDecision && !round.versions?.length && !round.metadataProposals?.length) return;
+    
     checkPageBreak(40);
     
-    // Round Header
-    doc.setFillColor(0, 33, 71);
+    doc.setFillColor(248, 250, 252);
     doc.rect(margin, yPosition - 6, pageWidth - 2 * margin, 12, 'F');
+    doc.setFillColor(0, 33, 71);
+    doc.rect(margin, yPosition - 6, 4, 12, 'F');
+    
     doc.setFontSize(14);
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(0, 33, 71);
     doc.setFont('helvetica', 'bold');
     doc.text(`${isSpanish ? 'Ronda' : 'Round'} ${round.roundNumber}`, margin + 10, yPosition + 2);
     yPosition += 15;
 
     // Desk Review
     if (round.deskReview) {
-      checkPageBreak(50);
-      doc.setFontSize(12);
+      checkPageBreak(30);
+      doc.setFontSize(11);
       doc.setTextColor(0, 33, 71);
       doc.setFont('helvetica', 'bold');
       doc.text(isSpanish ? 'Desk Review' : 'Desk Review', margin, yPosition);
-      yPosition += 7;
-      
+      yPosition += 6;
       doc.setFontSize(10);
       doc.setTextColor(71, 85, 105);
       doc.setFont('helvetica', 'normal');
-      
-      if (round.deskReview.decision) {
-        doc.text(`${isSpanish ? 'Decisión' : 'Decision'}: ${translateDecision(round.deskReview.decision, isSpanish)}`, margin + 10, yPosition);
-        yPosition += 6;
-      }
-      
       if (round.deskReview.feedback) {
-        const cleanText = round.deskReview.feedback.replace(/<[^>]*>/g, '');
+        const cleanText = getCleanText(round.deskReview.feedback);
         const lines = doc.splitTextToSize(cleanText, pageWidth - 2 * margin - 20);
         checkPageBreak(lines.length * 5 + 10);
         doc.text(lines, margin + 10, yPosition);
         yPosition += lines.length * 5 + 5;
       }
+      if (round.deskReview.decision) {
+        doc.text(`${isSpanish ? 'Decisión' : 'Decision'}: ${translateDecision(round.deskReview.decision, isSpanish)}`, margin + 10, yPosition);
+        yPosition += 5;
+      }
       yPosition += 10;
     }
 
     // Peer Reviews
-    const roundPeerReviews = peerReviews.filter(r => r.round === round.roundNumber);
-    if (roundPeerReviews.length > 0) {
+    if (round.peerReviews && round.peerReviews.length > 0) {
       checkPageBreak(30);
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setTextColor(0, 33, 71);
       doc.setFont('helvetica', 'bold');
       doc.text(isSpanish ? 'Revisiones de Pares' : 'Peer Reviews', margin, yPosition);
       yPosition += 8;
-      
-      roundPeerReviews.forEach((review, idx) => {
-        checkPageBreak(40);
+      round.peerReviews.forEach((review, idx) => {
+        checkPageBreak(20);
         doc.setFontSize(10);
         doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'bold');
-        doc.text(`${isSpanish ? 'Revisor' : 'Reviewer'} ${idx + 1}: ${review.reviewerName || 'N/A'}`, margin + 10, yPosition);
-        yPosition += 6;
-        
-        if (review.recommendation) {
-          doc.setFontSize(9);
-          doc.setTextColor(71, 85, 105);
-          doc.setFont('helvetica', 'normal');
-          doc.text(`${isSpanish ? 'Recomendación' : 'Recommendation'}: ${translateDecision(review.recommendation, isSpanish)}`, margin + 15, yPosition);
-          yPosition += 6;
-        }
-        
+        doc.text(`${review.reviewerName || (isSpanish ? 'Revisor' : 'Reviewer') + ' ' + (idx + 1)}`, margin + 10, yPosition);
+        yPosition += 5;
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${isSpanish ? 'Recomendación' : 'Recommendation'}: ${translateDecision(review.recommendation, isSpanish)}`, margin + 15, yPosition);
+        yPosition += 5;
         if (review.commentsToAuthor) {
-          const cleanComments = review.commentsToAuthor.replace(/<[^>]*>/g, '');
-          const lines = doc.splitTextToSize(cleanComments, pageWidth - 2 * margin - 25);
-          checkPageBreak(lines.length * 5 + 5);
+          const cleanText = getCleanText(review.commentsToAuthor);
+          const lines = doc.splitTextToSize(cleanText, pageWidth - 2 * margin - 30);
+          checkPageBreak(lines.length * 5 + 10);
           doc.text(lines, margin + 15, yPosition);
           yPosition += lines.length * 5 + 5;
         }
@@ -396,104 +349,102 @@ const exportToPDF = (auditLogs, rounds, peerReviews, versions, submissionTitle, 
       });
     }
 
-    // Final Decision
+    // Decisión Final
     if (round.finalDecision) {
-      checkPageBreak(40);
-      doc.setFillColor(255, 108, 12);
-      doc.rect(margin, yPosition - 6, pageWidth - 2 * margin, 12, 'F');
-      doc.setFontSize(12);
-      doc.setTextColor(255, 255, 255);
+      checkPageBreak(30);
+      doc.setFontSize(11);
+      doc.setTextColor(5, 150, 105);
       doc.setFont('helvetica', 'bold');
-      doc.text(isSpanish ? 'Decisión Final' : 'Final Decision', margin + 10, yPosition + 2);
-      yPosition += 15;
-      
-      if (round.finalDecision.decision) {
-        doc.setFontSize(10);
-        doc.setTextColor(71, 85, 105);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${isSpanish ? 'Decisión' : 'Decision'}: ${translateDecision(round.finalDecision.decision, isSpanish)}`, margin + 10, yPosition);
-        yPosition += 6;
-      }
-      
+      doc.text(isSpanish ? 'Decisión Final' : 'Final Decision', margin, yPosition);
+      yPosition += 6;
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
       if (round.finalDecision.feedback) {
-        const cleanText = round.finalDecision.feedback.replace(/<[^>]*>/g, '');
-        doc.setFontSize(9);
-        doc.setTextColor(71, 85, 105);
-        doc.setFont('helvetica', 'normal');
+        const cleanText = getCleanText(round.finalDecision.feedback);
         const lines = doc.splitTextToSize(cleanText, pageWidth - 2 * margin - 20);
         checkPageBreak(lines.length * 5 + 10);
         doc.text(lines, margin + 10, yPosition);
         yPosition += lines.length * 5 + 5;
       }
+      if (round.finalDecision.decision) {
+        doc.text(`${isSpanish ? 'Decisión' : 'Decision'}: ${translateDecision(round.finalDecision.decision, isSpanish)}`, margin + 10, yPosition);
+        yPosition += 5;
+      }
       yPosition += 10;
     }
 
-    // Audit Logs
-    const roundLogs = auditLogs.filter(log => log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1));
-    if (roundLogs.length > 0) {
+    // Metadata Proposals
+    if (round.metadataProposals && round.metadataProposals.length > 0) {
       checkPageBreak(30);
-      doc.setFontSize(12);
-      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(11);
+      doc.setTextColor(0, 33, 71);
       doc.setFont('helvetica', 'bold');
-      doc.text(isSpanish ? 'Registro de Actividad' : 'Activity Log', margin, yPosition);
+      doc.text(isSpanish ? 'Propuestas de Metadatos' : 'Metadata Proposals', margin, yPosition);
       yPosition += 8;
-      
-      roundLogs
-        .sort((a, b) => {
-          const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
-          const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
-          return dateA - dateB;
-        })
-        .forEach((log, idx) => {
-          checkPageBreak(25);
-          
-          doc.setFontSize(10);
-          doc.setTextColor(30, 41, 59);
-          doc.setFont('helvetica', 'bold');
-          doc.text(translateAction(log.action, isSpanish), margin + 10, yPosition);
-          
-          doc.setFontSize(8);
-          doc.setTextColor(148, 163, 184);
-          doc.setFont('helvetica', 'normal');
-          doc.text(formatDate(log.timestamp, isSpanish), pageWidth - margin - 10, yPosition, { align: 'right' });
-          
-          yPosition += 6;
-          
-          if (log.byEmail || log.by) {
-            doc.setFontSize(8);
-            doc.setTextColor(100, 116, 139);
-            doc.text(`${isSpanish ? 'Por' : 'By'}: ${log.byEmail || log.by}`, margin + 15, yPosition);
-            yPosition += 5;
-          }
-          
-          if (log.details) {
-            doc.setFontSize(8);
-            doc.setTextColor(100, 116, 139);
-            const detailsStr = JSON.stringify(log.details);
-            const lines = doc.splitTextToSize(detailsStr, pageWidth - 2 * margin - 25);
-            checkPageBreak(lines.length * 4 + 5);
-            doc.text(lines, margin + 15, yPosition);
-            yPosition += lines.length * 4 + 3;
-          }
-          
-          if (log.changes) {
-            doc.setFontSize(8);
-            doc.setTextColor(100, 116, 139);
-            const changesStr = JSON.stringify(log.changes);
-            const lines = doc.splitTextToSize(changesStr, pageWidth - 2 * margin - 25);
-            checkPageBreak(lines.length * 4 + 5);
-            doc.text(lines, margin + 15, yPosition);
-            yPosition += lines.length * 4 + 3;
-          }
-          
-          yPosition += 8;
+      round.metadataProposals.forEach((proposal, idx) => {
+        checkPageBreak(20);
+        doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${isSpanish ? 'Propuesta' : 'Proposal'} ${idx + 1} - ${translateAction('metadata_changes_proposed', isSpanish)}`, margin + 10, yPosition);
+        yPosition += 5;
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.setFont('helvetica', 'normal');
+        proposal.changes.forEach(change => {
+          doc.text(`${isSpanish ? 'Campo' : 'Field'}: ${change.field}`, margin + 15, yPosition);
+          yPosition += 5;
+          doc.text(`${isSpanish ? 'Valor Actual' : 'Current Value'}: ${JSON.stringify(change.currentValue)}`, margin + 15, yPosition);
+          yPosition += 5;
+          doc.text(`${isSpanish ? 'Valor Propuesto' : 'Proposed Value'}: ${JSON.stringify(change.proposedValue)}`, margin + 15, yPosition);
+          yPosition += 5;
+          doc.text(`${isSpanish ? 'Razón' : 'Reason'}: ${change.reason}`, margin + 15, yPosition);
+          yPosition += 5;
         });
+        if (proposal.authorResponse) {
+          doc.text(`${isSpanish ? 'Respuesta del Autor' : 'Author Response'}: ${proposal.authorResponse.accepted ? (isSpanish ? 'Aceptada' : 'Accepted') : (isSpanish ? 'Rechazada' : 'Rejected')}`, margin + 15, yPosition);
+          yPosition += 5;
+        }
+        yPosition += 8;
+      });
     }
+
+    // Audit Logs
+    roundLogs.forEach((log, logIndex) => {
+      checkPageBreak(30);
+      doc.setFillColor(255, 255, 255);
+      doc.rect(margin, yPosition - 5, pageWidth - 2 * margin, 25, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.rect(margin, yPosition - 5, pageWidth - 2 * margin, 25);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text(translateAction(log.action, isSpanish), margin + 10, yPosition);
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatDate(log.timestamp, isSpanish), pageWidth - margin - 10, yPosition, { align: 'right' });
+      yPosition += 6;
+      
+      doc.text(`${isSpanish ? 'Por' : 'By'}: ${log.byEmail || log.by || 'Sistema'}`, margin + 15, yPosition);
+      yPosition += 5;
+      
+      if (log.details && typeof log.details === 'object' && Object.keys(log.details).length > 0) {
+        Object.entries(log.details).forEach(([key, value]) => {
+          doc.text(`${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`, margin + 15, yPosition);
+          yPosition += 5;
+        });
+      }
+      yPosition += 10;
+    });
     
-    yPosition += 20;
+    yPosition += 15;
   });
 
-  // Footer
   const totalPages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
@@ -510,8 +461,47 @@ const exportToPDF = (auditLogs, rounds, peerReviews, versions, submissionTitle, 
   doc.save(`historial_${submissionTitle || 'submission'}.pdf`);
 };
 
-// ============ EXPORTACIÓN A WORD ============
-const exportToWord = (auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish) => {
+const exportToCSV = (auditLogs, rounds, submissionTitle, isSpanish) => {
+  const headers = [
+    isSpanish ? 'Fecha' : 'Date',
+    isSpanish ? 'Acción' : 'Action',
+    isSpanish ? 'Ronda' : 'Round',
+    isSpanish ? 'Realizado por' : 'Performed by',
+    isSpanish ? 'Email' : 'Email',
+    isSpanish ? 'Detalles' : 'Details',
+    isSpanish ? 'Recomendación' : 'Recommendation',
+    isSpanish ? 'Notas' : 'Notes',
+    isSpanish ? 'Archivo' : 'File',
+  ];
+  
+  const rows = auditLogs
+    .sort((a, b) => {
+      const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+      const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+      return dateA - dateB;
+    })
+    .map(log => [
+      formatDate(log.timestamp, isSpanish),
+      translateAction(log.action, isSpanish),
+      log.round || '1',
+      log.by === 'system' ? (isSpanish ? 'Sistema' : 'System') : (log.byEmail || log.by || ''),
+      log.byEmail || log.toEmail || '',
+      JSON.stringify(log.details || {}),
+      log.recommendation ? translateDecision(log.recommendation, isSpanish) : '',
+      log.notes || '',
+      log.fileName || '',
+    ]);
+  
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+  ].join('\n');
+  
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  saveAs(blob, `historial_${submissionTitle || 'submission'}.csv`);
+};
+
+const exportToWord = (auditLogs, rounds, submissionTitle, isSpanish) => {
   const sortedLogs = [...auditLogs].sort((a, b) => {
     const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
     const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
@@ -524,23 +514,22 @@ const exportToWord = (auditLogs, rounds, peerReviews, versions, submissionTitle,
           xmlns="http://www.w3.org/TR/REC-html40">
     <head>
       <meta charset="UTF-8">
-      <title>${isSpanish ? 'Historial de Revisión' : 'Review History'}</title>
+      <title>${isSpanish ? 'Historial de Auditoría' : 'Audit History'}</title>
       <style>
         body { font-family: 'Georgia', serif; color: #1a202c; }
         h1 { font-family: Arial, sans-serif; font-size: 24px; color: #002147; }
-        .round-header { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; color: #ffffff; background: #002147; padding: 10px; }
-        .decision-header { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; color: #ffffff; background: #FF6C0C; padding: 8px; }
+        .round-header { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; color: #002147; background: #f8fafc; padding: 8px; }
         .log-item { margin: 10px 0; padding: 8px; border: 1px solid #e2e8f0; }
         .log-action { font-weight: bold; color: #1e293b; }
         .log-date { color: #64748b; font-size: 11px; }
         .detail-label { font-weight: bold; color: #94a3b8; font-size: 10px; text-transform: uppercase; }
         .detail-value { color: #334155; }
         .version-item { margin: 10px 0; padding: 8px; border: 1px solid #bfdbfe; background: #eff6ff; }
-        .review-item { margin: 10px 0; padding: 10px; border: 1px solid #e2e8f0; background: #f8fafc; }
+        .proposal-item { margin: 10px 0; padding: 8px; border: 1px solid #fde68a; background: #fffbeb; }
       </style>
     </head>
     <body>
-      <h1>${isSpanish ? 'Historial de Revisión Completo' : 'Complete Review History'}</h1>
+      <h1>${isSpanish ? 'Historial de Auditoría' : 'Audit History'}</h1>
       <p>${submissionTitle || ''}</p>
   `;
 
@@ -548,58 +537,60 @@ const exportToWord = (auditLogs, rounds, peerReviews, versions, submissionTitle,
     const roundLogs = sortedLogs.filter(log => 
       log.round === round.roundNumber || (log.round === undefined && round.roundNumber === 1)
     );
-    const roundPeerReviews = peerReviews.filter(r => r.round === round.roundNumber);
-    const roundVersions = versions.filter(v => v.round === round.roundNumber);
     
     htmlContent += `
       <div class="round-header">${isSpanish ? 'Ronda' : 'Round'} ${round.roundNumber}</div>
     `;
     
-    // Desk Review
     if (round.deskReview) {
       htmlContent += `
-        <div class="decision-header">${isSpanish ? 'Desk Review' : 'Desk Review'}</div>
-        ${round.deskReview.decision ? `<p><strong>${isSpanish ? 'Decisión' : 'Decision'}:</strong> ${translateDecision(round.deskReview.decision, isSpanish)}</p>` : ''}
-        ${round.deskReview.feedback ? `<p>${round.deskReview.feedback.replace(/<[^>]*>/g, '')}</p>` : ''}
-        ${round.deskReview.commentsToEditorial ? `<p><strong>${isSpanish ? 'Notas Internas' : 'Internal Notes'}:</strong> ${round.deskReview.commentsToEditorial.replace(/<[^>]*>/g, '')}</p>` : ''}
-      `;
-    }
-    
-    // Peer Reviews
-    roundPeerReviews.forEach((review, idx) => {
-      htmlContent += `
-        <div class="review-item">
-          <div class="log-action">${isSpanish ? 'Revisor' : 'Reviewer'} ${idx + 1}: ${review.reviewerName || 'N/A'}</div>
-          ${review.recommendation ? `<p><strong>${isSpanish ? 'Recomendación' : 'Recommendation'}:</strong> ${translateDecision(review.recommendation, isSpanish)}</p>` : ''}
-          ${review.commentsToAuthor ? `<p><strong>${isSpanish ? 'Comentarios al Autor' : 'Comments to Author'}:</strong> ${review.commentsToAuthor.replace(/<[^>]*>/g, '')}</p>` : ''}
-          ${review.commentsToEditor ? `<p><strong>${isSpanish ? 'Comentarios al Editor' : 'Comments to Editor'}:</strong> ${review.commentsToEditor.replace(/<[^>]*>/g, '')}</p>` : ''}
+        <div class="log-item">
+          <div class="log-action">${isSpanish ? 'Desk Review' : 'Desk Review'}</div>
+          ${round.deskReview.feedback ? `<p>${getCleanText(round.deskReview.feedback)}</p>` : ''}
+          ${round.deskReview.decision ? `<p><strong>${isSpanish ? 'Decisión' : 'Decision'}:</strong> ${translateDecision(round.deskReview.decision, isSpanish)}</p>` : ''}
         </div>
       `;
-    });
-    
-    // Final Decision
+    }
+
+    if (round.peerReviews && round.peerReviews.length > 0) {
+      round.peerReviews.forEach((review, idx) => {
+        htmlContent += `
+          <div class="log-item">
+            <div class="log-action">${review.reviewerName || (isSpanish ? 'Revisor' : 'Reviewer') + ' ' + (idx + 1)}</div>
+            ${review.recommendation ? `<p><strong>${isSpanish ? 'Recomendación' : 'Recommendation'}:</strong> ${translateDecision(review.recommendation, isSpanish)}</p>` : ''}
+            ${review.commentsToAuthor ? `<p><strong>${isSpanish ? 'Comentarios al Autor' : 'Comments to Author'}:</strong> ${getCleanText(review.commentsToAuthor)}</p>` : ''}
+          </div>
+        `;
+      });
+    }
+
     if (round.finalDecision) {
       htmlContent += `
-        <div class="decision-header">${isSpanish ? 'Decisión Final' : 'Final Decision'}</div>
-        ${round.finalDecision.decision ? `<p><strong>${isSpanish ? 'Decisión' : 'Decision'}:</strong> ${translateDecision(round.finalDecision.decision, isSpanish)}</p>` : ''}
-        ${round.finalDecision.feedback ? `<p>${round.finalDecision.feedback.replace(/<[^>]*>/g, '')}</p>` : ''}
+        <div class="log-item">
+          <div class="log-action">${isSpanish ? 'Decisión Final' : 'Final Decision'}</div>
+          ${round.finalDecision.feedback ? `<p>${getCleanText(round.finalDecision.feedback)}</p>` : ''}
+          ${round.finalDecision.decision ? `<p><strong>${isSpanish ? 'Decisión' : 'Decision'}:</strong> ${translateDecision(round.finalDecision.decision, isSpanish)}</p>` : ''}
+        </div>
       `;
     }
-    
-    // Versions
-    if (roundVersions.length > 0) {
-      roundVersions.forEach((version, vIdx) => {
+
+    if (round.metadataProposals && round.metadataProposals.length > 0) {
+      round.metadataProposals.forEach((proposal, idx) => {
         htmlContent += `
-          <div class="version-item">
-            <div class="log-action">${isSpanish ? 'Versión' : 'Version'} ${vIdx + 1}</div>
-            ${version.fileName ? `<p><strong>${isSpanish ? 'Archivo' : 'File'}:</strong> ${version.fileName}</p>` : ''}
-            ${version.notes ? `<p><strong>${isSpanish ? 'Notas' : 'Notes'}:</strong> ${version.notes}</p>` : ''}
+          <div class="proposal-item">
+            <div class="log-action">${isSpanish ? 'Propuesta de Metadatos' : 'Metadata Proposal'} ${idx + 1}</div>
+            ${proposal.changes.map(change => `
+              <p><strong>${isSpanish ? 'Campo' : 'Field'}:</strong> ${change.field}</p>
+              <p><strong>${isSpanish ? 'Valor Actual' : 'Current Value'}:</strong> ${JSON.stringify(change.currentValue)}</p>
+              <p><strong>${isSpanish ? 'Valor Propuesto' : 'Proposed Value'}:</strong> ${JSON.stringify(change.proposedValue)}</p>
+              <p><strong>${isSpanish ? 'Razón' : 'Reason'}:</strong> ${change.reason}</p>
+            `).join('')}
+            ${proposal.authorResponse ? `<p><strong>${isSpanish ? 'Respuesta del Autor' : 'Author Response'}:</strong> ${proposal.authorResponse.accepted ? (isSpanish ? 'Aceptada' : 'Accepted') : (isSpanish ? 'Rechazada' : 'Rejected')}</p>` : ''}
           </div>
         `;
       });
     }
     
-    // Audit Logs
     roundLogs.forEach(log => {
       htmlContent += `
         <div class="log-item">
@@ -607,10 +598,12 @@ const exportToWord = (auditLogs, rounds, peerReviews, versions, submissionTitle,
             <span class="log-action">${translateAction(log.action, isSpanish)}</span>
             <span class="log-date"> - ${formatDate(log.timestamp, isSpanish)}</span>
           </div>
-          ${log.byEmail ? `<p><span class="detail-label">${isSpanish ? 'Por' : 'By'}:</span> <span class="detail-value">${log.byEmail}</span></p>` : ''}
-          ${log.details ? `<p><span class="detail-label">${isSpanish ? 'Detalles' : 'Details'}:</span> <span class="detail-value">${JSON.stringify(log.details)}</span></p>` : ''}
-          ${log.changes ? `<p><span class="detail-label">${isSpanish ? 'Cambios' : 'Changes'}:</span> <span class="detail-value">${JSON.stringify(log.changes)}</span></p>` : ''}
-          ${log.recommendation ? `<p><span class="detail-label">${isSpanish ? 'Recomendación' : 'Recommendation'}:</span> <span class="detail-value">${translateDecision(log.recommendation, isSpanish)}</span></p>` : ''}
+          <table>
+            <tr><td class="detail-label">${isSpanish ? 'Realizado por' : 'Performed by'}</td><td class="detail-value">${log.byEmail || log.by || 'Sistema'}</td></tr>
+            ${Object.entries(log.details || {}).map(([key, value]) => `
+              <tr><td class="detail-label">${key}</td><td class="detail-value">${typeof value === 'object' ? JSON.stringify(value) : value}</td></tr>
+            `).join('')}
+          </table>
         </div>
       `;
     });
@@ -622,6 +615,12 @@ const exportToWord = (auditLogs, rounds, peerReviews, versions, submissionTitle,
   saveAs(blob, `historial_${submissionTitle || 'submission'}.doc`);
 };
 
+const exportToJSON = (allData, submissionTitle, isSpanish) => {
+  const json = JSON.stringify(allData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  saveAs(blob, `historial_${submissionTitle || 'submission'}.json`);
+};
+
 // ============ COMPONENTE: TARJETA DE REVISOR ============
 const ReviewerFeedbackCard = ({ review, index, isSpanish }) => {
   const [expanded, setExpanded] = useState(false);
@@ -629,9 +628,7 @@ const ReviewerFeedbackCard = ({ review, index, isSpanish }) => {
   const recommendationColors = {
     'accept': 'bg-emerald-50 text-emerald-700 border-emerald-200',
     'minor-revisions': 'bg-sky-50 text-sky-700 border-sky-200',
-    'minor-revision': 'bg-sky-50 text-sky-700 border-sky-200',
     'major-revisions': 'bg-amber-50 text-amber-700 border-amber-200',
-    'major-revision': 'bg-amber-50 text-amber-700 border-amber-200',
     'reject': 'bg-red-50 text-red-700 border-red-200',
   };
   
@@ -763,7 +760,7 @@ const DeskReviewCard = ({ deskReview, isSpanish }) => {
         <div className="flex items-center gap-2">
           <Icons.ClipboardCheck className="w-5 h-5 text-[#FF6C0C]" />
           <span className="font-sans font-bold text-sm uppercase tracking-widest">
-            {isSpanish ? 'Desk Review (Evaluación Inicial)' : 'Desk Review (Initial Evaluation)'}
+            {isSpanish ? 'Desk Review (Evaluación Inicial)' : 'Desk Review'}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -803,7 +800,7 @@ const DeskReviewCard = ({ deskReview, isSpanish }) => {
                 <div>
                   <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-slate-500 mb-2 block flex items-center gap-1.5">
                     <Icons.Lock />
-                    {isSpanish ? 'Notas Internas del Equipo Editorial' : 'Internal Editorial Notes'}
+                    {isSpanish ? 'Notas Internas' : 'Internal Notes'}
                   </label>
                   <div 
                     className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-600 leading-relaxed bg-slate-100 p-4 rounded border border-slate-200"
@@ -868,27 +865,39 @@ const FinalDecisionCard = ({ decisionData, isSpanish }) => {
   );
 };
 
-// ============ COMPONENTE: METADATA PROPOSAL ============
-const MetadataProposalCard = ({ log, isSpanish }) => {
-  const [expanded, setExpanded] = useState(false);
+// ============ COMPONENTE: PROPUESTA DE METADATOS ============
+const MetadataProposalCard = ({ proposal, index, isSpanish }) => {
+  const [expanded, setExpanded] = useState(true);
   
+  const statusColors = {
+    'approved': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    'pending-author': 'bg-amber-50 text-amber-700 border-amber-200',
+    'rejected': 'bg-red-50 text-red-700 border-red-200',
+  };
+
   return (
-    <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
+    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden mb-4">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3.5 bg-slate-50 text-[#002147] border-b border-slate-200 hover:bg-slate-100 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <Icons.Tag className="w-4 h-4 text-[#FF6C0C]" />
-          <span className="font-sans font-bold text-sm text-[#002147]">
-            {isSpanish ? 'Propuesta de Metadatos' : 'Metadata Proposal'}
+          <Icons.Tag className="w-5 h-5 text-[#FF6C0C]" />
+          <span className="font-sans font-bold text-sm uppercase tracking-widest">
+            {isSpanish ? 'Propuesta de Metadatos' : 'Metadata Proposal'} {index + 1}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono text-slate-500">
-            {formatDate(log.timestamp, isSpanish)}
-          </span>
-          {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+          {proposal.status && (
+            <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${statusColors[proposal.status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+              {proposal.status === 'approved' ? (isSpanish ? 'Aprobada' : 'Approved') : 
+               proposal.status === 'pending-author' ? (isSpanish ? 'Pendiente del Autor' : 'Pending Author') : 
+               proposal.status === 'rejected' ? (isSpanish ? 'Rechazada' : 'Rejected') : proposal.status}
+            </span>
+          )}
+          <div className="text-slate-500">
+            {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+          </div>
         </div>
       </button>
       
@@ -900,112 +909,67 @@ const MetadataProposalCard = ({ log, isSpanish }) => {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="border-t border-slate-100 p-5 space-y-4 bg-slate-50">
-              {log.changes && Array.isArray(log.changes) && (
-                <div className="space-y-3">
-                  {log.changes.map((change, idx) => (
-                    <div key={idx} className="bg-white border border-slate-200 rounded p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                          {change.field || `Change ${idx + 1}`}
-                        </span>
-                        {change.reason && (
-                          <span className="text-xs text-slate-500 italic max-w-xs text-right">
-                            "{change.reason}"
-                          </span>
-                        )}
+            <div className="p-6 space-y-6">
+              {proposal.changes.map((change, idx) => (
+                <div key={idx} className="bg-slate-50/50 p-4 rounded border border-slate-100">
+                  <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    {change.field}
+                  </p>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">{isSpanish ? 'Valor Actual' : 'Current Value'}</p>
+                      <div className="bg-white p-3 rounded border border-slate-200 text-sm font-serif text-slate-500 line-through">
+                        {formatValue(change.currentValue, change.field)}
                       </div>
                     </div>
-                  ))}
+                    <div>
+                      <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1.5">{isSpanish ? 'Valor Propuesto' : 'Proposed Value'}</p>
+                      <div className="bg-white p-3 rounded border border-emerald-200 text-sm font-serif text-slate-800 font-medium">
+                        {formatValue(change.proposedValue, change.field)}
+                      </div>
+                    </div>
+                  </div>
+                  {change.reason && (
+                    <p className="text-xs text-slate-500 mt-3 font-sans italic border-l-2 border-slate-200 pl-2">
+                      "{change.reason}"
+                    </p>
+                  )}
+                </div>
+              ))}
+              
+              {proposal.authorResponse && (
+                <div className="bg-slate-50 p-4 rounded border border-slate-200">
+                  <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    {isSpanish ? 'Respuesta del Autor' : 'Author Response'}
+                  </p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${proposal.authorResponse.accepted ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      {proposal.authorResponse.accepted ? (isSpanish ? 'Aceptada' : 'Accepted') : (isSpanish ? 'Rechazada' : 'Rejected')}
+                    </span>
+                    {proposal.authorResponse.respondedByEmail && (
+                      <span className="text-xs font-mono text-slate-500">{proposal.authorResponse.respondedByEmail}</span>
+                    )}
+                  </div>
+                  {proposal.authorResponse.comments && (
+                    <p className="text-sm font-serif text-slate-700 italic">{proposal.authorResponse.comments}</p>
+                  )}
                 </div>
               )}
               
-              {log.byEmail && (
-                <div className="flex items-center gap-2 text-xs font-mono text-slate-500 pt-2 border-t border-slate-200">
-                  <Icons.User />
-                  {log.byEmail}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-// ============ COMPONENTE: AUDIT LOG ITEM ============
-const AuditLogItem = ({ log, isSpanish, index }) => {
-  const [expanded, setExpanded] = useState(false);
-  
-  // Extraer todas las claves dinámicamente
-  const logKeys = Object.entries(log).filter(([key]) => 
-    !['id', 'action', 'timestamp', 'round'].includes(key)
-  );
-  
-  const isMetadataProposal = log.action === 'metadata_changes_proposed';
-  
-  return (
-    <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors"
-      >
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-            log.action?.includes('review') ? 'bg-sky-500' :
-            log.action?.includes('metadata') ? 'bg-purple-500' :
-            log.action?.includes('decision') ? 'bg-orange-500' :
-            log.action?.includes('publication') ? 'bg-emerald-500' : 'bg-slate-400'
-          }`}></span>
-          <div className="text-left flex-1 min-w-0">
-            <span className="font-sans font-bold text-sm text-[#002147] block">
-              {translateAction(log.action, isSpanish)}
-            </span>
-            <span className="text-xs text-slate-500 font-mono">
-              {formatDate(log.timestamp, isSpanish)}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {log.byEmail && (
-            <span className="text-xs text-slate-500 font-mono hidden sm:block">
-              {log.byEmail}
-            </span>
-          )}
-          {expanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
-        </div>
-      </button>
-      
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="border-t border-slate-100 p-5 bg-slate-50">
-              {isMetadataProposal && log.changes ? (
-                <MetadataProposalCard log={log} isSpanish={isSpanish} />
-              ) : (
-                <div className="space-y-3">
-                  {logKeys.map(([key, value]) => {
-                    if (value === null || value === undefined) return null;
-                    
-                    return (
-                      <div key={key} className="flex items-start gap-3">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider min-w-[100px] pt-1">
-                          {key}:
-                        </span>
-                        <div className="flex-1 bg-white border border-slate-200 rounded p-3">
-                          {formatValue(value)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <div className="flex items-center gap-4 text-xs font-mono text-slate-500 pt-4 border-t border-slate-100">
+                {proposal.proposedByEmail && (
+                  <span className="flex items-center gap-1.5">
+                    <Icons.User />
+                    {proposal.proposedByEmail}
+                  </span>
+                )}
+                {proposal.proposedAt && (
+                  <span className="flex items-center gap-1.5">
+                    <Icons.Calendar />
+                    {formatDate(proposal.proposedAt, isSpanish)}
+                  </span>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -1015,12 +979,13 @@ const AuditLogItem = ({ log, isSpanish, index }) => {
 };
 
 // ============ COMPONENTE: RONDA ============
-const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLogs, versions, peerReviews }) => {
+const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLogs, versions, peerReviews, metadataProposals }) => {
   const [expanded, setExpanded] = useState(isCurrentRound);
   
   const roundLogs = auditLogs.filter(log => log.round === roundNumber || (log.round === undefined && roundNumber === 1));
   const roundVersions = versions.filter(v => v.round === roundNumber);
   const roundPeerReviews = peerReviews.filter(r => r.round === roundNumber);
+  const roundProposals = metadataProposals.filter(p => p.round === roundNumber);
   
   return (
     <div className={`bg-white rounded border shadow-sm mb-6 overflow-hidden ${isCurrentRound ? 'border-l-4 border-[#FF6C0C] border-y-slate-200 border-r-slate-200' : 'border-slate-200'}`}>
@@ -1050,8 +1015,7 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
               {roundLogs.length} {isSpanish ? 'eventos' : 'events'}
               {roundVersions.length > 0 && ` • ${roundVersions.length} ${isSpanish ? 'versiones' : 'versions'}`}
               {roundPeerReviews.length > 0 && ` • ${roundPeerReviews.length} ${isSpanish ? 'revisiones' : 'reviews'}`}
-              {roundData.deskReview && ` • Desk Review`}
-              {roundData.finalDecision && ` • ${isSpanish ? 'Decisión Final' : 'Final Decision'}`}
+              {roundProposals.length > 0 && ` • ${roundProposals.length} ${isSpanish ? 'propuestas de metadatos' : 'metadata proposals'}`}
             </span>
           </div>
         </div>
@@ -1080,20 +1044,13 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
               
               {/* DESK REVIEW */}
               {roundData.deskReview && (
-                <div>
-                  <h4 className="font-sans font-bold text-[#002147] text-sm uppercase tracking-widest border-b-2 border-[#FF6C0C] pb-2 mb-4 inline-block">
-                    <Icons.ClipboardCheck className="inline w-4 h-4 mr-2" />
-                    {isSpanish ? 'Desk Review' : 'Desk Review'}
-                  </h4>
-                  <DeskReviewCard deskReview={roundData.deskReview} isSpanish={isSpanish} />
-                </div>
+                <DeskReviewCard deskReview={roundData.deskReview} isSpanish={isSpanish} />
               )}
 
               {/* REVISIONES DE PARES */}
               {roundPeerReviews.length > 0 && (
                 <div>
                   <h4 className="font-sans font-bold text-[#002147] text-sm uppercase tracking-widest border-b-2 border-[#FF6C0C] pb-2 mb-4 inline-block">
-                    <Icons.User className="inline w-4 h-4 mr-2" />
                     {isSpanish ? 'Revisiones de Pares' : 'Peer Reviews'}
                   </h4>
                   <div className="space-y-4">
@@ -1111,12 +1068,25 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
 
               {/* DECISIÓN FINAL */}
               {roundData.finalDecision && (
+                <FinalDecisionCard decisionData={roundData.finalDecision} isSpanish={isSpanish} />
+              )}
+
+              {/* PROPUESTAS DE METADATOS */}
+              {roundProposals.length > 0 && (
                 <div>
-                  <h4 className="font-sans font-bold text-[#002147] text-sm uppercase tracking-widest border-b-2 border-[#FF6C0C] pb-2 mb-4 inline-block">
-                    <Icons.Gavel className="inline w-4 h-4 mr-2" />
-                    {isSpanish ? 'Decisión Final' : 'Final Decision'}
+                  <h4 className="font-sans font-bold text-[#002147] text-sm uppercase tracking-widest border-b-2 border-[#002147] pb-2 mb-4 inline-block">
+                    {isSpanish ? 'Propuestas de Metadatos' : 'Metadata Proposals'}
                   </h4>
-                  <FinalDecisionCard decisionData={roundData.finalDecision} isSpanish={isSpanish} />
+                  <div className="space-y-3">
+                    {roundProposals.map((proposal, idx) => (
+                      <MetadataProposalCard
+                        key={proposal.id || idx}
+                        proposal={proposal}
+                        index={idx}
+                        isSpanish={isSpanish}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -1124,7 +1094,6 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
               {roundVersions.length > 0 && (
                 <div>
                   <h4 className="font-sans font-bold text-[#002147] text-sm uppercase tracking-widest border-b-2 border-[#002147] pb-2 mb-4 inline-block">
-                    <Icons.File className="inline w-4 h-4 mr-2" />
                     {isSpanish ? 'Versiones del Manuscrito' : 'Manuscript Versions'}
                   </h4>
                   <div className="space-y-3">
@@ -1136,7 +1105,7 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
                           </div>
                           <div>
                             <span className="text-sm font-sans font-bold text-[#002147] block">
-                              {version.fileName || `${isSpanish ? 'Versión' : 'Version'} ${idx + 1}`}
+                              {version.fileName || `Versión ${idx + 1}`}
                             </span>
                             {version.notes && (
                               <span className="text-sm text-slate-600 font-serif mt-1 block">
@@ -1166,22 +1135,27 @@ const RoundCard = ({ roundNumber, roundData, isCurrentRound, isSpanish, auditLog
                 <div>
                   <h4 className="font-sans font-bold text-slate-600 text-sm uppercase tracking-widest border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
                     <Icons.Activity />
-                    {isSpanish ? 'Registro de Actividad Completo' : 'Complete Activity Log'}
+                    {isSpanish ? 'Registro de Actividad' : 'Activity Log'}
                   </h4>
-                  <div className="space-y-2">
+                  <div className="bg-white border border-slate-200 rounded shadow-sm">
                     {roundLogs
                       .sort((a, b) => {
                         const dateA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
                         const dateB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
                         return dateB - dateA;
                       })
-                      .map((log, idx) => (
-                        <AuditLogItem
-                          key={log.id || idx}
-                          log={log}
-                          isSpanish={isSpanish}
-                          index={idx}
-                        />
+                      .map((log, idx, arr) => (
+                        <div key={idx} className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 px-5 py-3 ${idx !== arr.length - 1 ? 'border-b border-slate-100' : ''}`}>
+                          <span className="font-mono text-xs text-slate-400 w-32 flex-shrink-0">
+                            {formatDate(log.timestamp, isSpanish)}
+                          </span>
+                          <span className="font-sans text-sm font-bold text-[#002147] flex-1">
+                            {translateAction(log.action, isSpanish)}
+                          </span>
+                          <span className="font-sans text-xs text-slate-500">
+                            {log.byEmail || log.by || 'Sistema'}
+                          </span>
+                        </div>
                       ))}
                   </div>
                 </div>
@@ -1200,6 +1174,7 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
   const [auditLogs, setAuditLogs] = useState([]);
   const [versions, setVersions] = useState([]);
   const [peerReviews, setPeerReviews] = useState([]);
+  const [metadataProposals, setMetadataProposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -1215,19 +1190,11 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
 
       try {
         // Cargar editorialTasks
-        const tasksQuery = query(
-          collection(db, 'editorialTasks'),
-          where('submissionId', '==', submissionId),
-          orderBy('round', 'asc')
-        );
+        const tasksQuery = query(collection(db, 'editorialTasks'), where('submissionId', '==', submissionId), orderBy('round', 'asc'));
         const tasksSnapshot = await getDocs(tasksQuery);
 
-        // Cargar reviewerAssignments
-        const assignmentsQuery = query(
-          collection(db, 'reviewerAssignments'),
-          where('submissionId', '==', submissionId),
-          where('status', '==', 'submitted')
-        );
+        // Cargar reviewerAssignments (PEER REVIEWS)
+        const assignmentsQuery = query(collection(db, 'reviewerAssignments'), where('submissionId', '==', submissionId), where('status', '==', 'submitted'));
         const assignmentsSnapshot = await getDocs(assignmentsQuery);
         
         const peerReviewsData = [];
@@ -1248,48 +1215,47 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
         });
         setPeerReviews(peerReviewsData);
 
-        // Cargar auditLogs
-        const auditLogsQuery = query(
-          collection(db, 'submissions', submissionId, 'auditLogs'),
-          orderBy('timestamp', 'asc')
-        );
+        // Cargar auditLogs (subcollection)
+        const auditLogsQuery = query(collection(db, 'submissions', submissionId, 'auditLogs'), orderBy('timestamp', 'asc'));
         const auditLogsSnapshot = await getDocs(auditLogsQuery);
         const logs = [];
-        auditLogsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          logs.push({ 
-            id: doc.id, 
-            ...data,
-            // Normalizar timestamp
-            timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : data.timestamp
-          });
-        });
+        auditLogsSnapshot.forEach((doc) => logs.push({ id: doc.id, ...doc.data() }));
         setAuditLogs(logs);
 
-        // Cargar versiones
-        const versionsQuery = query(
-          collection(db, 'submissions', submissionId, 'versions'),
-          orderBy('uploadedAt', 'asc')
-        );
+        // Cargar versiones (subcollection)
+        const versionsQuery = query(collection(db, 'submissions', submissionId, 'versions'), orderBy('uploadedAt', 'asc'));
         const versionsSnapshot = await getDocs(versionsQuery);
         const versionsData = [];
         versionsSnapshot.forEach((doc) => {
           const data = doc.data();
-          versionsData.push({ 
-            id: doc.id, 
-            ...data, 
-            round: data.round || 1,
-            uploadedAt: data.uploadedAt?.toDate ? data.uploadedAt.toDate() : data.uploadedAt
-          });
+          versionsData.push({ id: doc.id, ...data, round: data.round || 1 });
         });
         setVersions(versionsData);
 
-        // Cargar roundHistory
+        // Cargar metadataProposals (subcollection)
+        let proposalsData = [];
+        try {
+          const proposalsSnapshot = await getDocs(collection(db, 'submissions', submissionId, 'metadataProposals'));
+          proposalsSnapshot.forEach((doc) => {
+            const data = doc.data();
+            const proposalRound = data.round || 1;
+            proposalsData.push({
+              id: doc.id,
+              ...data,
+              round: proposalRound,
+              proposedAt: data.proposedAt || null,
+              authorResponse: data.authorResponse || null,
+            });
+          });
+        } catch (err) {
+          console.log('No metadataProposals collection found');
+        }
+        setMetadataProposals(proposalsData);
+
+        // Cargar roundHistory (subcollection)
         let roundHistoryData = {};
         try {
-          const roundHistorySnapshot = await getDocs(
-            collection(db, 'submissions', submissionId, 'roundHistory')
-          );
+          const roundHistorySnapshot = await getDocs(collection(db, 'submissions', submissionId, 'roundHistory'));
           roundHistorySnapshot.forEach((doc) => {
             roundHistoryData[doc.id] = doc.data();
           });
@@ -1310,12 +1276,13 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
               roundNumber: round,
               status: data.status || 'pending',
               deskReview: null,
-              finalDecision: null
+              finalDecision: null,
             });
           }
           
           const roundData = roundsMap.get(round);
           
+          // Desk Review
           if (data.deskReviewDecision || data.deskReviewFeedback || data.deskReviewComments) {
             roundData.deskReview = {
               decision: data.deskReviewDecision || null,
@@ -1325,6 +1292,7 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
             };
           }
           
+          // Final Decision
           if (data.finalDecision || data.finalDecisionFeedback) {
             roundData.finalDecision = {
               decision: data.finalDecision || null,
@@ -1334,7 +1302,7 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
           }
         });
 
-        // Procesar roundHistory para completar datos
+        // Procesar roundHistory para completar/sobrescribir datos
         Object.entries(roundHistoryData).forEach(([docId, historyData]) => {
           const roundMatch = docId.match(/round_(\d+)/);
           if (roundMatch) {
@@ -1344,13 +1312,13 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
                 roundNumber,
                 status: 'completed',
                 deskReview: null,
-                finalDecision: null
+                finalDecision: null,
               });
             }
             
             const roundData = roundsMap.get(roundNumber);
             
-            // Desk Review desde roundHistory
+            // Desk Review from roundHistory (takes precedence)
             if (historyData.deskReviewFeedback || historyData.deskReviewDecision) {
               roundData.deskReview = {
                 decision: historyData.deskReviewDecision || null,
@@ -1360,8 +1328,8 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
               };
             }
 
-            // Final Decision desde roundHistory
-            if (historyData.finalDecision || historyData.finalFeedback) {
+            // Final Decision from roundHistory (takes precedence)
+            if (historyData.finalDecision || historyData.finalFeedback || historyData.decision) {
               roundData.finalDecision = {
                 decision: historyData.finalDecision || historyData.decision || null,
                 feedback: historyData.finalFeedback || historyData.feedback || null,
@@ -1371,13 +1339,20 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
           }
         });
 
+        // Asignar propuestas de metadatos a las rondas
+        proposalsData.forEach(proposal => {
+          const roundNumber = proposal.round || 1;
+          if (roundsMap.has(roundNumber)) {
+            const roundData = roundsMap.get(roundNumber);
+            if (!roundData.metadataProposals) {
+              roundData.metadataProposals = [];
+            }
+            roundData.metadataProposals.push(proposal);
+          }
+        });
+
         if (roundsMap.size === 0) {
-          roundsMap.set(1, { 
-            roundNumber: 1, 
-            status: 'active', 
-            deskReview: null, 
-            finalDecision: null 
-          });
+          roundsMap.set(1, { roundNumber: 1, status: 'active', deskReview: null, finalDecision: null, metadataProposals: [] });
         }
 
         setRounds(Array.from(roundsMap.values()).sort((a, b) => a.roundNumber - b.roundNumber));
@@ -1391,6 +1366,28 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
 
     loadHistory();
   }, [submissionId]);
+
+  const handleExport = (type) => {
+    switch (type) {
+      case 'json':
+        exportToJSON({ rounds, auditLogs, versions, peerReviews, metadataProposals }, submissionTitle, isSpanish);
+        break;
+      case 'pdf':
+        exportToPDF(auditLogs, rounds, submissionTitle, isSpanish);
+        break;
+      case 'word':
+        exportToWord(auditLogs, rounds, submissionTitle, isSpanish);
+        break;
+      case 'excel':
+        exportToExcel(auditLogs, rounds, submissionTitle, isSpanish);
+        break;
+      case 'csv':
+        exportToCSV(auditLogs, rounds, submissionTitle, isSpanish);
+        break;
+      default:
+        break;
+    }
+  };
 
   if (loading) {
     return (
@@ -1414,7 +1411,6 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
       {/* Header Dashboard Premium */}
       <div className="bg-[#002147] text-white rounded-lg p-6 sm:p-8 shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-1/4 w-32 h-32 bg-[#FF6C0C] opacity-10 rounded-full blur-2xl pointer-events-none"></div>
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
@@ -1423,48 +1419,29 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
             </div>
             <div>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight mb-1">
-                {isSpanish ? 'Historial de Revisión Completo' : 'Complete Review History'}
+                {isSpanish ? 'Historial de Revisión' : 'Review History'}
               </h2>
               <p className="text-slate-400 text-sm font-sans max-w-xl">
                 {submissionTitle || submissionId}
-              </p>
-              <p className="text-slate-500 text-xs font-sans mt-2">
-                {rounds.length} {isSpanish ? 'rondas' : 'rounds'} • {auditLogs.length} {isSpanish ? 'eventos' : 'events'} • {peerReviews.length} {isSpanish ? 'revisiones' : 'reviews'}
               </p>
             </div>
           </div>
           
           <div className="flex flex-wrap gap-3">
-            <button 
-              onClick={() => exportToJSON(auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish)} 
-              className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm"
-              title="JSON"
-            >
-              <Icons.FileJson /> JSON
-            </button>
-            <button 
-              onClick={() => exportToPDF(auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish)} 
-              className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm"
-            >
+            <button onClick={() => handleExport('pdf')} className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm">
               <Icons.FilePdf /> PDF
             </button>
-            <button 
-              onClick={() => exportToWord(auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish)} 
-              className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm"
-            >
+            <button onClick={() => handleExport('word')} className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm">
               <Icons.DocumentText /> Word
             </button>
-            <button 
-              onClick={() => exportToExcel(auditLogs, rounds, peerReviews, versions, submissionTitle, isSpanish)} 
-              className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm"
-            >
+            <button onClick={() => handleExport('excel')} className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm">
               <Icons.FileSpreadsheet /> Excel
             </button>
-            <button 
-              onClick={() => exportToCSV(auditLogs, submissionTitle, isSpanish)} 
-              className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm"
-            >
+            <button onClick={() => handleExport('csv')} className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm">
               <Icons.Download /> CSV
+            </button>
+            <button onClick={() => handleExport('json')} className="flex items-center gap-2 bg-transparent border border-slate-500 hover:border-white hover:bg-white hover:text-[#002147] text-white px-4 py-2.5 rounded transition-all text-xs font-bold uppercase tracking-widest shadow-sm">
+              <Icons.Json /> JSON
             </button>
           </div>
         </div>
@@ -1483,6 +1460,7 @@ export const ReviewHistoryTab = ({ submissionId, currentRound, submissionTitle, 
               auditLogs={auditLogs}
               versions={versions}
               peerReviews={peerReviews}
+              metadataProposals={metadataProposals}
             />
           ))}
         </div>
