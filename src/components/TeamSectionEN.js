@@ -10,6 +10,7 @@ function TeamSectionEN() {
   const [jsonError, setJsonError] = useState(null);
   const [showAll, setShowAll] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const jsonUrl = 'https://www.revistacienciasestudiantes.com/team/Team.json';
 
@@ -177,9 +178,9 @@ function TeamSectionEN() {
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 5 }}
-              className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-3 w-72 p-4 bg-[#003B5C] text-white text-xs leading-relaxed rounded shadow-xl"
+              className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-3 w-72 p-4 bg-[#002147] text-white text-xs leading-relaxed rounded shadow-xl"
             >
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-[#003B5C]"></div>
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-[#002147]"></div>
               <p className="text-left font-sans">{roleDefinitions[definitionKey]}</p>
             </motion.div>
           )}
@@ -196,13 +197,13 @@ function TeamSectionEN() {
         <div className="max-w-7xl mx-auto text-center">
           <motion.span
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="text-[11px] uppercase tracking-[0.3em] font-semibold text-[#003B5C] mb-4 block"
+            className="text-[11px] uppercase tracking-[0.3em] font-semibold text-[#002147] mb-4 block"
           >
             Institutional Directory
           </motion.span>
           <motion.h1
             initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            className="text-4xl md:text-5xl font-serif text-[#003B5C] mb-6"
+            className="text-4xl md:text-5xl font-serif text-black mb-6"
           >
             Editorial and Academic Body
           </motion.h1>
@@ -216,15 +217,34 @@ function TeamSectionEN() {
       <main className="max-w-7xl mx-auto px-4 py-12">
         
         {/* ===================== ROLE FILTERS ===================== */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12">
+        {/* Mobile filter button */}
+        <div className="md:hidden mb-4">
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-[#002147]"
+          >
+            <span>Filter by role: {selectedRole}</span>
+            <svg 
+              className={`w-5 h-5 transition-transform ${showMobileFilters ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Desktop filters */}
+        <div className="hidden md:flex flex-wrap justify-center gap-2 mb-12">
           {roles.map((role) => (
             <div key={role} className="flex items-center">
               <button
                 onClick={() => setSelectedRole(role)}
                 className={`px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-all duration-300 border-b-2 ${
                   selectedRole === role
-                    ? 'border-[#FF7900] text-[#003B5C] bg-[#F3F7F9]'
-                    : 'border-transparent text-gray-500 hover:text-[#003B5C] hover:bg-gray-50'
+                    ? 'border-[#FF7900] text-[#002147] bg-[#F3F7F9]'
+                    : 'border-transparent text-gray-500 hover:text-[#002147] hover:bg-gray-50'
                 }`}
               >
                 {role}
@@ -234,10 +254,43 @@ function TeamSectionEN() {
           ))}
         </div>
 
+        {/* Mobile filters */}
+        <AnimatePresence>
+          {showMobileFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="md:hidden mb-6 overflow-hidden"
+            >
+              <div className="bg-white border border-gray-200 rounded-lg p-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {roles.map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => {
+                        setSelectedRole(role);
+                        setShowMobileFilters(false);
+                      }}
+                      className={`px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
+                        selectedRole === role
+                          ? 'bg-[#002147] text-white'
+                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* ===================== EDITORIAL TEAM GRID ===================== */}
         {isLoading ? (
           <div className="text-center py-20">
-            <div className="w-8 h-8 border-4 border-[#003B5C] border-t-[#FF7900] rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="w-8 h-8 border-4 border-[#002147] border-t-[#FF7900] rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-sm text-gray-500 uppercase tracking-widest">Loading directory...</p>
           </div>
         ) : jsonError ? (
@@ -271,13 +324,13 @@ function TeamSectionEN() {
                           </div>
                         ) : (
                           <div className="w-16 h-16 rounded bg-[#F3F7F9] flex items-center justify-center flex-shrink-0 border border-gray-100">
-                            <span className="text-[#003B5C] font-serif text-xl">
+                            <span className="text-[#002147] font-serif text-xl">
                               {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
                             </span>
                           </div>
                         )}
                         <div>
-                          <h3 className="text-lg font-serif text-[#003B5C] leading-tight group-hover:text-[#FF7900] transition-colors">
+                          <h3 className="text-lg font-serif text-black leading-tight group-hover:text-[#FF7900] transition-colors">
                             {member.displayName || `${member.firstName} ${member.lastName}`}
                           </h3>
                         </div>
@@ -286,7 +339,7 @@ function TeamSectionEN() {
                       <div className="mt-auto pt-4 border-t border-gray-50">
                         <div className="flex flex-wrap gap-1.5">
                           {(member.roles || []).filter(r => r && r !== 'Autor' && r !== 'Revisor').map((role) => (
-                            <span key={role} className="text-[10px] font-semibold uppercase tracking-wider bg-[#F3F7F9] text-[#003B5C] px-2.5 py-1 rounded-sm">
+                            <span key={role} className="text-[10px] font-semibold uppercase tracking-wider bg-[#F3F7F9] text-[#002147] px-2.5 py-1 rounded-sm">
                               {translateRole(role)}
                             </span>
                           ))}
@@ -302,7 +355,7 @@ function TeamSectionEN() {
               <div className="text-center mt-12">
                 <button
                   onClick={() => setShowAll(!showAll)}
-                  className="px-6 py-2 border border-[#003B5C] text-[#003B5C] text-xs font-bold uppercase tracking-widest hover:bg-[#003B5C] hover:text-white transition-colors rounded-sm"
+                  className="px-6 py-2 border border-[#002147] text-[#002147] text-xs font-bold uppercase tracking-widest hover:bg-[#002147] hover:text-white transition-colors rounded-sm"
                 >
                   {showAll ? "Show fewer results" : "View complete directory"}
                 </button>
@@ -315,7 +368,7 @@ function TeamSectionEN() {
         {scientificData.length > 0 && (
           <section className="mt-24">
             <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-8">
-              <h2 className="text-2xl font-serif text-[#003B5C] inline-flex items-center">
+              <h2 className="text-2xl font-serif text-black inline-flex items-center">
                 International Scientific Committee
                 <RoleDefinitionButton role="Scientific Committee" sectionName="Scientific Committee" />
               </h2>
@@ -338,12 +391,12 @@ function TeamSectionEN() {
                           alt={member.displayName}
                         />
                       ) : (
-                        <div className="w-full h-full bg-[#F3F7F9] flex items-center justify-center text-[#003B5C] font-serif">
+                        <div className="w-full h-full bg-[#F3F7F9] flex items-center justify-center text-[#002147] font-serif">
                           {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
                         </div>
                       )}
                     </div>
-                    <h4 className="text-sm font-serif text-[#1A232C] group-hover:text-[#003B5C] leading-snug">
+                    <h4 className="text-sm font-serif text-black group-hover:text-[#002147] leading-snug">
                       {member.displayName || `${member.firstName} ${member.lastName}`}
                     </h4>
                     <p className="text-[9px] text-[#64748B] uppercase mt-1.5 tracking-widest font-semibold">
@@ -360,7 +413,7 @@ function TeamSectionEN() {
         {institutionsData.length > 0 && (
           <section className="mt-28">
             <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-10">
-              <h2 className="text-2xl font-serif text-[#003B5C] inline-flex items-center">
+              <h2 className="text-2xl font-serif text-black inline-flex items-center">
                 Partner Institutions
                 <RoleDefinitionButton role="Partner Institution" sectionName="Partner Institution" />
               </h2>
@@ -386,7 +439,7 @@ function TeamSectionEN() {
                           alt={inst.displayName}
                         />
                       ) : (
-                        <svg className="w-12 h-12 text-[#003B5C]/20" fill="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-12 h-12 text-[#002147]/20" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 2L2 7v2h20V7L12 2zm0 2.8L18.4 7H5.6L12 4.8zM4 11h3v8H4v-8zm5 0h3v8H9v-8zm5 0h3v8h-3v-8zm5 0h3v8h-3v-8zM2 21h20v2H2v-2z"/>
                         </svg>
                       )}
@@ -397,13 +450,13 @@ function TeamSectionEN() {
                         <span className="text-[9px] text-[#FF7900] font-bold uppercase tracking-widest mb-1 block">
                           Institutional Endorsement
                         </span>
-                        <h3 className="text-xl font-serif text-[#003B5C] mb-3 leading-tight">
+                        <h3 className="text-xl font-serif text-black mb-3 leading-tight">
                           {inst.displayName || `${inst.firstName} ${inst.lastName}`}
                         </h3>
                       </div>
 
                       <div className="flex items-center justify-between mt-4">
-                        <span className="text-xs font-semibold text-[#64748B] hover:text-[#003B5C] flex items-center gap-1 transition-colors">
+                        <span className="text-xs font-semibold text-[#64748B] hover:text-[#002147] flex items-center gap-1 transition-colors">
                           View Profile 
                           <span aria-hidden="true">&rarr;</span>
                         </span>
@@ -414,7 +467,7 @@ function TeamSectionEN() {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1.5 text-xs text-[#003B5C] hover:text-[#FF7900] transition-colors"
+                            className="flex items-center gap-1.5 text-xs text-[#002147] hover:text-[#FF7900] transition-colors"
                             title="Visit official website"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -434,7 +487,7 @@ function TeamSectionEN() {
       </main>
 
       {/* ===================== RECRUITMENT FOOTER ===================== */}
-      <footer className="mt-20 bg-[#003B5C] text-white border-t-4 border-[#FF7900] px-4 py-16 text-center">
+      <footer className="mt-20 bg-[#002147] text-white border-t-4 border-[#FF7900] px-4 py-16 text-center">
         <div className="max-w-3xl mx-auto">
           <svg className="w-10 h-10 mx-auto text-[#FF7900] mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />

@@ -8,6 +8,7 @@ function FAQSection() {
 
   const [openIndex, setOpenIndex] = React.useState(null);
   const [filter, setFilter] = React.useState('all');
+  const [showMobileFilters, setShowMobileFilters] = React.useState(false);
 
   const categories = {
     es: [
@@ -487,7 +488,7 @@ function FAQSection() {
         
         {/* ENCABEZADO EDITORIAL */}
         <div className="mb-12 text-center">
-          <h2 className="text-3xl sm:text-4xl font-sans font-bold text-[#004b87] mb-3 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-serif text-black mb-3 tracking-tight">
             {isSpanish ? 'Preguntas Frecuentes' : 'Frequently Asked Questions'}
           </h2>
           <p className="text-[15px] text-[#666666] max-w-2xl mx-auto font-sans">
@@ -498,8 +499,8 @@ function FAQSection() {
           <div className="h-[2px] w-16 bg-[#e86125] mx-auto mt-6"></div>
         </div>
 
-        {/* FILTROS TIPO "TABS" ACADÉMICAS */}
-        <div className="flex flex-wrap justify-center gap-2 mb-10 border-b border-[#e6e8ea] pb-2">
+        {/* FILTROS TIPO "TABS" ACADÉMICAS - DESKTOP */}
+        <div className="hidden md:flex flex-wrap justify-center gap-2 mb-10 border-b border-[#e6e8ea] pb-2">
           {currentCategories.map(cat => (
             <button
               key={cat.id}
@@ -509,12 +510,66 @@ function FAQSection() {
               }}
               className={`px-4 py-2 text-[13px] font-sans font-semibold uppercase tracking-wider transition-all border-b-2 -mb-[2px]
                 ${filter === cat.id 
-                  ? 'border-[#004b87] text-[#004b87]' 
-                  : 'border-transparent text-[#666666] hover:text-[#004b87] hover:border-[#cbd0d5]'}`}
+                  ? 'border-[#002147] text-[#002147]' 
+                  : 'border-transparent text-[#666666] hover:text-[#002147] hover:border-[#cbd0d5]'}`}
             >
               {cat.label}
             </button>
           ))}
+        </div>
+
+        {/* FILTROS MÓVILES */}
+        <div className="md:hidden mb-6">
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-[#002147]"
+          >
+            <span>
+              {isSpanish ? 'Filtrar por categoría: ' : 'Filter by category: '}
+              {currentCategories.find(cat => cat.id === filter)?.label}
+            </span>
+            <svg 
+              className={`w-5 h-5 transition-transform ${showMobileFilters ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <AnimatePresence>
+            {showMobileFilters && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-white border border-gray-200 rounded-lg p-2 mt-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {currentCategories.map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setFilter(cat.id);
+                          setOpenIndex(null);
+                          setShowMobileFilters(false);
+                        }}
+                        className={`px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
+                          filter === cat.id
+                            ? 'bg-[#002147] text-white'
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* CONTENEDOR DE ACORDEONES ESTILO CAJA DE DOCUMENTOS */}
@@ -536,12 +591,12 @@ function FAQSection() {
                     <span className={`flex-shrink-0 text-[18px] font-bold font-serif leading-none mt-0.5 ${isOpen ? 'text-[#e86125]' : 'text-[#cbd0d5]'}`}>
                       Q.
                     </span>
-                    <span className={`text-[15px] font-sans font-semibold leading-snug transition-colors ${isOpen ? 'text-[#004b87]' : 'text-[#2b2b2b]'}`}>
+                    <span className={`text-[15px] font-sans font-semibold leading-snug transition-colors ${isOpen ? 'text-[#002147]' : 'text-[#2b2b2b]'}`}>
                       {faq.q}
                     </span>
                   </div>
                   
-                  <span className={`flex-shrink-0 ml-6 text-[#004b87] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                  <span className={`flex-shrink-0 ml-6 text-[#002147] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
@@ -570,7 +625,7 @@ function FAQSection() {
                                 href={link.url}
                                 target={link.url.startsWith('http') ? '_blank' : undefined}
                                 rel={link.url.startsWith('http') ? 'noopener noreferrer' : undefined}
-                                className="inline-flex items-center gap-1 text-[12px] font-bold font-sans uppercase tracking-wider text-[#006dae] hover:text-[#e86125] transition-colors"
+                                className="inline-flex items-center gap-1 text-[12px] font-bold font-sans uppercase tracking-wider text-[#002147] hover:text-[#e86125] transition-colors"
                               >
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -597,9 +652,9 @@ function FAQSection() {
         </div>
 
         {/* CAJA DE CONTACTO Y SOPORTE */}
-        <div className="bg-[#f8f9fa] border border-[#cbd0d5] border-l-4 border-l-[#006dae] p-6 rounded-sm mb-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div className="bg-[#f8f9fa] border border-[#cbd0d5] border-l-4 border-l-[#002147] p-6 rounded-sm mb-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
-            <h4 className="text-[15px] font-bold font-sans text-[#004b87] mb-1">
+            <h4 className="text-[15px] font-bold font-sans text-black mb-1">
               {isSpanish ? '¿No encontró lo que buscaba?' : 'Did not find what you were looking for?'}
             </h4>
             <p className="text-[13px] text-[#666666] font-sans">
@@ -610,7 +665,7 @@ function FAQSection() {
           </div>
           <a
             href="mailto:contact@revistacienciasestudiantes.com"
-            className="flex-shrink-0 inline-flex items-center gap-2 bg-white border border-[#006dae] text-[#006dae] hover:bg-[#006dae] hover:text-white px-5 py-2 text-[12px] font-bold font-sans uppercase tracking-wider transition-colors rounded-sm"
+            className="flex-shrink-0 inline-flex items-center gap-2 bg-white border border-[#002147] text-[#002147] hover:bg-[#002147] hover:text-white px-5 py-2 text-[12px] font-bold font-sans uppercase tracking-wider transition-colors rounded-sm"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -624,17 +679,17 @@ function FAQSection() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white border border-[#e6e8ea] border-l-4 border-l-[#004b87] p-6 shadow-sm rounded-sm"
+          className="bg-white border border-[#e6e8ea] border-l-4 border-l-[#002147] p-6 shadow-sm rounded-sm"
         >
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <div className="flex-shrink-0 w-12 h-12 bg-[#f4f5f7] border border-[#e6e8ea] rounded-sm flex items-center justify-center">
-              <svg className="w-6 h-6 text-[#004b87]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-[#002147]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
 
             <div className="flex-1">
-              <h3 className="text-lg font-sans font-semibold text-[#004b87] mb-1.5 tracking-tight">
+              <h3 className="text-lg font-serif font-semibold text-black mb-1.5 tracking-tight">
                 {isSpanish ? 'Guía Rápida para Autores' : 'Quick Guide for Authors'}
               </h3>
               <p className="text-[14px] text-[#2b2b2b] leading-relaxed mb-4 font-sans">
@@ -647,7 +702,7 @@ function FAQSection() {
                 href={isSpanish ? '/quick.html' : '/quickEN.html'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-[#004b87] hover:bg-[#e86125] text-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors font-sans rounded-sm"
+                className="inline-flex items-center gap-2 bg-[#002147] hover:bg-[#e86125] text-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors font-sans rounded-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -657,7 +712,7 @@ function FAQSection() {
             </div>
 
             <div className="hidden lg:flex flex-col items-center justify-center border-l border-[#e6e8ea] pl-8 min-w-[120px]">
-              <span className="text-3xl font-sans font-light text-[#004b87] leading-none mb-1">5</span>
+              <span className="text-3xl font-serif font-light text-[#002147] leading-none mb-1">5</span>
               <span className="text-[10px] uppercase tracking-widest text-[#666666] font-sans font-semibold">
                 {isSpanish ? 'Minutos' : 'Minutes'}
               </span>

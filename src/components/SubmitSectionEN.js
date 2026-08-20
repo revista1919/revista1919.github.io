@@ -1,6 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { 
+  CheckCircleIcon, 
+  DocumentCheckIcon, 
+  BookOpenIcon, 
+  ArrowRightOnRectangleIcon, 
+  ShieldExclamationIcon,
+  LanguageIcon,
+  SparklesIcon
+} from '@heroicons/react/24/outline';
 
 function SubmitSection() {
   const navigate = useNavigate();
@@ -11,227 +20,266 @@ function SubmitSection() {
 
   return (
     <motion.div
-      className="max-w-5xl mx-auto mt-8 mb-16 px-4"
-      initial={{ opacity: 0, y: 10 }}
+      className="max-w-6xl mx-auto mt-12 mb-20 px-4 sm:px-6 lg:px-8 font-sans"
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      {/* Direct Header */}
-      <header className="mb-10 border-b border-gray-100 pb-8">
-        <h2 className="text-3xl font-serif font-bold text-gray-900 mb-2">
+      {/* EDITORIAL HEADER */}
+      <header className="mb-12 text-center">
+        <motion.span
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-[11px] uppercase tracking-[0.3em] font-semibold text-[#002147] mb-4 block"
+        >
+          Editorial System
+        </motion.span>
+        <motion.h2
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="text-4xl md:text-5xl font-serif text-black mb-4"
+        >
           Manuscript Submission
-        </h2>
-        <p className="text-gray-500 font-light">
-          We appreciate your interest in publishing with us. Submission is a formal act that implies acceptance of our editorial policies.
+        </motion.h2>
+        <div className="w-16 h-1 bg-[#FF7900] mx-auto mb-6"></div>
+        <p className="text-slate-600 text-base leading-relaxed max-w-3xl mx-auto">
+          The submission process constitutes a formal act that implies full acceptance of our editorial and ethical guidelines. We appreciate your interest in publishing with our journal.
         </p>
       </header>
 
-      {/* PROMINENT NOTICE: Quick Guide first */}
-      <div className="bg-[#001f3f] text-white p-8 rounded-sm mb-10 shadow-md">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-          {/* Lightning / Checklist Icon */}
-          <div className="flex-shrink-0">
-            <svg className="w-12 h-12 text-[#c0a86a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
-                d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+      {/* PROMINENT NOTICE: Quick Guide as First Step */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="bg-[#002147] text-white rounded-xl mb-12 shadow-xl overflow-hidden relative"
+      >
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-72 h-72 bg-white opacity-5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#FF7900] opacity-10 rounded-full blur-2xl -ml-16 -mb-16 pointer-events-none"></div>
+        
+        <div className="p-8 sm:p-10 flex flex-col lg:flex-row items-start lg:items-center gap-8 relative z-10">
+          {/* Icon */}
+          <div className="flex-shrink-0 bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
+            <DocumentCheckIcon className="w-12 h-12 text-[#FF7900]" />
           </div>
+          
           <div className="flex-1">
-            <h3 className="text-lg font-serif font-bold text-[#c0a86a] mb-2">
-              Before submitting: review the essentials in 5 minutes
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mb-3">
+              Essential Pre-Submission Check
             </h3>
-            <p className="text-sm text-gray-200 leading-relaxed mb-4">
-              We know that reading full policies can feel heavy. That's why we created an 
-              <strong> Interactive Quick Guide </strong> with a visual checklist: check the boxes 
-              and you'll know if your manuscript is ready. If you need more detail later, check the full guide.
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed mb-6 max-w-3xl">
+              To optimize the editorial process, we have designed an <strong className="text-white">Interactive Quick Guide</strong>. 
+              This checklist will allow you to confirm, in less than 5 minutes, whether your manuscript meets the 
+              fundamental requirements before formal submission.
             </p>
+            
             <div className="flex flex-wrap gap-3">
               <a
                 href="/quickEN.html"
-                className="inline-flex items-center gap-2 bg-[#c0a86a] text-[#001f3f] px-5 py-2.5 text-xs uppercase font-bold tracking-[0.15em] hover:bg-white hover:text-[#001f3f] transition-colors rounded-sm"
+                className="inline-flex items-center gap-2 bg-[#FF7900] text-white px-6 py-3 text-xs uppercase font-bold tracking-wider hover:bg-[#E06A00] transition-all rounded-lg shadow-lg hover:shadow-[#FF7900]/30"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-                Quick Guide (Checklist)
+                <CheckCircleIcon className="w-5 h-5" />
+                Start Quick Checklist
               </a>
               <a
                 href="https://www.revistacienciasestudiantes.com/policiesEN.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-transparent border-2 border-white text-white px-5 py-2.5 text-xs uppercase font-bold tracking-[0.15em] hover:bg-white hover:text-[#001f3f] transition-colors rounded-sm"
+                className="inline-flex items-center gap-2 bg-transparent border-2 border-white/30 text-white px-6 py-3 text-xs uppercase font-bold tracking-wider hover:bg-white hover:text-[#002147] hover:border-white transition-all rounded-lg"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-                Full Policies
+                <BookOpenIcon className="w-5 h-5" />
+                Editorial Policies
               </a>
-              <button
-                onClick={() => navigate('/en/guidelines')}
-                className="inline-flex items-center gap-2 bg-transparent border-2 border-white text-white px-5 py-2.5 text-xs uppercase font-bold tracking-[0.15em] hover:bg-white hover:text-[#001f3f] transition-colors rounded-sm"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Complete Author Guidelines
-              </button>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Preparation Section (Checklist) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-        <div className="md:col-span-2 bg-gray-50 p-8 rounded-sm border-l-4 border-gray-900">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-4">
-            Pre-Submission Checklist
-          </h3>
-          <ul className="space-y-4 text-sm text-gray-700">
-            <li className="flex items-start">
-              <span className="mr-3 text-gray-900 font-bold">01.</span>
-              <span>
-                <strong>Strict anonymization.</strong> The document must be completely anonymized. 
-                <span className="text-red-700 font-semibold"> Do not include your name, institutional affiliation, or acknowledgments </span> 
-                within the uploaded file. Peer review is double-blind, and any identifying information 
-                compromises the process.
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-3 text-gray-900 font-bold">02.</span>
-              <span>
-                <strong>Chicago 17th ed. (author-date) style.</strong> All citations and references must strictly 
-                follow this format. Consult the Author Guidelines for precise examples.
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-3 text-gray-900 font-bold">03.</span>
-              <span>
-                <strong>Keywords with controlled vocabulary.</strong> You must include between 2 and 6 keywords 
-                using the classification system corresponding to your area (JEL, MeSH, ACM, or UNESCO). 
-                Consult the Editorial Policies for the complete mapping.
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-3 text-gray-900 font-bold">04.</span>
-              <span>
-                <strong>Mandatory declarations.</strong> Your manuscript must include: conflict of interest statement, 
-                funding statement, data availability statement, and, where applicable, ethics approval 
-                and informed consent statements.
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-3 text-gray-900 font-bold">05.</span>
-              <span>
-                <strong>Maximum similarity: 15%.</strong> Manuscripts exceeding this percentage will be returned 
-                without review. Use PlagiarismGuard or an equivalent tool to verify this.
-              </span>
-            </li>
-          </ul>
-        </div>
+      {/* PREPARATION SECTION */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+        {/* Main Checklist */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-sm p-8"
+        >
+          <div className="flex items-center mb-6">
+            <ShieldExclamationIcon className="w-6 h-6 text-[#FF7900] mr-3" />
+            <h3 className="text-lg font-serif font-bold text-black">
+              Immediate Rejection Criteria (Desk Reject)
+            </h3>
+          </div>
+          
+          <div className="space-y-6">
+            {/* Item 1 - Critical */}
+            <div className="flex items-start p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+              <ShieldExclamationIcon className="w-6 h-6 text-red-600 mr-4 flex-shrink-0 mt-1" />
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-1">Compromised Double-Blind Review</h4>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  The manuscript <strong className="text-red-600">must not contain names, institutional affiliations, or acknowledgments</strong>. 
+                  Any identifying information will immediately void the submission.
+                </p>
+              </div>
+            </div>
 
-        <div className="flex flex-col justify-center bg-[#f0f4f8] p-8 rounded-sm border border-[#c0a86a]">
-          <h4 className="text-xs font-bold text-[#001f3f] uppercase tracking-tighter mb-3">
-            Have you checked the quick guide?
-          </h4>
-          <p className="text-xs text-gray-700 mb-5 leading-relaxed">
-            The interactive quick guide takes 5 minutes and has a visual checklist. 
-            If you've already completed it, you're ready to continue. 
-            <strong className="text-[#001f3f]"> Full policies are still available if you need to go deeper.</strong>
-          </p>
-          <div className="space-y-2">
+            {/* Item 2 */}
+            <div className="flex items-start p-4 bg-slate-50 border-l-4 border-slate-300 rounded-r-lg">
+              <CheckCircleIcon className="w-6 h-6 text-slate-500 mr-4 flex-shrink-0 mt-1" />
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-1">Strict Citation Format</h4>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  The document must strictly adhere to <strong>Chicago 17th ed. (author-date)</strong> format in both 
+                  in-text citations and bibliography.
+                </p>
+              </div>
+            </div>
+
+            {/* Item 3 */}
+            <div className="flex items-start p-4 bg-slate-50 border-l-4 border-slate-300 rounded-r-lg">
+              <CheckCircleIcon className="w-6 h-6 text-slate-500 mr-4 flex-shrink-0 mt-1" />
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-1">Keywords and Classification Codes</h4>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  You must provide 3 to 5 free keywords, and <strong>separately</strong>, assign the specialized 
+                  Classification Codes for your discipline (e.g., JEL codes or MeSH descriptors).
+                </p>
+              </div>
+            </div>
+
+            {/* Item 4 */}
+            <div className="flex items-start p-4 bg-slate-50 border-l-4 border-slate-300 rounded-r-lg">
+              <CheckCircleIcon className="w-6 h-6 text-slate-500 mr-4 flex-shrink-0 mt-1" />
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-1">Mandatory Declarations</h4>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  The article must include at the end: Funding, Conflict of Interest, Data Availability, and 
+                  (if applicable) Ethics Approval statements.
+                </p>
+              </div>
+            </div>
+
+            {/* Item 5 - Critical */}
+            <div className="flex items-start p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+              <ShieldExclamationIcon className="w-6 h-6 text-red-600 mr-4 flex-shrink-0 mt-1" />
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-1">Similarity Threshold (Plagiarism)</h4>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  The similarity index <strong className="text-red-600">must not exceed 15%</strong> (excluding bibliography). 
+                  This will be verified using anti-plagiarism software before the review begins.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Sidebar Panel */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+          className="flex flex-col justify-center bg-gradient-to-br from-[#F3F7F9] to-white p-8 rounded-xl border-2 border-[#002147]/10"
+        >
+          <div className="text-center mb-6">
+            <SparklesIcon className="w-12 h-12 text-[#002147] mx-auto mb-4" />
+            <h4 className="text-lg font-serif font-bold text-black mb-2">
+              Interactive Quick Guide
+            </h4>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Complete the 5-minute visual checklist and confirm that your manuscript is ready for submission.
+            </p>
+          </div>
+          
+          <div className="space-y-3">
             <a
               href="/quickEN.html"
-              className="block text-center text-xs font-bold uppercase tracking-widest text-white bg-[#001f3f] py-2.5 px-4 hover:bg-[#c0a86a] hover:text-[#001f3f] transition-colors rounded-sm"
+              className="block text-center text-sm font-bold uppercase tracking-wider text-white bg-[#002147] py-3 px-4 hover:bg-[#00152e] transition-colors rounded-lg shadow-md"
             >
-              Open Interactive Quick Guide
+              Open Quick Guide
             </a>
             <a
               href="https://www.revistacienciasestudiantes.com/policiesEN.html"
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-center text-xs font-bold uppercase tracking-widest text-[#001f3f] border-2 border-[#001f3f] py-2.5 px-4 hover:bg-[#001f3f] hover:text-white transition-colors rounded-sm"
+              className="block text-center text-sm font-bold uppercase tracking-wider text-[#002147] border-2 border-[#002147] py-3 px-4 hover:bg-[#002147] hover:text-white transition-colors rounded-lg"
             >
               Full Policies
             </a>
             <button
               onClick={() => navigate('/en/guidelines')}
-              className="block w-full text-center text-xs font-bold uppercase tracking-widest text-[#c0a86a] border-2 border-[#c0a86a] py-2.5 px-4 hover:bg-[#c0a86a] hover:text-white transition-colors rounded-sm"
+              className="block w-full text-center text-sm font-bold uppercase tracking-wider text-[#FF7900] border-2 border-[#FF7900] py-3 px-4 hover:bg-[#FF7900] hover:text-white transition-colors rounded-lg"
             >
-              Complete Guide
+              Author Guidelines
             </button>
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* New Submission Container */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-sm overflow-hidden">
-        <div className="bg-gray-900 py-3 px-6">
-          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">
-            Manuscript Submission System
+      {/* CALL TO ACTION: SUBMISSION SYSTEM */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-lg"
+      >
+        <div className="bg-[#002147] px-6 py-4 flex justify-between items-center">
+          <span className="text-xs font-bold text-white uppercase tracking-widest">
+            Submission System
           </span>
+          <LanguageIcon className="w-5 h-5 text-white/60" />
         </div>
         
-        <div className="p-12 text-center">
-          <div className="max-w-md mx-auto">
-            <svg 
-              className="w-16 h-16 mx-auto text-gray-400 mb-4" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={1.5} 
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
-              />
+        <div className="p-10 sm:p-14 text-center max-w-2xl mx-auto">
+          <div className="w-20 h-20 bg-[#F3F7F9] border border-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <ArrowRightOnRectangleIcon className="w-10 h-10 text-[#002147]" />
+          </div>
+          
+          <h3 className="text-2xl font-serif text-black mb-4">
+            Author Portal Access
+          </h3>
+          
+          <p className="text-slate-600 mb-8 leading-relaxed">
+            To initiate a new submission or track a manuscript under review, you must authenticate 
+            through the editorial system. The process is free and takes only a few minutes.
+          </p>
+
+          <button
+            onClick={handleSubmitClick}
+            className="w-full sm:w-auto bg-[#002147] text-white px-10 py-4 rounded-lg font-bold text-sm tracking-wide hover:bg-[#00152e] hover:shadow-xl hover:shadow-[#002147]/20 transition-all flex items-center justify-center gap-3 mx-auto group"
+          >
+            <span>Sign In / Create Account</span>
+            <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
-            
-            <h3 className="text-xl font-serif font-bold text-gray-900 mb-3">
-              Submit your manuscript through the portal
-            </h3>
-            
-            <p className="text-gray-600 mb-6">
-              To submit your manuscript, you must log in or create an account in our editorial system. 
-              Once inside, go to the "Submit Manuscript" tab to complete the process.
-            </p>
+          </button>
 
-            <div className="space-y-3">
-              <button
-                onClick={handleSubmitClick}
-                className="w-full bg-gray-900 text-white py-3 px-6 rounded-sm hover:bg-gray-800 transition-colors font-medium"
+          <div className="mt-8 pt-6 border-t border-slate-200">
+            <p className="text-sm text-slate-500">
+              Para envíos en español, por favor acceda al{' '}
+              <a 
+                href="/login/submit" 
+                className="text-[#002147] font-semibold hover:text-[#FF7900] transition-colors underline underline-offset-2"
               >
-                Log in or create account
-              </button>
-              
-              <p className="text-sm text-gray-500">
-                Already have an account?{' '}
-                <button
-                  onClick={handleSubmitClick}
-                  className="text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Sign in now
-                </button>
-              </p>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <p className="text-xs text-gray-500">
-                Para envíos en español,{' '}
-                <a 
-                  href="/login/submit" 
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  acceda al portal en español
-                </a>
-              </p>
-            </div>
+                Portal Editorial en Español
+              </a>.
+            </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <footer className="mt-8 text-center text-xs text-gray-400">
-        Need help? Contact editorial support
+      {/* FOOTER */}
+      <footer className="mt-10 text-center">
+        <p className="text-sm text-slate-400">
+          Need technical assistance?{' '}
+          <a 
+            href="mailto:support@revistacienciasestudiantes.com" 
+            className="text-[#002147] hover:text-[#FF7900] transition-colors font-medium"
+          >
+            Contact editorial support
+          </a>
+        </p>
       </footer>
     </motion.div>
   );
