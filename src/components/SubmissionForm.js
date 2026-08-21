@@ -97,99 +97,103 @@ const getAreasByLanguage = (language) => {
   return AREAS_TEMATICAS[language] || AREAS_TEMATICAS.es;
 };
 // ============ CONFIGURACIÓN DE VOCABULARIOS CONTROLADOS ============
+// ============ CONFIGURACIÓN DE VOCABULARIOS CONTROLADOS ============
 const VOCABULARIO_POR_AREA = {
+  // ========== CIENCIAS EXACTAS Y NATURALES ==========
   "Matemáticas": {
     vocabulario: "MSC",
     nombre: "Mathematics Subject Classification (MSC2020)",
-    formato: "Solo código MSC",
+    formato: "Código alfanumérico MSC",
     ejemplo: "11N05",
     searchUrl: "https://mathscinet.ams.org/mathscinet/msc/msc2020.html",
-    instrucciones: "Ingresa solo el código MSC (ej: 11N05). No incluyas el descriptor."
+    instrucciones: "Ingresa solo el código MSC (ej: 11N05, 68T05). No incluyas el descriptor. Usado por MathSciNet, zbMATH y la mayoría de journals de matemáticas."
   },
   "Física": {
     vocabulario: "PhySH",
     nombre: "Physics Subject Headings (APS)",
-    formato: "Solo código PhySH",
+    formato: "Identificador de concepto PhySH",
     ejemplo: "quantum-mechanics",
     searchUrl: "https://physh.aps.org/",
-    instrucciones: "Ingresa solo el identificador PhySH. No incluyas el término completo."
+    instrucciones: "Ingresa el identificador/concepto PhySH (ej: quantum-mechanics, condensed-matter-physics). No es un código numérico rígido. Reemplazó a PACS."
   },
   "Química": {
-    vocabulario: "CAS",
-    nombre: "Chemical Abstracts Service Classification",
-    formato: "Solo número CAS",
-    ejemplo: "78-10-4",
+    vocabulario: "CA-Sections + CAS-RN",
+    nombre: "Chemical Abstracts Subject Sections + CAS Registry Numbers",
+    formato: "Número de sección CA (1-80) o CAS RN (solo sustancias)",
+    ejemplo: "78-10-4 (CAS RN) o sección 35 (Organic Chemistry)",
     searchUrl: "https://commonchemistry.cas.org/",
-    instrucciones: "Ingresa solo el número de registro CAS (ej: 78-10-4). No incluyas el nombre del compuesto."
+    instrucciones: "NO existe un sistema jerárquico de códigos temáticos tipo MSC. Usa: 1) CAS Registry Number solo para compuestos específicos (ej: 78-10-4). 2) Secciones temáticas de Chemical Abstracts (aprox. 80 secciones). 3) Términos controlados de SciFinder."
   },
   "Biología": {
-    vocabulario: "MeSH",
-    nombre: "Medical Subject Headings",
-    formato: "Solo código MeSH",
-    ejemplo: "D001777",
+    vocabulario: "MeSH + NCBI-Taxonomy",
+    nombre: "Medical Subject Headings + NCBI Taxonomy",
+    formato: "MeSH Unique ID / Tree Number o TaxID NCBI",
+    ejemplo: "D001777 (MeSH) o NCBI TaxID",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Ingresa solo el código MeSH (ej: D001777). No incluyas el descriptor."
+    instrucciones: "MeSH es el estándar biomédico (PubMed). Para biología pura/organismos se usa más NCBI Taxonomy. Ingresa código MeSH (ej: D001777) o TaxID."
   },
   "Geología": {
     vocabulario: "GeoRef",
-    nombre: "GeoRef Thesaurus",
-    formato: "Solo código GeoRef",
-    ejemplo: "igneous-rocks",
+    nombre: "GeoRef Thesaurus + Subject Categories (AGI)",
+    formato: "Código de categoría GeoRef (01-30) o término del tesauro",
+    ejemplo: "05 (Igneous and metamorphic petrology) o igneous-rocks",
     searchUrl: "https://www.americangeosciences.org/georef/georef-thesaurus",
-    instrucciones: "Ingresa solo el identificador del tesauro GeoRef. No incluyas el término."
+    instrucciones: "Usa códigos de categoría (01 Mineralogy … 30 Engineering geology) o términos controlados del tesauro GeoRef. Ejemplo de categoría: 05."
   },
   "Astronomía y Astrofísica": {
     vocabulario: "UAT",
     nombre: "Unified Astronomy Thesaurus",
-    formato: "Solo código UAT",
+    formato: "Código numérico UAT",
     ejemplo: "1087",
     searchUrl: "https://astrothesaurus.org/",
-    instrucciones: "Ingresa solo el código numérico UAT (ej: 1087). No incluyas el descriptor."
+    instrucciones: "Ingresa solo el código numérico UAT (ej: 1087). No incluyas el descriptor. Estándar de la AAS."
   },
   "Ciencias Ambientales y Ecología": {
-    vocabulario: "EnvThes",
-    nombre: "Environmental Thesaurus",
-    formato: "Solo código EnvThes",
-    ejemplo: "20286",
-    searchUrl: "https://vocabs.lter-europe.net/envthes/en/",
-    instrucciones: "Ingresa solo el código EnvThes (ej: 20286). No incluyas el término."
+    vocabulario: "GEMET / EnvThes",
+    nombre: "GEneral Multilingual Environmental Thesaurus / Environmental Thesaurus (LTER)",
+    formato: "Identificador o término controlado",
+    ejemplo: "20286 (EnvThes) o término GEMET",
+    searchUrl: "https://www.eionet.europa.eu/gemet/es/",
+    instrucciones: "GEMET es el más general y usado internacionalmente. EnvThes es específico de redes LTER europeas. Ingresa identificador o término preferido."
   },
   "Oceanografía": {
-    vocabulario: "BODC",
-    nombre: "British Oceanographic Data Centre Vocabulary",
-    formato: "Solo código BODC",
-    ejemplo: "P021",
+    vocabulario: "BODC/NERC",
+    nombre: "NERC Vocabulary Server (BODC) – Parameter Usage Vocabulary",
+    formato: "Código alfanumérico de colección (P01, P02, etc.)",
+    ejemplo: "P021 o código P01 completo",
     searchUrl: "https://vocab.nerc.ac.uk/",
-    instrucciones: "Ingresa solo el código alfanumérico BODC (ej: P021). No incluyas el descriptor."
+    instrucciones: "Ingresa el código de la colección NERC/BODC (ej: P01 para parámetros). Estándar para datos marinos y oceanográficos."
   },
   "Meteorología y Ciencias Atmosféricas": {
-    vocabulario: "WMO",
-    nombre: "World Meteorological Organization Vocabulary",
-    formato: "Solo código WMO",
-    ejemplo: "3720",
-    searchUrl: "https://codes.wmo.int/",
-    instrucciones: "Ingresa solo el código WMO (ej: 3720). No incluyas el descriptor."
+    vocabulario: "AMS-Terms / WMO-Codes",
+    nombre: "American Meteorological Society terminology + WMO Codes (solo datos)",
+    formato: "Términos controlados AMS o códigos WMO (BUFR/GRIB)",
+    ejemplo: "atmospheric-river o código WMO específico",
+    searchUrl: "https://www.ametsoc.org/",
+    instrucciones: "NO existe un sistema de clasificación temática de papers equivalente a MSC o MeSH. Los journals de AMS usan términos controlados. Los códigos WMO son para transmisión de datos, no para indexar literatura."
   },
   "Paleontología": {
-    vocabulario: "PBDB",
-    nombre: "Paleobiology Database Taxonomy",
-    formato: "Solo código PBDB",
-    ejemplo: "52822",
-    searchUrl: "https://paleobiodb.org/navigator/",
-    instrucciones: "Ingresa solo el código numérico PBDB (ej: 52822). No incluyas el nombre del taxón."
+    vocabulario: "GeoRef",
+    nombre: "GeoRef Subject Categories (08-11) + Thesaurus",
+    formato: "Código de categoría GeoRef o término del tesauro",
+    ejemplo: "10 (Invertebrate paleontology)",
+    searchUrl: "https://www.americangeosciences.org/georef/georef-thesaurus",
+    instrucciones: "Usa categorías GeoRef: 08 General paleontology, 09 Paleobotany, 10 Invertebrate, 11 Vertebrate. PBDB es una base de datos de taxones, NO un sistema de clasificación de papers."
   },
+
+  // ========== CIENCIAS DE LA SALUD ==========
   "Medicina General e Interna": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Solo código MeSH",
+    formato: "MeSH Unique ID / Tree Number",
     ejemplo: "D008112",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Ingresa solo el código MeSH (ej: D008112). No incluyas el descriptor."
+    instrucciones: "Ingresa solo el código MeSH (ej: D008112). No incluyas el descriptor. Estándar absoluto en PubMed/MEDLINE."
   },
   "Salud Pública y Epidemiología": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Solo código MeSH",
+    formato: "MeSH Unique ID / Tree Number",
     ejemplo: "D011635",
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Ingresa solo el código MeSH (ej: D011635). No incluyas el descriptor."
@@ -197,7 +201,7 @@ const VOCABULARIO_POR_AREA = {
   "Enfermería": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Solo código MeSH",
+    formato: "MeSH Unique ID / Tree Number",
     ejemplo: "D009729",
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Ingresa solo el código MeSH (ej: D009729). No incluyas el descriptor."
@@ -205,7 +209,7 @@ const VOCABULARIO_POR_AREA = {
   "Nutrición y Dietética": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Solo código MeSH",
+    formato: "MeSH Unique ID / Tree Number",
     ejemplo: "D009750",
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Ingresa solo el código MeSH (ej: D009750). No incluyas el descriptor."
@@ -213,15 +217,15 @@ const VOCABULARIO_POR_AREA = {
   "Farmacología y Farmacia": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Solo código MeSH",
+    formato: "MeSH Unique ID / Tree Number",
     ejemplo: "D010597",
     searchUrl: "https://meshb.nlm.nih.gov/search",
-    instrucciones: "Ingresa solo el código MeSH (ej: D010597). No incluyas el descriptor."
+    instrucciones: "Ingresa solo el código MeSH (ej: D010597). No incluyas el descriptor. También se usan CAS RN para compuestos."
   },
   "Odontología": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Solo código MeSH",
+    formato: "MeSH Unique ID / Tree Number",
     ejemplo: "D003813",
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Ingresa solo el código MeSH (ej: D003813). No incluyas el descriptor."
@@ -229,7 +233,7 @@ const VOCABULARIO_POR_AREA = {
   "Kinesiología y Fisioterapia": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Solo código MeSH",
+    formato: "MeSH Unique ID / Tree Number",
     ejemplo: "D026801",
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Ingresa solo el código MeSH (ej: D026801). No incluyas el descriptor."
@@ -237,7 +241,7 @@ const VOCABULARIO_POR_AREA = {
   "Tecnología Médica y Bioanálisis": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Solo código MeSH",
+    formato: "MeSH Unique ID / Tree Number",
     ejemplo: "D008364",
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Ingresa solo el código MeSH (ej: D008364). No incluyas el descriptor."
@@ -245,298 +249,759 @@ const VOCABULARIO_POR_AREA = {
   "Veterinaria": {
     vocabulario: "MeSH",
     nombre: "Medical Subject Headings",
-    formato: "Solo código MeSH",
+    formato: "MeSH Unique ID / Tree Number",
     ejemplo: "D014730",
     searchUrl: "https://meshb.nlm.nih.gov/search",
     instrucciones: "Ingresa solo el código MeSH (ej: D014730). No incluyas el descriptor."
   },
+
+  // ========== INGENIERÍAS ==========
   "Ingeniería Civil": {
     vocabulario: "Ei",
-    nombre: "Engineering Index Thesaurus (Compendex)",
-    formato: "Solo código Ei",
+    nombre: "Engineering Index Thesaurus / Compendex Classification",
+    formato: "Código de clasificación Ei",
     ejemplo: "405.1",
     searchUrl: "https://www.engineeringvillage.com/",
-    instrucciones: "Ingresa solo el código Ei (ej: 405.1). No incluyas el término."
+    instrucciones: "Ingresa solo el código Ei/Compendex (ej: 405.1). También se usan términos controlados del Ei Thesaurus."
   },
   "Ingeniería Industrial y de Sistemas": {
-    vocabulario: "IIE",
-    nombre: "Industrial Engineering Terminology (IISE)",
-    formato: "Solo código IIE",
-    ejemplo: "4.2.1",
-    searchUrl: "https://www.iise.org/",
-    instrucciones: "Ingresa solo el código IIE (ej: 4.2.1). No incluyas el descriptor."
+    vocabulario: "Ei",
+    nombre: "Engineering Index Thesaurus / Compendex Classification",
+    formato: "Código de clasificación Ei",
+    ejemplo: "912.2",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instrucciones: "No existe un sistema 'IIE/IISE' de códigos de papers. Se usa el sistema Ei/Compendex (igual que el resto de ingenierías)."
   },
   "Ingeniería Mecánica": {
-    vocabulario: "ASME",
-    nombre: "ASME Subject Classification",
-    formato: "Solo código ASME",
-    ejemplo: "10-01",
-    searchUrl: "https://www.asme.org/",
-    instrucciones: "Ingresa solo el código ASME (ej: 10-01). No incluyas el término."
+    vocabulario: "Ei / ASME",
+    nombre: "Engineering Index Thesaurus (Compendex) + ASME subject categories",
+    formato: "Código Ei o categoría ASME",
+    ejemplo: "601.1 o 10-01",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instrucciones: "Principalmente códigos Ei/Compendex. ASME tiene categorías propias en sus journals."
   },
   "Ingeniería Eléctrica y Electrónica": {
     vocabulario: "IEEE",
-    nombre: "IEEE Thesaurus",
-    formato: "Solo código IEEE",
-    ejemplo: "B6210L",
+    nombre: "IEEE Thesaurus / IEEE Taxonomy",
+    formato: "Término controlado del IEEE Thesaurus",
+    ejemplo: "power-systems",
     searchUrl: "https://www.ieee.org/publications/services/thesaurus-access-page.html",
-    instrucciones: "Ingresa solo el código IEEE (ej: B6210L). No incluyas el descriptor."
+    instrucciones: "Ingresa el término preferido del IEEE Thesaurus. Existe también la IEEE Taxonomy (jerárquica de 3 niveles). El ejemplo antiguo tipo B6210L no es el formato principal actual."
   },
   "Ingeniería Química y Biotecnología": {
-    vocabulario: "IChemE",
-    nombre: "Institution of Chemical Engineers Thesaurus",
-    formato: "Solo código IChemE",
-    ejemplo: "BIO-04",
-    searchUrl: "https://www.icheme.org/",
-    instrucciones: "Ingresa solo el código IChemE (ej: BIO-04). No incluyas el descriptor."
+    vocabulario: "Ei",
+    nombre: "Engineering Index Thesaurus / Compendex",
+    formato: "Código de clasificación Ei",
+    ejemplo: "804.1",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instrucciones: "No existe un 'IChemE Thesaurus' estándar de clasificación de papers. Se usa Ei/Compendex."
   },
   "Ingeniería en Computación e Informática": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Solo código ACM",
-    ejemplo: "CCS2012.10003116",
+    vocabulario: "ACM-CCS",
+    nombre: "ACM Computing Classification System (2012)",
+    formato: "Código CCS jerárquico",
+    ejemplo: "10003116",
     searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Ingresa solo el código ACM CCS (ej: CCS2012.10003116). No incluyas el descriptor."
+    instrucciones: "Ingresa el código ACM CCS (ej: 10003116). Estándar en ACM Digital Library y journals de CS."
   },
   "Ciencia de Datos e Inteligencia Artificial": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Solo código ACM",
-    ejemplo: "CCS2012.10010179",
+    vocabulario: "ACM-CCS",
+    nombre: "ACM Computing Classification System (2012)",
+    formato: "Código CCS jerárquico",
+    ejemplo: "10010179",
     searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Ingresa solo el código ACM CCS (ej: CCS2012.10010179). No incluyas el descriptor."
+    instrucciones: "Ingresa el código ACM CCS correspondiente a AI / Machine Learning / Data Mining."
   },
   "Robótica y Automatización": {
-    vocabulario: "ACM",
-    nombre: "ACM Computing Classification System",
-    formato: "Solo código ACM",
-    ejemplo: "CCS2012.10010187",
+    vocabulario: "ACM-CCS / IEEE",
+    nombre: "ACM Computing Classification System + IEEE Thesaurus",
+    formato: "Código ACM-CCS o término IEEE",
+    ejemplo: "10010187",
     searchUrl: "https://dl.acm.org/ccs",
-    instrucciones: "Ingresa solo el código ACM CCS (ej: CCS2012.10010187). No incluyas el descriptor."
+    instrucciones: "Principalmente ACM CCS. También se usan términos del IEEE Thesaurus en journals IEEE."
   },
   "Ingeniería de Materiales y Nanotecnología": {
-    vocabulario: "ASM",
-    nombre: "ASM International Materials Thesaurus",
-    formato: "Solo código ASM",
-    ejemplo: "nanocomposites",
-    searchUrl: "https://www.asminternational.org/",
-    instrucciones: "Ingresa solo el identificador ASM. No incluyas el término completo."
+    vocabulario: "Ei / ASM",
+    nombre: "Engineering Index Thesaurus + ASM International terms",
+    formato: "Código Ei o término ASM",
+    ejemplo: "nanocomposites o código Ei correspondiente",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instrucciones: "No hay un sistema de códigos ASM único dominante para papers. Se usa principalmente Ei + términos controlados."
   },
   "Ingeniería Aeroespacial": {
     vocabulario: "NASA",
     nombre: "NASA Thesaurus",
-    formato: "Solo código NASA",
+    formato: "Término controlado del NASA Thesaurus",
     ejemplo: "aircraft-design",
     searchUrl: "https://sti.nasa.gov/nasa-thesaurus/",
-    instrucciones: "Ingresa solo el identificador del tesauro NASA. No incluyas el descriptor."
+    instrucciones: "Ingresa el identificador/término del NASA Thesaurus. Históricamente el estándar en literatura aeroespacial."
   },
   "Energías Renovables y Sostenibilidad": {
-    vocabulario: "ETDE",
-    nombre: "Energy Technology Data Exchange Thesaurus",
-    formato: "Solo código ETDE",
+    vocabulario: "Ei / ETDE (histórico)",
+    nombre: "Engineering Index Thesaurus (principal) + ETDE residual",
+    formato: "Código Ei o término",
     ejemplo: "solar-energy",
-    searchUrl: "https://www.etde.org/",
-    instrucciones: "Ingresa solo el identificador ETDE. No incluyas el término."
+    searchUrl: "https://www.engineeringvillage.com/",
+    instrucciones: "ETDE ya no es el estándar activo principal. Usa códigos/términos Ei/Compendex."
   },
+
+  // ========== CIENCIAS SOCIALES ==========
   "Sociología": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Solo código JEL",
-    ejemplo: "Z13",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Ingresa solo el código JEL (ej: Z13). No incluyas el descriptor."
+    vocabulario: "LCSH / UNESCO",
+    nombre: "Library of Congress Subject Headings + UNESCO Thesaurus",
+    formato: "Término LCSH o UNESCO",
+    ejemplo: "Sociology",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instrucciones: "JEL NO es de sociología (es solo de Economía). Se usan LCSH, UNESCO Thesaurus o tesauros de Sociological Abstracts."
   },
   "Antropología y Arqueología": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Solo código JEL",
-    ejemplo: "Z19",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Ingresa solo el código JEL (ej: Z19). No incluyas el descriptor."
+    vocabulario: "LCSH / UNESCO",
+    nombre: "Library of Congress Subject Headings + UNESCO Thesaurus",
+    formato: "Término LCSH o UNESCO",
+    ejemplo: "Anthropology",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instrucciones: "JEL NO aplica. Usar LCSH o UNESCO."
   },
   "Psicología": {
     vocabulario: "APA",
     nombre: "APA Thesaurus of Psychological Index Terms",
-    formato: "Solo código APA",
+    formato: "Término controlado APA",
     ejemplo: "cognitive-processes",
     searchUrl: "https://psycnet.apa.org/thesaurus/",
-    instrucciones: "Ingresa solo el identificador APA. No incluyas el término completo."
+    instrucciones: "Ingresa el término preferido del APA Thesaurus. Usado en PsycINFO."
   },
   "Economía y Negocios": {
     vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Solo código JEL",
+    nombre: "Journal of Economic Literature Classification System",
+    formato: "Código JEL (letra + números)",
     ejemplo: "D00",
     searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Ingresa solo el código JEL (ej: D00). No incluyas el descriptor."
+    instrucciones: "Ingresa solo el código JEL (ej: D00, J16, F50). Estándar absoluto en economía."
   },
   "Ciencias Políticas y Relaciones Internacionales": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Solo código JEL",
-    ejemplo: "F50",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Ingresa solo el código JEL (ej: F50). No incluyas el descriptor."
+    vocabulario: "LCSH / UNESCO",
+    nombre: "Library of Congress Subject Headings + UNESCO Thesaurus",
+    formato: "Término LCSH o UNESCO",
+    ejemplo: "International relations",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instrucciones: "JEL NO es de ciencias políticas. Usar LCSH o UNESCO."
   },
   "Derecho": {
-    vocabulario: "LCSH",
-    nombre: "Library of Congress Subject Headings",
-    formato: "Solo código LCSH",
+    vocabulario: "LCSH / LCC",
+    nombre: "Library of Congress Subject Headings + Library of Congress Classification (K)",
+    formato: "Término LCSH o número de clasificación",
     ejemplo: "KF385",
     searchUrl: "https://id.loc.gov/authorities/subjects.html",
-    instrucciones: "Ingresa solo el código de clasificación LCSH (ej: KF385). No incluyas el descriptor."
+    instrucciones: "Mezcla de subject headings (LCSH) y clasificación bibliográfica (clase K)."
   },
   "Geografía Humana y Ordenamiento Territorial": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Solo código JEL",
-    ejemplo: "R10",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Ingresa solo el código JEL (ej: R10). No incluyas el descriptor."
+    vocabulario: "LCSH / UNESCO",
+    nombre: "Library of Congress Subject Headings + UNESCO Thesaurus",
+    formato: "Término LCSH o UNESCO",
+    ejemplo: "Human geography",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instrucciones: "JEL (R10) es solo de economía regional. No es el estándar de geografía humana."
   },
   "Estudios de Género": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Solo código JEL",
-    ejemplo: "J16",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Ingresa solo el código JEL (ej: J16). No incluyas el descriptor."
+    vocabulario: "LCSH / UNESCO",
+    nombre: "Library of Congress Subject Headings + UNESCO Thesaurus",
+    formato: "Término LCSH o UNESCO",
+    ejemplo: "Gender identity",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instrucciones: "JEL (J16) es de economía de género. No es el estándar de Gender Studies."
   },
   "Comunicación Social y Periodismo": {
-    vocabulario: "CIOS",
-    nombre: "Communication Institute for Online Scholarship Thesaurus",
-    formato: "Solo código CIOS",
-    ejemplo: "mass-media-effects",
-    searchUrl: "https://www.cios.org/",
-    instrucciones: "Ingresa solo el identificador CIOS. No incluyas el término completo."
+    vocabulario: "LCSH",
+    nombre: "Library of Congress Subject Headings",
+    formato: "Término controlado",
+    ejemplo: "Mass media",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instrucciones: "No existe un 'CIOS Thesaurus' dominante y estándar. Se usan LCSH o términos de bases especializadas."
   },
   "Educación y Pedagogía": {
     vocabulario: "ERIC",
     nombre: "Education Resources Information Center Thesaurus",
-    formato: "Solo código ERIC",
+    formato: "Término controlado ERIC",
     ejemplo: "educational-technology",
     searchUrl: "https://eric.ed.gov/?ti=all",
-    instrucciones: "Ingresa solo el identificador ERIC. No incluyas el descriptor completo."
+    instrucciones: "Ingresa el identificador/término ERIC. Estándar en educación."
   },
   "Trabajo Social": {
-    vocabulario: "JEL",
-    nombre: "JEL Classification System",
-    formato: "Solo código JEL",
-    ejemplo: "I38",
-    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
-    instrucciones: "Ingresa solo el código JEL (ej: I38). No incluyas el descriptor."
+    vocabulario: "LCSH / MeSH",
+    nombre: "Library of Congress Subject Headings + MeSH (aspectos sanitarios)",
+    formato: "Término LCSH o código MeSH",
+    ejemplo: "Social work",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instrucciones: "JEL (I38) es de economía del bienestar. No es el estándar de Trabajo Social."
   },
+
+  // ========== HUMANIDADES ==========
   "Historia": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Solo código UNESCO",
-    ejemplo: "6.25",
+    formato: "Término preferido (descriptor)",
+    ejemplo: "History",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.25). No incluyas el descriptor."
+    instrucciones: "Ingresa el término preferido exacto del UNESCO Thesaurus (ej: History). No uses códigos numéricos antiguos de microthesauri (tipo 6.25)."
   },
   "Filosofía": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Solo código UNESCO",
-    ejemplo: "6.05",
+    formato: "Término preferido (descriptor)",
+    ejemplo: "Philosophy",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.05). No incluyas el descriptor."
+    instrucciones: "Ingresa el término preferido exacto del UNESCO Thesaurus (ej: Philosophy). No uses códigos numéricos antiguos de microthesauri (tipo 6.05)."
   },
   "Lingüística y Filología": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Solo código UNESCO",
-    ejemplo: "6.10",
+    formato: "Término preferido (descriptor)",
+    ejemplo: "Linguistics",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.10). No incluyas el descriptor."
+    instrucciones: "Ingresa el término preferido exacto del UNESCO Thesaurus (ej: Linguistics). No uses códigos numéricos antiguos de microthesauri (tipo 6.10)."
   },
   "Literatura": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Solo código UNESCO",
-    ejemplo: "6.15",
+    formato: "Término preferido (descriptor)",
+    ejemplo: "Literature",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.15). No incluyas el descriptor."
+    instrucciones: "Ingresa el término preferido exacto del UNESCO Thesaurus (ej: Literature). No uses códigos numéricos antiguos de microthesauri (tipo 6.15)."
   },
   "Estudios Clásicos": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Solo código UNESCO",
-    ejemplo: "6.20",
+    formato: "Término preferido (descriptor)",
+    ejemplo: "Classical studies",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.20). No incluyas el descriptor."
+    instrucciones: "Ingresa el término preferido exacto del UNESCO Thesaurus (ej: Classical studies). No uses códigos numéricos antiguos de microthesauri (tipo 6.20)."
   },
   "Teología y Ciencias de la Religión": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Solo código UNESCO",
-    ejemplo: "6.30",
+    formato: "Término preferido (descriptor)",
+    ejemplo: "Religion",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.30). No incluyas el descriptor."
+    instrucciones: "Ingresa el término preferido exacto del UNESCO Thesaurus (ej: Religion o Theology). No uses códigos numéricos antiguos de microthesauri (tipo 6.30)."
   },
   "Estudios Culturales": {
     vocabulario: "UNESCO",
     nombre: "UNESCO Thesaurus",
-    formato: "Solo código UNESCO",
-    ejemplo: "6.35",
+    formato: "Término preferido (descriptor)",
+    ejemplo: "Cultural studies",
     searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/es/",
-    instrucciones: "Ingresa solo el código numérico UNESCO (ej: 6.35). No incluyas el descriptor."
+    instrucciones: "Ingresa el término preferido exacto del UNESCO Thesaurus (ej: Cultural studies o Culture). No uses códigos numéricos antiguos de microthesauri (tipo 6.35)."
   },
   "Arte, Música y Cine": {
     vocabulario: "AAT",
-    nombre: "Art & Architecture Thesaurus",
-    formato: "Solo código AAT",
+    nombre: "Art & Architecture Thesaurus (Getty)",
+    formato: "Código numérico AAT",
     ejemplo: "300033618",
     searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
     instrucciones: "Ingresa solo el código numérico AAT (ej: 300033618). No incluyas el descriptor."
   },
   "Arquitectura y Urbanismo": {
     vocabulario: "AAT",
-    nombre: "Art & Architecture Thesaurus",
-    formato: "Solo código AAT",
+    nombre: "Art & Architecture Thesaurus (Getty)",
+    formato: "Código numérico AAT",
     ejemplo: "300008125",
     searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
     instrucciones: "Ingresa solo el código numérico AAT (ej: 300008125). No incluyas el descriptor."
   },
+
+  // ========== CIENCIAS AGRÍCOLAS ==========
   "Agronomía y Producción Agrícola": {
     vocabulario: "AGROVOC",
     nombre: "FAO Agricultural Thesaurus (AGROVOC)",
-    formato: "Solo código AGROVOC",
+    formato: "Código AGROVOC (c_XXXX)",
     ejemplo: "c_867",
-    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/es/",
     instrucciones: "Ingresa solo el código AGROVOC (ej: c_867). No incluyas el término."
   },
   "Ciencias Forestales": {
     vocabulario: "AGROVOC",
     nombre: "FAO Agricultural Thesaurus (AGROVOC)",
-    formato: "Solo código AGROVOC",
+    formato: "Código AGROVOC",
     ejemplo: "c_3014",
-    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
-    instrucciones: "Ingresa solo el código AGROVOC (ej: c_3014). No incluyas el término."
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/es/",
+    instrucciones: "Ingresa solo el código AGROVOC (ej: c_3014)."
   },
   "Acuicultura y Pesca": {
-    vocabulario: "ASFA",
-    nombre: "Aquatic Sciences and Fisheries Abstracts Thesaurus",
-    formato: "Solo código ASFA",
-    ejemplo: "Q5 01521",
-    searchUrl: "https://www.fao.org/fishery/asfa/en",
-    instrucciones: "Ingresa solo el código ASFA (ej: Q5 01521). No incluyas el descriptor."
+    vocabulario: "ASFA + AGROVOC",
+    nombre: "Aquatic Sciences and Fisheries Abstracts Thesaurus + AGROVOC",
+    formato: "Código ASFA o AGROVOC",
+    ejemplo: "Q5 01521 o c_XXXX",
+    searchUrl: "https://www.fao.org/fishery/asfa/es",
+    instrucciones: "ASFA es el clásico de pesca/acuicultura. AGROVOC también se usa ampliamente."
   },
   "Zootecnia y Producción Animal": {
     vocabulario: "AGROVOC",
     nombre: "FAO Agricultural Thesaurus (AGROVOC)",
-    formato: "Solo código AGROVOC",
+    formato: "Código AGROVOC",
     ejemplo: "c_433",
-    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
-    instrucciones: "Ingresa solo el código AGROVOC (ej: c_433). No incluyas el término."
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/es/",
+    instrucciones: "Ingresa solo el código AGROVOC (ej: c_433)."
   },
   "Ingeniería de Alimentos": {
     vocabulario: "FSTA",
-    nombre: "Food Science and Technology Abstracts Thesaurus",
-    formato: "Solo código FSTA",
+    nombre: "Food Science and Technology Abstracts Thesaurus (IFIS)",
+    formato: "Código o término FSTA",
     ejemplo: "Q04",
     searchUrl: "https://www.ifis.org/fsta",
-    instrucciones: "Ingresa solo el código FSTA (ej: Q04). No incluyas el descriptor."
+    instrucciones: "Ingresa el código o término FSTA (ej: Q04)."
+  }
+};
+const VOCABULARIO_POR_AREA_EN = {
+  // ========== EXACT AND NATURAL SCIENCES ==========
+  "Mathematics": {
+    vocabulary: "MSC",
+    name: "Mathematics Subject Classification (MSC2020)",
+    format: "Alphanumeric MSC code",
+    example: "11N05",
+    searchUrl: "https://mathscinet.ams.org/mathscinet/msc/msc2020.html",
+    instructions: "Enter only the MSC code (e.g., 11N05, 68T05). Do not include the descriptor. Used by MathSciNet, zbMATH, and most mathematics journals."
+  },
+  "Physics": {
+    vocabulary: "PhySH",
+    name: "Physics Subject Headings (APS)",
+    format: "PhySH concept identifier",
+    example: "quantum-mechanics",
+    searchUrl: "https://physh.aps.org/",
+    instructions: "Enter the PhySH identifier/concept (e.g., quantum-mechanics, condensed-matter-physics). It is not a rigid numeric code. It replaced PACS."
+  },
+  "Chemistry": {
+    vocabulary: "CA-Sections + CAS-RN",
+    name: "Chemical Abstracts Subject Sections + CAS Registry Numbers",
+    format: "CA section number (1-80) or CAS RN (substances only)",
+    example: "78-10-4 (CAS RN) or section 35 (Organic Chemistry)",
+    searchUrl: "https://commonchemistry.cas.org/",
+    instructions: "There is NO hierarchical thematic code system like MSC. Use: 1) CAS Registry Number only for specific compounds (e.g., 78-10-4). 2) Chemical Abstracts thematic sections (approx. 80 sections). 3) SciFinder controlled terms."
+  },
+  "Biology": {
+    vocabulary: "MeSH + NCBI-Taxonomy",
+    name: "Medical Subject Headings + NCBI Taxonomy",
+    format: "MeSH Unique ID / Tree Number or NCBI TaxID",
+    example: "D001777 (MeSH) or NCBI TaxID",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instructions: "MeSH is the biomedical standard (PubMed). For pure biology/organisms, NCBI Taxonomy is more commonly used. Enter MeSH code (e.g., D001777) or TaxID."
+  },
+  "Geology": {
+    vocabulary: "GeoRef",
+    name: "GeoRef Thesaurus + Subject Categories (AGI)",
+    format: "GeoRef category code (01-30) or thesaurus term",
+    example: "05 (Igneous and metamorphic petrology) or igneous-rocks",
+    searchUrl: "https://www.americangeosciences.org/georef/georef-thesaurus",
+    instructions: "Use category codes (01 Mineralogy … 30 Engineering geology) or controlled terms from the GeoRef Thesaurus. Example category: 05."
+  },
+  "Astronomy and Astrophysics": {
+    vocabulary: "UAT",
+    name: "Unified Astronomy Thesaurus",
+    format: "Numeric UAT code",
+    example: "1087",
+    searchUrl: "https://astrothesaurus.org/",
+    instructions: "Enter only the numeric UAT code (e.g., 1087). Do not include the descriptor. AAS standard."
+  },
+  "Environmental Sciences and Ecology": {
+    vocabulary: "GEMET / EnvThes",
+    name: "GEneral Multilingual Environmental Thesaurus / Environmental Thesaurus (LTER)",
+    format: "Identifier or controlled term",
+    example: "20286 (EnvThes) or GEMET term",
+    searchUrl: "https://www.eionet.europa.eu/gemet/",
+    instructions: "GEMET is the most general and internationally used. EnvThes is specific to European LTER networks. Enter identifier or preferred term."
+  },
+  "Oceanography": {
+    vocabulary: "BODC/NERC",
+    name: "NERC Vocabulary Server (BODC) – Parameter Usage Vocabulary",
+    format: "Alphanumeric collection code (P01, P02, etc.)",
+    example: "P021 or full P01 code",
+    searchUrl: "https://vocab.nerc.ac.uk/",
+    instructions: "Enter the NERC/BODC collection code (e.g., P01 for parameters). Standard for marine and oceanographic data."
+  },
+  "Meteorology and Atmospheric Sciences": {
+    vocabulary: "AMS-Terms / WMO-Codes",
+    name: "American Meteorological Society terminology + WMO Codes (data only)",
+    format: "AMS controlled terms or WMO codes (BUFR/GRIB)",
+    example: "atmospheric-river or specific WMO code",
+    searchUrl: "https://www.ametsoc.org/",
+    instructions: "There is NO thematic paper classification system equivalent to MSC or MeSH. AMS journals use controlled terms. WMO codes are for data transmission, not for indexing literature."
+  },
+  "Paleontology": {
+    vocabulary: "GeoRef",
+    name: "GeoRef Subject Categories (08-11) + Thesaurus",
+    format: "GeoRef category code or thesaurus term",
+    example: "10 (Invertebrate paleontology)",
+    searchUrl: "https://www.americangeosciences.org/georef/georef-thesaurus",
+    instructions: "Use GeoRef categories: 08 General paleontology, 09 Paleobotany, 10 Invertebrate, 11 Vertebrate. PBDB is a taxon database, NOT a paper classification system."
+  },
+
+  // ========== HEALTH SCIENCES ==========
+  "General and Internal Medicine": {
+    vocabulary: "MeSH",
+    name: "Medical Subject Headings",
+    format: "MeSH Unique ID / Tree Number",
+    example: "D008112",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instructions: "Enter only the MeSH code (e.g., D008112). Do not include the descriptor. Absolute standard in PubMed/MEDLINE."
+  },
+  "Public Health and Epidemiology": {
+    vocabulary: "MeSH",
+    name: "Medical Subject Headings",
+    format: "MeSH Unique ID / Tree Number",
+    example: "D011635",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instructions: "Enter only the MeSH code (e.g., D011635). Do not include the descriptor."
+  },
+  "Nursing": {
+    vocabulary: "MeSH",
+    name: "Medical Subject Headings",
+    format: "MeSH Unique ID / Tree Number",
+    example: "D009729",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instructions: "Enter only the MeSH code (e.g., D009729). Do not include the descriptor."
+  },
+  "Nutrition and Dietetics": {
+    vocabulary: "MeSH",
+    name: "Medical Subject Headings",
+    format: "MeSH Unique ID / Tree Number",
+    example: "D009750",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instructions: "Enter only the MeSH code (e.g., D009750). Do not include the descriptor."
+  },
+  "Pharmacology and Pharmacy": {
+    vocabulary: "MeSH",
+    name: "Medical Subject Headings",
+    format: "MeSH Unique ID / Tree Number",
+    example: "D010597",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instructions: "Enter only the MeSH code (e.g., D010597). Do not include the descriptor. CAS RN are also used for compounds."
+  },
+  "Dentistry": {
+    vocabulary: "MeSH",
+    name: "Medical Subject Headings",
+    format: "MeSH Unique ID / Tree Number",
+    example: "D003813",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instructions: "Enter only the MeSH code (e.g., D003813). Do not include the descriptor."
+  },
+  "Kinesiology and Physical Therapy": {
+    vocabulary: "MeSH",
+    name: "Medical Subject Headings",
+    format: "MeSH Unique ID / Tree Number",
+    example: "D026801",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instructions: "Enter only the MeSH code (e.g., D026801). Do not include the descriptor."
+  },
+  "Medical Technology and Bioanalysis": {
+    vocabulary: "MeSH",
+    name: "Medical Subject Headings",
+    format: "MeSH Unique ID / Tree Number",
+    example: "D008364",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instructions: "Enter only the MeSH code (e.g., D008364). Do not include the descriptor."
+  },
+  "Veterinary Medicine": {
+    vocabulary: "MeSH",
+    name: "Medical Subject Headings",
+    format: "MeSH Unique ID / Tree Number",
+    example: "D014730",
+    searchUrl: "https://meshb.nlm.nih.gov/search",
+    instructions: "Enter only the MeSH code (e.g., D014730). Do not include the descriptor."
+  },
+
+  // ========== ENGINEERING AND TECHNOLOGY ==========
+  "Civil Engineering": {
+    vocabulary: "Ei",
+    name: "Engineering Index Thesaurus / Compendex Classification",
+    format: "Ei classification code",
+    example: "405.1",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instructions: "Enter only the Ei/Compendex code (e.g., 405.1). Controlled terms from the Ei Thesaurus are also used."
+  },
+  "Industrial and Systems Engineering": {
+    vocabulary: "Ei",
+    name: "Engineering Index Thesaurus / Compendex Classification",
+    format: "Ei classification code",
+    example: "912.2",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instructions: "There is no 'IIE/IISE' paper code system. The Ei/Compendex system is used (same as other engineering fields)."
+  },
+  "Mechanical Engineering": {
+    vocabulary: "Ei / ASME",
+    name: "Engineering Index Thesaurus (Compendex) + ASME subject categories",
+    format: "Ei code or ASME category",
+    example: "601.1 or 10-01",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instructions: "Primarily Ei/Compendex codes. ASME has its own categories in its journals."
+  },
+  "Electrical and Electronic Engineering": {
+    vocabulary: "IEEE",
+    name: "IEEE Thesaurus / IEEE Taxonomy",
+    format: "IEEE Thesaurus controlled term",
+    example: "power-systems",
+    searchUrl: "https://www.ieee.org/publications/services/thesaurus-access-page.html",
+    instructions: "Enter the preferred term from the IEEE Thesaurus. The IEEE Taxonomy (3-level hierarchical) also exists. The old B6210L-type example is not the current primary format."
+  },
+  "Chemical Engineering and Biotechnology": {
+    vocabulary: "Ei",
+    name: "Engineering Index Thesaurus / Compendex",
+    format: "Ei classification code",
+    example: "804.1",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instructions: "There is no standard 'IChemE Thesaurus' for paper classification. Ei/Compendex is used."
+  },
+  "Computer Science and Informatics": {
+    vocabulary: "ACM-CCS",
+    name: "ACM Computing Classification System (2012)",
+    format: "Hierarchical CCS code",
+    example: "10003116",
+    searchUrl: "https://dl.acm.org/ccs",
+    instructions: "Enter the ACM CCS code (e.g., 10003116). Standard in ACM Digital Library and CS journals."
+  },
+  "Data Science and Artificial Intelligence": {
+    vocabulary: "ACM-CCS",
+    name: "ACM Computing Classification System (2012)",
+    format: "Hierarchical CCS code",
+    example: "10010179",
+    searchUrl: "https://dl.acm.org/ccs",
+    instructions: "Enter the ACM CCS code corresponding to AI / Machine Learning / Data Mining."
+  },
+  "Robotics and Automation": {
+    vocabulary: "ACM-CCS / IEEE",
+    name: "ACM Computing Classification System + IEEE Thesaurus",
+    format: "ACM-CCS code or IEEE term",
+    example: "10010187",
+    searchUrl: "https://dl.acm.org/ccs",
+    instructions: "Primarily ACM CCS. IEEE Thesaurus terms are also used in IEEE journals."
+  },
+  "Materials Science and Nanotechnology": {
+    vocabulary: "Ei / ASM",
+    name: "Engineering Index Thesaurus + ASM International terms",
+    format: "Ei code or ASM term",
+    example: "nanocomposites or corresponding Ei code",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instructions: "There is no single dominant ASM code system for papers. Mainly Ei + controlled terms are used."
+  },
+  "Aerospace Engineering": {
+    vocabulary: "NASA",
+    name: "NASA Thesaurus",
+    format: "NASA Thesaurus controlled term",
+    example: "aircraft-design",
+    searchUrl: "https://sti.nasa.gov/nasa-thesaurus/",
+    instructions: "Enter the NASA Thesaurus identifier/term. Historically the standard in aerospace literature."
+  },
+  "Renewable Energies and Sustainability": {
+    vocabulary: "Ei / ETDE (historical)",
+    name: "Engineering Index Thesaurus (primary) + ETDE residual",
+    format: "Ei code or term",
+    example: "solar-energy",
+    searchUrl: "https://www.engineeringvillage.com/",
+    instructions: "ETDE is no longer the primary active standard. Use Ei/Compendex codes/terms."
+  },
+
+  // ========== SOCIAL SCIENCES ==========
+  "Sociology": {
+    vocabulary: "LCSH / UNESCO",
+    name: "Library of Congress Subject Headings + UNESCO Thesaurus",
+    format: "LCSH or UNESCO term",
+    example: "Sociology",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instructions: "JEL is NOT for sociology (it is Economics only). Use LCSH, UNESCO Thesaurus, or Sociological Abstracts thesauri."
+  },
+  "Anthropology and Archaeology": {
+    vocabulary: "LCSH / UNESCO",
+    name: "Library of Congress Subject Headings + UNESCO Thesaurus",
+    format: "LCSH or UNESCO term",
+    example: "Anthropology",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instructions: "JEL does NOT apply. Use LCSH or UNESCO."
+  },
+  "Psychology": {
+    vocabulary: "APA",
+    name: "APA Thesaurus of Psychological Index Terms",
+    format: "APA controlled term",
+    example: "cognitive-processes",
+    searchUrl: "https://psycnet.apa.org/thesaurus/",
+    instructions: "Enter the preferred term from the APA Thesaurus. Used in PsycINFO."
+  },
+  "Economics and Business": {
+    vocabulary: "JEL",
+    name: "Journal of Economic Literature Classification System",
+    format: "JEL code (letter + numbers)",
+    example: "D00",
+    searchUrl: "https://www.aeaweb.org/econlit/jelCodes.php",
+    instructions: "Enter only the JEL code (e.g., D00, J16, F50). Absolute standard in economics."
+  },
+  "Political Science and International Relations": {
+    vocabulary: "LCSH / UNESCO",
+    name: "Library of Congress Subject Headings + UNESCO Thesaurus",
+    format: "LCSH or UNESCO term",
+    example: "International relations",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instructions: "JEL is NOT for political science. Use LCSH or UNESCO."
+  },
+  "Law": {
+    vocabulary: "LCSH / LCC",
+    name: "Library of Congress Subject Headings + Library of Congress Classification (K)",
+    format: "LCSH term or classification number",
+    example: "KF385",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instructions: "Mix of subject headings (LCSH) and bibliographic classification (class K)."
+  },
+  "Human Geography and Land Planning": {
+    vocabulary: "LCSH / UNESCO",
+    name: "Library of Congress Subject Headings + UNESCO Thesaurus",
+    format: "LCSH or UNESCO term",
+    example: "Human geography",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instructions: "JEL (R10) is only for regional economics. It is not the standard for human geography."
+  },
+  "Gender Studies": {
+    vocabulary: "LCSH / UNESCO",
+    name: "Library of Congress Subject Headings + UNESCO Thesaurus",
+    format: "LCSH or UNESCO term",
+    example: "Gender identity",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instructions: "JEL (J16) is for gender economics. It is not the standard for Gender Studies."
+  },
+  "Social Communication and Journalism": {
+    vocabulary: "LCSH",
+    name: "Library of Congress Subject Headings",
+    format: "Controlled term",
+    example: "Mass media",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instructions: "There is no dominant standard 'CIOS Thesaurus'. LCSH or specialized database terms are used."
+  },
+  "Education and Pedagogy": {
+    vocabulary: "ERIC",
+    name: "Education Resources Information Center Thesaurus",
+    format: "ERIC controlled term",
+    example: "educational-technology",
+    searchUrl: "https://eric.ed.gov/?ti=all",
+    instructions: "Enter the ERIC identifier/term. Standard in education."
+  },
+  "Social Work": {
+    vocabulary: "LCSH / MeSH",
+    name: "Library of Congress Subject Headings + MeSH (health aspects)",
+    format: "LCSH term or MeSH code",
+    example: "Social work",
+    searchUrl: "https://id.loc.gov/authorities/subjects.html",
+    instructions: "JEL (I38) is welfare economics. It is not the standard for Social Work."
+  },
+
+  // ========== HUMANITIES ==========
+  "History": {
+    vocabulary: "UNESCO",
+    name: "UNESCO Thesaurus",
+    format: "Preferred term (descriptor)",
+    example: "History",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/en/",
+    instructions: "Enter the exact preferred term from the UNESCO Thesaurus (e.g., History). Do not use old numeric microthesauri codes (like 6.25)."
+  },
+  "Philosophy": {
+    vocabulary: "UNESCO",
+    name: "UNESCO Thesaurus",
+    format: "Preferred term (descriptor)",
+    example: "Philosophy",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/en/",
+    instructions: "Enter the exact preferred term from the UNESCO Thesaurus (e.g., Philosophy). Do not use old numeric microthesauri codes (like 6.05)."
+  },
+  "Linguistics and Philology": {
+    vocabulary: "UNESCO",
+    name: "UNESCO Thesaurus",
+    format: "Preferred term (descriptor)",
+    example: "Linguistics",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/en/",
+    instructions: "Enter the exact preferred term from the UNESCO Thesaurus (e.g., Linguistics). Do not use old numeric microthesauri codes (like 6.10)."
+  },
+  "Literature": {
+    vocabulary: "UNESCO",
+    name: "UNESCO Thesaurus",
+    format: "Preferred term (descriptor)",
+    example: "Literature",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/en/",
+    instructions: "Enter the exact preferred term from the UNESCO Thesaurus (e.g., Literature). Do not use old numeric microthesauri codes (like 6.15)."
+  },
+  "Classical Studies": {
+    vocabulary: "UNESCO",
+    name: "UNESCO Thesaurus",
+    format: "Preferred term (descriptor)",
+    example: "Classical studies",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/en/",
+    instructions: "Enter the exact preferred term from the UNESCO Thesaurus (e.g., Classical studies). Do not use old numeric microthesauri codes (like 6.20)."
+  },
+  "Theology and Religious Studies": {
+    vocabulary: "UNESCO",
+    name: "UNESCO Thesaurus",
+    format: "Preferred term (descriptor)",
+    example: "Religion",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/en/",
+    instructions: "Enter the exact preferred term from the UNESCO Thesaurus (e.g., Religion or Theology). Do not use old numeric microthesauri codes (like 6.30)."
+  },
+  "Cultural Studies": {
+    vocabulary: "UNESCO",
+    name: "UNESCO Thesaurus",
+    format: "Preferred term (descriptor)",
+    example: "Cultural studies",
+    searchUrl: "https://vocabularies.unesco.org/browser/thesaurus/en/",
+    instructions: "Enter the exact preferred term from the UNESCO Thesaurus (e.g., Cultural studies or Culture). Do not use old numeric microthesauri codes (like 6.35)."
+  },
+  "Art, Music and Film": {
+    vocabulary: "AAT",
+    name: "Art & Architecture Thesaurus (Getty)",
+    format: "Numeric AAT code",
+    example: "300033618",
+    searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
+    instructions: "Enter only the numeric AAT code (e.g., 300033618). Do not include the descriptor."
+  },
+  "Architecture and Urbanism": {
+    vocabulary: "AAT",
+    name: "Art & Architecture Thesaurus (Getty)",
+    format: "Numeric AAT code",
+    example: "300008125",
+    searchUrl: "https://www.getty.edu/research/tools/vocabularies/aat/",
+    instructions: "Enter only the numeric AAT code (e.g., 300008125). Do not include the descriptor."
+  },
+
+  // ========== AGRICULTURAL SCIENCES ==========
+  "Agronomy and Agricultural Production": {
+    vocabulary: "AGROVOC",
+    name: "FAO Agricultural Thesaurus (AGROVOC)",
+    format: "AGROVOC code (c_XXXX)",
+    example: "c_867",
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
+    instructions: "Enter only the AGROVOC code (e.g., c_867). Do not include the term."
+  },
+  "Forestry Sciences": {
+    vocabulary: "AGROVOC",
+    name: "FAO Agricultural Thesaurus (AGROVOC)",
+    format: "AGROVOC code",
+    example: "c_3014",
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
+    instructions: "Enter only the AGROVOC code (e.g., c_3014)."
+  },
+  "Aquaculture and Fisheries": {
+    vocabulary: "ASFA + AGROVOC",
+    name: "Aquatic Sciences and Fisheries Abstracts Thesaurus + AGROVOC",
+    format: "ASFA or AGROVOC code",
+    example: "Q5 01521 or c_XXXX",
+    searchUrl: "https://www.fao.org/fishery/asfa/en",
+    instructions: "ASFA is the classic for fisheries/aquaculture. AGROVOC is also widely used."
+  },
+  "Animal Science and Production": {
+    vocabulary: "AGROVOC",
+    name: "FAO Agricultural Thesaurus (AGROVOC)",
+    format: "AGROVOC code",
+    example: "c_433",
+    searchUrl: "https://agrovoc.fao.org/browse/agrovoc/en/",
+    instructions: "Enter only the AGROVOC code (e.g., c_433)."
+  },
+  "Food Engineering": {
+    vocabulary: "FSTA",
+    name: "Food Science and Technology Abstracts Thesaurus (IFIS)",
+    format: "FSTA code or term",
+    example: "Q04",
+    searchUrl: "https://www.ifis.org/fsta",
+    instructions: "Enter the FSTA code or term (e.g., Q04)."
   }
 };
 // Agrega esto después de AREAS_TEMATICAS
@@ -554,9 +1019,35 @@ Object.entries(AREAS_TEMATICAS.es).forEach(([catEs, areasEs]) => {
 
 
 // Helper para obtener vocabulario
-const getVocabularyForArea = (area) => {
+// Helper para obtener vocabulario (actualizado para soportar inglés)
+const getVocabularyForArea = (area, lang = 'es') => {
   // Si el área está en inglés, buscar su equivalente en español
   const spanishArea = AREA_MAPPING[area] || area;
+  
+  // Si el idioma es inglés, buscar en VOCABULARIO_POR_AREA_EN
+  if (lang === 'en') {
+    // El área ya está en inglés (viene del selector)
+    const englishArea = area;
+    
+    // Buscar directamente en el objeto en inglés
+    if (VOCABULARIO_POR_AREA_EN[englishArea]) {
+      return VOCABULARIO_POR_AREA_EN[englishArea];
+    }
+    
+    // Si no se encuentra, buscar el equivalente en inglés del área en español
+    const areaEn = Object.keys(AREA_MAPPING).find(
+      en => AREA_MAPPING[en] === spanishArea && en !== spanishArea
+    );
+    
+    if (areaEn && VOCABULARIO_POR_AREA_EN[areaEn]) {
+      return VOCABULARIO_POR_AREA_EN[areaEn];
+    }
+    
+    // Fallback al español
+    return VOCABULARIO_POR_AREA[spanishArea];
+  }
+  
+  // Para español, usar el objeto original
   return VOCABULARIO_POR_AREA[spanishArea];
 };
 const HelpCapsule = ({ text, title }) => {
@@ -670,11 +1161,11 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
             </div>
             <div className="flex-1">
               <h4 className="font-serif font-bold text-[#003b5c] text-sm tracking-wide">
-                {vocabularyConfig.vocabulario}: {vocabularyConfig.nombre}
-              </h4>
-              <p className="text-slate-500 text-xs mt-1.5 font-sans leading-relaxed">
-                {vocabularyConfig.instrucciones}
-              </p>
+  {vocabularyConfig.vocabulario || vocabularyConfig.vocabulary}: {vocabularyConfig.nombre || vocabularyConfig.name}
+</h4>
+<p className="text-slate-500 text-xs mt-1.5 font-sans leading-relaxed">
+  {vocabularyConfig.instrucciones || vocabularyConfig.instructions}
+</p>
               <a
                 href={vocabularyConfig.searchUrl}
                 target="_blank"
@@ -691,18 +1182,18 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
           </div>
           <div className="bg-white rounded-lg p-4 border border-slate-100">
             <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-              {isSpanish ? 'Formato esperado:' : 'Expected format:'}
-            </span>
-            <code className="ml-2 text-sm font-mono text-[#003b5c] bg-slate-50 px-2 py-1 rounded">
-              {vocabularyConfig.formato}
-            </code>
-            <span className="text-slate-400 text-sm mx-2">·</span>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-              {isSpanish ? 'Ejemplo:' : 'Example:'}
-            </span>
-            <code className="ml-2 text-sm font-mono text-[#e86125] bg-slate-50 px-2 py-1 rounded">
-              {vocabularyConfig.ejemplo}
-            </code>
+  {isSpanish ? 'Formato esperado:' : 'Expected format:'}
+</span>
+<code className="ml-2 text-sm font-mono text-[#003b5c] bg-slate-50 px-2 py-1 rounded">
+  {vocabularyConfig.formato || vocabularyConfig.format}
+</code>
+<span className="text-slate-400 text-sm mx-2">·</span>
+<span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
+  {isSpanish ? 'Ejemplo:' : 'Example:'}
+</span>
+<code className="ml-2 text-sm font-mono text-[#e86125] bg-slate-50 px-2 py-1 rounded">
+  {vocabularyConfig.ejemplo || vocabularyConfig.example}
+</code>
           </div>
         </div>
       )}
@@ -714,7 +1205,13 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
             value={newTerm}
             onChange={(e) => setNewTerm(e.target.value)}
             onKeyPress={handleTermKeyPress}
-            placeholder={mode === 'codes' ? "Ej: CCS2012.10010179" : (isSpanish ? "Ej: Aprendizaje automático" : "e.g., Machine learning")}
+            // En ControlledKeywordInput
+placeholder={mode === 'codes' 
+  ? (isSpanish 
+      ? `Ej: ${vocabularyConfig.ejemplo || vocabularyConfig.example}` 
+      : `e.g., ${vocabularyConfig.example || vocabularyConfig.ejemplo}`)
+  : (isSpanish ? "Ej: Aprendizaje automático" : "e.g., Machine learning")
+}
             className="w-full p-3.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:bg-slate-50 outline-none transition-all duration-300 shadow-sm"
           />
           {mode === 'keywords' && (
@@ -1360,7 +1857,7 @@ const steps = [
           formData.keywordsEs.length <= 6 &&
           formData.area.trim() &&
           formData.articleType;
-           if (formData.area && getVocabularyForArea(formData.area)) {
+           if (formData.area && getVocabularyForArea(formData.area, language)) {
           if (!formData.specializedCodes || formData.specializedCodes.length < 2) {
             return false;
           }
@@ -1427,11 +1924,11 @@ const steps = [
           errors.area = isSpanish ? 'El área temática es obligatoria' : 'Subject area is required';
         }
                 // Validación de códigos especializados (si hay área con vocabulario)
-        if (formData.area && getVocabularyForArea(formData.area)) {
+        if (formData.area && getVocabularyForArea(formData.area, language)) {
           if (!formData.specializedCodes || formData.specializedCodes.length < 2) {
             errors.specializedCodes = isSpanish 
-              ? `Debes agregar al menos 2 códigos especializados (${getVocabularyForArea(formData.area)?.vocabulario})` 
-              : `You must add at least 2 specialized codes (${getVocabularyForArea(formData.area)?.vocabulario})`;
+              ? `Debes agregar al menos 2 códigos especializados (${getVocabularyForArea(formData.area, language)?.vocabulario})` 
+              : `You must add at least 2 specialized codes (${getVocabularyForArea(formData.area, language)?.vocabulario})`;
           }
           if (formData.specializedCodes && formData.specializedCodes.length > 4) {
             errors.specializedCodes = isSpanish 
@@ -1579,7 +2076,7 @@ const steps = [
   abstractEn: formData.abstractEn,
   keywordsEs: formData.keywordsEs,  // ✅ Nombre correcto
   keywordsEn: formData.keywordsEn,  // ✅ Nombre correcto
-  keywordsVocabulario: getVocabularyForArea(formData.area)?.vocabulario || 'unknown',  // ✅ CORRECTO
+  keywordsVocabulario: getVocabularyForArea(formData.area, language)?.vocabulario || 'unknown',  // ✅ CORRECTO
   specializedCodes: formData.specializedCodes,  // ✅ Nombre correcto (si el backend lo espera así)
   area: formData.area,
         paperLanguage: formData.paperLanguage,
@@ -2042,7 +2539,7 @@ const steps = [
                         <span className="text-red-500 ml-1">*</span>
                       </label>
                       <ControlledKeywordInput
-                        vocabularyConfig={getVocabularyForArea(formData.area) || {}}
+                        vocabularyConfig={getVocabularyForArea(formData.area, language) || {}}
                         value={formData.keywordsEs}
                         onChange={(val) => {
                           setFormData(prev => ({ ...prev, keywordsEs: val }));
@@ -2066,7 +2563,7 @@ const steps = [
                         <span className="text-red-500 ml-1">*</span>
                       </label>
                       <ControlledKeywordInput
-                        vocabularyConfig={getVocabularyForArea(formData.area) || {}}
+                        vocabularyConfig={getVocabularyForArea(formData.area, language) || {}}
                         value={formData.keywordsEn}
                         onChange={(val) => setFormData(prev => ({ ...prev, keywordsEn: val }))}
                         language={language}
@@ -2075,7 +2572,7 @@ const steps = [
                     </div>
                   </div>
 {/* Códigos especializados - SOLO si hay área seleccionada con vocabulario */}
-{formData.area && getVocabularyForArea(formData.area) ? (
+{formData.area && getVocabularyForArea(formData.area, language) ? (
   <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 ring-1 ring-slate-200/60 shadow-sm">
     <div className="flex items-center gap-2 mb-4">
       <div className="w-10 h-10 bg-[#003b5c]/5 rounded-lg flex items-center justify-center">
@@ -2088,14 +2585,14 @@ const steps = [
         <HelpCapsule
           title={isSpanish ? '¿Qué son los códigos especializados?' : 'What are specialized codes?'}
           text={isSpanish
-            ? `Son códigos estandarizados del vocabulario ${getVocabularyForArea(formData.area)?.vocabulario || ''}. Solo necesitas ingresar el código (ej: ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area)?.ejemplo || ''}). No incluyas el término completo. Debes agregar entre 2 y 4 códigos.`
-            : `These are standardized codes from the ${getVocabularyForArea(formData.area)?.vocabulario || ''} vocabulary. You only need to enter the code (e.g., ${getVocabularyForArea(formData.area)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area)?.ejemplo || ''}). Do not include the full term. You must add between 2 and 4 codes.`}
+            ? `Son códigos estandarizados del vocabulario ${getVocabularyForArea(formData.area, language)?.vocabulario || ''}. Solo necesitas ingresar el código (ej: ${getVocabularyForArea(formData.area, language)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area, language)?.ejemplo || ''}). No incluyas el término completo. Debes agregar entre 2 y 4 códigos.`
+            : `These are standardized codes from the ${getVocabularyForArea(formData.area, language)?.vocabulario || ''} vocabulary. You only need to enter the code (e.g., ${getVocabularyForArea(formData.area, language)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area, language)?.ejemplo || ''}). Do not include the full term. You must add between 2 and 4 codes.`}
         />
       </label>
     </div>
     
     <ControlledKeywordInput
-      vocabularyConfig={getVocabularyForArea(formData.area)}
+      vocabularyConfig={getVocabularyForArea(formData.area, language)}
       value={formData.specializedCodes}
       onChange={(val) => {
         setFormData(prev => ({ ...prev, specializedCodes: val }));

@@ -1317,7 +1317,10 @@ console.log(`[${requestId}] 📝 Datos del artículo recibidos:`, {
       const JSON_PATH = "articles.json";
       const BRANCH = "main";
 
+            // Función para obtener el JSON actual
       async function getCurrentArticlesJson() {
+        console.log(`[${requestId}] 📥 Intentando obtener articles.json...`);
+        
         try {
           const { data } = await octokit.repos.getContent({
             owner: REPO_OWNER,
@@ -1326,47 +1329,263 @@ console.log(`[${requestId}] 📝 Datos del artículo recibidos:`, {
             ref: BRANCH
           });
           
-          const content = Buffer.from(data.content, 'base64').toString('utf8');
-          return {
-            articles: JSON.parse(content),
-            sha: data.sha
-          };
+          console.log(`[${requestId}] 📏 Tamaño del archivo: ${data.size} bytes`);
+          
+          if (data.size < 1000000 && data.content) {
+            console.log(`[${requestId}] ✅ Usando contenido de API estándar`);
+            
+            const content = Buffer.from(data.content, 'base64').toString('utf8');
+            
+            if (!content || content.trim() === '') {
+              console.warn(`[${requestId}] ⚠️ Contenido vacío, intentando Git Database API...`);
+              return await getCurrentArticlesJsonViaGitDatabase();
+            }
+            
+            if (content.charCodeAt(0) === 0xFEFF) {
+              content = content.slice(1);
+            }
+            
+            try {
+              const parsedContent = JSON.parse(content);
+              console.log(`[${requestId}] ✅ JSON parseado: ${parsedContent.length} artículos`);
+              return {
+                articles: Array.isArray(parsedContent) ? parsedContent : [],
+                sha: data.sha
+              };
+            } catch (parseError) {
+              console.error(`[${requestId}] ❌ Error parseando JSON:`, parseError.message);
+              return await getCurrentArticlesJsonViaGitDatabase();
+            }
+          }
+          
+          console.log(`[${requestId}] ⚠️ Archivo grande (${data.size} bytes), usando Git Database API`);
+          return await getCurrentArticlesJsonViaGitDatabase();
+          
         } catch (error) {
           if (error.status === 404) {
+            console.log(`[${requestId}] 📝 articles.json no existe, se creará nuevo`);
             return {
               articles: [],
               sha: null
             };
           }
+          
+          console.error(`[${requestId}] ❌ Error en getContent:`, error.message);
+          return await getCurrentArticlesJsonViaGitDatabase();
+        }
+      }
+
+      // Función alternativa usando Git Database API para archivos grandes
+      async function getCurrentArticlesJsonViaGitDatabase() {
+        console.log(`[${requestId}] 📥 Usando Git Database API para obtener articles.json...`);
+        
+        try {
+          // 1. Obtener la referencia del branch
+          const { data: refData } = await octokit.git.getRef({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            ref: `heads/${BRANCH}`
+          });
+          
+          const commitSha = refData.object.sha;
+          console.log(`[${requestId}] ✅ Commit SHA: ${commitSha}`);
+          
+          // 2. Obtener el commit para conocer el SHA del árbol
+          const { data: commitData } = await octokit.git.getCommit({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            commit_sha: commitSha
+          });
+          
+          const treeSha = commitData.tree.sha;
+          console.log(`[${requestId}] ✅ Tree SHA: ${treeSha}`);
+          
+          // 3. Obtener el árbol COMPLETO (recursivo)
+          const { data: treeData } = await octokit.git.getTree({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            tree_sha: treeSha,
+            recursive: 1
+          });
+          
+          console.log(`[${requestId}] ✅ Árbol obtenido: ${treeData.tree.length} elementos`);
+          
+          // 4. Buscar el archivo en el árbol completo
+          const fileEntry = treeData.tree.find(item => item.path === JSON_PATH);
+          
+          if (!fileEntry) {
+            console.log(`[${requestId}] 📝 articles.json no encontrado en el árbol`);
+            return {
+              articles: [],
+              sha: null
+            };
+          }
+          
+          console.log(`[${requestId}] ✅ Archivo encontrado. SHA: ${fileEntry.sha}`);
+          
+          // 5. Obtener el blob del archivo
+          const { data: blobData } = await octokit.git.getBlob({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            file_sha: fileEntry.sha
+          });
+          
+          let content;
+          if (blobData.encoding === 'base64') {
+            content = Buffer.from(blobData.content, 'base64').toString('utf8');
+          } else {
+            content = blobData.content;
+          }
+          
+          console.log(`[${requestId}] 📏 Blob decodificado: ${content.length} caracteres`);
+          
+          if (!content || content.trim() === '') {
+            console.warn(`[${requestId}] ⚠️ El blob está vacío`);
+            return {
+              articles: [],
+              sha: fileEntry.sha
+            };
+          }
+          
+          if (content.charCodeAt(0) === 0xFEFF) {
+            content = content.slice(1);
+          }
+          
+          try {
+            const parsedContent = JSON.parse(content);
+            console.log(`[${requestId}] ✅ JSON parseado: ${parsedContent.length} artículos`);
+            return {
+              articles: Array.isArray(parsedContent) ? parsedContent : [],
+              sha: fileEntry.sha
+            };
+          } catch (parseError) {
+            console.error(`[${requestId}] ❌ Error parseando blob:`, parseError.message);
+            console.error(`[${requestId}] 📄 Primeros 200 caracteres:`, content.substring(0, 200));
+            return {
+              articles: [],
+              sha: fileEntry.sha
+            };
+          }
+        } catch (error) {
+          console.error(`[${requestId}] ❌ Error en Git Database API:`, error.message);
           throw error;
         }
       }
 
+      // Función para guardar el JSON
       async function saveArticlesJson(articles, sha, commitMessage) {
-        const content = Buffer.from(JSON.stringify(articles, null, 2)).toString('base64');
+        const content = JSON.stringify(articles, null, 2);
+        const contentBuffer = Buffer.from(content, 'utf8');
         
-        if (sha) {
-          await octokit.repos.createOrUpdateFileContents({
+        console.log(`[${requestId}] 📏 Tamaño del contenido a guardar: ${contentBuffer.length} bytes`);
+        
+        if (contentBuffer.length < 1000000) {
+          console.log(`[${requestId}] ✅ Usando API estándar para guardar`);
+          
+          const contentBase64 = contentBuffer.toString('base64');
+          
+          const params = {
             owner: REPO_OWNER,
             repo: REPO_NAME,
             path: JSON_PATH,
             message: commitMessage,
-            content: content,
-            sha: sha,
+            content: contentBase64,
             branch: BRANCH
-          });
+          };
+          
+          if (sha) {
+            params.sha = sha;
+          }
+          
+          await octokit.repos.createOrUpdateFileContents(params);
+          console.log(`[${requestId}] ✅ Archivo guardado con API estándar`);
         } else {
-          await octokit.repos.createOrUpdateFileContents({
-            owner: REPO_OWNER,
-            repo: REPO_NAME,
-            path: JSON_PATH,
-            message: commitMessage,
-            content: content,
-            branch: BRANCH
-          });
+          console.log(`[${requestId}] ⚠️ Archivo grande, usando Git Database API para guardar`);
+          
+          try {
+            // 1. Obtener la referencia actual del branch
+            const { data: refData } = await octokit.git.getRef({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              ref: `heads/${BRANCH}`
+            });
+            
+            const currentCommitSha = refData.object.sha;
+            console.log(`[${requestId}] ✅ Commit actual: ${currentCommitSha}`);
+            
+            // 2. Obtener el commit para conocer el árbol base
+            const { data: currentCommitData } = await octokit.git.getCommit({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              commit_sha: currentCommitSha
+            });
+            
+            const baseTreeSha = currentCommitData.tree.sha;
+            console.log(`[${requestId}] ✅ Árbol base: ${baseTreeSha}`);
+            
+            // 3. Crear el blob con el nuevo contenido
+            const { data: blobData } = await octokit.git.createBlob({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              content: content,
+              encoding: 'utf-8'
+            });
+            
+            console.log(`[${requestId}] ✅ Blob creado: ${blobData.sha}`);
+            
+            // 4. Crear el árbol con base_tree para no borrar otros archivos
+            const { data: treeData } = await octokit.git.createTree({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              base_tree: baseTreeSha,
+              tree: [{
+                path: JSON_PATH,
+                mode: '100644',
+                type: 'blob',
+                sha: blobData.sha
+              }]
+            });
+            
+            console.log(`[${requestId}] ✅ Árbol creado: ${treeData.sha}`);
+            
+            // 5. Crear el commit
+            const { data: commitData } = await octokit.git.createCommit({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              message: commitMessage,
+              tree: treeData.sha,
+              parents: [currentCommitSha]
+            });
+            
+            console.log(`[${requestId}] ✅ Commit creado: ${commitData.sha}`);
+            
+            // 6. Actualizar la referencia del branch
+            await octokit.git.updateRef({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              ref: `heads/${BRANCH}`,
+              sha: commitData.sha,
+              force: false
+            });
+            
+            console.log(`[${requestId}] 🚀 Branch actualizado exitosamente`);
+            
+          } catch (error) {
+            console.error(`[${requestId}] ❌ Error guardando archivo grande:`, error.message);
+            throw error;
+          }
         }
       }
 
+// Función auxiliar para obtener el SHA del commit actual
+async function getCurrentCommitSha() {
+  const { data } = await octokit.git.getRef({
+    owner: REPO_OWNER,
+    repo: REPO_NAME,
+    ref: `heads/${BRANCH}`
+  });
+  return data.object.sha;
+}
       // En la función processAuthors dentro de exports.manageArticles
 function processAuthors(authorsInput) {
   let authorsArray = [];
