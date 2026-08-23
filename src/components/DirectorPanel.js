@@ -564,42 +564,43 @@ export default function DirectorPanel({ user }) {
       const palabrasClaveArray = processKeywordString(articleForm.palabras_clave);
       const keywordsArray = processKeywordString(articleForm.keywords_english);
 
-      const articleData = {
-        titulo: articleForm.titulo,
-        tituloEnglish: articleForm.tituloEnglish,
-        doi: articleForm.doi,
-        autores: autoresParaBackend,
-        resumen: articleForm.resumen,
-        abstract: articleForm.abstract,
-        palabras_clave: palabrasClaveArray,
-        keywords_english: keywordsArray,
-        specialized_codes: articleForm.specialized_codes,
-        keywords_vocabulary: articleForm.keywords_vocabulary,
-        area: articleForm.area,
-        tipo: articleForm.tipo,
-        type: articleForm.type,
-        fecha: articleForm.fecha,
-        receivedDate: articleForm.receivedDate || null,
-        acceptedDate: articleForm.acceptedDate || null,
-        volumen: articleForm.volumen,
-        numero: articleForm.numero,
-        primeraPagina: articleForm.primeraPagina,
-        ultimaPagina: articleForm.ultimaPagina,
-        conflicts: articleForm.conflicts,
-        conflictsEnglish: articleForm.conflictsEnglish,
-        funding: articleForm.funding,
-        fundingEnglish: articleForm.fundingEnglish,
-        acknowledgments: articleForm.acknowledgments,
-        acknowledgmentsEnglish: articleForm.acknowledgmentsEnglish,
-        authorCredits: articleForm.authorCredits,
-        authorCreditsEnglish: articleForm.authorCreditsEnglish,
-        dataAvailability: articleForm.dataAvailability,
-        dataAvailabilityEnglish: articleForm.dataAvailabilityEnglish,
-        submissionId: articleForm.submissionId,
-        html_es: html_es,
-        html_en: html_en,
-        referencias: articleForm.referencias,
-      };
+      // VERIFICAR que articleData incluya TODOS estos campos (ya deberían estar, pero confirma):
+const articleData = {
+  titulo: articleForm.titulo,
+  tituloEnglish: articleForm.tituloEnglish,
+  doi: articleForm.doi,
+  autores: autoresParaBackend,  // ✅ Ya incluye authorId
+  resumen: articleForm.resumen,
+  abstract: articleForm.abstract,
+  palabras_clave: palabrasClaveArray,
+  keywords_english: keywordsArray,
+  specialized_codes: articleForm.specialized_codes,
+  keywords_vocabulary: articleForm.keywords_vocabulary,
+  area: articleForm.area,
+  tipo: articleForm.tipo,
+  type: articleForm.type,
+  fecha: articleForm.fecha,
+  receivedDate: articleForm.receivedDate || null,
+  acceptedDate: articleForm.acceptedDate || null,
+  volumen: articleForm.volumen,
+  numero: articleForm.numero,
+  primeraPagina: articleForm.primeraPagina,
+  ultimaPagina: articleForm.ultimaPagina,
+  conflicts: articleForm.conflicts,
+  conflictsEnglish: articleForm.conflictsEnglish,
+  funding: articleForm.funding,
+  fundingEnglish: articleForm.fundingEnglish,
+  acknowledgments: articleForm.acknowledgments,
+  acknowledgmentsEnglish: articleForm.acknowledgmentsEnglish,  // ✅ Asegurar que esté
+  authorCredits: articleForm.authorCredits,
+  authorCreditsEnglish: articleForm.authorCreditsEnglish,      // ✅ Asegurar que esté
+  dataAvailability: articleForm.dataAvailability,
+  dataAvailabilityEnglish: articleForm.dataAvailabilityEnglish, // ✅ Asegurar que esté
+  submissionId: articleForm.submissionId,
+  html_es: html_es,
+  html_en: html_en,
+  referencias: articleForm.referencias,
+};
 
       let action = 'edit';
       if (!editingItem && articleForm.submissionId) {
@@ -1037,7 +1038,69 @@ const ArticleForm = ({ formData, setFormData, isProcessing, isEditing, submissio
       return { ...prev, autores: updatedAutores };
     });
   };
+// AGREGAR DESPUÉS de la función updateAuthor dentro de ArticleForm
+const [showAuthorSearch, setShowAuthorSearch] = useState(false);
+const [authorSearchTerm, setAuthorSearchTerm] = useState('');
+const [authorSearchResults, setAuthorSearchResults] = useState([]);
+const [searchingAuthors, setSearchingAuthors] = useState(false);
+const [activeAuthorIndex, setActiveAuthorIndex] = useState(null);
 
+const searchUsers = async (searchTerm) => {
+  if (!searchTerm || searchTerm.trim().length < 2) return;
+  setSearchingAuthors(true);
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, firestoreLimit(50));
+    const querySnapshot = await getDocs(q);
+    const results = [];
+    
+    querySnapshot.forEach((doc) => {
+      const userData = doc.data();
+      const fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.toLowerCase();
+      const displayName = (userData.displayName || '').toLowerCase();
+      const email = (userData.email || '').toLowerCase();
+      const term = searchTerm.toLowerCase();
+      
+      if (fullName.includes(term) || displayName.includes(term) || email.includes(term)) {
+        results.push({
+          uid: doc.id,
+          name: displayName || fullName || 'Sin nombre',
+          email: userData.email || '',
+          institution: userData.institution || '',
+          orcid: userData.orcid || '',
+        });
+      }
+    });
+    
+    setAuthorSearchResults(results.slice(0, 10));
+  } catch (error) {
+    console.error("Error searching users:", error);
+  } finally {
+    setSearchingAuthors(false);
+  }
+};
+
+const assignUserToAuthor = (userData) => {
+  if (activeAuthorIndex === null) return;
+  
+  setFormData(prev => {
+    const updatedAutores = [...prev.autores];
+    updatedAutores[activeAuthorIndex] = {
+      ...updatedAutores[activeAuthorIndex],
+      name: userData.name,
+      email: userData.email,
+      institution: userData.institution || updatedAutores[activeAuthorIndex].institution,
+      orcid: userData.orcid || updatedAutores[activeAuthorIndex].orcid,
+      authorId: userData.uid,
+    };
+    return { ...prev, autores: updatedAutores };
+  });
+  
+  setShowAuthorSearch(false);
+  setAuthorSearchTerm('');
+  setAuthorSearchResults([]);
+  setActiveAuthorIndex(null);
+};
   return (
     <div className="flex flex-col h-[75vh]">
       {submissionId && (
@@ -1089,12 +1152,37 @@ const ArticleForm = ({ formData, setFormData, isProcessing, isEditing, submissio
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 block w-full">Autor {index + 1}</span>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Input label="Nombre Completo *" value={autor.name} onChange={(e) => updateAuthor(index, 'name', e.target.value)} />
-                      <Input label="Correo Electrónico *" type="email" value={autor.email} onChange={(e) => updateAuthor(index, 'email', e.target.value)} />
-                      <Input label="Institución Académica" value={autor.institution} onChange={(e) => updateAuthor(index, 'institution', e.target.value)} />
-                      <Input label="ID ORCID" value={autor.orcid} onChange={(e) => updateAuthor(index, 'orcid', e.target.value)} placeholder="0000-0000-0000-0000" className="font-mono text-sm" />
-                    </div>
+                    // REEMPLAZAR el bloque que muestra los campos de autor por este:
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  <div className="relative">
+    <Input 
+      label="Nombre Completo *" 
+      value={autor.name} 
+      onChange={(e) => updateAuthor(index, 'name', e.target.value)} 
+    />
+    <button
+      type="button"
+      onClick={() => {
+        setActiveAuthorIndex(index);
+        setShowAuthorSearch(true);
+        setAuthorSearchTerm('');
+        setAuthorSearchResults([]);
+      }}
+      className="absolute right-2 top-8 p-1 text-indigo-600 hover:text-indigo-800"
+      title="Buscar usuario"
+    >
+      <MagnifyingGlassIcon className="w-4 h-4" />
+    </button>
+  </div>
+  <Input label="Correo Electrónico *" type="email" value={autor.email} onChange={(e) => updateAuthor(index, 'email', e.target.value)} />
+  <Input label="Institución Académica" value={autor.institution} onChange={(e) => updateAuthor(index, 'institution', e.target.value)} />
+  <div>
+    <Input label="ID ORCID" value={autor.orcid} onChange={(e) => updateAuthor(index, 'orcid', e.target.value)} placeholder="0000-0000-0000-0000" className="font-mono text-sm" />
+    {autor.authorId && (
+      <p className="text-[10px] text-emerald-600 mt-1 font-mono">UID: {autor.authorId}</p>
+    )}
+  </div>
+</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                       <Input label="Taxonomía CRediT" value={autor.contribution || ''} onChange={(e) => updateAuthor(index, 'contribution', e.target.value)} placeholder="Conceptualización, Metodología..." />
                       <div className="flex flex-col justify-end gap-2">
@@ -1106,6 +1194,76 @@ const ArticleForm = ({ formData, setFormData, isProcessing, isEditing, submissio
                     </div>
                   </div>
                 ))}
+                {/* Modal de búsqueda de usuarios */}
+<AnimatePresence>
+  {showAuthorSearch && (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+    >
+      <div className="absolute inset-0 bg-slate-900/50" onClick={() => setShowAuthorSearch(false)} />
+      <motion.div 
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.95 }}
+        className="bg-white w-full max-w-md rounded-lg shadow-xl relative z-10 p-6"
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h4 className="font-bold text-slate-900">Buscar Usuario Registrado</h4>
+          <button onClick={() => setShowAuthorSearch(false)} className="p-1 hover:bg-slate-100 rounded">
+            <XMarkIcon className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+        
+        <div className="relative mb-4">
+          <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre o email..."
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+            value={authorSearchTerm}
+            onChange={(e) => {
+              setAuthorSearchTerm(e.target.value);
+              searchUsers(e.target.value);
+            }}
+            autoFocus
+          />
+        </div>
+        
+        <div className="max-h-64 overflow-y-auto space-y-2">
+          {searchingAuthors ? (
+            <div className="flex justify-center py-4">
+              <ArrowPathIcon className="w-6 h-6 animate-spin text-indigo-600" />
+            </div>
+          ) : authorSearchResults.length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-4">
+              {authorSearchTerm.length < 2 ? 'Escribe al menos 2 caracteres...' : 'No se encontraron usuarios'}
+            </p>
+          ) : (
+            authorSearchResults.map((user) => (
+              <button
+                key={user.uid}
+                type="button"
+                onClick={() => assignUserToAuthor(user)}
+                className="w-full p-3 text-left border border-slate-200 rounded-md hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-slate-900 text-sm">{user.name}</p>
+                    <p className="text-xs text-slate-500">{user.email}</p>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400">{user.uid.substring(0, 8)}...</span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
                 <button type="button" onClick={addAuthor} className="w-full py-3 border border-dashed border-slate-300 rounded-md text-slate-600 hover:border-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 text-sm font-medium">
                   <PlusIcon className="w-4 h-4" /> Registrar Coautor
                 </button>
@@ -1225,32 +1383,49 @@ const ArticleForm = ({ formData, setFormData, isProcessing, isEditing, submissio
               {formData.pdfUrl && !formData.pdfFile && <p className="text-[10px] text-slate-400 mt-3 font-mono">Galley actual: {formData.pdfUrl.split('/').pop()}</p>}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Declaración de Financiación</label>
-                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="funding" value={formData.funding} onChange={handleChange} />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Funding Statement</label>
-                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="fundingEnglish" value={formData.fundingEnglish} onChange={handleChange} />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Conflictos de Interés</label>
-                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="conflicts" value={formData.conflicts} onChange={handleChange} />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Conflicts of Interest</label>
-                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="conflictsEnglish" value={formData.conflictsEnglish} onChange={handleChange} />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Disponibilidad de Datos (Data Availability)</label>
-                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="dataAvailability" value={formData.dataAvailability} onChange={handleChange} />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Agradecimientos (Acknowledgments)</label>
-                <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="acknowledgments" value={formData.acknowledgments} onChange={handleChange} />
-              </div>
-            </div>
+            // REEMPLAZAR la sección de "Declaración de Financiación" y siguientes por:
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+  <div>
+    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Declaración de Financiación (ES)</label>
+    <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="funding" value={formData.funding} onChange={handleChange} />
+  </div>
+  <div>
+    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Funding Statement (EN)</label>
+    <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="fundingEnglish" value={formData.fundingEnglish} onChange={handleChange} />
+  </div>
+  <div>
+    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Conflictos de Interés (ES)</label>
+    <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="conflicts" value={formData.conflicts} onChange={handleChange} />
+  </div>
+  <div>
+    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Conflicts of Interest (EN)</label>
+    <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="conflictsEnglish" value={formData.conflictsEnglish} onChange={handleChange} />
+  </div>
+  <div>
+    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Disponibilidad de Datos (ES)</label>
+    <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="dataAvailability" value={formData.dataAvailability} onChange={handleChange} />
+  </div>
+  <div>
+    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Data Availability (EN)</label>
+    <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="dataAvailabilityEnglish" value={formData.dataAvailabilityEnglish} onChange={handleChange} />
+  </div>
+  <div>
+    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Agradecimientos (ES)</label>
+    <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="acknowledgments" value={formData.acknowledgments} onChange={handleChange} />
+  </div>
+  <div>
+    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Acknowledgments (EN)</label>
+    <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="acknowledgmentsEnglish" value={formData.acknowledgmentsEnglish} onChange={handleChange} />
+  </div>
+  <div>
+    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Créditos de Autoría (ES)</label>
+    <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="authorCredits" value={formData.authorCredits} onChange={handleChange} />
+  </div>
+  <div>
+    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Author Credits (EN)</label>
+    <textarea className="w-full p-3 border border-slate-300 rounded-md h-20 text-sm" name="authorCreditsEnglish" value={formData.authorCreditsEnglish} onChange={handleChange} />
+  </div>
+</div>
           </div>
         )}
       </div>
