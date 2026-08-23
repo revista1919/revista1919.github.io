@@ -1152,7 +1152,7 @@ const assignUserToAuthor = (userData) => {
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 block w-full">Autor {index + 1}</span>
                     
-                    // REEMPLAZAR el bloque que muestra los campos de autor por este:
+                   
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
   <div className="relative">
     <Input 
@@ -1176,12 +1176,18 @@ const assignUserToAuthor = (userData) => {
   </div>
   <Input label="Correo Electrónico *" type="email" value={autor.email} onChange={(e) => updateAuthor(index, 'email', e.target.value)} />
   <Input label="Institución Académica" value={autor.institution} onChange={(e) => updateAuthor(index, 'institution', e.target.value)} />
-  <div>
+<div>
     <Input label="ID ORCID" value={autor.orcid} onChange={(e) => updateAuthor(index, 'orcid', e.target.value)} placeholder="0000-0000-0000-0000" className="font-mono text-sm" />
-    {autor.authorId && (
-      <p className="text-[10px] text-emerald-600 mt-1 font-mono">UID: {autor.authorId}</p>
-    )}
-  </div>
+</div>
+<div>
+    <Input 
+      label="UID del Usuario" 
+      value={autor.authorId || ''} 
+      onChange={(e) => updateAuthor(index, 'authorId', e.target.value)} 
+      placeholder="UID manual o usar buscador" 
+      className="font-mono text-xs" 
+    />
+</div>
 </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                       <Input label="Taxonomía CRediT" value={autor.contribution || ''} onChange={(e) => updateAuthor(index, 'contribution', e.target.value)} placeholder="Conceptualización, Metodología..." />
@@ -1192,9 +1198,12 @@ const assignUserToAuthor = (userData) => {
                         </label>
                       </div>
                     </div>
-                  </div>
+                 </div>
                 ))}
-                {/* Modal de búsqueda de usuarios */}
+                </div>
+            </div>
+
+            {/* Modal de búsqueda de usuarios - FUERA del map */}
 <AnimatePresence>
   {showAuthorSearch && (
     <motion.div 
@@ -1264,6 +1273,13 @@ const assignUserToAuthor = (userData) => {
     </motion.div>
   )}
 </AnimatePresence>
+
+            <div className="pt-4 border-t border-slate-200">
+              <div className="flex justify-between items-center mb-4">
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">Filiación y Autores *</label>
+              </div>
+              
+              <div className="space-y-4">
                 <button type="button" onClick={addAuthor} className="w-full py-3 border border-dashed border-slate-300 rounded-md text-slate-600 hover:border-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 text-sm font-medium">
                   <PlusIcon className="w-4 h-4" /> Registrar Coautor
                 </button>
@@ -1383,7 +1399,7 @@ const assignUserToAuthor = (userData) => {
               {formData.pdfUrl && !formData.pdfFile && <p className="text-[10px] text-slate-400 mt-3 font-mono">Galley actual: {formData.pdfUrl.split('/').pop()}</p>}
             </div>
 
-            // REEMPLAZAR la sección de "Declaración de Financiación" y siguientes por:
+ 
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
   <div>
     <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Declaración de Financiación (ES)</label>
