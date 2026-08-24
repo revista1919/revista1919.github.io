@@ -2,10 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Visor Académico - Revista Nacional de las Ciencias para Estudiantes</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,133 +28,127 @@
       --text-muted: #64748B;
       --text-inverse: #F8FAFC;
       --toolbar-height: 52px;
-      --sidebar-width: 340px;
+      --sidebar-width: 320px;
       --shadow-sm: 0 1px 2px rgba(0, 28, 61, 0.05);
       --shadow-md: 0 4px 12px rgba(0, 28, 61, 0.08);
       --shadow-paper: 0 2px 8px rgba(0, 0, 0, 0.04), 0 16px 32px rgba(0, 28, 61, 0.08);
       --shadow-float: 0 12px 32px rgba(0, 28, 61, 0.15);
       --transition-smooth: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-      --highlight-yellow: rgba(253, 224, 71, 0.45);
-      --highlight-green: rgba(134, 239, 172, 0.45);
-      --highlight-blue: rgba(147, 197, 253, 0.45);
-      --highlight-pink: rgba(249, 168, 212, 0.45);
+      /* Resaltados más suaves para no tapar el texto */
+      --highlight-yellow: rgba(253, 224, 71, 0.28);
+      --highlight-green: rgba(134, 239, 172, 0.28);
+      --highlight-blue: rgba(147, 197, 253, 0.28);
+      --highlight-pink: rgba(249, 168, 212, 0.28);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      width: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg-reader);
-      overflow: hidden;
-      height: 100vh;
-      width: 100vw;
       display: flex;
       flex-direction: column;
       color: var(--text-main);
       -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* BARRA SUPERIOR */
+    /* ========== TOOLBAR ========== */
     .pdf-toolbar {
       background: var(--oxford-blue);
       border-bottom: 2px solid var(--elsevier-orange);
       color: var(--text-inverse);
-      padding: 0 16px;
+      padding: 0 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       z-index: 1000;
       height: var(--toolbar-height);
+      min-height: var(--toolbar-height);
       box-shadow: var(--shadow-md);
       flex-shrink: 0;
+      gap: 4px;
     }
 
     .brand-container {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-right: 24px;
-      padding-right: 24px;
+      gap: 10px;
+      margin-right: 12px;
+      padding-right: 12px;
       border-right: 1px solid rgba(255,255,255,0.15);
+      flex-shrink: 0;
     }
-
     .brand-logo {
-      width: 40px;
-      height: 40px;
+      width: 36px; height: 36px;
       background-image: url('https://www.revistacienciasestudiantes.com/logo.png');
       background-size: contain;
       background-position: center;
       background-repeat: no-repeat;
-      border-radius: 8px;
-      flex-shrink: 0;
+      border-radius: 6px;
     }
+    .brand-text { display: flex; flex-direction: column; }
+    .brand-title { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.95); line-height: 1.2; }
+    .brand-subtitle { font-size: 9px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.4px; }
 
-    .brand-text { display: flex; flex-direction: column; justify-content: center; }
-    .brand-title {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
-      line-height: 1.2;
-      color: rgba(255, 255, 255, 0.95);
-    }
-    .brand-subtitle {
-      font-size: 10px;
-      font-weight: 400;
-      color: rgba(255, 255, 255, 0.6);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .toolbar-group { display: flex; align-items: center; gap: 4px; }
-    .toolbar-left { flex: 1; display: flex; align-items: center; }
-    .toolbar-center { display: flex; justify-content: center; }
-    .toolbar-right { flex: 1; display: flex; justify-content: flex-end; gap: 8px; }
+    .toolbar-group { display: flex; align-items: center; gap: 2px; }
+    .toolbar-left { flex: 1; display: flex; align-items: center; min-width: 0; }
+    .toolbar-center { display: flex; justify-content: center; flex-shrink: 0; }
+    .toolbar-right { flex: 1; display: flex; justify-content: flex-end; gap: 4px; min-width: 0; }
 
     .btn {
       background: transparent;
       border: none;
-      color: rgba(255, 255, 255, 0.75);
-      padding: 6px 8px;
-      border-radius: 6px;
+      color: rgba(255,255,255,0.8);
+      padding: 8px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 13px;
       font-weight: 500;
       font-family: inherit;
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
+      gap: 4px;
       transition: var(--transition-smooth);
+      min-width: 40px;
+      min-height: 40px;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
     }
-    .btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
-    .btn:active:not(:disabled) { transform: scale(0.96); }
-    .btn.active {
-      background: rgba(255, 108, 12, 0.2);
-      color: var(--elsevier-orange);
-    }
-    .btn-icon { width: 18px; height: 18px; flex-shrink: 0; }
+    .btn:hover:not(:disabled) { background: rgba(255,255,255,0.12); color: #fff; }
+    .btn:active:not(:disabled) { transform: scale(0.94); background: rgba(255,255,255,0.18); }
+    .btn.active { background: rgba(255,108,12,0.25); color: var(--elsevier-orange); }
+    .btn-icon { width: 20px; height: 20px; flex-shrink: 0; }
     .btn-primary {
       background: var(--elsevier-orange);
       color: white !important;
-      padding: 6px 14px;
-      border-radius: 6px;
+      padding: 8px 12px;
+      border-radius: 8px;
       font-weight: 500;
     }
     .btn-primary:hover:not(:disabled) { background: var(--elsevier-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: wait; }
 
-    .divider {
-      width: 1px;
-      height: 16px;
-      background: rgba(255, 255, 255, 0.2);
-      margin: 0 8px;
-    }
+    .divider { width: 1px; height: 18px; background: rgba(255,255,255,0.2); margin: 0 4px; }
 
-    /* PANEL LATERAL */
+    /* ========== LAYOUT ========== */
     .viewer-wrapper {
       flex: 1;
       display: flex;
       overflow: hidden;
       position: relative;
+      min-height: 0;
     }
 
     .pdf-sidebar {
@@ -160,24 +157,24 @@
       border-right: 1px solid var(--border-subtle);
       display: flex;
       flex-direction: column;
-      transition: margin-left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
       flex-shrink: 0;
       z-index: 50;
       box-shadow: var(--shadow-sm);
     }
-    .pdf-sidebar.hidden { margin-left: calc(-1 * var(--sidebar-width)); }
+    .pdf-sidebar.hidden { transform: translateX(-100%); margin-right: calc(-1 * var(--sidebar-width)); }
 
     .sidebar-tabs {
       display: flex;
       border-bottom: 1px solid var(--border-subtle);
       background: #FAFAFA;
-      padding: 8px 12px 0;
-      gap: 4px;
+      padding: 6px 8px 0;
+      gap: 2px;
+      flex-shrink: 0;
     }
-
     .sidebar-tab {
       flex: 1;
-      padding: 10px 8px;
+      padding: 12px 6px;
       background: transparent;
       border: none;
       cursor: pointer;
@@ -186,8 +183,9 @@
       color: var(--text-muted);
       border-radius: 6px 6px 0 0;
       transition: var(--transition-smooth);
+      touch-action: manipulation;
     }
-    .sidebar-tab:hover { color: var(--oxford-blue); background: rgba(0,0,0,0.02); }
+    .sidebar-tab:hover { color: var(--oxford-blue); }
     .sidebar-tab.active {
       color: var(--oxford-blue);
       font-weight: 600;
@@ -195,8 +193,8 @@
       box-shadow: 0 -2px 0 var(--elsevier-orange) inset;
     }
 
-    .sidebar-content { flex: 1; overflow-y: auto; padding: 0; }
-    .sidebar-panel { display: none; padding: 24px; animation: fadeUp 0.3s ease; }
+    .sidebar-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .sidebar-panel { display: none; padding: 20px; animation: fadeUp 0.25s ease; }
     .sidebar-panel.active { display: block; }
 
     @keyframes fadeUp {
@@ -204,19 +202,19 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .sidebar-section { margin-bottom: 28px; }
+    .sidebar-section { margin-bottom: 24px; }
     .sidebar-section h3 {
       font-size: 11px;
       text-transform: uppercase;
       color: var(--text-muted);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       letter-spacing: 0.05em;
       font-weight: 600;
     }
 
     #docTitle {
       font-family: 'Lora', serif;
-      font-size: 16px;
+      font-size: 15px;
       line-height: 1.4;
       color: var(--oxford-blue);
       font-weight: 600;
@@ -224,7 +222,6 @@
 
     .doi-badge {
       display: inline-flex;
-      align-items: center;
       background: #F8FAFC;
       color: var(--oxford-blue);
       padding: 6px 10px;
@@ -233,7 +230,6 @@
       font-size: 11px;
       text-decoration: none;
       border: 1px solid var(--border-subtle);
-      transition: var(--transition-smooth);
       word-break: break-all;
     }
     .doi-badge:hover { border-color: var(--elsevier-orange); color: var(--elsevier-orange); }
@@ -245,53 +241,42 @@
       border-radius: 6px;
       border: 1px solid var(--border-subtle);
     }
-    .meta-card span {
-      font-size: 10px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      display: block;
-      margin-bottom: 4px;
-    }
-    .meta-card strong {
-      font-size: 14px;
-      color: var(--oxford-blue);
-      font-family: 'JetBrains Mono', monospace;
-    }
+    .meta-card span { font-size: 10px; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 4px; }
+    .meta-card strong { font-size: 14px; color: var(--oxford-blue); font-family: 'JetBrains Mono', monospace; }
 
     .toc-item {
-      padding: 6px 10px;
+      padding: 10px 10px;
       cursor: pointer;
       font-size: 13px;
       color: var(--text-main);
-      border-radius: 4px;
+      border-radius: 6px;
       transition: var(--transition-smooth);
       display: flex;
       align-items: baseline;
-      gap: 12px;
+      gap: 10px;
       line-height: 1.4;
+      touch-action: manipulation;
     }
-    .toc-item:hover { background: #F1F5F9; color: var(--oxford-blue); }
+    .toc-item:hover, .toc-item:active { background: #F1F5F9; color: var(--oxford-blue); }
     .toc-level-1 { font-weight: 500; }
-    .toc-level-2 { padding-left: 20px; font-size: 12px; color: var(--text-muted); }
-    .toc-level-3 { padding-left: 36px; font-size: 12px; color: var(--text-muted); }
-    .toc-page {
-      color: var(--text-muted);
-      font-size: 11px;
-      margin-left: auto;
-      font-family: 'JetBrains Mono', monospace;
-    }
+    .toc-level-2 { padding-left: 18px; font-size: 12px; color: var(--text-muted); }
+    .toc-level-3 { padding-left: 32px; font-size: 12px; color: var(--text-muted); }
+    .toc-page { color: var(--text-muted); font-size: 11px; margin-left: auto; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
 
-    /* CONTENEDOR DEL PDF */
+    /* ========== PDF CONTAINER ========== */
     .pdf-container {
       flex: 1;
       overflow: auto;
-      padding: 40px 20px 100px;
+      padding: 24px 12px 80px;
       background: var(--bg-reader);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 40px;
+      gap: 28px;
       scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      min-width: 0;
+      overscroll-behavior-y: contain;
     }
 
     .pdf-page-wrapper {
@@ -301,11 +286,12 @@
       border-radius: 2px;
       margin: 0 auto;
       transition: box-shadow 0.3s ease;
+      max-width: 100%;
     }
 
-    .pdf-canvas { display: block; border-radius: 2px; }
+    .pdf-canvas { display: block; border-radius: 2px; max-width: 100%; height: auto; }
 
-    /* ========== TEXT LAYER (PDF.js oficial + mejoras) ========== */
+    /* Text layer */
     .textLayer {
       position: absolute;
       text-align: initial;
@@ -314,31 +300,19 @@
       opacity: 1;
       line-height: 1;
       -webkit-text-size-adjust: none;
-      -moz-text-size-adjust: none;
       text-size-adjust: none;
-      forced-color-adjust: none;
       transform-origin: 0 0;
       z-index: 2;
     }
-
-    .textLayer span,
-    .textLayer br {
+    .textLayer span, .textLayer br {
       color: transparent;
       position: absolute;
       white-space: pre;
       cursor: text;
       transform-origin: 0% 0%;
     }
-
-    /* Selección nativa del navegador */
-    .textLayer ::selection {
-      background: rgba(255, 108, 12, 0.35);
-    }
-    .textLayer ::-moz-selection {
-      background: rgba(255, 108, 12, 0.35);
-    }
-
-    /* endOfContent: evita que la selección se expanda a toda la página */
+    .textLayer ::selection { background: rgba(255, 108, 12, 0.32); }
+    .textLayer ::-moz-selection { background: rgba(255, 108, 12, 0.32); }
     .textLayer .endOfContent {
       display: block;
       position: absolute;
@@ -347,11 +321,9 @@
       cursor: default;
       user-select: none;
     }
-    .textLayer.selecting .endOfContent {
-      top: 0;
-    }
+    .textLayer.selecting .endOfContent { top: 0; }
 
-    /* ========== CAPA DE ANOTACIONES ========== */
+    /* Annotation layer */
     .annotation-layer {
       position: absolute;
       top: 0; left: 0;
@@ -365,25 +337,25 @@
       mix-blend-mode: multiply;
       pointer-events: auto;
       cursor: pointer;
-      border-radius: 2px;
+      border-radius: 1px;
       z-index: 4;
       transition: opacity 0.15s;
     }
-    .annotation-highlight:hover { opacity: 0.75; }
+    .annotation-highlight:hover { opacity: 0.7; }
     .annotation-highlight.color-yellow { background: var(--highlight-yellow); }
     .annotation-highlight.color-green { background: var(--highlight-green); }
     .annotation-highlight.color-blue { background: var(--highlight-blue); }
     .annotation-highlight.color-pink { background: var(--highlight-pink); }
 
-    /* Notas estilo Post-it */
     .annotation-note {
       position: absolute;
       background: #FFFAEB;
-      border-top: 4px solid var(--elsevier-orange);
+      border-top: 3px solid var(--elsevier-orange);
       border-radius: 2px 2px 8px 8px;
-      padding: 12px;
+      padding: 10px;
       pointer-events: auto;
-      width: 220px;
+      width: 200px;
+      max-width: min(200px, 70vw);
       box-shadow: var(--shadow-md);
       z-index: 20;
       transition: var(--transition-smooth);
@@ -393,7 +365,6 @@
       box-shadow: var(--shadow-float);
       z-index: 21;
       cursor: text;
-      transform: translateY(-2px);
     }
     .annotation-note textarea {
       width: 100%;
@@ -402,16 +373,16 @@
       font-size: 13px;
       font-family: 'Lora', serif;
       resize: none;
-      min-height: 80px;
+      min-height: 64px;
       color: var(--oxford-blue);
-      line-height: 1.5;
+      line-height: 1.45;
     }
     .annotation-note textarea:focus { outline: none; }
 
     .annotation-delete {
       position: absolute;
-      top: -12px; right: -12px;
-      width: 24px; height: 24px;
+      top: -10px; right: -10px;
+      width: 28px; height: 28px;
       border-radius: 50%;
       background: white;
       color: #EF4444;
@@ -422,82 +393,138 @@
       align-items: center;
       justify-content: center;
       opacity: 0;
-      transform: scale(0.8);
+      transform: scale(0.85);
       transition: var(--transition-smooth);
-      font-size: 16px;
+      font-size: 18px;
       line-height: 1;
+      touch-action: manipulation;
     }
-    .annotation-note:hover .annotation-delete { opacity: 1; transform: scale(1); }
+    .annotation-note:hover .annotation-delete,
+    .annotation-note:focus-within .annotation-delete { opacity: 1; transform: scale(1); }
     .annotation-delete:hover { background: #EF4444; color: white; border-color: #EF4444; }
 
-    /* Enlaces del PDF */
     .pdf-link {
       position: absolute;
-      z-index: 5;
+      z-index: 6;
       cursor: pointer;
       background: transparent;
+      touch-action: manipulation;
     }
-    .pdf-link:hover { background: rgba(255, 108, 12, 0.12); }
+    .pdf-link:hover, .pdf-link:active { background: rgba(255, 108, 12, 0.14); }
 
-    /* BUSCADOR */
-    .search-bar {
+    /* Destino temporal (flash al navegar) */
+    .dest-flash {
+      position: absolute;
+      z-index: 15;
+      pointer-events: none;
+      background: rgba(255, 108, 12, 0.22);
+      border: 2px solid var(--elsevier-orange);
+      border-radius: 3px;
+      box-shadow: 0 0 0 4px rgba(255, 108, 12, 0.15);
+      animation: destPulse 2.2s ease forwards;
+    }
+    @keyframes destPulse {
+      0% { opacity: 0; transform: scaleY(0.6); }
+      15% { opacity: 1; transform: scaleY(1); }
+      70% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* ========== SEARCH (bottom sheet style) ========== */
+    .search-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 15, 36, 0.35);
+      z-index: 1200;
       opacity: 0;
       visibility: hidden;
-      transform: translateX(-50%) translateY(-10px);
-      position: absolute;
-      top: calc(var(--toolbar-height) + 16px);
-      left: 50%;
-      background: rgba(255, 255, 255, 0.97);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      box-shadow: var(--shadow-float);
-      padding: 16px;
-      z-index: 1100;
-      width: 420px;
-      transition: var(--transition-smooth);
+      transition: opacity 0.25s ease, visibility 0.25s ease;
+      backdrop-filter: blur(2px);
     }
-    .search-bar.active {
-      opacity: 1;
-      visibility: visible;
-      transform: translateX(-50%) translateY(0);
+    .search-overlay.active { opacity: 1; visibility: visible; }
+
+    .search-panel {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      background: white;
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -8px 32px rgba(0, 28, 61, 0.18);
+      z-index: 1201;
+      transform: translateY(110%);
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      max-height: min(70vh, 520px);
+      display: flex;
+      flex-direction: column;
+      padding-bottom: var(--safe-bottom);
+    }
+    .search-panel.active { transform: translateY(0); }
+
+    .search-handle {
+      width: 36px;
+      height: 4px;
+      background: #CBD5E1;
+      border-radius: 2px;
+      margin: 10px auto 6px;
+      flex-shrink: 0;
     }
 
-    .search-input-group { display: flex; gap: 8px; margin-bottom: 12px; }
+    .search-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 16px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
     .search-input {
       flex: 1;
-      padding: 10px 14px;
+      padding: 12px 14px;
       border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      font-size: 13px;
+      border-radius: 10px;
+      font-size: 16px; /* evita zoom iOS */
       font-family: 'Inter', sans-serif;
       background: #F8FAFC;
-      transition: var(--transition-smooth);
     }
     .search-input:focus {
       outline: none;
       background: white;
       border-color: var(--elsevier-orange);
-      box-shadow: 0 0 0 3px rgba(255, 108, 12, 0.1);
+      box-shadow: 0 0 0 3px rgba(255, 108, 12, 0.12);
     }
-
-    .search-results { max-height: 320px; overflow-y: auto; padding-right: 4px; }
-    .search-result-item {
-      padding: 10px;
+    .search-close-btn {
+      background: #F1F5F9;
+      border: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
       cursor: pointer;
-      border-radius: 6px;
-      border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      touch-action: manipulation;
+    }
+    .search-close-btn:active { background: #E2E8F0; }
+
+    .search-results {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 16px 20px;
+    }
+    .search-result-item {
+      padding: 12px;
+      cursor: pointer;
+      border-radius: 8px;
       margin-bottom: 4px;
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1.5;
       color: var(--text-muted);
+      touch-action: manipulation;
     }
-    .search-result-item strong {
-      color: var(--oxford-blue);
-      display: block;
-      margin-bottom: 2px;
-    }
-    .search-result-item:hover { background: #F1F5F9; }
+    .search-result-item strong { color: var(--oxford-blue); display: block; margin-bottom: 2px; font-size: 12px; }
+    .search-result-item:active, .search-result-item:hover { background: #F1F5F9; }
     .search-result-item .highlight {
       background: #FEF08A;
       color: #854D0E;
@@ -506,37 +533,37 @@
       border-radius: 2px;
     }
 
-    /* SELECTOR DE COLOR */
+    /* Color picker */
     .color-picker {
       position: fixed;
-      top: 70px;
-      right: 24px;
+      top: calc(var(--toolbar-height) + 8px);
+      right: 12px;
       background: white;
       border: 1px solid var(--border-subtle);
-      border-radius: 8px;
+      border-radius: 10px;
       box-shadow: var(--shadow-md);
-      padding: 8px;
+      padding: 8px 10px;
       display: none;
-      gap: 6px;
+      gap: 8px;
       z-index: 100;
       align-items: center;
     }
     .color-picker.active { display: flex; }
     .color-option {
-      width: 22px;
-      height: 22px;
+      width: 26px; height: 26px;
       border-radius: 50%;
       cursor: pointer;
       border: 2px solid transparent;
       transition: transform 0.1s;
+      touch-action: manipulation;
     }
-    .color-option:hover { transform: scale(1.15); }
+    .color-option:hover, .color-option:active { transform: scale(1.12); }
     .color-option.active { border-color: var(--oxford-blue); }
 
-    /* LOADING */
+    /* Loading */
     .loading-overlay {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      inset: 0;
       background: var(--bg-reader);
       display: flex;
       flex-direction: column;
@@ -546,49 +573,35 @@
       transition: opacity 0.4s ease, visibility 0.4s ease;
     }
     .spinner {
-      width: 40px;
-      height: 40px;
+      width: 40px; height: 40px;
       border: 2px solid rgba(0, 28, 61, 0.1);
       border-top: 2px solid var(--elsevier-orange);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
-    .loading-text {
-      font-family: 'Lora', serif;
-      color: var(--oxford-blue);
-      font-size: 15px;
-      font-style: italic;
-    }
+    .loading-text { font-family: 'Lora', serif; color: var(--oxford-blue); font-size: 15px; font-style: italic; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
-
-    /* SCROLLBAR */
-    ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb {
-      background: #CBD5E1;
-      border-radius: 10px;
-      border: 3px solid var(--bg-reader);
-    }
-    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-    .sidebar-content::-webkit-scrollbar-thumb { border-color: var(--bg-sidebar); }
 
     /* Toast */
     .toast {
       position: fixed;
-      bottom: 24px;
+      bottom: calc(24px + var(--safe-bottom));
       left: 50%;
-      transform: translateX(-50%) translateY(20px);
+      transform: translateX(-50%) translateY(16px);
       background: var(--oxford-blue);
       color: white;
-      padding: 10px 20px;
-      border-radius: 8px;
+      padding: 12px 20px;
+      border-radius: 10px;
       font-size: 13px;
       box-shadow: var(--shadow-float);
       opacity: 0;
       visibility: hidden;
-      transition: all 0.3s ease;
+      transition: all 0.28s ease;
       z-index: 2000;
+      max-width: 90vw;
+      text-align: center;
+      pointer-events: none;
     }
     .toast.show {
       opacity: 1;
@@ -596,12 +609,94 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    /* Selection action bar (móvil: resaltar tras seleccionar) */
+    .selection-bar {
+      position: fixed;
+      bottom: calc(16px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: white;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      box-shadow: var(--shadow-float);
+      padding: 8px 10px;
+      display: flex;
+      gap: 6px;
+      z-index: 1100;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.22s ease;
+      max-width: 96vw;
+    }
+    .selection-bar.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+    .selection-bar .btn-sel {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
+      white-space: nowrap;
+    }
+    .btn-sel-hl { background: #FEF08A; color: #854D0E; }
+    .btn-sel-copy { background: #F1F5F9; color: var(--oxford-blue); }
+    .btn-sel-note { background: #FFEDD5; color: #9A3412; }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 8px;
+      border: 2px solid var(--bg-reader);
+    }
+    .sidebar-content::-webkit-scrollbar-thumb { border-color: var(--bg-sidebar); }
+
+    /* ========== MOBILE ========== */
     @media (max-width: 768px) {
-      .text-hide-mobile { display: none; }
+      .text-hide-mobile { display: none !important; }
       .brand-container { display: none; }
-      .pdf-sidebar { position: absolute; height: 100%; z-index: 100; }
-      .search-bar { width: 90%; left: 5%; transform: translateY(-10px); }
-      .search-bar.active { transform: translateY(0); }
+      .divider { display: none; }
+
+      .pdf-sidebar {
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        height: 100%;
+        width: min(var(--sidebar-width), 88vw);
+        z-index: 200;
+        box-shadow: var(--shadow-float);
+      }
+      .pdf-sidebar.hidden {
+        transform: translateX(-105%);
+        margin-right: 0;
+      }
+
+      .sidebar-backdrop {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 15, 36, 0.4);
+        z-index: 150;
+      }
+      .sidebar-backdrop.visible { display: block; }
+
+      .pdf-container { padding: 16px 8px 100px; gap: 20px; }
+      .toolbar-center .toolbar-group { background: rgba(0,0,0,0.25); padding: 2px; border-radius: 10px; }
+      .btn { min-width: 44px; min-height: 44px; padding: 10px; }
+      .btn-primary { padding: 10px 12px; }
+
+      /* En móvil, mostrar delete de notas siempre un poco visible */
+      .annotation-delete { opacity: 0.85; transform: scale(1); }
+    }
+
+    @media (min-width: 769px) {
+      .sidebar-backdrop { display: none !important; }
     }
   </style>
 </head>
@@ -617,25 +712,24 @@
       </div>
     </div>
     <div class="toolbar-group">
-      <button class="btn" onclick="toggleSidebar()" title="Panel lateral">
+      <button class="btn" onclick="toggleSidebar()" title="Panel" aria-label="Panel lateral">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"></path></svg>
       </button>
-      <button class="btn" onclick="toggleSearch()" title="Buscar (Ctrl+F)">
+      <button class="btn" onclick="toggleSearch()" title="Buscar" aria-label="Buscar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path></svg>
-        <span class="text-hide-mobile">Buscar</span>
       </button>
     </div>
   </div>
 
   <div class="toolbar-center">
-    <div class="toolbar-group" style="background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px;">
-      <button class="btn active" id="selectTool" onclick="setTool('select')" title="Seleccionar texto (V)">
+    <div class="toolbar-group">
+      <button class="btn active" id="selectTool" onclick="setTool('select')" title="Seleccionar (V)" aria-label="Seleccionar texto">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5"></path></svg>
       </button>
-      <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Resaltar texto seleccionado (H)">
+      <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Resaltar (H)" aria-label="Resaltar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.89l12.683-12.683zM16.862 4.487L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path></svg>
       </button>
-      <button class="btn" id="noteTool" onclick="setTool('note')" title="Nota al margen (N)">
+      <button class="btn" id="noteTool" onclick="setTool('note')" title="Nota (N)" aria-label="Nota">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"></path></svg>
       </button>
     </div>
@@ -643,32 +737,23 @@
 
   <div class="toolbar-right">
     <div class="toolbar-group">
-      <button class="btn" onclick="zoomOut()" title="Alejar">
+      <button class="btn" onclick="zoomOut()" title="Alejar" aria-label="Alejar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"></path></svg>
       </button>
-      <span style="font-size: 12px; font-family: 'JetBrains Mono'; width: 48px; text-align: center;" id="zoomLevel">125%</span>
-      <button class="btn" onclick="zoomIn()" title="Acercar">
+      <span style="font-size:11px;font-family:'JetBrains Mono';width:40px;text-align:center;color:rgba(255,255,255,0.85);" id="zoomLevel">100%</span>
+      <button class="btn" onclick="zoomIn()" title="Acercar" aria-label="Acercar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"></path></svg>
       </button>
     </div>
-    <div class="divider"></div>
-    <button class="btn btn-primary" onclick="downloadAnnotated()" title="Descargar PDF + revisiones">
+    <button class="btn btn-primary" id="downloadBtn" onclick="downloadAnnotatedPDF()" title="Descargar con anotaciones" aria-label="Descargar">
       <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
       <span class="text-hide-mobile">Descargar</span>
     </button>
   </div>
 </header>
 
-<div class="search-bar" id="searchBar">
-  <div class="search-input-group">
-    <input type="text" class="search-input" id="searchInput" placeholder="Término de búsqueda..." autocomplete="off">
-    <button class="btn btn-primary" onclick="performSearch()">Buscar</button>
-  </div>
-  <div class="search-results" id="searchResults"></div>
-</div>
-
 <div class="color-picker" id="colorPicker">
-  <span style="font-size:11px;color:var(--text-muted);margin-right:4px;">Color:</span>
+  <span style="font-size:11px;color:var(--text-muted);">Color</span>
   <div class="color-option active" style="background:#FDE047;" data-color="yellow" onclick="selectHighlightColor('yellow', this)"></div>
   <div class="color-option" style="background:#86EFAC;" data-color="green" onclick="selectHighlightColor('green', this)"></div>
   <div class="color-option" style="background:#93C5FD;" data-color="blue" onclick="selectHighlightColor('blue', this)"></div>
@@ -676,55 +761,49 @@
 </div>
 
 <div class="viewer-wrapper">
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
   <aside class="pdf-sidebar" id="pdfSidebar">
     <div class="sidebar-tabs">
-      <button class="sidebar-tab active" onclick="switchSidebarTab('info', this)">Metadatos</button>
-      <button class="sidebar-tab" onclick="switchSidebarTab('toc', this)">Estructura</button>
-      <button class="sidebar-tab" onclick="switchSidebarTab('annotations', this)">Revisiones</button>
+      <button class="sidebar-tab active" onclick="switchSidebarTab('info', this)">Info</button>
+      <button class="sidebar-tab" onclick="switchSidebarTab('toc', this)">Índice</button>
+      <button class="sidebar-tab" onclick="switchSidebarTab('annotations', this)">Marcas</button>
     </div>
     <div class="sidebar-content">
       <div class="sidebar-panel active" id="panel-info">
         <div class="sidebar-section">
-          <h3>Título del Documento</h3>
-          <p id="docTitle">Cargando documento...</p>
+          <h3>Título</h3>
+          <p id="docTitle">Cargando…</p>
         </div>
         <div class="sidebar-section">
-          <h3>Identificador Digital</h3>
-          <a href="#" class="doi-badge" id="docDoi" target="_blank">DOI no registrado</a>
+          <h3>DOI</h3>
+          <a href="#" class="doi-badge" id="docDoi" target="_blank" rel="noopener">DOI no registrado</a>
         </div>
         <div class="sidebar-section">
           <h3>Propiedades</h3>
           <div class="meta-grid">
-            <div class="meta-card">
-              <span>Extensión</span>
-              <strong id="docPages">- págs</strong>
-            </div>
-            <div class="meta-card">
-              <span>Marcas</span>
-              <strong id="annotationCount">0</strong>
-            </div>
+            <div class="meta-card"><span>Páginas</span><strong id="docPages">—</strong></div>
+            <div class="meta-card"><span>Marcas</span><strong id="annotationCount">0</strong></div>
           </div>
         </div>
         <div class="sidebar-section">
-          <h3>Atajos de teclado</h3>
-          <p style="font-size:12px;color:var(--text-muted);line-height:1.7;">
-            <kbd>V</kbd> Seleccionar · <kbd>H</kbd> Resaltar<br>
-            <kbd>N</kbd> Nota · <kbd>Ctrl+F</kbd> Buscar<br>
-            <kbd>Esc</kbd> Cerrar búsqueda
+          <h3>Consejos</h3>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.65;">
+            Selecciona texto y usa la barra inferior para resaltar o copiar.<br>
+            En móvil, mantén pulsado para seleccionar.
           </p>
         </div>
       </div>
       <div class="sidebar-panel" id="panel-toc">
         <div class="sidebar-section">
           <div id="tocContent">
-            <p style="color: var(--text-muted); font-style: italic; font-size: 13px;">Procesando esquema del manuscrito...</p>
+            <p style="color:var(--text-muted);font-style:italic;font-size:13px;">Procesando índice…</p>
           </div>
         </div>
       </div>
       <div class="sidebar-panel" id="panel-annotations">
         <div class="sidebar-section">
           <div id="annotationsList">
-            <p style="color: var(--text-muted); font-style: italic; font-size: 13px;">Sin revisiones pendientes.</p>
+            <p style="color:var(--text-muted);font-style:italic;font-size:13px;">Sin marcas aún.</p>
           </div>
         </div>
       </div>
@@ -734,9 +813,29 @@
   <main class="pdf-container" id="pdfContainer">
     <div class="loading-overlay" id="loading">
       <div class="spinner"></div>
-      <div class="loading-text" id="loadingText">Preparando entorno de lectura...</div>
+      <div class="loading-text">Preparando entorno de lectura…</div>
     </div>
   </main>
+</div>
+
+<!-- Buscador tipo bottom sheet -->
+<div class="search-overlay" id="searchOverlay" onclick="closeSearch()"></div>
+<div class="search-panel" id="searchPanel" role="dialog" aria-label="Buscar en el documento">
+  <div class="search-handle"></div>
+  <div class="search-header">
+    <input type="search" class="search-input" id="searchInput" placeholder="Buscar en el manuscrito…" enterkeyhint="search" autocomplete="off">
+    <button class="search-close-btn" onclick="closeSearch()" aria-label="Cerrar búsqueda">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<!-- Barra de selección (móvil / desktop) -->
+<div class="selection-bar" id="selectionBar">
+  <button class="btn-sel btn-sel-hl" onclick="highlightCurrentSelection()">Resaltar</button>
+  <button class="btn-sel btn-sel-copy" onclick="copyCurrentSelection()">Copiar</button>
+  <button class="btn-sel btn-sel-note" onclick="noteFromSelection()">Nota</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -745,46 +844,37 @@
 (function () {
   'use strict';
 
-  // ---------- Parámetros URL ----------
   const urlParams = new URLSearchParams(window.location.search);
   let pdfUrl = urlParams.get('url') || urlParams.get('pdf');
   const doi = urlParams.get('doi') || '';
   const title = urlParams.get('title') || 'Manuscrito sin título';
-  const storageKey = 'pdfAnnotations_' + (pdfUrl || 'default').slice(-80);
+  const storageKey = 'pdfAnn_v2_' + (pdfUrl || 'default').replace(/[^a-z0-9]/gi, '').slice(-60);
 
-  // ---------- Estado ----------
   let pdfDoc = null;
-  let scale = 1.25;
+  let scale = 1.0;
   let currentTool = 'select';
   let currentHighlightColor = 'yellow';
   let annotations = {};
-  try {
-    annotations = JSON.parse(localStorage.getItem(storageKey) || '{}');
-  } catch (e) { annotations = {}; }
+  try { annotations = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (e) { annotations = {}; }
   let renderedPages = new Set();
   let pageTextContentCache = {};
-  let pageViewports = {}; // pageNum -> viewport at current scale
+  let pageViewports = {};
+  let pagePdfHeights = {}; // PDF user-space height per page
+  let pendingSelection = null;
 
-  // ---------- Normalizar URL (dominios de la revista) ----------
   function normalizeUrl(url) {
     if (!url) return url;
-    const currentHost = window.location.hostname;
-    const domains = ['revista1919.github.io', 'www.revistacienciasestudiantes.com', 'revistacienciasestudiantes.com'];
-    for (const domain of domains) {
-      if (url.includes(domain)) {
-        url = url.replace(domain, currentHost);
-        break;
-      }
-    }
+    const host = window.location.hostname;
+    ['revista1919.github.io', 'www.revistacienciasestudiantes.com', 'revistacienciasestudiantes.com'].forEach(d => {
+      if (url.includes(d)) url = url.replace(d, host);
+    });
     return url;
   }
   pdfUrl = normalizeUrl(pdfUrl);
 
-  // ---------- PDF.js worker ----------
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  // ---------- DOM ----------
   const pdfContainer = document.getElementById('pdfContainer');
   const loadingOverlay = document.getElementById('loading');
   const docTitleEl = document.getElementById('docTitle');
@@ -794,11 +884,15 @@
   const tocContentEl = document.getElementById('tocContent');
   const annotationsListEl = document.getElementById('annotationsList');
   const zoomLevelEl = document.getElementById('zoomLevel');
-  const searchBarEl = document.getElementById('searchBar');
+  const searchOverlay = document.getElementById('searchOverlay');
+  const searchPanel = document.getElementById('searchPanel');
   const searchInputEl = document.getElementById('searchInput');
   const searchResultsEl = document.getElementById('searchResults');
   const colorPickerEl = document.getElementById('colorPicker');
   const toastEl = document.getElementById('toast');
+  const selectionBar = document.getElementById('selectionBar');
+  const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+  const downloadBtn = document.getElementById('downloadBtn');
 
   docTitleEl.textContent = title;
   if (doi) {
@@ -806,130 +900,121 @@
     docDoiEl.textContent = 'doi.org/' + doi;
   }
 
-  // ---------- Toast ----------
+  // Escala inicial según ancho de pantalla
+  function computeInitialScale() {
+    const w = window.innerWidth;
+    if (w < 400) return 0.85;
+    if (w < 600) return 1.0;
+    if (w < 900) return 1.15;
+    return 1.25;
+  }
+  scale = computeInitialScale();
+  zoomLevelEl.textContent = Math.round(scale * 100) + '%';
+
   function showToast(msg, ms) {
     toastEl.textContent = msg;
     toastEl.classList.add('show');
-    setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
   }
 
-  // ---------- Intersection Observer (lazy render) ----------
   const pageObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const pageNum = parseInt(entry.target.dataset.page, 10);
-        if (!renderedPages.has(pageNum)) {
-          renderPage(pageNum, entry.target);
-        }
+        if (!renderedPages.has(pageNum)) renderPage(pageNum, entry.target);
       }
     });
-  }, { root: pdfContainer, rootMargin: '150% 0px', threshold: 0 });
+  }, { root: pdfContainer, rootMargin: '180% 0px', threshold: 0 });
 
-  // ---------- Carga ----------
   if (!pdfUrl) {
-    loadingOverlay.innerHTML =
-      '<div style="color:var(--oxford-blue);font-family:Lora,serif;">Se requiere URL del documento (?url=... o ?pdf=...).</div>';
+    loadingOverlay.innerHTML = '<div style="color:var(--oxford-blue);font-family:Lora,serif;padding:24px;text-align:center;">Se requiere URL del documento<br><small>(?url=… o ?pdf=…)</small></div>';
   } else {
     loadPdf();
   }
 
   function loadPdf() {
-    loadingOverlay.querySelector('.loading-text').textContent = 'Cargando manuscrito...';
     pdfjsLib.getDocument({
       url: pdfUrl,
       withCredentials: false,
       cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
       cMapPacked: true
-    }).promise.then(function (pdf) {
+    }).promise.then(pdf => {
       pdfDoc = pdf;
-      docPagesEl.textContent = pdf.numPages + ' págs';
+      docPagesEl.textContent = pdf.numPages;
       createPageContainers();
       loadOutline();
       setTimeout(() => {
         loadingOverlay.style.opacity = '0';
         loadingOverlay.style.visibility = 'hidden';
-      }, 400);
-    }).catch(function (error) {
-      console.error(error);
-      loadingOverlay.innerHTML =
-        '<div style="color:#D32F2F;font-family:Lora,serif;max-width:420px;text-align:center;">Error de lectura documental:<br><small>' +
-        (error.message || error) + '</small></div>';
+      }, 350);
+    }).catch(err => {
+      console.error(err);
+      loadingOverlay.innerHTML = '<div style="color:#D32F2F;font-family:Lora,serif;max-width:360px;text-align:center;padding:20px;">Error al cargar el documento<br><small>' + (err.message || err) + '</small></div>';
     });
   }
 
   function createPageContainers() {
-    // Desconectar observer anterior
     pageObserver.disconnect();
     pdfContainer.innerHTML = '';
     renderedPages.clear();
     pageTextContentCache = {};
     pageViewports = {};
+    pagePdfHeights = {};
 
     for (let i = 1; i <= pdfDoc.numPages; i++) {
-      const pageWrapper = document.createElement('div');
-      pageWrapper.className = 'pdf-page-wrapper';
-      pageWrapper.id = 'page-' + i;
-      pageWrapper.dataset.page = String(i);
-      // Placeholder aproximado A4
-      pageWrapper.style.width = Math.floor(595 * scale) + 'px';
-      pageWrapper.style.height = Math.floor(842 * scale) + 'px';
-      pdfContainer.appendChild(pageWrapper);
-      pageObserver.observe(pageWrapper);
+      const wrap = document.createElement('div');
+      wrap.className = 'pdf-page-wrapper';
+      wrap.id = 'page-' + i;
+      wrap.dataset.page = String(i);
+      wrap.style.width = Math.floor(595 * scale) + 'px';
+      wrap.style.height = Math.floor(842 * scale) + 'px';
+      pdfContainer.appendChild(wrap);
+      pageObserver.observe(wrap);
     }
     setTool(currentTool);
     updateAnnotationCount();
     updateAnnotationsList();
   }
 
-  // ---------- Render de página ----------
-  async function renderPage(pageNum, wrapperElement) {
+  async function renderPage(pageNum, wrapper) {
     if (renderedPages.has(pageNum)) return;
     renderedPages.add(pageNum);
 
     try {
       const page = await pdfDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: scale });
-      const outputScale = window.devicePixelRatio || 1;
-
+      const viewport = page.getViewport({ scale });
+      const outputScale = Math.min(window.devicePixelRatio || 1, 2);
+      const baseViewport = page.getViewport({ scale: 1 });
+      pagePdfHeights[pageNum] = baseViewport.height;
       pageViewports[pageNum] = viewport;
 
-      wrapperElement.style.width = Math.floor(viewport.width) + 'px';
-      wrapperElement.style.height = Math.floor(viewport.height) + 'px';
-      wrapperElement.innerHTML = '';
+      wrapper.style.width = Math.floor(viewport.width) + 'px';
+      wrapper.style.height = Math.floor(viewport.height) + 'px';
+      wrapper.innerHTML = '';
 
-      // 1. Canvas
       const canvas = document.createElement('canvas');
       canvas.className = 'pdf-canvas';
       canvas.width = Math.floor(viewport.width * outputScale);
       canvas.height = Math.floor(viewport.height * outputScale);
       canvas.style.width = Math.floor(viewport.width) + 'px';
       canvas.style.height = Math.floor(viewport.height) + 'px';
-      wrapperElement.appendChild(canvas);
+      wrapper.appendChild(canvas);
 
       const ctx = canvas.getContext('2d', { alpha: false });
       const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+      await page.render({ canvasContext: ctx, transform, viewport }).promise;
 
-      await page.render({
-        canvasContext: ctx,
-        transform: transform,
-        viewport: viewport
-      }).promise;
-
-      // 2. Text layer (selección de texto)
       const textLayerDiv = document.createElement('div');
       textLayerDiv.className = 'textLayer';
       textLayerDiv.style.width = Math.floor(viewport.width) + 'px';
       textLayerDiv.style.height = Math.floor(viewport.height) + 'px';
-      // Variable CSS que usa el text layer moderno de pdf.js
       textLayerDiv.style.setProperty('--scale-factor', String(scale));
-      wrapperElement.appendChild(textLayerDiv);
+      wrapper.appendChild(textLayerDiv);
 
       const textContent = await page.getTextContent();
-      pageTextContentCache[pageNum] = textContent.items
-        .map(item => item.str)
-        .join(' ');
+      pageTextContentCache[pageNum] = textContent.items.map(it => it.str).join(' ');
 
-      // endOfContent (mejora selección, evita expansión a toda la página)
       const endOfContent = document.createElement('div');
       endOfContent.className = 'endOfContent';
       textLayerDiv.appendChild(endOfContent);
@@ -938,46 +1023,135 @@
         await pdfjsLib.renderTextLayer({
           textContentSource: textContent,
           container: textLayerDiv,
-          viewport: viewport,
+          viewport,
           textDivs: []
         }).promise;
-      } catch (tlErr) {
-        console.warn('Text layer issue page', pageNum, tlErr);
-      }
+      } catch (e) { console.warn('textLayer', pageNum, e); }
 
-      // Mejorar selección: class "selecting" al arrastrar
-      textLayerDiv.addEventListener('mousedown', () => {
-        textLayerDiv.classList.add('selecting');
-      });
-      document.addEventListener('mouseup', () => {
-        textLayerDiv.classList.remove('selecting');
-      }, { once: true });
+      textLayerDiv.addEventListener('mousedown', () => textLayerDiv.classList.add('selecting'));
+      textLayerDiv.addEventListener('touchstart', () => textLayerDiv.classList.add('selecting'), { passive: true });
 
-      // 3. Annotation layer
-      const annotationLayer = document.createElement('div');
-      annotationLayer.className = 'annotation-layer';
-      annotationLayer.id = 'annotations-' + pageNum;
-      wrapperElement.appendChild(annotationLayer);
+      const annLayer = document.createElement('div');
+      annLayer.className = 'annotation-layer';
+      annLayer.id = 'annotations-' + pageNum;
+      wrapper.appendChild(annLayer);
 
       loadAnnotationsForPage(pageNum);
-
-      // 4. Enlaces del PDF (internos / externos)
-      await processPageLinks(pageNum, page, viewport, wrapperElement);
-
+      await processPageLinks(pageNum, page, viewport, wrapper);
     } catch (err) {
-      console.warn('Render error page ' + pageNum, err);
+      console.warn('render', pageNum, err);
       renderedPages.delete(pageNum);
     }
   }
 
-  // ---------- Enlaces ----------
+  // ---------- Destinos: página + Y en coordenadas PDF + flash ----------
+  async function resolveDestination(dest) {
+    if (!dest) return null;
+    try {
+      let explicit = dest;
+      if (typeof dest === 'string') {
+        explicit = await pdfDoc.getDestination(dest);
+      }
+      if (!Array.isArray(explicit) || !explicit[0]) return null;
+
+      const pageIndex = await pdfDoc.getPageIndex(explicit[0]);
+      const pageNum = pageIndex + 1;
+      // Formato típico: [pageRef, {name:'XYZ'}, left, top, zoom]  — top en coords PDF (origen abajo)
+      // o FitH: [pageRef, {name:'FitH'}, top]
+      let pdfY = null;
+      const fit = explicit[1];
+      if (fit && typeof fit === 'object') {
+        if (fit.name === 'XYZ' && explicit[3] != null) pdfY = explicit[3];
+        else if (fit.name === 'FitH' && explicit[2] != null) pdfY = explicit[2];
+        else if (fit.name === 'FitR' && explicit[5] != null) pdfY = explicit[5];
+      } else if (typeof explicit[1] === 'string') {
+        // a veces viene como string "XYZ"
+        if (explicit[1] === 'XYZ' && explicit[3] != null) pdfY = explicit[3];
+        if (explicit[1] === 'FitH' && explicit[2] != null) pdfY = explicit[2];
+      }
+      return { pageNum, pdfY };
+    } catch (e) {
+      console.warn('resolveDestination', e);
+      return null;
+    }
+  }
+
+  window.scrollToDestination = async function (dest) {
+    const resolved = await resolveDestination(dest);
+    if (!resolved) {
+      showToast('No se pudo resolver el enlace');
+      return;
+    }
+    await scrollToPagePosition(resolved.pageNum, resolved.pdfY);
+  };
+
+  window.scrollToPage = function (pageNum) {
+    scrollToPagePosition(pageNum, null);
+  };
+
+  async function scrollToPagePosition(pageNum, pdfY) {
+    // Asegurar que la página exista y se renderice
+    let pageEl = document.getElementById('page-' + pageNum);
+    if (!pageEl) return;
+
+    // Si aún no está renderizada, esperar un poco
+    if (!renderedPages.has(pageNum)) {
+      pageEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+      await new Promise(r => setTimeout(r, 120));
+      // forzar render si el observer no lo hizo
+      if (!renderedPages.has(pageNum)) await renderPage(pageNum, pageEl);
+      await new Promise(r => setTimeout(r, 80));
+      pageEl = document.getElementById('page-' + pageNum);
+    }
+
+    const viewport = pageViewports[pageNum];
+    const pdfH = pagePdfHeights[pageNum];
+
+    if (pdfY != null && viewport && pdfH) {
+      // PDF Y: origen abajo-izquierda → viewport Y: origen arriba
+      const viewY = viewport.convertToViewportPoint(0, pdfY)[1];
+      const pageTop = pageEl.offsetTop;
+      const containerRect = pdfContainer.getBoundingClientRect();
+      // Centrar el destino en el viewport del contenedor
+      const targetScroll = pageTop + viewY - containerRect.height * 0.28;
+      pdfContainer.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+
+      // Flash en la zona exacta
+      flashDestination(pageEl, viewport, pdfY);
+    } else {
+      pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pageEl.style.boxShadow = '0 0 0 3px var(--elsevier-orange), var(--shadow-paper)';
+      setTimeout(() => { pageEl.style.boxShadow = 'var(--shadow-paper)'; }, 1800);
+    }
+
+    // Cerrar sidebar en móvil
+    if (window.innerWidth <= 768) {
+      const sb = document.getElementById('pdfSidebar');
+      if (!sb.classList.contains('hidden')) toggleSidebar();
+    }
+  }
+
+  function flashDestination(pageEl, viewport, pdfY) {
+    // Quitar flashes previos
+    pageEl.querySelectorAll('.dest-flash').forEach(el => el.remove());
+
+    const viewY = viewport.convertToViewportPoint(0, pdfY)[1];
+    const flash = document.createElement('div');
+    flash.className = 'dest-flash';
+    flash.style.left = '4%';
+    flash.style.width = '92%';
+    flash.style.top = Math.max(0, viewY - 18) + 'px';
+    flash.style.height = '36px';
+    pageEl.appendChild(flash);
+    setTimeout(() => flash.remove(), 2300);
+  }
+
   async function processPageLinks(pageNum, page, viewport, wrapper) {
     try {
       const annots = await page.getAnnotations({ intent: 'display' });
-      annots.forEach(annotation => {
-        if (annotation.subtype !== 'Link') return;
+      for (const annotation of annots) {
+        if (annotation.subtype !== 'Link') continue;
 
-        // rect en coordenadas PDF → viewport
         const rect = viewport.convertToViewportRectangle(annotation.rect);
         const left = Math.min(rect[0], rect[2]);
         const top = Math.min(rect[1], rect[3]);
@@ -990,78 +1164,56 @@
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
           a.className = 'pdf-link';
-          a.style.left = left + 'px';
-          a.style.top = top + 'px';
-          a.style.width = width + 'px';
-          a.style.height = height + 'px';
+          a.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${Math.max(height, 14)}px;`;
           a.title = annotation.url;
           wrapper.appendChild(a);
         } else if (annotation.dest) {
           const div = document.createElement('div');
           div.className = 'pdf-link';
-          div.style.left = left + 'px';
-          div.style.top = top + 'px';
-          div.style.width = width + 'px';
-          div.style.height = height + 'px';
+          div.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${Math.max(height, 14)}px;`;
           div.title = 'Ir a sección';
-
-          const resolveDest = async () => {
-            let dest = annotation.dest;
-            if (typeof dest === 'string') {
-              dest = await pdfDoc.getDestination(dest);
-            }
-            if (Array.isArray(dest) && dest[0]) {
-              const pageIndex = await pdfDoc.getPageIndex(dest[0]);
-              const targetPage = pageIndex + 1;
-              div.onclick = () => scrollToPage(targetPage);
-              div.title = 'Ir a página ' + targetPage;
-            }
-          };
-          resolveDest().catch(() => {});
+          const destCopy = annotation.dest;
+          div.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            scrollToDestination(destCopy);
+          });
+          // Touch: evitar delay
+          div.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            scrollToDestination(destCopy);
+          }, { passive: false });
           wrapper.appendChild(div);
         }
-      });
-    } catch (e) {
-      console.warn('Links page', pageNum, e);
-    }
+      }
+    } catch (e) { console.warn('links', pageNum, e); }
   }
 
-  // ---------- Outline / Índice ----------
   function loadOutline() {
-    pdfDoc.getOutline().then(function (outline) {
-      if (!outline || outline.length === 0) {
-        tocContentEl.innerHTML =
-          '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">Estructura no disponible en este PDF.</p>';
+    pdfDoc.getOutline().then(async outline => {
+      if (!outline || !outline.length) {
+        tocContentEl.innerHTML = '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">Este PDF no incluye índice.</p>';
         return;
       }
-      renderOutlineTree(outline, 1).then(html => {
-        tocContentEl.innerHTML = html;
-      });
+      tocContentEl.innerHTML = await renderOutlineTree(outline, 1);
     }).catch(() => {
-      tocContentEl.innerHTML =
-        '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">Índice no disponible.</p>';
+      tocContentEl.innerHTML = '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">Índice no disponible.</p>';
     });
   }
 
   async function renderOutlineTree(items, level) {
     let html = '';
     for (const item of items) {
-      let pageRef = 1;
+      const destJson = item.dest ? JSON.stringify(item.dest).replace(/"/g, '&quot;') : '';
+      const safeTitle = (item.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      let pageLabel = '';
       if (item.dest) {
-        try {
-          let dest = item.dest;
-          if (typeof dest === 'string') {
-            dest = await pdfDoc.getDestination(dest);
-          }
-          if (Array.isArray(dest) && dest[0]) {
-            pageRef = (await pdfDoc.getPageIndex(dest[0])) + 1;
-          }
-        } catch (e) { /* ignore */ }
+        const r = await resolveDestination(item.dest);
+        if (r) pageLabel = `<span class="toc-page">p. ${r.pageNum}</span>`;
       }
       const lvl = Math.min(level, 3);
-      const safeTitle = (item.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      html += `<div class="toc-item toc-level-${lvl}" onclick="scrollToPage(${pageRef})">` +
-        `<span>${safeTitle}</span><span class="toc-page">p. ${pageRef}</span></div>`;
+      html += `<div class="toc-item toc-level-${lvl}" data-dest="${destJson}" role="button">` +
+        `<span>${safeTitle}</span>${pageLabel}</div>`;
       if (item.items && item.items.length) {
         html += await renderOutlineTree(item.items, level + 1);
       }
@@ -1069,24 +1221,42 @@
     return html;
   }
 
-  // ---------- UI globals ----------
-  window.scrollToPage = function (pageNum) {
-    const page = document.getElementById('page-' + pageNum);
-    if (page) {
-      page.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      page.style.boxShadow = '0 0 0 3px var(--elsevier-orange), var(--shadow-paper)';
-      setTimeout(() => { page.style.boxShadow = 'var(--shadow-paper)'; }, 1800);
+  // Delegación de clics en TOC
+  tocContentEl.addEventListener('click', (e) => {
+    const item = e.target.closest('.toc-item');
+    if (!item) return;
+    const destStr = item.getAttribute('data-dest');
+    if (destStr) {
+      try {
+        const dest = JSON.parse(destStr.replace(/&quot;/g, '"'));
+        scrollToDestination(dest);
+      } catch (err) {
+        const m = item.querySelector('.toc-page');
+        if (m) {
+          const n = parseInt(m.textContent.replace(/\D/g, ''), 10);
+          if (n) scrollToPage(n);
+        }
+      }
+    }
+  });
+
+  window.toggleSidebar = function () {
+    const sb = document.getElementById('pdfSidebar');
+    const isHidden = sb.classList.toggle('hidden');
+    if (window.innerWidth <= 768) {
+      sidebarBackdrop.classList.toggle('visible', !isHidden);
     }
   };
 
-  window.toggleSidebar = function () {
-    document.getElementById('pdfSidebar').classList.toggle('hidden');
-  };
+  // Sidebar oculta por defecto en móvil
+  if (window.innerWidth <= 768) {
+    document.getElementById('pdfSidebar').classList.add('hidden');
+  }
 
-  window.switchSidebarTab = function (tab, btnElement) {
+  window.switchSidebarTab = function (tab, btn) {
     document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
-    btnElement.classList.add('active');
+    btn.classList.add('active');
     document.getElementById('panel-' + tab).classList.add('active');
   };
 
@@ -1095,60 +1265,50 @@
     document.getElementById('selectTool').classList.toggle('active', tool === 'select');
     document.getElementById('highlightTool').classList.toggle('active', tool === 'highlight');
     document.getElementById('noteTool').classList.toggle('active', tool === 'note');
-
-    if (tool === 'highlight') {
-      colorPickerEl.classList.add('active');
-      showToast('Selecciona texto y se resaltará al soltar', 2500);
-    } else {
-      colorPickerEl.classList.remove('active');
-    }
-
-    // Cursor
-    const cursor = tool === 'highlight' ? 'text' : (tool === 'note' ? 'crosshair' : 'default');
-    pdfContainer.style.cursor = cursor;
-    document.querySelectorAll('.textLayer').forEach(tl => {
-      tl.style.cursor = tool === 'note' ? 'crosshair' : 'text';
-    });
+    colorPickerEl.classList.toggle('active', tool === 'highlight');
+    if (tool === 'highlight') showToast('Selecciona texto para resaltar', 2000);
   };
 
-  window.selectHighlightColor = function (color, element) {
+  window.selectHighlightColor = function (color, el) {
     currentHighlightColor = color;
-    document.querySelectorAll('.color-option').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
+    document.querySelectorAll('.color-option').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
   };
 
   window.zoomIn = function () {
-    scale = Math.min(scale + 0.25, 3.0);
+    scale = Math.min(scale + 0.2, 2.8);
     updateZoom();
   };
   window.zoomOut = function () {
-    scale = Math.max(scale - 0.25, 0.5);
+    scale = Math.max(scale - 0.2, 0.5);
     updateZoom();
   };
-
   function updateZoom() {
     zoomLevelEl.textContent = Math.round(scale * 100) + '%';
-    // Re-escalar anotaciones: las guardamos en coordenadas normalizadas (0-1)
     createPageContainers();
   }
 
   // ---------- Búsqueda ----------
   window.toggleSearch = function () {
-    searchBarEl.classList.toggle('active');
-    if (searchBarEl.classList.contains('active')) {
-      searchInputEl.focus();
-      searchInputEl.select();
+    const open = !searchPanel.classList.contains('active');
+    if (open) {
+      searchOverlay.classList.add('active');
+      searchPanel.classList.add('active');
+      setTimeout(() => { searchInputEl.focus(); searchInputEl.select(); }, 280);
     } else {
-      clearSearchHighlights();
+      closeSearch();
     }
   };
 
-  searchInputEl.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') performSearch();
-    if (e.key === 'Escape') {
-      searchBarEl.classList.remove('active');
-      clearSearchHighlights();
-    }
+  window.closeSearch = function () {
+    searchOverlay.classList.remove('active');
+    searchPanel.classList.remove('active');
+    clearSearchHighlights();
+  };
+
+  searchInputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); performSearch(); }
+    if (e.key === 'Escape') closeSearch();
   });
 
   function clearSearchHighlights() {
@@ -1162,11 +1322,12 @@
     const query = searchInputEl.value.trim();
     if (!query || !pdfDoc) return;
 
-    searchResultsEl.innerHTML = '<p style="color:var(--text-muted);">Consultando documento...</p>';
+    searchResultsEl.innerHTML = '<p style="color:var(--text-muted);padding:8px;">Buscando…</p>';
     clearSearchHighlights();
 
     const results = [];
-    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'gi');
 
     for (let i = 1; i <= pdfDoc.numPages; i++) {
       let text = pageTextContentCache[i];
@@ -1174,160 +1335,138 @@
         try {
           const page = await pdfDoc.getPage(i);
           const content = await page.getTextContent();
-          text = content.items.map(item => item.str).join(' ');
+          text = content.items.map(it => it.str).join(' ');
           pageTextContentCache[i] = text;
         } catch (e) { continue; }
       }
-      let match;
       regex.lastIndex = 0;
+      let match;
       while ((match = regex.exec(text)) !== null) {
-        const start = Math.max(0, match.index - 45);
-        const end = Math.min(text.length, match.index + query.length + 45);
-        results.push({
-          page: i,
-          text: text.substring(start, end),
-          index: match.index
-        });
-        if (results.length >= 80) break;
+        const start = Math.max(0, match.index - 40);
+        const end = Math.min(text.length, match.index + query.length + 40);
+        results.push({ page: i, text: text.substring(start, end) });
+        if (results.length >= 60) break;
       }
-      if (results.length >= 80) break;
+      if (results.length >= 60) break;
     }
 
-    if (results.length === 0) {
-      searchResultsEl.innerHTML =
-        '<p style="color:var(--text-muted);">Sin hallazgos para «' + query.replace(/</g, '&lt;') + '».</p>';
+    if (!results.length) {
+      searchResultsEl.innerHTML = '<p style="color:var(--text-muted);padding:8px;">Sin resultados para «' + query.replace(/</g, '&lt;') + '».</p>';
       return;
     }
 
-    let html = `<p style="font-weight:600;font-size:13px;margin-bottom:12px;">${results.length} registro${results.length !== 1 ? 's' : ''} encontrado${results.length !== 1 ? 's' : ''}</p>`;
-    results.slice(0, 50).forEach(result => {
-      const highlighted = result.text
+    let html = `<p style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--oxford-blue);">${results.length} resultado${results.length !== 1 ? 's' : ''}</p>`;
+    results.forEach(r => {
+      const highlighted = r.text
         .replace(/</g, '&lt;')
-        .replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '<span class="highlight">$&</span>');
-      html += `<div class="search-result-item" onclick="scrollToPage(${result.page})">` +
-        `<strong>Página ${result.page}</strong>...${highlighted}...</div>`;
+        .replace(new RegExp(escaped, 'gi'), '<span class="highlight">$&</span>');
+      html += `<div class="search-result-item" data-page="${r.page}"><strong>Página ${r.page}</strong>…${highlighted}…</div>`;
     });
     searchResultsEl.innerHTML = html;
 
-    // Resaltar en páginas ya renderizadas
     const qLower = query.toLowerCase();
-    for (const result of results.slice(0, 30)) {
-      const pageWrapper = document.getElementById('page-' + result.page);
-      if (!pageWrapper || !renderedPages.has(result.page)) continue;
-      const textLayer = pageWrapper.querySelector('.textLayer');
-      if (!textLayer) continue;
-      textLayer.querySelectorAll('span').forEach(span => {
+    results.slice(0, 25).forEach(r => {
+      const wrap = document.getElementById('page-' + r.page);
+      if (!wrap || !renderedPages.has(r.page)) return;
+      const tl = wrap.querySelector('.textLayer');
+      if (!tl) return;
+      tl.querySelectorAll('span').forEach(span => {
         if (span.textContent && span.textContent.toLowerCase().includes(qLower)) {
-          span.style.background = 'rgba(253, 224, 71, 0.55)';
+          span.style.background = 'rgba(253, 224, 71, 0.5)';
           span.classList.add('search-highlight-temp');
         }
       });
-    }
+    });
   };
 
-  // ---------- Anotaciones: carga y guardado ----------
+  searchResultsEl.addEventListener('click', e => {
+    const item = e.target.closest('.search-result-item');
+    if (!item) return;
+    const page = parseInt(item.dataset.page, 10);
+    closeSearch();
+    scrollToPage(page);
+  });
+
+  // ---------- Anotaciones ----------
   function saveAnnotations() {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(annotations));
-    } catch (e) {
-      console.warn('localStorage full or unavailable', e);
-    }
+    try { localStorage.setItem(storageKey, JSON.stringify(annotations)); } catch (e) {}
   }
 
   function updateAnnotationCount() {
-    let count = 0;
-    for (const pageAnns of Object.values(annotations)) {
-      if (Array.isArray(pageAnns)) count += pageAnns.length;
-    }
-    annotationCountEl.textContent = String(count);
+    let n = 0;
+    Object.values(annotations).forEach(a => { if (Array.isArray(a)) n += a.length; });
+    annotationCountEl.textContent = String(n);
   }
 
   function updateAnnotationsList() {
     let html = '';
-    let count = 0;
-    const pages = Object.keys(annotations).map(Number).sort((a, b) => a - b);
-    for (const pageNum of pages) {
-      const pageAnns = annotations[pageNum] || [];
-      pageAnns.forEach((ann, idx) => {
-        count++;
+    let n = 0;
+    Object.keys(annotations).map(Number).sort((a, b) => a - b).forEach(pageNum => {
+      (annotations[pageNum] || []).forEach((ann, idx) => {
+        n++;
         const label = ann.type === 'highlight' ? 'Resaltado' : 'Nota';
         const preview = ann.text
-          ? (ann.text.length > 80 ? ann.text.slice(0, 80) + '…' : ann.text)
+          ? (ann.text.length > 90 ? ann.text.slice(0, 90) + '…' : ann.text)
           : '<em>(sin texto)</em>';
-        html += `<div style="padding:12px;background:#F8FAFC;border:1px solid var(--border-subtle);border-radius:6px;margin-bottom:8px;cursor:pointer;" onclick="scrollToPage(${pageNum})">` +
-          `<strong style="font-size:11px;color:var(--oxford-blue);display:block;margin-bottom:4px;text-transform:uppercase;">Página ${pageNum} · ${label}</strong>` +
-          `<p style="font-size:13px;margin:0;font-family:'Lora',serif;color:var(--text-main);">${preview}</p></div>`;
+        html += `<div style="padding:12px;background:#F8FAFC;border:1px solid var(--border-subtle);border-radius:8px;margin-bottom:8px;cursor:pointer;" data-goto="${pageNum}">` +
+          `<strong style="font-size:11px;color:var(--oxford-blue);display:block;margin-bottom:4px;text-transform:uppercase;">Pág. ${pageNum} · ${label}</strong>` +
+          `<p style="font-size:13px;margin:0;font-family:'Lora',serif;">${preview.replace(/</g, '&lt;')}</p></div>`;
       });
-    }
-    if (count === 0) {
-      annotationsListEl.innerHTML =
-        '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">Sin revisiones pendientes.</p>';
-    } else {
-      annotationsListEl.innerHTML = html;
-    }
+    });
+    annotationsListEl.innerHTML = n
+      ? html
+      : '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">Sin marcas aún.</p>';
   }
+
+  annotationsListEl.addEventListener('click', e => {
+    const card = e.target.closest('[data-goto]');
+    if (card) scrollToPage(parseInt(card.dataset.goto, 10));
+  });
 
   function loadAnnotationsForPage(pageNum) {
     const layer = document.getElementById('annotations-' + pageNum);
     if (!layer) return;
     layer.innerHTML = '';
-
-    const pageAnnotations = annotations[pageNum] || [];
     const viewport = pageViewports[pageNum];
     if (!viewport) return;
+    const list = annotations[pageNum] || [];
 
-    pageAnnotations.forEach((annotation, index) => {
+    list.forEach((annotation, index) => {
       if (annotation.type === 'note') {
-        // Coordenadas normalizadas 0–1
-        const x = (annotation.nx != null ? annotation.nx : annotation.x / (annotation.pageWidth || viewport.width)) * viewport.width;
-        const y = (annotation.ny != null ? annotation.ny : annotation.y / (annotation.pageHeight || viewport.height)) * viewport.height;
-
+        const x = (annotation.nx != null ? annotation.nx : 0.1) * viewport.width;
+        const y = (annotation.ny != null ? annotation.ny : 0.1) * viewport.height;
         const div = document.createElement('div');
         div.className = 'annotation-note';
         div.style.left = x + 'px';
         div.style.top = y + 'px';
-        div.innerHTML = `<button class="annotation-delete" data-page="${pageNum}" data-index="${index}" title="Eliminar">×</button>`;
-
-        const textarea = document.createElement('textarea');
-        textarea.value = annotation.text || '';
-        textarea.placeholder = 'Comentario de revisión...';
-        textarea.addEventListener('change', function () {
-          annotation.text = textarea.value;
+        const del = document.createElement('button');
+        del.className = 'annotation-delete';
+        del.textContent = '×';
+        del.title = 'Eliminar';
+        del.addEventListener('click', e => { e.stopPropagation(); deleteAnnotation(pageNum, index); });
+        div.appendChild(del);
+        const ta = document.createElement('textarea');
+        ta.value = annotation.text || '';
+        ta.placeholder = 'Comentario…';
+        ta.addEventListener('change', () => {
+          annotation.text = ta.value;
           saveAnnotations();
-          updateAnnotationCount();
           updateAnnotationsList();
         });
-        div.appendChild(textarea);
+        div.appendChild(ta);
         layer.appendChild(div);
-
-        div.querySelector('.annotation-delete').addEventListener('click', function (e) {
-          e.stopPropagation();
-          deleteAnnotation(pageNum, index);
-        });
-      } else if (annotation.type === 'highlight') {
-        // rects: array de { nx, ny, nw, nh } normalizados
-        const rects = annotation.rects || [];
-        rects.forEach((r, ri) => {
-          const left = r.nx * viewport.width;
-          const top = r.ny * viewport.height;
-          const width = r.nw * viewport.width;
-          const height = r.nh * viewport.height;
-
+      } else if (annotation.type === 'highlight' && annotation.rects) {
+        annotation.rects.forEach(r => {
           const div = document.createElement('div');
           div.className = 'annotation-highlight color-' + (annotation.color || 'yellow');
-          div.style.left = left + 'px';
-          div.style.top = top + 'px';
-          div.style.width = width + 'px';
-          div.style.height = height + 'px';
-          div.title = annotation.text ? annotation.text.slice(0, 120) : 'Texto resaltado';
-          div.dataset.page = pageNum;
-          div.dataset.index = index;
-
-          div.addEventListener('click', function (e) {
+          div.style.left = (r.nx * viewport.width) + 'px';
+          div.style.top = (r.ny * viewport.height) + 'px';
+          div.style.width = (r.nw * viewport.width) + 'px';
+          div.style.height = (r.nh * viewport.height) + 'px';
+          div.title = annotation.text ? annotation.text.slice(0, 100) : 'Resaltado';
+          div.addEventListener('click', e => {
             e.stopPropagation();
-            if (confirm('¿Eliminar este resaltado?')) {
-              deleteAnnotation(pageNum, index);
-            }
+            if (confirm('¿Eliminar este resaltado?')) deleteAnnotation(pageNum, index);
           });
           layer.appendChild(div);
         });
@@ -1336,115 +1475,203 @@
   }
 
   window.deleteAnnotation = function (pageNum, index) {
-    if (annotations[pageNum]) {
-      annotations[pageNum].splice(index, 1);
-      if (annotations[pageNum].length === 0) delete annotations[pageNum];
-      saveAnnotations();
-      loadAnnotationsForPage(pageNum);
-      updateAnnotationsList();
-      updateAnnotationCount();
-      showToast('Anotación eliminada');
-    }
+    if (!annotations[pageNum]) return;
+    annotations[pageNum].splice(index, 1);
+    if (!annotations[pageNum].length) delete annotations[pageNum];
+    saveAnnotations();
+    loadAnnotationsForPage(pageNum);
+    updateAnnotationsList();
+    updateAnnotationCount();
+    showToast('Eliminado');
   };
 
-  // ---------- Resaltado por SELECCIÓN DE TEXTO (como Acrobat) ----------
-  function getSelectionRectsRelativeToPage(range, pageWrapper) {
+  // ---------- Selección de texto → barra de acciones ----------
+  function getSelectionContext() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    const text = sel.toString().trim();
+    if (!text) return null;
+    let node = range.commonAncestorContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    const pageWrapper = node.closest && node.closest('.pdf-page-wrapper');
+    if (!pageWrapper) return null;
+    const pageNum = parseInt(pageWrapper.dataset.page, 10);
+    return { sel, range, text, pageWrapper, pageNum };
+  }
+
+  function getRectsForRange(range, pageWrapper) {
     const pageRect = pageWrapper.getBoundingClientRect();
     const clientRects = range.getClientRects();
     const rects = [];
     for (let i = 0; i < clientRects.length; i++) {
       const r = clientRects[i];
-      // Filtrar rects vacíos o fuera de la página
       if (r.width < 1 || r.height < 1) continue;
       const left = r.left - pageRect.left;
       const top = r.top - pageRect.top;
-      // Solo rects que intersectan la página
-      if (left + r.width < 0 || top + r.height < 0 ||
-          left > pageRect.width || top > pageRect.height) continue;
+      if (left + r.width < 0 || top + r.height < 0 || left > pageRect.width || top > pageRect.height) continue;
       rects.push({
         x: Math.max(0, left),
         y: Math.max(0, top),
-        width: Math.min(r.width, pageRect.width - left),
-        height: Math.min(r.height, pageRect.height - top)
+        width: Math.min(r.width, pageRect.width - Math.max(0, left)),
+        height: Math.min(r.height, pageRect.height - Math.max(0, top))
       });
     }
     return rects;
   }
 
-  function createHighlightFromSelection() {
-    if (currentTool !== 'highlight') return;
+  function showSelectionBar() {
+    const ctx = getSelectionContext();
+    if (!ctx) {
+      selectionBar.classList.remove('show');
+      pendingSelection = null;
+      return;
+    }
+    pendingSelection = ctx;
+    selectionBar.classList.add('show');
+  }
 
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+  function hideSelectionBar() {
+    selectionBar.classList.remove('show');
+  }
 
-    const range = selection.getRangeAt(0);
-    const selectedText = selection.toString().trim();
-    if (!selectedText) return;
+  document.addEventListener('selectionchange', () => {
+    // Debounce ligero
+    clearTimeout(showSelectionBar._t);
+    showSelectionBar._t = setTimeout(showSelectionBar, 80);
+  });
 
-    // Encontrar el page-wrapper que contiene la selección
-    let node = range.commonAncestorContainer;
-    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-    const pageWrapper = node.closest ? node.closest('.pdf-page-wrapper') : null;
-    if (!pageWrapper) return;
+  document.addEventListener('mouseup', () => {
+    setTimeout(() => {
+      if (currentTool === 'highlight') {
+        const ctx = getSelectionContext();
+        if (ctx) {
+          applyHighlight(ctx);
+          window.getSelection().removeAllRanges();
+          hideSelectionBar();
+        }
+      } else {
+        showSelectionBar();
+      }
+    }, 30);
+  });
 
-    const pageNum = parseInt(pageWrapper.dataset.page, 10);
-    const viewport = pageViewports[pageNum];
+  document.addEventListener('touchend', () => {
+    setTimeout(showSelectionBar, 120);
+  }, { passive: true });
+
+  function applyHighlight(ctx) {
+    const viewport = pageViewports[ctx.pageNum];
     if (!viewport) return;
-
-    const rawRects = getSelectionRectsRelativeToPage(range, pageWrapper);
-    if (rawRects.length === 0) return;
-
-    // Normalizar a 0–1 para que sobrevivan al zoom
-    const normalizedRects = rawRects.map(r => ({
+    const raw = getRectsForRange(ctx.range, ctx.pageWrapper);
+    if (!raw.length) return;
+    const normalized = raw.map(r => ({
       nx: r.x / viewport.width,
       ny: r.y / viewport.height,
       nw: r.width / viewport.width,
       nh: r.height / viewport.height
     }));
-
-    if (!annotations[pageNum]) annotations[pageNum] = [];
-    annotations[pageNum].push({
+    if (!annotations[ctx.pageNum]) annotations[ctx.pageNum] = [];
+    annotations[ctx.pageNum].push({
       type: 'highlight',
       color: currentHighlightColor,
-      text: selectedText,
-      rects: normalizedRects,
+      text: ctx.text,
+      rects: normalized,
       created: Date.now()
     });
-
     saveAnnotations();
-    loadAnnotationsForPage(pageNum);
+    loadAnnotationsForPage(ctx.pageNum);
     updateAnnotationCount();
     updateAnnotationsList();
-
-    selection.removeAllRanges();
     showToast('Texto resaltado');
   }
 
-  // mouseup / pointerup para capturar la selección
-  pdfContainer.addEventListener('mouseup', function (e) {
-    if (currentTool === 'highlight') {
-      // Pequeño delay para que el navegador termine de actualizar la selección
-      setTimeout(createHighlightFromSelection, 10);
+  window.highlightCurrentSelection = function () {
+    const ctx = pendingSelection || getSelectionContext();
+    if (!ctx) { showToast('Selecciona texto primero'); return; }
+    applyHighlight(ctx);
+    window.getSelection().removeAllRanges();
+    hideSelectionBar();
+  };
+
+  window.copyCurrentSelection = async function () {
+    const ctx = pendingSelection || getSelectionContext();
+    if (!ctx) { showToast('Nada que copiar'); return; }
+    try {
+      // Texto enriquecido: plain + html mínimo
+      const plain = ctx.text;
+      const html = '<meta charset="utf-8"><span style="font-family:Lora,Georgia,serif;">' +
+        plain.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+        '</span>';
+      if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/plain': new Blob([plain], { type: 'text/plain' }),
+            'text/html': new Blob([html], { type: 'text/html' })
+          })
+        ]);
+      } else {
+        await navigator.clipboard.writeText(plain);
+      }
+      showToast('Copiado');
+    } catch (e) {
+      // Fallback
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = ctx.text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        showToast('Copiado');
+      } catch (e2) {
+        showToast('No se pudo copiar');
+      }
     }
-  });
+    hideSelectionBar();
+  };
 
-  // ---------- Notas (clic en la página) ----------
-  pdfContainer.addEventListener('click', function (e) {
+  window.noteFromSelection = function () {
+    const ctx = pendingSelection || getSelectionContext();
+    if (!ctx) {
+      setTool('note');
+      showToast('Toca la página para colocar la nota');
+      hideSelectionBar();
+      return;
+    }
+    const viewport = pageViewports[ctx.pageNum];
+    if (!viewport) return;
+    const raw = getRectsForRange(ctx.range, ctx.pageWrapper);
+    const first = raw[0] || { x: 20, y: 20 };
+    if (!annotations[ctx.pageNum]) annotations[ctx.pageNum] = [];
+    annotations[ctx.pageNum].push({
+      type: 'note',
+      nx: first.x / viewport.width,
+      ny: first.y / viewport.height,
+      text: ctx.text.slice(0, 500),
+      created: Date.now()
+    });
+    saveAnnotations();
+    loadAnnotationsForPage(ctx.pageNum);
+    updateAnnotationCount();
+    updateAnnotationsList();
+    window.getSelection().removeAllRanges();
+    hideSelectionBar();
+    showToast('Nota creada con el texto');
+  };
+
+  // Notas por clic
+  pdfContainer.addEventListener('click', e => {
     if (currentTool !== 'note') return;
-    if (e.target.closest('.annotation-note') || e.target.closest('.annotation-highlight')) return;
-    if (e.target.closest('.pdf-link')) return;
-
+    if (e.target.closest('.annotation-note') || e.target.closest('.annotation-highlight') || e.target.closest('.pdf-link')) return;
     const wrapper = e.target.closest('.pdf-page-wrapper');
     if (!wrapper) return;
-
     const pageNum = parseInt(wrapper.dataset.page, 10);
     const viewport = pageViewports[pageNum];
     if (!viewport) return;
-
     const rect = wrapper.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
     if (!annotations[pageNum]) annotations[pageNum] = [];
     annotations[pageNum].push({
       type: 'note',
@@ -1453,73 +1680,145 @@
       text: '',
       created: Date.now()
     });
-
     saveAnnotations();
     loadAnnotationsForPage(pageNum);
     updateAnnotationsList();
     updateAnnotationCount();
-
     setTimeout(() => {
       const notes = document.querySelectorAll('#annotations-' + pageNum + ' .annotation-note textarea');
       if (notes.length) notes[notes.length - 1].focus();
-    }, 50);
-
+    }, 40);
     showToast('Nota añadida');
   });
 
-  // ---------- Descargar ----------
-  window.downloadAnnotated = function () {
-    // 1. PDF original
-    const link = document.createElement('a');
-    link.href = pdfUrl;
-    link.download = (title || 'manuscrito').replace(/[^a-z0-9áéíóúñü\s\-]/gi, '_').trim() + '.pdf';
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // ---------- Descargar PDF con anotaciones incrustadas (pdf-lib) ----------
+  window.downloadAnnotatedPDF = async function () {
+    if (!pdfUrl || !pdfDoc) return;
+    downloadBtn.disabled = true;
+    showToast('Generando PDF con marcas…', 4000);
 
-    // 2. JSON de revisiones (si hay)
-    const hasAnns = Object.keys(annotations).some(k => (annotations[k] || []).length > 0);
-    if (hasAnns) {
-      const payload = {
-        title: title,
-        doi: doi,
-        pdfUrl: pdfUrl,
-        exportedAt: new Date().toISOString(),
-        annotations: annotations
+    try {
+      const res = await fetch(pdfUrl);
+      if (!res.ok) throw new Error('No se pudo obtener el PDF');
+      const existingBytes = await res.arrayBuffer();
+
+      const { PDFDocument, rgb, StandardFonts } = PDFLib;
+      const pdfLibDoc = await PDFDocument.load(existingBytes, { ignoreEncryption: true });
+      const pages = pdfLibDoc.getPages();
+      const font = await pdfLibDoc.embedFont(StandardFonts.Helvetica);
+
+      const colorMap = {
+        yellow: rgb(1, 0.92, 0.23),
+        green: rgb(0.45, 0.9, 0.55),
+        blue: rgb(0.5, 0.75, 0.98),
+        pink: rgb(0.95, 0.6, 0.8)
       };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+
+      for (const [pageKey, anns] of Object.entries(annotations)) {
+        const pageIndex = parseInt(pageKey, 10) - 1;
+        if (pageIndex < 0 || pageIndex >= pages.length || !Array.isArray(anns)) continue;
+        const page = pages[pageIndex];
+        const { width, height } = page.getSize();
+
+        for (const ann of anns) {
+          if (ann.type === 'highlight' && ann.rects) {
+            const c = colorMap[ann.color] || colorMap.yellow;
+            for (const r of ann.rects) {
+              // Normalizado (origen arriba) → PDF (origen abajo)
+              const x = r.nx * width;
+              const w = r.nw * width;
+              const h = r.nh * height;
+              const y = height - (r.ny * height) - h;
+              page.drawRectangle({
+                x, y, width: w, height: Math.max(h, 2),
+                color: c,
+                opacity: 0.35,
+                borderWidth: 0
+              });
+            }
+          } else if (ann.type === 'note') {
+            const nx = (ann.nx != null ? ann.nx : 0.05) * width;
+            const nyTop = (ann.ny != null ? ann.ny : 0.05) * height;
+            const noteY = height - nyTop - 14;
+            // Icono / marca
+            page.drawRectangle({
+              x: nx,
+              y: noteY,
+              width: 12,
+              height: 12,
+              color: rgb(1, 0.42, 0.05),
+              opacity: 0.9
+            });
+            const noteText = (ann.text || 'Nota').slice(0, 120);
+            page.drawText(noteText, {
+              x: nx + 16,
+              y: noteY + 2,
+              size: 8,
+              font,
+              color: rgb(0, 0.11, 0.24),
+              maxWidth: Math.min(220, width - nx - 24),
+              lineHeight: 10
+            });
+          }
+        }
+      }
+
+      const outBytes = await pdfLibDoc.save();
+      const blob = new Blob([outBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = (title || 'manuscrito').replace(/[^a-z0-9áéíóúñü\s\-]/gi, '_').trim() + '_revisiones.json';
+      a.download = (title || 'manuscrito').replace(/[^\wáéíóúñü\s\-]/gi, '_').trim().slice(0, 80) + '_revisado.pdf';
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       URL.revokeObjectURL(url);
-      showToast('PDF + archivo de revisiones descargados');
-    } else {
-      showToast('PDF descargado (sin revisiones)');
+      showToast('PDF descargado con anotaciones');
+    } catch (err) {
+      console.error(err);
+      showToast('Error al generar PDF. Se descarga el original.');
+      // Fallback: original
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = (title || 'manuscrito') + '.pdf';
+      a.target = '_blank';
+      a.click();
+    } finally {
+      downloadBtn.disabled = false;
     }
   };
 
-  // ---------- Atajos de teclado ----------
-  document.addEventListener('keydown', function (e) {
+  // Atajos
+  document.addEventListener('keydown', e => {
     const tag = (e.target.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'textarea') return;
-
     if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
       e.preventDefault();
       toggleSearch();
     }
     if (e.key === 'Escape') {
-      searchBarEl.classList.remove('active');
-      clearSearchHighlights();
+      closeSearch();
+      hideSelectionBar();
+      if (window.innerWidth <= 768) {
+        const sb = document.getElementById('pdfSidebar');
+        if (!sb.classList.contains('hidden')) toggleSidebar();
+      }
     }
     if (e.key === 'h' || e.key === 'H') setTool('highlight');
     if (e.key === 'n' || e.key === 'N') setTool('note');
     if (e.key === 'v' || e.key === 'V') setTool('select');
   });
 
-  // Inicio
+  // Cerrar barra al tocar fuera
+  document.addEventListener('click', e => {
+    if (!selectionBar.contains(e.target) && !e.target.closest('.textLayer')) {
+      // no ocultar inmediatamente si hay selección
+      setTimeout(() => {
+        if (!getSelectionContext()) hideSelectionBar();
+      }, 50);
+    }
+  });
+
   setTool('select');
   updateAnnotationCount();
   updateAnnotationsList();
