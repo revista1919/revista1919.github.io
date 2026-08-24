@@ -930,7 +930,7 @@
 </div>
 
 <!-- Buscador tipo bottom sheet -->
-<div class="search-overlay" id="searchOverlay" onclick="closeSearch()"></div>
+<div class="search-overlay" id="searchOverlay" onclick="closeSearch();clearSearchHighlights();"></div>
 <div class="search-panel" id="searchPanel" role="dialog" aria-label="Buscar en el documento">
   <div class="search-handle"></div>
   <div class="search-header">
@@ -975,11 +975,24 @@
 
   function normalizeUrl(url) {
     if (!url) return url;
-    const host = window.location.hostname;
-    ['revista1919.github.io', 'www.revistacienciasestudiantes.com', 'revistacienciasestudiantes.com'].forEach(d => {
-      if (url.includes(d)) url = url.replace(d, host);
-    });
-    return url;
+    try {
+      const u = new URL(url, window.location.href);
+      const host = window.location.hostname;
+      // Dominios espejo de la revista (mismo contenido, distinto host)
+      const mirrors = new Set([
+        'revista1919.github.io',
+        'www.revistacienciasestudiantes.com',
+        'revistacienciasestudiantes.com'
+      ]);
+      // Solo reescribir host si estamos en un espejo y el PDF apunta a OTRO espejo
+      // (evita el bug www.www.… al reemplazar substrings)
+      if (mirrors.has(u.hostname) && mirrors.has(host) && u.hostname !== host) {
+        u.hostname = host;
+      }
+      return u.href;
+    } catch (e) {
+      return url;
+    }
   }
   pdfUrl = normalizeUrl(pdfUrl);
 
@@ -1399,10 +1412,50 @@
     scale = Math.max(scale - 0.2, 0.5);
     updateZoom();
   };
+  let zoomDebounce = null;
   function updateZoom() {
     zoomLevelEl.textContent = Math.round(scale * 100) + '%';
     createPageContainers();
   }
+  function setScaleClamped(s) {
+    scale = Math.min(2.8, Math.max(0.5, s));
+    zoomLevelEl.textContent = Math.round(scale * 100) + '%';
+    if (zoomDebounce) clearTimeout(zoomDebounce);
+    zoomDebounce = setTimeout(() => updateZoom(), 80);
+  }
+
+  // Zoom con trackpad / rueda + Ctrl (o Cmd)
+  pdfContainer.addEventListener('wheel', function (e) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.08 : 0.08;
+    setScaleClamped(scale + delta);
+  }, { passive: false });
+
+  // Pinch-to-zoom en móvil
+  let pinchStartDist = 0;
+  let pinchStartScale = 1;
+  function touchDistance(t0, t1) {
+    const dx = t0.clientX - t1.clientX;
+    const dy = t0.clientY - t1.clientY;
+    return Math.hypot(dx, dy);
+  }
+  pdfContainer.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) {
+      pinchStartDist = touchDistance(e.touches[0], e.touches[1]);
+      pinchStartScale = scale;
+    }
+  }, { passive: true });
+  pdfContainer.addEventListener('touchmove', function (e) {
+    if (e.touches.length !== 2 || !pinchStartDist) return;
+    e.preventDefault();
+    const dist = touchDistance(e.touches[0], e.touches[1]);
+    const factor = dist / pinchStartDist;
+    setScaleClamped(pinchStartScale * factor);
+  }, { passive: false });
+  pdfContainer.addEventListener('touchend', function (e) {
+    if (e.touches.length < 2) pinchStartDist = 0;
+  }, { passive: true });
 
   // ---------- Búsqueda ----------
   window.toggleSearch = function () {
@@ -1419,24 +1472,32 @@
   window.closeSearch = function () {
     searchOverlay.classList.remove('active');
     searchPanel.classList.remove('active');
-    clearSearchHighlights();
+    // No limpiar aún si acabamos de saltar a un resultado (lo limpia el timeout)
   };
 
   searchInputEl.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); performSearch(); }
-    if (e.key === 'Escape') closeSearch();
+    if (e.key === 'Escape') {
+      closeSearch();
+      clearSearchHighlights();
+    }
   });
 
   let lastSearchQuery = '';
+  let searchClearTimer = null;
 
-  function clearSearchHighlights() {
+  window.clearSearchHighlights = function clearSearchHighlights() {
+    if (searchClearTimer) {
+      clearTimeout(searchClearTimer);
+      searchClearTimer = null;
+    }
     document.querySelectorAll('.search-highlight-temp, .search-hit, .search-hit-active').forEach(el => {
       el.style.background = '';
       el.classList.remove('search-highlight-temp', 'search-hit', 'search-hit-active');
     });
-  }
+  };
 
-  /** Marca spans de la text layer que contienen la query y opcionalmente centra el primero */
+  /** Marca temporalmente el match activo (se limpia solo) */
   function highlightQueryOnPage(pageNum, query, scrollToFirst) {
     const wrap = document.getElementById('page-' + pageNum);
     if (!wrap) return null;
@@ -1448,22 +1509,20 @@
     tl.querySelectorAll('span').forEach(span => {
       const t = span.textContent || '';
       if (t.toLowerCase().includes(q)) {
-        span.classList.add('search-hit', 'search-highlight-temp');
         if (!first) first = span;
       }
     });
     if (first && scrollToFirst) {
-      first.classList.add('search-hit-active');
-      // Scroll del contenedor hasta el span
+      first.classList.add('search-hit', 'search-hit-active', 'search-highlight-temp');
       const spanRect = first.getBoundingClientRect();
       const contRect = pdfContainer.getBoundingClientRect();
       const delta = spanRect.top - contRect.top - contRect.height * 0.3;
       pdfContainer.scrollBy({ top: delta, behavior: 'smooth' });
-      // Flash extra
-      first.style.transition = 'background 0.3s';
-      setTimeout(() => {
-        first.classList.remove('search-hit-active');
-      }, 2800);
+      // Auto-limpiar para que no quede permanente
+      if (searchClearTimer) clearTimeout(searchClearTimer);
+      searchClearTimer = setTimeout(() => {
+        clearSearchHighlights();
+      }, 3200);
     }
     return first;
   }
@@ -1514,14 +1573,7 @@
       html += `<div class="search-result-item" data-page="${r.page}" data-idx="${idx}"><strong>Página ${r.page}</strong>…${highlighted}…</div>`;
     });
     searchResultsEl.innerHTML = html;
-
-    // Pre-marcar páginas ya visibles
-    const pagesSeen = new Set();
-    results.forEach(r => {
-      if (pagesSeen.has(r.page)) return;
-      pagesSeen.add(r.page);
-      if (renderedPages.has(r.page)) highlightQueryOnPage(r.page, query, false);
-    });
+    // No marcar permanentemente todas las coincidencias; solo al hacer clic
   };
 
   searchResultsEl.addEventListener('click', async e => {
@@ -1530,34 +1582,20 @@
     const page = parseInt(item.dataset.page, 10);
     const query = lastSearchQuery;
     closeSearch();
+    clearSearchHighlights();
 
-    // Ir a la página y esperar render
     let pageEl = document.getElementById('page-' + page);
     if (pageEl) {
       pageEl.scrollIntoView({ behavior: 'auto', block: 'center' });
       if (!renderedPages.has(page)) {
         await renderPage(page, pageEl);
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 120));
       }
     }
 
-    // Resaltar y centrar el match exacto
-    clearSearchHighlights();
-    // Marcar todas las páginas con hits ligeros
-    for (let i = 1; i <= (pdfDoc ? pdfDoc.numPages : 0); i++) {
-      if (renderedPages.has(i) && pageTextContentCache[i] &&
-          pageTextContentCache[i].toLowerCase().includes(query.toLowerCase())) {
-        highlightQueryOnPage(i, query, false);
-      }
-    }
     const hit = highlightQueryOnPage(page, query, true);
-    if (!hit) {
-      // Fallback: scroll a página + flash de página
-      scrollToPage(page);
-      showToast('Resultado en página ' + page);
-    } else {
-      showToast('Resultado en página ' + page);
-    }
+    if (!hit) scrollToPage(page);
+    showToast('Resultado en página ' + page);
   });
 
   // ---------- Anotaciones ----------
@@ -1748,7 +1786,7 @@
     annotations[ctx.pageNum].push({
       type: 'highlight',
       color: currentHighlightColor,
-      text: ctx.text,
+      text: cleanCopiedText(ctx.text),
       rects: normalized,
       created: Date.now()
     });
@@ -1767,12 +1805,33 @@
     hideSelectionBar();
   };
 
+  /** Limpia guiones de partición silábica y saltos de línea del PDF */
+  function cleanCopiedText(raw) {
+    if (!raw) return '';
+    let t = String(raw);
+    // Soft hyphen (U+00AD) y guiones invisibles
+    t = t.replace(/[\u00ad\u200b\u2060]/g, '');
+    // Guión al final de línea + salto → unir palabra
+    t = t.replace(/-\s*[\r\n]+\s*/g, '');
+    // Guión de partición: "inves-tigación" → "investigación"
+    // (2+ letras, guión, 2+ minúsculas). Compatible sin \p{L}
+    try {
+      t = t.replace(/(\p{L}{2,})-(\p{Ll}{2,})/gu, '$1$2');
+    } catch (e) {
+      t = t.replace(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,})-([a-záéíóúüñ]{2,})/g, '$1$2');
+    }
+    // Saltos de línea → espacio
+    t = t.replace(/[\r\n]+/g, ' ');
+    // Espacios múltiples
+    t = t.replace(/[ \t\f\v]+/g, ' ');
+    return t.trim();
+  }
+
   window.copyCurrentSelection = async function () {
     const ctx = pendingSelection || getSelectionContext();
     if (!ctx) { showToast('Nada que copiar'); return; }
     try {
-      // Texto enriquecido: plain + html mínimo
-      const plain = ctx.text;
+      const plain = cleanCopiedText(ctx.text);
       const html = '<meta charset="utf-8"><span style="font-family:Lora,Georgia,serif;">' +
         plain.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
         '</span>';
@@ -1783,15 +1842,21 @@
             'text/html': new Blob([html], { type: 'text/html' })
           })
         ]);
-      } else {
+      } else if (navigator.clipboard) {
         await navigator.clipboard.writeText(plain);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = plain;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
       }
       showToast('Copiado');
     } catch (e) {
-      // Fallback
       try {
         const ta = document.createElement('textarea');
-        ta.value = ctx.text;
+        ta.value = cleanCopiedText(ctx.text);
         document.body.appendChild(ta);
         ta.select();
         document.execCommand('copy');
