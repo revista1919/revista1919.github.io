@@ -3,34 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visor Académico - La Revista Nacional de las Ciencias para Estudiantes</title>
+  <title>Visor Académico - Revista Nacional de las Ciencias para Estudiantes</title>
 
   <!-- PDF.js desde CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js">
-  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <!-- Fuentes académicas premium -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --oxford-blue: #002147;
-      --oxford-dark: #00152e;
+      /* Paleta Institucional Premium */
+      --oxford-blue: #001C3D;
+      --oxford-dark: #000F24;
       --elsevier-orange: #FF6C0C;
-      --elsevier-hover: #e65a00;
-      --bg-reader: #e3e8ee;
-      --bg-sidebar: #ffffff;
-      --text-main: #1f2937;
-      --text-muted: #6b7280;
-      --toolbar-height: 56px;
-      --sidebar-width: 320px;
-      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-      --shadow-paper: 0 1px 3px rgba(0,0,0,0.05), 0 10px 30px rgba(0, 33, 71, 0.12);
-      --transition-spring: cubic-bezier(0.25, 0.8, 0.25, 1);
+      --elsevier-hover: #E55A00;
+      
+      /* Fondos y Superficies */
+      --bg-reader: #EDF1F5;
+      --bg-sidebar: #FFFFFF;
+      --bg-paper: #FFFFFF;
+      --border-subtle: #E2E8F0;
+      
+      /* Tipografía */
+      --text-main: #1E293B;
+      --text-muted: #64748B;
+      --text-inverse: #F8FAFC;
+      
+      /* Dimensiones */
+      --toolbar-height: 52px;
+      --sidebar-width: 340px;
+      
+      /* Sombras Académicas (Dispersión suave) */
+      --shadow-sm: 0 1px 2px rgba(0, 28, 61, 0.05);
+      --shadow-md: 0 4px 12px rgba(0, 28, 61, 0.08);
+      --shadow-paper: 0 2px 8px rgba(0, 0, 0, 0.04), 0 16px 32px rgba(0, 28, 61, 0.08);
+      --shadow-float: 0 12px 32px rgba(0, 28, 61, 0.15);
+      
+      /* Transiciones */
+      --transition-smooth: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+      
+      /* Colores de Anotación */
+      --highlight-yellow: rgba(253, 224, 71, 0.4);
+      --highlight-green: rgba(134, 239, 172, 0.4);
+      --highlight-blue: rgba(147, 197, 253, 0.4);
+      --highlight-pink: rgba(249, 168, 212, 0.4);
     }
 
     * {
@@ -40,7 +59,7 @@
     }
 
     body {
-      font-family: 'Inter', -apple-system, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg-reader);
       overflow: hidden;
       height: 100vh;
@@ -49,162 +68,128 @@
       flex-direction: column;
       color: var(--text-main);
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       user-select: none;
     }
 
-    /* Barra superior académica */
+    /* BARRA SUPERIOR */
     .pdf-toolbar {
       background: var(--oxford-blue);
       border-bottom: 2px solid var(--elsevier-orange);
-      color: white;
-      padding: 0 20px;
+      color: var(--text-inverse);
+      padding: 0 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       z-index: 1000;
       height: var(--toolbar-height);
-      box-shadow: 0 4px 20px rgba(0, 33, 71, 0.2);
+      box-shadow: var(--shadow-md);
       flex-shrink: 0;
-      user-select: none;
+    }
+
+    /* Identidad de la Revista */
+    .brand-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-right: 24px;
+      padding-right: 24px;
+      border-right: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background-image: url('https://www.revistacienciasestudiantes.com/logo.png');
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .brand-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      line-height: 1.2;
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .brand-subtitle {
+      font-size: 10px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .toolbar-group {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
     }
+
+    .toolbar-left { flex: 1; display: flex; align-items: center; }
+    .toolbar-center { display: flex; justify-content: center; }
+    .toolbar-right { flex: 1; display: flex; justify-content: flex-end; gap: 8px; }
 
     .btn {
       background: transparent;
-      border: 1px solid transparent;
-      color: rgba(255, 255, 255, 0.85);
-      padding: 6px 12px;
+      border: none;
+      color: rgba(255, 255, 255, 0.75);
+      padding: 6px 8px;
       border-radius: 6px;
       cursor: pointer;
       font-size: 13px;
       font-weight: 500;
-      font-family: 'Inter', sans-serif;
+      font-family: inherit;
       display: flex;
       align-items: center;
-      gap: 8px;
-      transition: all 0.2s var(--transition-spring);
+      gap: 6px;
+      transition: var(--transition-smooth);
     }
 
     .btn:hover:not(:disabled) {
       background: rgba(255, 255, 255, 0.1);
       color: #ffffff;
     }
-    .btn:active:not(:disabled) {
-      transform: scale(0.97);
-    }
-    .btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
+    .btn:active:not(:disabled) { transform: scale(0.96); }
+    
     .btn.active {
-      background: rgba(255, 108, 12, 0.2);
+      background: rgba(255, 108, 12, 0.15);
       color: var(--elsevier-orange);
-      border-color: rgba(255, 108, 12, 0.4);
     }
+    
     .btn-icon {
       width: 18px;
       height: 18px;
       flex-shrink: 0;
     }
+    
     .btn-primary {
       background: var(--elsevier-orange);
       color: white !important;
-      font-weight: 600;
-      box-shadow: var(--shadow-sm);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: 500;
     }
-    .btn-primary:hover:not(:disabled) {
-      background: var(--elsevier-hover);
-      box-shadow: 0 4px 12px rgba(255, 108, 12, 0.3);
-    }
+    .btn-primary:hover:not(:disabled) { background: var(--elsevier-hover); }
+
     .divider {
       width: 1px;
-      height: 20px;
-      background: rgba(255, 255, 255, 0.15);
-      margin: 0 10px;
+      height: 16px;
+      background: rgba(255, 255, 255, 0.2);
+      margin: 0 8px;
     }
 
-    /* Buscador premium con barra flotante */
-    .search-bar {
-      opacity: 0;
-      visibility: hidden;
-      transform: translateX(-50%) translateY(-10px);
-      position: absolute;
-      top: calc(var(--toolbar-height) + 10px);
-      left: 50%;
-      background: rgba(255, 255, 255, 0.98);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(0, 33, 71, 0.1);
-      border-radius: 16px;
-      box-shadow: var(--shadow-lg);
-      padding: 20px;
-      z-index: 1100;
-      width: 440px;
-      max-width: 90vw;
-      transition: all 0.3s var(--transition-spring);
-    }
-
-    .search-bar.active {
-      opacity: 1;
-      visibility: visible;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    .search-input-group {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .search-input {
-      flex: 1;
-      padding: 12px 16px;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      font-size: 14px;
-      font-family: 'Inter', sans-serif;
-      transition: all 0.2s;
-      background: #f9fafb;
-    }
-
-    .search-input:focus {
-      outline: none;
-      border-color: var(--elsevier-orange);
-      background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(255, 108, 12, 0.1);
-    }
-
-    .search-results {
-      max-height: 360px;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-
-    .search-result-item {
-      padding: 12px;
-      cursor: pointer;
-      border-radius: 10px;
-      transition: background 0.15s;
-      border: 1px solid transparent;
-      margin-bottom: 6px;
-      background: #fafafa;
-    }
-    .search-result-item:hover {
-      background: #f0f4ff;
-      border-color: #d1d9e6;
-    }
-    .search-result-item .highlight {
-      background: #fef08a;
-      color: #92400e;
-      font-weight: 600;
-      padding: 0 2px;
-      border-radius: 2px;
-    }
-
+    /* PANEL LATERAL */
     .viewer-wrapper {
       flex: 1;
       display: flex;
@@ -212,18 +197,16 @@
       position: relative;
     }
 
-    /* Panel lateral académico */
     .pdf-sidebar {
       width: var(--sidebar-width);
       background: var(--bg-sidebar);
-      border-right: 1px solid rgba(0, 33, 71, 0.1);
+      border-right: 1px solid var(--border-subtle);
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
-      transition: margin-left 0.4s var(--transition-spring);
+      transition: margin-left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
       flex-shrink: 0;
-      box-shadow: 1px 0 12px rgba(0,0,0,0.03);
       z-index: 50;
+      box-shadow: var(--shadow-sm);
     }
 
     .pdf-sidebar.hidden {
@@ -232,171 +215,145 @@
 
     .sidebar-tabs {
       display: flex;
-      border-bottom: 1px solid #e5e7eb;
-      background: #f9fafb;
-      padding: 0 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: #FAFAFA;
+      padding: 8px 12px 0;
+      gap: 4px;
     }
 
     .sidebar-tab {
       flex: 1;
-      padding: 16px 8px;
-      background: none;
+      padding: 10px 8px;
+      background: transparent;
       border: none;
       cursor: pointer;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--text-muted);
+      border-radius: 6px 6px 0 0;
+      transition: var(--transition-smooth);
       position: relative;
-      transition: color 0.2s;
     }
 
-    .sidebar-tab:hover {
-      color: var(--oxford-blue);
-    }
+    .sidebar-tab:hover { color: var(--oxford-blue); background: rgba(0,0,0,0.02); }
     .sidebar-tab.active {
       color: var(--oxford-blue);
-    }
-    .sidebar-tab::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: var(--elsevier-orange);
-      transform: scaleX(0);
-      transition: transform 0.3s var(--transition-spring);
-    }
-    .sidebar-tab.active::after {
-      transform: scaleX(1);
+      font-weight: 600;
+      background: var(--bg-sidebar);
+      box-shadow: 0 -2px 0 var(--elsevier-orange) inset;
     }
 
     .sidebar-content {
       flex: 1;
       overflow-y: auto;
-      background: white;
       padding: 0;
     }
-    .sidebar-panel {
-      display: none;
-      padding: 24px;
-      animation: fadeIn 0.3s ease;
-    }
-    .sidebar-panel.active {
-      display: block;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
+
+    .sidebar-panel { display: none; padding: 24px; animation: fadeUp 0.3s ease; }
+    .sidebar-panel.active { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .sidebar-section {
-      margin-bottom: 24px;
-    }
+    .sidebar-section { margin-bottom: 28px; }
     .sidebar-section h3 {
       font-size: 11px;
       text-transform: uppercase;
       color: var(--text-muted);
-      margin-bottom: 12px;
-      letter-spacing: 0.08em;
-      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: 0.05em;
+      font-weight: 600;
     }
-    .sidebar-section p {
-      font-size: 13px;
-      margin-bottom: 8px;
-      line-height: 1.6;
+
+    /* Tipografía refinada para títulos */
+    #docTitle {
+      font-family: 'Lora', serif;
+      font-size: 16px;
+      line-height: 1.4;
+      color: var(--oxford-blue);
+      font-weight: 600;
     }
 
     .doi-badge {
       display: inline-flex;
       align-items: center;
-      background: #fff7ed;
-      color: var(--elsevier-hover);
-      padding: 6px 12px;
-      border-radius: 6px;
+      background: #F8FAFC;
+      color: var(--oxford-blue);
+      padding: 6px 10px;
+      border-radius: 4px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
+      font-size: 11px;
       text-decoration: none;
-      border: 1px solid #fed7aa;
-      transition: all 0.2s;
+      border: 1px solid var(--border-subtle);
+      transition: var(--transition-smooth);
       word-break: break-all;
     }
-    .doi-badge:hover {
-      background: #ffedd5;
-      box-shadow: var(--shadow-sm);
-    }
+    .doi-badge:hover { border-color: var(--elsevier-orange); color: var(--elsevier-orange); }
 
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .meta-card {
+      background: #F8FAFC;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+    }
+    .meta-card span { font-size: 10px; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 4px;}
+    .meta-card strong { font-size: 14px; color: var(--oxford-blue); font-family: 'JetBrains Mono', monospace; }
+
+    /* Índice / TOC */
     .toc-item {
-      padding: 8px 12px;
+      padding: 6px 10px;
       cursor: pointer;
       font-size: 13px;
       color: var(--text-main);
-      border-radius: 6px;
-      transition: all 0.2s;
+      border-radius: 4px;
+      transition: var(--transition-smooth);
       display: flex;
       align-items: baseline;
       gap: 12px;
-      margin-bottom: 2px;
+      line-height: 1.4;
     }
-    .toc-item:hover {
-      background: #f3f4f6;
-      color: var(--oxford-blue);
-    }
-    .toc-level-1 {
-      font-weight: 600;
-    }
-    .toc-level-2 {
-      padding-left: 24px;
-      font-size: 12.5px;
-      color: var(--text-muted);
-    }
-    .toc-page {
-      color: var(--text-muted);
-      font-size: 11px;
-      margin-left: auto;
-      font-family: 'JetBrains Mono', monospace;
-    }
+    .toc-item:hover { background: #F1F5F9; color: var(--oxford-blue); }
+    .toc-level-1 { font-weight: 500; }
+    .toc-level-2 { padding-left: 20px; font-size: 12px; color: var(--text-muted); }
+    .toc-page { color: var(--text-muted); font-size: 11px; margin-left: auto; font-family: 'JetBrains Mono', monospace; }
 
-    /* Contenedor principal de páginas con scroll limpio */
+    /* CONTENEDOR DEL PDF */
     .pdf-container {
       flex: 1;
       overflow: auto;
-      padding: 40px 20px 80px;
+      padding: 40px 20px 100px;
       background: var(--bg-reader);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 28px;
+      gap: 40px;
       scroll-behavior: smooth;
-      position: relative;
     }
 
     .pdf-page-wrapper {
       position: relative;
-      background: white;
+      background: var(--bg-paper);
       box-shadow: var(--shadow-paper);
       border-radius: 2px;
-      min-height: 800px;
-      width: 100%;
-      max-width: fit-content;
-      transition: transform 0.2s ease;
+      margin: 0 auto;
+      transition: box-shadow 0.3s ease;
     }
 
-    .pdf-canvas {
-      display: block;
-      background: white;
-      border-radius: 2px;
-      pointer-events: none; /* El canvas no captura eventos, todo se maneja en capas superiores */
-    }
+    .pdf-canvas { display: block; border-radius: 2px; }
 
-    /* Capa de texto y selección con textLayer de pdf.js */
+    /* CAPAS (Texto y Anotaciones) */
     .text-layer {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0.25; /* Texto invisible pero seleccionable */
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      opacity: 0.25;
       pointer-events: auto;
       z-index: 5;
       line-height: 1.0;
@@ -407,66 +364,49 @@
       -webkit-user-select: text;
       cursor: text;
     }
-    .text-layer ::selection {
-      background: rgba(255, 108, 12, 0.4);
-    }
-    .text-layer span {
-      color: transparent;
-      position: absolute;
-      white-space: pre;
-      cursor: text;
-      transform-origin: 0% 0%;
-    }
+    .text-layer ::selection { background: rgba(255, 108, 12, 0.3); }
+    .text-layer span { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
 
-    /* Capa de anotaciones */
     .annotation-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 10;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 10;
     }
-    .annotation-layer.active {
-      pointer-events: auto;
-    }
+    .annotation-layer.active { pointer-events: auto; }
 
     .annotation-highlight {
       position: absolute;
-      background: rgba(254, 240, 138, 0.5);
       mix-blend-mode: multiply;
-      border-bottom: 2px solid #eab308;
       pointer-events: auto;
       cursor: pointer;
-      transition: background 0.2s;
-      border-radius: 2px;
+      border-radius: 3px;
+      z-index: 15;
+      transition: opacity 0.2s;
     }
-    .annotation-highlight:hover {
-      background: rgba(254, 240, 138, 0.8);
-    }
+    .annotation-highlight:hover { opacity: 0.7; }
+    .annotation-highlight.color-yellow { background: var(--highlight-yellow); border-bottom: 2px solid #EAB308; }
+    .annotation-highlight.color-green { background: var(--highlight-green); border-bottom: 2px solid #22C55E; }
+    .annotation-highlight.color-blue { background: var(--highlight-blue); border-bottom: 2px solid #3B82F6; }
+    .annotation-highlight.color-pink { background: var(--highlight-pink); border-bottom: 2px solid #EC4899; }
 
+    /* Notas estilo Post-it Académico */
     .annotation-note {
       position: absolute;
-      background: #ffffff;
-      border-left: 4px solid var(--elsevier-orange);
-      border-radius: 0 8px 8px 0;
+      background: #FFFAEB;
+      border-top: 4px solid var(--elsevier-orange);
+      border-radius: 2px 2px 8px 8px;
       padding: 12px;
-      font-size: 13px;
-      font-family: 'Inter', sans-serif;
       pointer-events: auto;
-      min-width: 180px;
-      max-width: 250px;
+      width: 220px;
       box-shadow: var(--shadow-md);
       z-index: 20;
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: var(--transition-smooth);
       cursor: grab;
     }
     .annotation-note:focus-within {
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: var(--shadow-lg);
+      box-shadow: var(--shadow-float);
       z-index: 21;
       cursor: text;
+      transform: translateY(-2px);
     }
     .annotation-note textarea {
       width: 100%;
@@ -476,182 +416,234 @@
       font-family: 'Lora', serif;
       resize: none;
       min-height: 80px;
-      color: var(--text-main);
+      color: var(--oxford-blue);
       line-height: 1.5;
     }
-    .annotation-note textarea:focus {
-      outline: none;
-    }
+    .annotation-note textarea:focus { outline: none; }
+    
     .annotation-delete {
       position: absolute;
-      top: -10px;
-      right: -10px;
-      width: 22px;
-      height: 22px;
+      top: -12px; right: -12px;
+      width: 24px; height: 24px;
       border-radius: 50%;
-      background: #ef4444;
-      color: white;
-      border: 2px solid white;
+      background: white;
+      color: #EF4444;
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-sm);
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       opacity: 0;
       transform: scale(0.8);
-      transition: all 0.2s var(--transition-spring);
+      transition: var(--transition-smooth);
+      font-size: 16px;
+      line-height: 1;
     }
-    .annotation-note:hover .annotation-delete {
-      opacity: 1;
-      transform: scale(1);
-    }
+    .annotation-note:hover .annotation-delete { opacity: 1; transform: scale(1); }
+    .annotation-delete:hover { background: #EF4444; color: white; border-color: #EF4444; }
 
-    /* Overlay de carga */
+    /* BUSCADOR PREMIUM */
+    .search-bar {
+      opacity: 0; visibility: hidden;
+      transform: translateX(-50%) translateY(-10px);
+      position: absolute;
+      top: calc(var(--toolbar-height) + 16px);
+      left: 50%;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      box-shadow: var(--shadow-float);
+      padding: 16px;
+      z-index: 1100;
+      width: 400px;
+      transition: var(--transition-smooth);
+    }
+    .search-bar.active { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+    
+    .search-input-group { display: flex; gap: 8px; margin-bottom: 12px; }
+    .search-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      background: #F8FAFC;
+      transition: var(--transition-smooth);
+    }
+    .search-input:focus {
+      outline: none; background: white;
+      border-color: var(--elsevier-orange);
+      box-shadow: 0 0 0 3px rgba(255, 108, 12, 0.1);
+    }
+    
+    .search-results { max-height: 300px; overflow-y: auto; padding-right: 4px; }
+    .search-result-item {
+      padding: 10px; cursor: pointer; border-radius: 6px;
+      border: 1px solid transparent; margin-bottom: 4px;
+      font-size: 12px; line-height: 1.5; color: var(--text-muted);
+    }
+    .search-result-item strong { color: var(--oxford-blue); display: block; margin-bottom: 2px; }
+    .search-result-item:hover { background: #F1F5F9; }
+    .search-result-item .highlight { background: #FEF08A; color: #854D0E; font-weight: 500; padding: 0 2px; border-radius: 2px; }
+
+    /* SELECTOR DE COLOR */
+    .color-picker {
+      position: fixed; top: 70px; right: 24px;
+      background: white; border: 1px solid var(--border-subtle);
+      border-radius: 8px; box-shadow: var(--shadow-md);
+      padding: 8px; display: none; gap: 6px; z-index: 100;
+    }
+    .color-picker.active { display: flex; }
+    .color-option {
+      width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: transform 0.1s;
+    }
+    .color-option:hover { transform: scale(1.15); }
+    .color-option.active { border-color: var(--oxford-blue); }
+
+    /* LOADING ELEGANTE */
     .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: var(--bg-reader);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      transition: opacity 0.5s ease, visibility 0.5s ease;
-      pointer-events: none;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 9999; transition: opacity 0.4s ease, visibility 0.4s ease;
     }
-
     .spinner {
-      width: 48px;
-      height: 48px;
-      border: 3px solid rgba(0, 33, 71, 0.1);
-      border-top: 3px solid var(--elsevier-orange);
+      width: 40px; height: 40px;
+      border: 2px solid rgba(0, 28, 61, 0.1);
+      border-top: 2px solid var(--elsevier-orange);
       border-radius: 50%;
-      animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
-      margin-bottom: 24px;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 20px;
     }
-
     .loading-text {
       font-family: 'Lora', serif;
       color: var(--oxford-blue);
-      font-size: 16px;
-      font-style: italic;
-      letter-spacing: 0.02em;
+      font-size: 15px; font-style: italic;
     }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Scrollbar premium */
-    ::-webkit-scrollbar {
-      width: 14px;
-      height: 14px;
-    }
-    ::-webkit-scrollbar-track {
-      background: var(--bg-reader);
-    }
+    /* SCROLLBAR PREMIUM */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 7px;
-      border: 4px solid var(--bg-reader);
+      background: #CBD5E1; border-radius: 10px;
+      border: 3px solid var(--bg-reader);
     }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
+    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+    .sidebar-content::-webkit-scrollbar-thumb { border-color: var(--bg-sidebar); }
+
+    .internal-link { pointer-events: auto !important; cursor: pointer !important; }
+    .internal-link:hover { background: rgba(255, 108, 12, 0.15); }
 
     @media (max-width: 768px) {
       .text-hide-mobile { display: none; }
+      .brand-container { display: none; }
       .pdf-sidebar { position: absolute; height: 100%; z-index: 100; }
-      .search-bar { width: 90%; left: 5%; transform: translateY(-10px); }
-      .search-bar.active { transform: translateY(0); }
+      .search-bar { width: 90%; left: 5%; }
     }
   </style>
 </head>
 <body>
 
 <header class="pdf-toolbar">
-  <div class="toolbar-group">
-    <button class="btn" onclick="goBack()" title="Volver al sistema">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-      <span class="text-hide-mobile">Volver</span>
-    </button>
-    <button class="btn" onclick="toggleSidebar()" title="Panel lateral">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
-    </button>
-    <button class="btn" onclick="toggleSearch()" title="Buscar (Ctrl+F)">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-      <span class="text-hide-mobile">Buscar</span>
-    </button>
+  <div class="toolbar-left">
+    <div class="brand-container">
+      <div class="brand-logo"></div>
+      <div class="brand-text">
+        <span class="brand-title">Revista Nacional de las Ciencias</span>
+        <span class="brand-subtitle">Visor de Manuscritos</span>
+      </div>
+    </div>
+    
+    <div class="toolbar-group">
+      <button class="btn" onclick="toggleSidebar()" title="Panel lateral">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"></path></svg>
+      </button>
+      <button class="btn" onclick="toggleSearch()" title="Buscar en documento">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path></svg>
+        <span class="text-hide-mobile">Buscar</span>
+      </button>
+    </div>
   </div>
 
-  <div class="toolbar-group">
-    <button class="btn" id="selectTool" onclick="setTool('select')" title="Seleccionar texto">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
-    </button>
-    <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Subrayar texto (hacer clic y arrastrar)">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-    </button>
-    <button class="btn" id="noteTool" onclick="setTool('note')" title="Añadir nota (clic en la página)">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-    </button>
+  <div class="toolbar-center">
+    <div class="toolbar-group" style="background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px;">
+      <button class="btn" id="selectTool" onclick="setTool('select')" title="Seleccionar">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5"></path></svg>
+      </button>
+      <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Subrayar">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.89l12.683-12.683zM16.862 4.487L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path></svg>
+      </button>
+      <button class="btn" id="noteTool" onclick="setTool('note')" title="Nota al margen">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"></path></svg>
+      </button>
+    </div>
   </div>
 
-  <div class="toolbar-group">
-    <button class="btn" onclick="zoomOut()" title="Alejar">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
-    </button>
-    <span style="font-size: 13px; font-weight: 600; width: 45px; text-align: center;" id="zoomLevel">125%</span>
-    <button class="btn" onclick="zoomIn()" title="Acercar">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-    </button>
+  <div class="toolbar-right">
+    <div class="toolbar-group">
+      <button class="btn" onclick="zoomOut()" title="Alejar">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"></path></svg>
+      </button>
+      <span style="font-size: 12px; font-family: 'JetBrains Mono'; width: 44px; text-align: center;" id="zoomLevel">125%</span>
+      <button class="btn" onclick="zoomIn()" title="Acercar">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"></path></svg>
+      </button>
+    </div>
     <div class="divider"></div>
-    <button class="btn" onclick="printPDF()" title="Imprimir">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-    </button>
-    <button class="btn btn-primary" onclick="downloadAnnotatedPDF()" title="Descargar PDF + anotaciones">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+    <button class="btn btn-primary" onclick="downloadAnnotatedPDF()" title="Exportar PDF">
+      <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
       <span class="text-hide-mobile">Descargar</span>
     </button>
   </div>
 </header>
 
-<!-- Barra de búsqueda flotante -->
 <div class="search-bar" id="searchBar">
   <div class="search-input-group">
-    <input type="text" class="search-input" id="searchInput" placeholder="Buscar en el documento..." onkeyup="handleSearch(event)">
-    <button class="btn btn-primary" onclick="performSearch()">
-      <svg class="btn-icon" style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-    </button>
+    <input type="text" class="search-input" id="searchInput" placeholder="Término de búsqueda..." onkeyup="handleSearch(event)">
+    <button class="btn btn-primary" onclick="performSearch()">Buscar</button>
   </div>
   <div class="search-results" id="searchResults"></div>
+</div>
+
+<div class="color-picker" id="colorPicker">
+  <div class="color-option active" style="background: var(--highlight-yellow);" data-color="yellow" onclick="selectHighlightColor('yellow', this)"></div>
+  <div class="color-option" style="background: var(--highlight-green);" data-color="green" onclick="selectHighlightColor('green', this)"></div>
+  <div class="color-option" style="background: var(--highlight-blue);" data-color="blue" onclick="selectHighlightColor('blue', this)"></div>
+  <div class="color-option" style="background: var(--highlight-pink);" data-color="pink" onclick="selectHighlightColor('pink', this)"></div>
 </div>
 
 <div class="viewer-wrapper">
   <aside class="pdf-sidebar" id="pdfSidebar">
     <div class="sidebar-tabs">
-      <button class="sidebar-tab active" onclick="switchSidebarTab('info', this)">Detalles</button>
-      <button class="sidebar-tab" onclick="switchSidebarTab('toc', this)">Índice</button>
-      <button class="sidebar-tab" onclick="switchSidebarTab('annotations', this)">Notas</button>
+      <button class="sidebar-tab active" onclick="switchSidebarTab('info', this)">Metadatos</button>
+      <button class="sidebar-tab" onclick="switchSidebarTab('toc', this)">Estructura</button>
+      <button class="sidebar-tab" onclick="switchSidebarTab('annotations', this)">Revisiones</button>
     </div>
 
     <div class="sidebar-content">
       <div class="sidebar-panel active" id="panel-info">
         <div class="sidebar-section">
-          <h3>Manuscrito</h3>
-          <p id="docTitle" style="font-weight: 600; color: var(--oxford-blue); font-size: 15px;">Cargando documento...</p>
+          <h3>Título del Documento</h3>
+          <p id="docTitle">Cargando documento...</p>
         </div>
         <div class="sidebar-section">
-          <h3>Identificador Permanente (DOI)</h3>
-          <a href="#" class="doi-badge" id="docDoi" target="_blank">Enlace no disponible</a>
+          <h3>Identificador Digital</h3>
+          <a href="#" class="doi-badge" id="docDoi" target="_blank">DOI no registrado</a>
         </div>
         <div class="sidebar-section">
-          <h3>Metadatos</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
-            <div><span style="color:var(--text-muted); font-size: 11px; text-transform:uppercase; display:block;">Páginas</span><strong style="font-size:14px;" id="docPages">-</strong></div>
-            <div><span style="color:var(--text-muted); font-size: 11px; text-transform:uppercase; display:block;">Anotaciones</span><strong style="font-size:14px;" id="annotationCount">0</strong></div>
+          <h3>Propiedades</h3>
+          <div class="meta-grid">
+            <div class="meta-card">
+              <span>Extensión</span>
+              <strong id="docPages">- págs</strong>
+            </div>
+            <div class="meta-card">
+              <span>Marcas</span>
+              <strong id="annotationCount">0</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -659,7 +651,7 @@
       <div class="sidebar-panel" id="panel-toc">
         <div class="sidebar-section">
           <div id="tocContent">
-            <p style="color: var(--text-muted); font-style: italic; font-size: 13px;">Procesando estructura...</p>
+            <p style="color: var(--text-muted); font-style: italic; font-size: 13px;">Procesando esquema del manuscrito...</p>
           </div>
         </div>
       </div>
@@ -667,7 +659,7 @@
       <div class="sidebar-panel" id="panel-annotations">
         <div class="sidebar-section">
           <div id="annotationsList">
-            <p style="color: var(--text-muted); font-style: italic; font-size: 13px;">No hay notas registradas.</p>
+            <p style="color: var(--text-muted); font-style: italic; font-size: 13px;">Sin revisiones pendientes.</p>
           </div>
         </div>
       </div>
@@ -677,7 +669,7 @@
   <main class="pdf-container" id="pdfContainer">
     <div class="loading-overlay" id="loading">
       <div class="spinner"></div>
-      <div class="loading-text" id="loadingText">Renderizando manuscrito...</div>
+      <div class="loading-text" id="loadingText">Preparando entorno de lectura...</div>
     </div>
   </main>
 </div>
@@ -694,9 +686,10 @@
     let pdfDoc = null;
     let scale = 1.25;
     let currentTool = 'select';
+    let currentHighlightColor = 'yellow';
     let annotations = JSON.parse(localStorage.getItem('pdfAnnotations') || '{}');
     let renderedPages = new Set();
-    let pageTextContentCache = {}; // caché de contenido de texto por página
+    let pageTextContentCache = {};
 
     // Normalizar URL
     function normalizeUrl(url) {
@@ -729,6 +722,7 @@
     const searchBarEl = document.getElementById('searchBar');
     const searchInputEl = document.getElementById('searchInput');
     const searchResultsEl = document.getElementById('searchResults');
+    const colorPickerEl = document.getElementById('colorPicker');
 
     // Establecer título y DOI
     docTitleEl.textContent = title;
@@ -751,7 +745,7 @@
 
     // Cargar PDF
     if (!pdfUrl) {
-      loadingOverlay.innerHTML = '<div style="background:#fee2e2; color:#dc2626; padding: 20px; border-radius:8px;">Error: URL requerida.</div>';
+      loadingOverlay.innerHTML = '<div style="color:var(--oxford-blue); font-family:Lora;">Se requiere URL del documento.</div>';
     } else {
       loadPdf();
     }
@@ -767,7 +761,7 @@
           loadingOverlay.style.visibility = 'hidden';
         }, 500);
       }).catch(function(error) {
-        loadingOverlay.innerHTML = '<div style="background:#fee2e2; color:#dc2626; padding: 20px; border-radius:8px;">Error al cargar PDF: ' + error.message + '</div>';
+        loadingOverlay.innerHTML = '<div style="color:#D32F2F; font-family:Lora;">Error de lectura documental: ' + error.message + '</div>';
       });
     }
 
@@ -781,7 +775,6 @@
         pageWrapper.className = 'pdf-page-wrapper';
         pageWrapper.id = 'page-' + i;
         pageWrapper.dataset.page = i;
-        // Tamaño provisional antes de renderizar
         pageWrapper.style.width = (800 * scale) + "px";
         pageWrapper.style.height = (1035 * scale) + "px";
         pdfContainer.appendChild(pageWrapper);
@@ -824,24 +817,31 @@
         // 2. Text layer (para selección y copiado)
         const textLayerDiv = document.createElement('div');
         textLayerDiv.className = 'text-layer';
-        textLayerDiv.style.setProperty('--scale-factor', viewport.scale);
         textLayerDiv.style.width = Math.floor(viewport.width) + "px";
         textLayerDiv.style.height = Math.floor(viewport.height) + "px";
         wrapperElement.appendChild(textLayerDiv);
 
         const textContent = await page.getTextContent();
-        // Guardar en caché para búsqueda
         pageTextContentCache[pageNum] = textContent.items.map(item => item.str).join(' ');
 
-        // Renderizar textLayer manualmente (compatible)
+        // Renderizar textLayer usando pdf.js
         pdfjsLib.renderTextLayer({
           textContentSource: textContent,
           container: textLayerDiv,
           viewport: viewport,
           textDivs: []
+        }).promise.then(() => {
+          // Convertir spans en enlaces si es necesario
+          const spans = textLayerDiv.querySelectorAll('span');
+          spans.forEach(span => {
+            if (span.textContent.includes('http') || span.textContent.includes('www.')) {
+              span.style.pointerEvents = 'auto';
+              span.style.cursor = 'pointer';
+              span.classList.add('internal-link');
+            }
+          });
         }).catch(() => {
-          // Fallback básico
-          textLayerDiv.innerHTML = '';
+          console.warn('Text layer rendering issue for page', pageNum);
         });
 
         // 3. Annotation layer
@@ -853,8 +853,87 @@
 
         // Cargar anotaciones existentes para esta página
         loadAnnotationsForPage(pageNum);
+
+        // 4. Procesar enlaces internos y externos
+        await processPageLinks(pageNum, page, viewport);
       } catch (err) {
         console.warn('Render error page ' + pageNum, err);
+      }
+    }
+
+    // Procesar enlaces internos y externos
+    async function processPageLinks(pageNum, page, viewport) {
+      try {
+        const annotations = await page.getAnnotations();
+        const wrapper = document.getElementById('page-' + pageNum);
+        
+        annotations.forEach(annotation => {
+          if (annotation.subtype === 'Link' && annotation.url) {
+            // Enlace externo
+            const linkElement = document.createElement('a');
+            linkElement.href = annotation.url;
+            linkElement.target = '_blank';
+            linkElement.className = 'internal-link';
+            linkElement.style.position = 'absolute';
+            linkElement.style.left = annotation.rect[0] + 'px';
+            linkElement.style.top = annotation.rect[1] + 'px';
+            linkElement.style.width = (annotation.rect[2] - annotation.rect[0]) + 'px';
+            linkElement.style.height = (annotation.rect[3] - annotation.rect[1]) + 'px';
+            linkElement.style.zIndex = '25';
+            linkElement.style.pointerEvents = 'auto';
+            linkElement.style.cursor = 'pointer';
+            linkElement.title = annotation.url;
+            wrapper.appendChild(linkElement);
+          } else if (annotation.subtype === 'Link' && annotation.dest) {
+            // Enlace interno
+            const linkElement = document.createElement('div');
+            linkElement.className = 'internal-link';
+            linkElement.style.position = 'absolute';
+            linkElement.style.left = annotation.rect[0] + 'px';
+            linkElement.style.top = annotation.rect[1] + 'px';
+            linkElement.style.width = (annotation.rect[2] - annotation.rect[0]) + 'px';
+            linkElement.style.height = (annotation.rect[3] - annotation.rect[1]) + 'px';
+            linkElement.style.zIndex = '25';
+            linkElement.style.pointerEvents = 'auto';
+            linkElement.style.cursor = 'pointer';
+            
+            let targetPage = pageNum;
+            if (typeof annotation.dest === 'string') {
+              // Resolver destino por nombre
+              try {
+                pdfDoc.getDestination(annotation.dest).then(function(dest) {
+                  if (dest && dest[0]) {
+                    pdfDoc.getPageIndex(dest[0]).then(function(pageIndex) {
+                      targetPage = pageIndex + 1;
+                      linkElement.onclick = function() {
+                        scrollToPage(targetPage);
+                      };
+                      linkElement.title = 'Ir a página ' + targetPage;
+                    });
+                  }
+                });
+              } catch(e) {
+                console.warn('Error resolving link destination', e);
+              }
+            } else if (Array.isArray(annotation.dest) && annotation.dest[0]) {
+              try {
+                pdfDoc.getPageIndex(annotation.dest[0]).then(function(pageIndex) {
+                  targetPage = pageIndex + 1;
+                  linkElement.onclick = function() {
+                    scrollToPage(targetPage);
+                  };
+                  linkElement.title = 'Ir a página ' + targetPage;
+                });
+              } catch(e) {
+                console.warn('Error resolving link destination', e);
+              }
+            }
+            
+            wrapper.appendChild(linkElement);
+          }
+        });
+      } catch(e) {
+        console.warn('Error processing links for page', pageNum, e);
       }
     }
 
@@ -866,30 +945,42 @@
           return;
         }
         let html = '';
-        outline.forEach(item => html += renderOutlineItem(item, 1));
-        tocContentEl.innerHTML = html;
+        const processOutlineItems = async function(items) {
+          for (const item of items) {
+            html += await renderOutlineItem(item, 1);
+          }
+        };
+        
+        processOutlineItems(outline).then(() => {
+          tocContentEl.innerHTML = html;
+        });
       }).catch(() => {
         tocContentEl.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">Índice no disponible.</p>';
       });
     }
 
-    function renderOutlineItem(item, level) {
-      // Intentar obtener página del destino si existe
+    async function renderOutlineItem(item, level) {
       let pageRef = 1;
       if (item.dest) {
-        if (typeof item.dest === 'string') {
-          // resolución de destinos string es compleja, usamos 1 por defecto
-        } else if (Array.isArray(item.dest) && item.dest[0] && typeof item.dest[0] === 'object') {
-          // obtenemos num del ref
-          if (item.dest[0].num !== undefined) pageRef = item.dest[0].num + 1; // pdf.js index desde 0
+        try {
+          if (typeof item.dest === 'string') {
+            const dest = await pdfDoc.getDestination(item.dest);
+            if (dest && dest[0]) {
+              pageRef = await pdfDoc.getPageIndex(dest[0]) + 1;
+            }
+          } else if (Array.isArray(item.dest) && item.dest[0]) {
+            pageRef = await pdfDoc.getPageIndex(item.dest[0]) + 1;
+          }
+        } catch(e) {
+          console.warn('Error resolving outline destination', e);
         }
-      } else if (item.url) {
-        // Enlaces externos no se soportan en página
-        pageRef = 1;
       }
+      
       let html = `<div class="toc-item toc-level-${level}" onclick="scrollToPage(${pageRef})" style="cursor:pointer;"><span>${item.title}</span><span class="toc-page">p. ${pageRef}</span></div>`;
       if (item.items && item.items.length > 0) {
-        item.items.forEach(child => html += renderOutlineItem(child, level + 1));
+        for (const child of item.items) {
+          html += await renderOutlineItem(child, level + 1);
+        }
       }
       return html;
     }
@@ -899,10 +990,10 @@
       const page = document.getElementById('page-' + pageNum);
       if (page) {
         page.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        // Si la página no está renderizada, hacer scroll al contenedor para forzar observador
-        const target = pdfContainer.querySelector(`[data-page="${pageNum}"]`);
-        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        page.style.boxShadow = '0 0 0 3px var(--elsevier-orange), var(--shadow-paper)';
+        setTimeout(() => {
+          page.style.boxShadow = 'var(--shadow-paper)';
+        }, 2000);
       }
     };
 
@@ -927,8 +1018,19 @@
         layer.classList.toggle('active', tool !== 'select');
       });
 
-      // Ajustar cursor
+      if (tool === 'highlight') {
+        colorPickerEl.style.display = 'flex';
+      } else {
+        colorPickerEl.style.display = 'none';
+      }
+
       pdfContainer.style.cursor = tool === 'highlight' ? 'crosshair' : (tool === 'note' ? 'text' : 'default');
+    };
+
+    window.selectHighlightColor = function(color, element) {
+      currentHighlightColor = color;
+      document.querySelectorAll('.color-option').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
     };
 
     window.zoomIn = function() {
@@ -951,18 +1053,31 @@
       searchBarEl.classList.toggle('active');
       if (searchBarEl.classList.contains('active')) {
         searchInputEl.focus();
+        searchInputEl.select();
       }
     };
 
     window.handleSearch = function(event) {
       if (event.key === 'Enter') performSearch();
+      if (event.key === 'Escape') {
+        searchBarEl.classList.remove('active');
+        clearSearchHighlights();
+      }
     };
+
+    function clearSearchHighlights() {
+      document.querySelectorAll('.search-highlight-temp').forEach(el => {
+        el.style.background = '';
+        el.classList.remove('search-highlight-temp');
+      });
+    }
 
     window.performSearch = async function() {
       const query = searchInputEl.value.trim();
       if (!query || !pdfDoc) return;
 
-      searchResultsEl.innerHTML = '<p style="color:#9ca3af;">Buscando...</p>';
+      searchResultsEl.innerHTML = '<p style="color:var(--text-muted);">Consultando documento...</p>';
+      clearSearchHighlights();
 
       const results = [];
       for (let i = 1; i <= pdfDoc.numPages; i++) {
@@ -987,19 +1102,34 @@
       }
 
       if (results.length === 0) {
-        searchResultsEl.innerHTML = '<p style="color:#9ca3af;">Sin resultados para "' + query + '".</p>';
+        searchResultsEl.innerHTML = '<p style="color:var(--text-muted);">Sin hallazgos para "' + query + '".</p>';
         return;
       }
 
-      let html = `<p style="font-weight:600; margin-bottom:8px;">${results.length} coincidencias</p>`;
+      let html = `<p style="font-weight:600; font-size:13px; margin-bottom:12px;">${results.length} registros encontrados</p>`;
       results.slice(0, 50).forEach((result, idx) => {
         const highlighted = result.text.replace(new RegExp(query, 'gi'), '<span class="highlight">$&</span>');
-        html += `<div class="search-result-item" onclick="scrollToPage(${result.page})"><strong>Página ${result.page}</strong><br>${highlighted}...</div>`;
+        html += `<div class="search-result-item" onclick="scrollToPage(${result.page})"><strong>Página ${result.page}</strong>${highlighted}...</div>`;
       });
       searchResultsEl.innerHTML = html;
+
+      for (const result of results.slice(0, 20)) {
+        const pageWrapper = document.getElementById('page-' + result.page);
+        if (pageWrapper && renderedPages.has(result.page)) {
+          const textLayer = pageWrapper.querySelector('.text-layer');
+          if (textLayer) {
+            const spans = textLayer.querySelectorAll('span');
+            spans.forEach(span => {
+              if (span.textContent.toLowerCase().includes(query.toLowerCase())) {
+                span.style.background = 'rgba(253, 224, 71, 0.6)';
+                span.classList.add('search-highlight-temp');
+              }
+            });
+          }
+        }
+      }
     };
 
-    // Gestión de anotaciones
     function loadAnnotationsForPage(pageNum) {
       const layer = document.getElementById('annotations-' + pageNum);
       if (!layer) return;
@@ -1015,7 +1145,7 @@
           div.innerHTML = `<button class="annotation-delete" onclick="deleteAnnotation(${pageNum}, ${index})">×</button>`;
           const textarea = document.createElement('textarea');
           textarea.value = annotation.text || '';
-          textarea.placeholder = 'Comentario editorial...';
+          textarea.placeholder = 'Comentario de revisión...';
           textarea.onchange = function() {
             annotation.text = textarea.value;
             saveAnnotations();
@@ -1026,18 +1156,23 @@
           layer.appendChild(div);
         } else if (annotation.type === 'highlight') {
           const div = document.createElement('div');
-          div.className = 'annotation-highlight';
+          div.className = 'annotation-highlight color-' + (annotation.color || 'yellow');
           div.style.left = annotation.x + 'px';
           div.style.top = annotation.y + 'px';
           div.style.width = annotation.width + 'px';
           div.style.height = annotation.height + 'px';
-          div.title = 'Subrayado';
+          div.title = 'Texto resaltado';
+          div.onclick = function(e) {
+            e.stopPropagation();
+            if (confirm('¿Remover este resaltado?')) {
+              deleteAnnotation(pageNum, index);
+            }
+          };
           layer.appendChild(div);
         }
       });
     }
 
-    // Clic para notas
     pdfContainer.addEventListener('click', function(e) {
       if (currentTool === 'note') {
         const wrapper = e.target.closest('.pdf-page-wrapper');
@@ -1053,16 +1188,24 @@
           loadAnnotationsForPage(pageNum);
           updateAnnotationsList();
           updateAnnotationCount();
+          
+          setTimeout(() => {
+            const notes = document.querySelectorAll('#annotations-' + pageNum + ' .annotation-note textarea');
+            if (notes.length > 0) {
+              notes[notes.length - 1].focus();
+            }
+          }, 100);
         }
       }
     });
 
-    // Herramienta de subrayado: clic y arrastrar para crear resaltado
     let highlightStartX, highlightStartY, highlightStartPage, isHighlighting = false;
     let highlightOverlay = null;
 
     pdfContainer.addEventListener('mousedown', function(e) {
       if (currentTool !== 'highlight') return;
+      if (e.target.closest('.annotation-highlight') || e.target.closest('.annotation-note')) return;
+      
       const wrapper = e.target.closest('.pdf-page-wrapper');
       if (!wrapper) return;
       e.preventDefault();
@@ -1072,15 +1215,14 @@
       highlightStartX = e.clientX - rect.left;
       highlightStartY = e.clientY - rect.top;
 
-      // Crear overlay de arrastre
       highlightOverlay = document.createElement('div');
       highlightOverlay.style.position = 'absolute';
       highlightOverlay.style.left = highlightStartX + 'px';
       highlightOverlay.style.top = highlightStartY + 'px';
       highlightOverlay.style.width = '0px';
       highlightOverlay.style.height = '0px';
-      highlightOverlay.style.background = 'rgba(255, 108, 12, 0.3)';
-      highlightOverlay.style.border = '1px dashed #FF6C0C';
+      highlightOverlay.style.background = 'rgba(255, 108, 12, 0.2)';
+      highlightOverlay.style.border = '1px solid var(--elsevier-orange)';
       highlightOverlay.style.zIndex = '15';
       highlightOverlay.style.pointerEvents = 'none';
       wrapper.appendChild(highlightOverlay);
@@ -1108,7 +1250,6 @@
       const wrapper = highlightOverlay.parentElement;
       if (!wrapper) return;
       const pageNum = parseInt(wrapper.dataset.page);
-      const rect = wrapper.getBoundingClientRect();
       const left = parseFloat(highlightOverlay.style.left);
       const top = parseFloat(highlightOverlay.style.top);
       const width = parseFloat(highlightOverlay.style.width);
@@ -1116,7 +1257,11 @@
 
       if (width > 5 && height > 5) {
         if (!annotations[pageNum]) annotations[pageNum] = [];
-        annotations[pageNum].push({ type: 'highlight', x: left, y: top, width: width, height: height });
+        annotations[pageNum].push({ 
+          type: 'highlight', 
+          x: left, y: top, width: width, height: height,
+          color: currentHighlightColor
+        });
         saveAnnotations();
         loadAnnotationsForPage(pageNum);
         updateAnnotationCount();
@@ -1154,21 +1299,17 @@
       for (const [pageNum, pageAnns] of Object.entries(annotations)) {
         pageAnns.forEach((ann) => {
           count++;
-          html += `<div style="padding: 12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; margin-bottom:8px; cursor:pointer;" onclick="scrollToPage(${pageNum})">`;
-          html += `<strong style="font-size:12px; color:var(--elsevier-orange);">Página ${pageNum} · ${ann.type === 'highlight' ? 'Subrayado' : 'Nota'}</strong>`;
-          html += `<p style="font-size:13px; margin:4px 0 0;">${ann.text || '<em>Sin texto</em>'}</p></div>`;
+          html += `<div style="padding: 12px; background:#F8FAFC; border:1px solid var(--border-subtle); border-radius:6px; margin-bottom:8px; cursor:pointer;" onclick="scrollToPage(${pageNum})">`;
+          html += `<strong style="font-size:11px; color:var(--oxford-blue); display:block; margin-bottom:4px; text-transform:uppercase;">Página ${pageNum} · ${ann.type === 'highlight' ? 'Marca' : 'Revisión'}</strong>`;
+          html += `<p style="font-size:13px; margin:0; font-family:'Lora',serif;">${ann.text || '<em>(Marca visual)</em>'}</p></div>`;
         });
       }
       if (count === 0) {
-        annotationsListEl.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">No hay notas registradas.</p>';
+        annotationsListEl.innerHTML = '<p style="color: var(--text-muted); font-style: italic; font-size:13px;">Sin revisiones pendientes.</p>';
       } else {
         annotationsListEl.innerHTML = html;
       }
     }
-
-    window.printPDF = function() {
-      window.print();
-    };
 
     window.downloadAnnotatedPDF = function() {
       const link = document.createElement('a');
@@ -1184,21 +1325,12 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = title.replace(/[^a-z0-9]/gi, '_') + '_anotaciones.json';
+        a.download = title.replace(/[^a-z0-9]/gi, '_') + '_revisiones.json';
         a.click();
         URL.revokeObjectURL(url);
       }
     };
 
-    window.goBack = function() {
-      if (document.referrer) {
-        window.history.back();
-      } else {
-        window.close();
-      }
-    };
-
-    // Atajos de teclado
     document.addEventListener('keydown', function(e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
@@ -1206,19 +1338,13 @@
       }
       if (e.key === 'Escape') {
         searchBarEl.classList.remove('active');
+        clearSearchHighlights();
       }
-      if (e.key === 'h' || e.key === 'H') {
-        setTool('highlight');
-      }
-      if (e.key === 'n' || e.key === 'N') {
-        setTool('note');
-      }
-      if (e.key === 'v' || e.key === 'V') {
-        setTool('select');
-      }
+      if (e.key === 'h' || e.key === 'H') setTool('highlight');
+      if (e.key === 'n' || e.key === 'N') setTool('note');
+      if (e.key === 'v' || e.key === 'V') setTool('select');
     });
 
-    // Inicialización de UI
     setTool('select');
     updateAnnotationCount();
     updateAnnotationsList();
