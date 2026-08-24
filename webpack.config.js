@@ -183,6 +183,10 @@ module.exports = (env, argv) => {
           { from: 'firebase.json', to: 'firebase.json', noErrorOnMissing: true },
           { from: '.firebaserc', to: '.firebaserc', noErrorOnMissing: true },
           
+          // ============ NUEVOS VISORES PDF ============
+          { from: 'public/viewer.html', to: 'viewer.html', noErrorOnMissing: true },
+          { from: 'public/viewerEN.html', to: 'viewerEN.html', noErrorOnMissing: true },
+          
           // Archivos de políticas existentes
           { from: 'public/policies.html', to: 'policies.html', noErrorOnMissing: true },
           { from: 'public/policiesEN.html', to: 'policiesEN.html', noErrorOnMissing: true },

@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visor de Manuscritos - Revista Nacional de las Ciencias para Estudiantes</title>
+  
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --oxford-blue: #002147;
+      --oxford-dark: #00152e;
+      --elsevier-orange: #FF6C0C;
+      --elsevier-hover: #e65a00;
+      --bg-reader: #eef2f6;
+      --toolbar-height: 60px;
+      --sidebar-width: 280px;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-reader);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* ================= TOOLBAR EDITORIAL ================= */
+    .pdf-toolbar {
+      background: var(--oxford-blue);
+      border-bottom: 3px solid var(--elsevier-orange);
+      color: white;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+      box-shadow: 0 4px 15px rgba(0, 33, 71, 0.15);
+      height: var(--toolbar-height);
+      flex-shrink: 0;
+    }
+    
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    
+    .btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    .btn-primary {
+      background: var(--elsevier-orange);
+      color: white;
+      border-color: var(--elsevier-orange);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--elsevier-hover);
+      border-color: var(--elsevier-hover);
+      box-shadow: 0 2px 8px rgba(255, 108, 12, 0.3);
+    }
+
+    .pagination-pill {
+      background: var(--oxford-dark);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      padding: 2px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .btn-round {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: transparent;
+      border: none;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-round:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-round:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .page-info {
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+    }
+    
+    .page-input {
+      width: 45px;
+      padding: 4px 0;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .page-input:focus {
+      outline: 1px solid var(--elsevier-orange);
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .divider {
+      width: 1px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.15);
+      margin: 0 8px;
+    }
+
+    /* ================= SIDEBAR LATERAL ================= */
+    .viewer-wrapper {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .pdf-sidebar {
+      width: var(--sidebar-width);
+      background: white;
+      border-right: 1px solid #d1d5db;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      transition: margin-left 0.3s ease;
+      flex-shrink: 0;
+    }
+    
+    .pdf-sidebar.hidden {
+      margin-left: calc(-1 * var(--sidebar-width));
+    }
+    
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      font-weight: 700;
+      color: var(--oxford-blue);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .sidebar-content {
+      padding: 16px;
+      font-size: 13px;
+      color: #4b5563;
+      line-height: 1.6;
+    }
+    
+    .sidebar-section {
+      margin-bottom: 20px;
+    }
+    
+    .sidebar-section h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--oxford-blue);
+      margin-bottom: 8px;
+      letter-spacing: 0.05em;
+    }
+    
+    .sidebar-section p, .sidebar-section li {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+    
+    .sidebar-section ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .sidebar-section li {
+      padding: 4px 0;
+    }
+    
+    .doi-link {
+      color: var(--elsevier-orange);
+      text-decoration: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      word-break: break-all;
+    }
+    
+    .doi-link:hover {
+      text-decoration: underline;
+    }
+    
+    /* ================= CONTENEDOR PDF ================= */
+    .pdf-container {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      padding: 30px 20px;
+      position: relative;
+      background: #525659;
+    }
+    
+    .pdf-canvas {
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      background: white;
+      border-radius: 2px;
+      margin-bottom: 40px;
+      transition: width 0.2s ease, height 0.2s ease;
+    }
+    
+    /* ================= ESTADOS DE CARGA ================= */
+    .loading-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #525659;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: opacity 0.3s ease;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top: 3px solid var(--elsevier-orange);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    .loading-text {
+      font-family: 'Lora', serif;
+      color: white;
+      font-size: 16px;
+      font-style: italic;
+    }
+
+    .error-msg {
+      color: #dc2626;
+      background: #fee2e2;
+      padding: 15px 25px;
+      border-radius: 4px;
+      border: 1px solid #f87171;
+      font-weight: 500;
+      text-align: center;
+      max-width: 400px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* ================= TOOLTIP ================= */
+    .tooltip {
+      position: relative;
+    }
+    
+    .tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    
+    .tooltip:hover::after {
+      opacity: 1;
+    }
+
+    /* Scrollbar estilizado */
+    ::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #e2e8f0; 
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #94a3b8; 
+      border-radius: 6px;
+      border: 3px solid #e2e8f0;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b; 
+    }
+
+    /* ================= RESPONSIVE ================= */
+    @media (max-width: 768px) {
+      .pdf-toolbar { padding: 0 10px; }
+      .text-hide-mobile { display: none; }
+      .divider { margin: 0 2px; }
+      .pdf-sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      }
+    }
+  </style>
+</head>
+<body>
+  
+  <!-- HEADER / TOOLBAR -->
+  <header class="pdf-toolbar">
+    <!-- Izquierda: Volver y Sidebar -->
+    <div class="toolbar-group">
+      <button class="btn" onclick="goBack()" title="Volver al artículo">
+        <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        <span class="text-hide-mobile">Volver</span>
+      </button>
+      
+      <button class="btn" onclick="toggleSidebar()" title="Información del artículo">
+        <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span class="text-hide-mobile">Info</span>
+      </button>
+    </div>
+    
+    <!-- Centro: Controles de Paginación -->
+    <div class="toolbar-group">
+      <div class="pagination-pill">
+        <button class="btn-round" id="prevPage" onclick="changePage(-1)" title="Página Anterior">
+          <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        </button>
+        
+        <span class="page-info">
+          <input type="number" class="page-input" id="pageInput" value="1" min="1" onchange="goToPage()"> 
+          <span style="color: rgba(255,255,255,0.5);">/</span> 
+          <span id="totalPages">0</span>
+        </span>
+        
+        <button class="btn-round" id="nextPage" onclick="changePage(1)" title="Página Siguiente">
+          <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Derecha: Zoom, Modo presentación y Descarga -->
+    <div class="toolbar-group">
+      <button class="btn-round tooltip" data-tooltip="Alejar" onclick="zoomOut()" title="Alejar">
+        <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path></svg>
+      </button>
+      
+      <span style="font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; width: 45px; text-align: center;" id="zoomLevel">100%</span>
+      
+      <button class="btn-round tooltip" data-tooltip="Acercar" onclick="zoomIn()" title="Acercar">
+        <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+      </button>
+
+      <button class="btn-round tooltip" data-tooltip="Ajustar al ancho" onclick="fitToWidth()" title="Ajustar al ancho">
+        <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+      </button>
+
+      <div class="divider"></div>
+
+      <button class="btn btn-primary" onclick="downloadPDF()" title="Descargar Manuscrito">
+        <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        <span class="text-hide-mobile">Descargar</span>
+      </button>
+    </div>
+  </header>
+  
+  <!-- WRAPPER PRINCIPAL -->
+  <div class="viewer-wrapper">
+    
+    <!-- SIDEBAR DE INFORMACIÓN -->
+    <aside class="pdf-sidebar" id="pdfSidebar">
+      <div class="sidebar-header">
+        <span>Información</span>
+        <button class="btn-round" onclick="toggleSidebar()" title="Cerrar panel" style="width: 24px; height: 24px;">
+          <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      
+      <div class="sidebar-content">
+        <div class="sidebar-section">
+          <h3>Documento</h3>
+          <p id="docTitle">Cargando...</p>
+        </div>
+        
+        <div class="sidebar-section">
+          <h3>DOI</h3>
+          <a href="#" class="doi-link" id="docDoi" target="_blank">No disponible</a>
+        </div>
+        
+        <div class="sidebar-section">
+          <h3>Estadísticas</h3>
+          <ul>
+            <li><strong>Páginas:</strong> <span id="docPages">0</span></li>
+            <li><strong>Tamaño:</strong> <span id="docSize">Calculando...</span></li>
+          </ul>
+        </div>
+        
+        <div class="sidebar-section">
+          <h3>Atajos de teclado</h3>
+          <ul style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">
+            <li>← → : Navegar páginas</li>
+            <li>+ / - : Zoom</li>
+            <li>Home / End : Primera/Última</li>
+            <li>Ctrl+F : Buscar (prox.)</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- VISOR PDF -->
+    <main class="pdf-container" id="pdfContainer">
+      <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">Procesando documento académico...</div>
+      </div>
+      <canvas class="pdf-canvas" id="pdfCanvas"></canvas>
+    </main>
+  </div>
+  
+  <script>
+    // ========== CONFIGURACIÓN ==========
+    const urlParams = new URLSearchParams(window.location.search);
+    const pdfUrl = urlParams.get('url') || urlParams.get('pdf');
+    const doi = urlParams.get('doi') || '';
+    const title = urlParams.get('title') || 'Documento académico';
+    
+    // ========== ESTADO ==========
+    let pdfDoc = null;
+    let pageNum = 1;
+    let scale = 1.25;
+    let pageRendering = false;
+    let pageNumPending = null;
+    let sidebarVisible = true;
+    
+    // ========== INICIALIZACIÓN ==========
+    if (!pdfUrl) {
+      showError('Error: No se ha especificado un documento válido en la URL.');
+    } else {
+      // Configurar PDF.js
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      
+      // Actualizar información en sidebar
+      document.getElementById('docTitle').textContent = title;
+      if (doi) {
+        const doiLink = document.getElementById('docDoi');
+        doiLink.href = 'https://doi.org/' + doi;
+        doiLink.textContent = 'https://doi.org/' + doi;
+      }
+      
+      // Cargar PDF
+      pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
+        pdfDoc = pdf;
+        document.getElementById('totalPages').textContent = pdf.numPages;
+        document.getElementById('docPages').textContent = pdf.numPages;
+        document.getElementById('pageInput').max = pdf.numPages;
+        
+        // Calcular tamaño del documento
+        calculateDocSize(pdfUrl);
+        
+        // Ocultar loader
+        hideLoading();
+        
+        // Renderizar primera página
+        renderPage(pageNum);
+      }).catch(function(error) {
+        showError('Error de lectura PDF:<br>' + error.message);
+      });
+    }
+    
+    // ========== FUNCIONES DE RENDERIZADO ==========
+    function renderPage(num) {
+      pageRendering = true;
+      
+      pdfDoc.getPage(num).then(function(page) {
+        const canvas = document.getElementById('pdfCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const viewport = page.getViewport({ scale: scale });
+        
+        // Soporte para pantallas Retina / High-DPI
+        const outputScale = window.devicePixelRatio || 1;
+        
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        canvas.style.width = Math.floor(viewport.width) + "px";
+        canvas.style.height = Math.floor(viewport.height) + "px";
+        
+        const transform = outputScale !== 1 
+          ? [outputScale, 0, 0, outputScale, 0, 0] 
+          : null;
+        
+        const renderContext = {
+          canvasContext: ctx,
+          transform: transform,
+          viewport: viewport
+        };
+        
+        const renderTask = page.render(renderContext);
+        renderTask.promise.then(function() {
+          pageRendering = false;
+          
+          // Actualizar UI
+          document.getElementById('pageInput').value = num;
+          document.getElementById('prevPage').disabled = (num <= 1);
+          document.getElementById('nextPage').disabled = (num >= pdfDoc.numPages);
+          
+          // Scroll al inicio
+          document.getElementById('pdfContainer').scrollTop = 0;
+          
+          if (pageNumPending !== null) {
+            renderPage(pageNumPending);
+            pageNumPending = null;
+          }
+        });
+      });
+    }
+    
+    function queueRenderPage(num) {
+      if (pageRendering) {
+        pageNumPending = num;
+      } else {
+        renderPage(num);
+      }
+    }
+    
+    // ========== NAVEGACIÓN ==========
+    function changePage(delta) {
+      if (!pdfDoc) return;
+      const newPage = pageNum + delta;
+      if (newPage >= 1 && newPage <= pdfDoc.numPages) {
+        pageNum = newPage;
+        queueRenderPage(pageNum);
+      }
+    }
+    
+    function goToPage() {
+      if (!pdfDoc) return;
+      const input = document.getElementById('pageInput');
+      const newPage = parseInt(input.value);
+      if (newPage >= 1 && newPage <= pdfDoc.numPages) {
+        pageNum = newPage;
+        queueRenderPage(pageNum);
+      } else {
+        input.value = pageNum;
+      }
+    }
+    
+    // ========== ZOOM ==========
+    function updateZoomText() {
+      document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+    }
+    
+    function zoomIn() {
+      scale = Math.min(scale + 0.25, 4.0);
+      updateZoomText();
+      if (pdfDoc) queueRenderPage(pageNum);
+    }
+    
+    function zoomOut() {
+      scale = Math.max(scale - 0.25, 0.5);
+      updateZoomText();
+      if (pdfDoc) queueRenderPage(pageNum);
+    }
+    
+    function fitToWidth() {
+      if (!pdfDoc) return;
+      const container = document.getElementById('pdfContainer');
+      const containerWidth = container.clientWidth - 80;
+      
+      pdfDoc.getPage(pageNum).then(function(page) {
+        const viewport = page.getViewport({ scale: 1 });
+        scale = containerWidth / viewport.width;
+        updateZoomText();
+        queueRenderPage(pageNum);
+      });
+    }
+    
+    // ========== UTILIDADES ==========
+    function downloadPDF() {
+      window.open(pdfUrl, '_blank');
+    }
+    
+    function goBack() {
+      if (document.referrer) {
+        window.history.back();
+      } else {
+        window.close();
+      }
+    }
+    
+    function toggleSidebar() {
+      const sidebar = document.getElementById('pdfSidebar');
+      sidebar.classList.toggle('hidden');
+      sidebarVisible = !sidebarVisible;
+    }
+    
+    function showError(message) {
+      const loader = document.getElementById('loading');
+      loader.innerHTML = '<div class="error-msg">' + message + '</div>';
+    }
+    
+    function hideLoading() {
+      const loader = document.getElementById('loading');
+      loader.style.opacity = '0';
+      setTimeout(() => loader.style.display = 'none', 300);
+    }
+    
+    function calculateDocSize(url) {
+      fetch(url).then(response => {
+        if (response.ok) {
+          const size = response.headers.get('Content-Length');
+          if (size) {
+            const sizeKB = (size / 1024).toFixed(1);
+            const sizeMB = (size / (1024 * 1024)).toFixed(2);
+            document.getElementById('docSize').textContent = 
+              size > 1024 * 1024 ? sizeMB + ' MB' : sizeKB + ' KB';
+          }
+        }
+      }).catch(() => {
+        document.getElementById('docSize').textContent = 'No disponible';
+      });
+    }
+    
+    // ========== ATAJOS DE TECLADO ==========
+    document.addEventListener('keydown', function(e) {
+      if (!pdfDoc) return;
+      
+      // No interferir con el input de página
+      if (document.activeElement.id === 'pageInput') {
+        if (e.key === 'Enter') {
+          goToPage();
+          e.preventDefault();
+        }
+        return;
+      }
+      
+      switch(e.key) {
+        case 'ArrowLeft':
+          changePage(-1);
+          e.preventDefault();
+          break;
+        case 'ArrowRight':
+          changePage(1);
+          e.preventDefault();
+          break;
+        case '+':
+        case '=':
+          zoomIn();
+          e.preventDefault();
+          break;
+        case '-':
+          zoomOut();
+          e.preventDefault();
+          break;
+        case 'Home':
+          pageNum = 1;
+          queueRenderPage(1);
+          e.preventDefault();
+          break;
+        case 'End':
+          pageNum = pdfDoc.numPages;
+          queueRenderPage(pdfDoc.numPages);
+          e.preventDefault();
+          break;
+        case 'f':
+          if (e.ctrlKey || e.metaKey) {
+            alert('Búsqueda de texto: Próximamente disponible');
+            e.preventDefault();
+          }
+          break;
+      }
+    });
+    
+    // ========== INICIALIZACIÓN FINAL ==========
+    updateZoomText();
+  </script>
+</body>
+</html>
