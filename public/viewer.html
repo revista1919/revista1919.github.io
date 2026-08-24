@@ -35,6 +35,7 @@
       /* Sombras planas y definidas */
       --shadow-paper: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
       --shadow-dropdown: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      --shadow-float: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
       
       /* Resaltados en tonos pastel secos */
       --highlight-yellow: rgba(253, 224, 71, 0.4);
@@ -68,7 +69,7 @@
     /* ========== TOOLBAR INSTITUCIONAL ========== */
     .pdf-toolbar {
       background: #FFFFFF;
-      border-bottom: 1px solid var(--border-hard);
+      border-bottom: 2px solid var(--brand-navy);
       color: var(--text-main);
       padding: 0 16px;
       display: flex;
@@ -79,6 +80,7 @@
       min-height: var(--toolbar-height);
       flex-shrink: 0;
       gap: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
     .brand-container {
@@ -151,7 +153,7 @@
       min-width: 0; 
     }
 
-    /* Botones institucionales sin efectos rebote */
+    /* Botones institucionales */
     .btn {
       background: transparent;
       border: 1px solid transparent;
@@ -162,9 +164,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s, color 0.15s;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
       min-width: 36px;
       min-height: 36px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      gap: 4px;
     }
     
     .btn:hover:not(:disabled) { 
@@ -172,11 +178,16 @@
       color: var(--brand-navy); 
     }
     
+    .btn:active:not(:disabled) { 
+      background: #E5E7EB; 
+    }
+    
     .btn.active { 
       color: var(--brand-accent); 
       background: transparent;
       border-bottom: 2px solid var(--brand-accent);
       border-radius: 0;
+      font-weight: 600;
     }
     
     .btn-icon { 
@@ -201,6 +212,12 @@
     .btn-primary:hover:not(:disabled) { 
       background: #FFFFFF; 
       color: var(--brand-navy) !important;
+      border-color: var(--brand-navy);
+    }
+    
+    .btn-primary:disabled { 
+      opacity: 0.5; 
+      cursor: wait; 
     }
     
     .divider { 
@@ -235,12 +252,14 @@
       margin-right: calc(-1 * var(--sidebar-width)); 
     }
 
-    /* Pestañas de barra lateral rígidas */
+    /* Pestañas de barra lateral */
     .sidebar-tabs {
       display: flex;
       border-bottom: 1px solid var(--border-hard);
       background: #F9FAFB;
       flex-shrink: 0;
+      padding: 0;
+      gap: 0;
     }
     
     .sidebar-tab {
@@ -255,7 +274,8 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-muted);
-      transition: color 0.15s;
+      transition: color 0.15s, border-color 0.15s;
+      touch-action: manipulation;
     }
     
     .sidebar-tab:hover { 
@@ -277,10 +297,16 @@
     .sidebar-panel { 
       display: none; 
       padding: 24px 20px; 
+      animation: fadeIn 0.2s ease;
     }
     
     .sidebar-panel.active { 
       display: block; 
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .sidebar-section { 
@@ -307,7 +333,7 @@
       margin-bottom: 16px;
     }
 
-    /* Metadatos en formato lista de definición */
+    /* Metadatos en formato lista */
     .meta-list {
       display: flex;
       flex-direction: column;
@@ -344,6 +370,7 @@
       border-bottom: 1px solid var(--border-light);
       padding-bottom: 1px;
       transition: border-color 0.15s;
+      word-break: break-all;
     }
     
     .doi-link:hover { 
@@ -361,9 +388,10 @@
       gap: 12px;
       line-height: 1.4;
       border-bottom: 1px dashed var(--border-light);
+      touch-action: manipulation;
     }
     
-    .toc-item:hover { 
+    .toc-item:hover, .toc-item:active { 
       color: var(--brand-accent); 
     }
     
@@ -388,6 +416,7 @@
       font-size: 11px; 
       margin-left: auto; 
       font-family: 'JetBrains Mono', monospace; 
+      flex-shrink: 0;
     }
 
     /* ========== CONTENEDOR PDF ========== */
@@ -401,6 +430,9 @@
       align-items: center;
       gap: 32px;
       -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+      min-width: 0;
+      overscroll-behavior-y: contain;
     }
 
     .pdf-page-wrapper {
@@ -416,6 +448,11 @@
       display: block; 
       max-width: 100%; 
       height: auto; 
+      border-radius: 0;
+      filter: none;
+      -webkit-filter: none;
+      image-rendering: auto;
+      image-rendering: crisp-edges;
     }
 
     /* Capa de texto para selección */
@@ -426,6 +463,10 @@
       overflow: hidden; 
       opacity: 1; 
       line-height: 1; 
+      -webkit-text-size-adjust: none;
+      -moz-text-size-adjust: none;
+      text-size-adjust: none;
+      forced-color-adjust: none;
       transform-origin: 0 0; 
       z-index: 2; 
       box-sizing: content-box; 
@@ -437,18 +478,50 @@
       white-space: pre; 
       cursor: text; 
       transform-origin: 0% 0%; 
+      box-sizing: content-box;
+    }
+    
+    .textLayer span.markedContent { 
+      top: 0; 
+      height: 0; 
     }
     
     .textLayer ::selection { 
-      background: rgba(232, 87, 42, 0.3); 
+      background: rgba(232, 87, 42, 0.35); 
       color: transparent; 
     }
     
     .textLayer ::-moz-selection { 
-      background: rgba(232, 87, 42, 0.3); 
+      background: rgba(232, 87, 42, 0.35); 
       color: transparent; 
     }
     
+    .textLayer .endOfContent {
+      display: block;
+      position: absolute;
+      inset: 100% 0 0;
+      z-index: -1;
+      cursor: default;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    .textLayer.selecting .endOfContent,
+    .textLayer .endOfContent.active { 
+      top: 0; 
+    }
+    
+    .textLayer span.search-hit {
+      background: rgba(255, 200, 0, 0.55) !important;
+      border-radius: 0;
+    }
+    
+    .textLayer span.search-hit-active {
+      background: rgba(232, 87, 42, 0.65) !important;
+      outline: 2px solid var(--brand-accent);
+      outline-offset: 1px;
+    }
+
     /* Capa de anotaciones */
     .annotation-layer { 
       position: absolute; 
@@ -465,7 +538,13 @@
       mix-blend-mode: multiply; 
       pointer-events: auto; 
       cursor: pointer; 
+      border-radius: 0;
       z-index: 4; 
+      transition: opacity 0.15s;
+    }
+    
+    .annotation-highlight:hover { 
+      opacity: 0.7; 
     }
     
     .annotation-highlight.color-yellow { 
@@ -484,12 +563,13 @@
       background: var(--highlight-pink); 
     }
 
-    /* Notas académicas sin aspecto de burbuja */
+    /* Notas académicas */
     .annotation-note {
       position: absolute;
       background: #FFFDF0;
       border: 1px solid #EAB308;
       border-top: 4px solid var(--brand-accent);
+      border-radius: 0 0 4px 4px;
       padding: 12px;
       pointer-events: auto;
       width: 220px;
@@ -497,6 +577,13 @@
       box-shadow: var(--shadow-dropdown);
       z-index: 20;
       cursor: grab;
+      transition: box-shadow 0.15s;
+    }
+    
+    .annotation-note:focus-within {
+      box-shadow: var(--shadow-float);
+      z-index: 21;
+      cursor: text;
     }
     
     .annotation-note textarea {
@@ -519,26 +606,69 @@
       position: absolute;
       top: -12px; 
       right: -12px;
-      width: 24px; 
-      height: 24px;
+      width: 28px; 
+      height: 28px;
+      border-radius: 50%;
       background: #FFFFFF;
       color: #DC2626;
       border: 1px solid var(--border-hard);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       opacity: 0;
-      font-size: 14px;
+      transform: scale(0.85);
+      transition: all 0.15s;
+      font-size: 18px;
       line-height: 1;
+      touch-action: manipulation;
     }
     
     .annotation-note:hover .annotation-delete,
     .annotation-note:focus-within .annotation-delete { 
       opacity: 1; 
+      transform: scale(1);
+    }
+    
+    .annotation-delete:hover { 
+      background: #DC2626; 
+      color: #FFFFFF; 
+      border-color: #DC2626; 
     }
 
-    /* ========== BUSCADOR ESTRUCTURADO ========== */
+    .pdf-link {
+      position: absolute;
+      z-index: 6;
+      cursor: pointer;
+      background: transparent;
+      touch-action: manipulation;
+      min-height: 22px;
+    }
+    
+    .pdf-link:hover, .pdf-link:active { 
+      background: rgba(232, 87, 42, 0.15); 
+    }
+
+    .dest-flash {
+      position: absolute;
+      z-index: 15;
+      pointer-events: none;
+      background: rgba(232, 87, 42, 0.22);
+      border: 2px solid var(--brand-accent);
+      border-radius: 0;
+      box-shadow: 0 0 0 4px rgba(232, 87, 42, 0.15);
+      animation: destPulse 2.2s ease forwards;
+    }
+    
+    @keyframes destPulse {
+      0% { opacity: 0; transform: scaleY(0.6); }
+      15% { opacity: 1; transform: scaleY(1); }
+      70% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* ========== BUSCADOR ========== */
     .search-overlay {
       position: fixed;
       inset: 0;
@@ -584,6 +714,7 @@
       padding: 12px;
       border-bottom: 1px solid var(--border-hard);
       background: #F9FAFB;
+      gap: 8px;
     }
     
     .search-input {
@@ -591,13 +722,14 @@
       padding: 8px 12px;
       border: 1px solid var(--border-hard);
       border-radius: var(--radius);
-      font-size: 13px;
+      font-size: 16px;
       font-family: 'Inter', sans-serif;
     }
     
     .search-input:focus { 
       outline: none; 
       border-color: var(--brand-navy); 
+      box-shadow: 0 0 0 3px rgba(0, 33, 71, 0.1);
     }
     
     .search-close-btn {
@@ -606,11 +738,18 @@
       padding: 8px;
       cursor: pointer;
       color: var(--text-muted);
+      border-radius: var(--radius);
+      touch-action: manipulation;
+    }
+    
+    .search-close-btn:hover {
+      background: #F3F4F6;
     }
     
     .search-results {
       flex: 1;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       padding: 0;
     }
     
@@ -621,6 +760,7 @@
       line-height: 1.5;
       color: var(--text-muted);
       border-bottom: 1px solid var(--border-light);
+      touch-action: manipulation;
     }
     
     .search-result-item strong { 
@@ -631,8 +771,202 @@
       text-transform: uppercase; 
     }
     
-    .search-result-item:hover { 
+    .search-result-item:hover, 
+    .search-result-item:active { 
       background: #F9FAFB; 
+    }
+    
+    .search-result-item .highlight {
+      background: #FEF08A;
+      color: #854D0E;
+      font-weight: 500;
+      padding: 0 2px;
+      border-radius: 0;
+    }
+
+    /* Selector de colores */
+    .color-picker {
+      position: fixed;
+      top: calc(var(--toolbar-height) + 8px);
+      right: 12px;
+      background: #FFFFFF;
+      border: 1px solid var(--border-hard);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-dropdown);
+      padding: 8px 10px;
+      display: none;
+      gap: 8px;
+      z-index: 100;
+      align-items: center;
+    }
+    
+    .color-picker.active { 
+      display: flex; 
+    }
+    
+    .color-option {
+      width: 26px; 
+      height: 26px;
+      border-radius: 0;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.1s;
+      touch-action: manipulation;
+    }
+    
+    .color-option:hover, .color-option:active { 
+      transform: scale(1.1); 
+    }
+    
+    .color-option.active { 
+      border-color: var(--brand-navy); 
+    }
+
+    /* Overlay de carga */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-reader);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    
+    .spinner {
+      width: 40px; 
+      height: 40px;
+      border: 2px solid rgba(0, 33, 71, 0.1);
+      border-top: 2px solid var(--brand-accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+    
+    .loading-text { 
+      font-family: 'Lora', serif; 
+      color: var(--brand-navy); 
+      font-size: 15px; 
+      font-style: italic; 
+    }
+    
+    @keyframes spin { 
+      100% { transform: rotate(360deg); } 
+    }
+
+    /* Toast de notificaciones */
+    .toast {
+      position: fixed;
+      bottom: calc(24px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--brand-navy);
+      color: white;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      box-shadow: var(--shadow-float);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.28s ease;
+      z-index: 2000;
+      max-width: 90vw;
+      text-align: center;
+      pointer-events: none;
+    }
+    
+    .toast.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Barra de acción de selección */
+    .selection-bar {
+      position: fixed;
+      bottom: calc(16px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #FFFFFF;
+      border: 1px solid var(--border-hard);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-float);
+      padding: 8px 10px;
+      display: flex;
+      gap: 6px;
+      z-index: 1100;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.22s ease;
+      max-width: 96vw;
+    }
+    
+    .selection-bar.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+    
+    .selection-bar .btn-sel {
+      padding: 10px 14px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    
+    .btn-sel-hl { 
+      background: #FEF08A; 
+      color: #854D0E; 
+    }
+    
+    .btn-sel-hl:hover { 
+      background: #FDE047; 
+    }
+    
+    .btn-sel-copy { 
+      background: #F3F4F6; 
+      color: var(--brand-navy); 
+    }
+    
+    .btn-sel-copy:hover { 
+      background: #E5E7EB; 
+    }
+    
+    .btn-sel-note { 
+      background: #FFEDD5; 
+      color: #9A3412; 
+    }
+    
+    .btn-sel-note:hover { 
+      background: #FED7AA; 
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { 
+      width: 8px; 
+      height: 8px; 
+    }
+    
+    ::-webkit-scrollbar-track { 
+      background: transparent; 
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 0;
+      border: 2px solid var(--bg-reader);
+    }
+    
+    .sidebar-content::-webkit-scrollbar-thumb { 
+      border-color: var(--bg-sidebar); 
     }
 
     /* ========== MENÚ DE DESCARGA ========== */
@@ -647,6 +981,7 @@
       min-width: 240px;
       display: none;
       flex-direction: column;
+      padding: 4px;
     }
     
     .download-menu.open { 
@@ -656,20 +991,19 @@
     .download-menu button {
       background: transparent;
       border: none;
-      border-bottom: 1px solid var(--border-light);
+      border-radius: var(--radius);
       text-align: left;
       padding: 12px 16px;
       font-size: 13px;
       font-family: inherit;
       color: var(--text-main);
       cursor: pointer;
+      transition: background 0.15s;
+      touch-action: manipulation;
     }
     
-    .download-menu button:last-child { 
-      border-bottom: none; 
-    }
-    
-    .download-menu button:hover { 
+    .download-menu button:hover,
+    .download-menu button:active { 
       background: #F9FAFB; 
       color: var(--brand-navy); 
     }
@@ -689,33 +1023,144 @@
 
     /* ========== AJUSTES MÓVILES ========== */
     @media (max-width: 768px) {
+      :root { 
+        --toolbar-height: 56px; 
+      }
+
+      .text-hide-mobile { 
+        display: none !important; 
+      }
+      
       .brand-container { 
         display: none; 
       }
       
+      .divider { 
+        display: none; 
+      }
+
+      .pdf-toolbar {
+        padding: 0 6px;
+        gap: 2px;
+      }
+      
+      .toolbar-left, .toolbar-right { 
+        flex: 0 0 auto; 
+      }
+      
+      .toolbar-center { 
+        flex: 1; 
+        justify-content: center; 
+      }
+
       .pdf-sidebar {
         position: absolute; 
         left: 0; 
         top: 0; 
         bottom: 0;
         height: 100%; 
-        width: 85vw;
+        width: min(var(--sidebar-width), 88vw);
         border-right: 1px solid var(--border-hard);
-        box-shadow: 10px 0 20px rgba(0,0,0,0.1);
+        box-shadow: var(--shadow-float);
+        z-index: 200;
       }
       
-      .btn { 
-        min-width: 44px; 
-        min-height: 44px; 
+      .pdf-sidebar.hidden {
+        transform: translateX(-105%);
+        margin-right: 0;
+      }
+
+      .sidebar-backdrop {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.3);
+        z-index: 150;
       }
       
+      .sidebar-backdrop.visible { 
+        display: block; 
+      }
+
+      .pdf-container { 
+        padding: 12px 6px 110px; 
+        gap: 16px; 
+      }
+      
+      .toolbar-center .toolbar-group {
+        background: #F3F4F6;
+        padding: 3px;
+        border-radius: var(--radius);
+        gap: 0;
+      }
+      
+      .btn {
+        min-width: 42px;
+        min-height: 42px;
+        padding: 8px;
+        border-radius: var(--radius);
+      }
+      
+      .btn-primary {
+        padding: 8px 10px;
+        min-width: 42px;
+      }
+      
+      #zoomLevel { 
+        width: 36px !important; 
+        font-size: 10px !important; 
+      }
+
+      .annotation-delete { 
+        opacity: 0.9; 
+        transform: scale(1); 
+      }
+
+      .pdf-link { 
+        min-height: 28px; 
+      }
+
+      .pdf-page-wrapper {
+        max-width: none;
+      }
+      
+      .pdf-canvas {
+        max-width: none;
+        filter: none;
+        -webkit-filter: none;
+      }
+
       .search-panel { 
-        top: 0; 
+        position: fixed;
+        left: 0; 
         right: 0; 
-        width: 100%; 
-        height: 100%; 
-        max-height: none; 
-        transform: translateY(-100%); 
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        border-radius: 12px 12px 0 0;
+        box-shadow: 0 -8px 32px rgba(0, 33, 71, 0.15);
+        max-height: min(70vh, 520px);
+        transform: translateY(110%);
+        padding-bottom: var(--safe-bottom);
+      }
+      
+      .search-panel.active { 
+        transform: translateY(0); 
+      }
+      
+      .search-handle {
+        width: 36px;
+        height: 4px;
+        background: #CBD5E1;
+        border-radius: 2px;
+        margin: 10px auto 6px;
+        flex-shrink: 0;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .sidebar-backdrop { 
+        display: none !important; 
       }
     }
   </style>
@@ -732,10 +1177,10 @@
       </div>
     </div>
     <div class="toolbar-group">
-      <button class="btn" onclick="toggleSidebar()" title="Índice y Metadatos">
+      <button class="btn" onclick="toggleSidebar()" title="Panel" aria-label="Panel lateral">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"></path></svg>
       </button>
-      <button class="btn" onclick="toggleSearch()" title="Buscar en el documento">
+      <button class="btn" onclick="toggleSearch()" title="Buscar" aria-label="Buscar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path></svg>
       </button>
     </div>
@@ -743,97 +1188,148 @@
 
   <div class="toolbar-center">
     <div class="toolbar-group">
-      <button class="btn active" id="selectTool" onclick="setTool('select')" title="Seleccionar texto">
+      <button class="btn active" id="selectTool" onclick="setTool('select')" title="Seleccionar (V)" aria-label="Seleccionar texto">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5"></path></svg>
       </button>
-      <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Resaltar">
-        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.89l12.683-12.683z"></path></svg>
+      <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Resaltar (H)" aria-label="Resaltar">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.89l12.683-12.683zM16.862 4.487L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path></svg>
+      </button>
+      <button class="btn" id="noteTool" onclick="setTool('note')" title="Nota (N)" aria-label="Nota">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"></path></svg>
       </button>
     </div>
   </div>
 
   <div class="toolbar-right">
     <div class="toolbar-group">
-      <button class="btn" onclick="zoomOut()" title="Alejar">
+      <button class="btn" onclick="zoomOut()" title="Alejar" aria-label="Alejar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"></path></svg>
       </button>
       <span style="font-size:11px;font-family:'JetBrains Mono';width:40px;text-align:center;color:var(--text-muted);" id="zoomLevel">100%</span>
-      <button class="btn" onclick="zoomIn()" title="Acercar">
+      <button class="btn" onclick="zoomIn()" title="Acercar" aria-label="Acercar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"></path></svg>
       </button>
     </div>
-    <div class="divider"></div>
-    <button class="btn-primary" id="downloadBtn" onclick="toggleDownloadMenu(event)">
-      Descargar
+    <button class="btn btn-primary" id="downloadBtn" onclick="toggleDownloadMenu(event)" title="Descargar" aria-label="Descargar" aria-haspopup="true">
+      <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
+      <span class="text-hide-mobile">Descargar</span>
     </button>
   </div>
 </header>
 
-<div class="download-menu" id="downloadMenu">
+<div class="download-menu" id="downloadMenu" role="menu">
   <button type="button" onclick="downloadPDF('none')">
-    <strong>Manuscrito Original</strong>
-    <span>Versión limpia, sin anotaciones</span>
+    <strong>PDF original</strong>
+    <span>Sin marcas ni comentarios</span>
+  </button>
+  <button type="button" onclick="downloadPDF('highlights')">
+    <strong>Solo resaltados</strong>
+    <span>Marcas de color sobre el texto</span>
+  </button>
+  <button type="button" onclick="downloadPDF('notes')">
+    <strong>Solo comentarios</strong>
+    <span>Notas adhesivas (icono + popup)</span>
   </button>
   <button type="button" onclick="downloadPDF('all')">
-    <strong>Documento con Notas</strong>
-    <span>Incluye marcas y comentarios del lector</span>
+    <strong>Todo</strong>
+    <span>Resaltados + comentarios</span>
   </button>
 </div>
 
+<div class="color-picker" id="colorPicker">
+  <span style="font-size:11px;color:var(--text-muted);">Color</span>
+  <div class="color-option active" style="background:#FDE047;" data-color="yellow" onclick="selectHighlightColor('yellow', this)"></div>
+  <div class="color-option" style="background:#86EFAC;" data-color="green" onclick="selectHighlightColor('green', this)"></div>
+  <div class="color-option" style="background:#93C5FD;" data-color="blue" onclick="selectHighlightColor('blue', this)"></div>
+  <div class="color-option" style="background:#F9A8D4;" data-color="pink" onclick="selectHighlightColor('pink', this)"></div>
+</div>
+
 <div class="viewer-wrapper">
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
   <aside class="pdf-sidebar" id="pdfSidebar">
     <div class="sidebar-tabs">
-      <button class="sidebar-tab active" onclick="switchSidebarTab('info', this)">Metadatos</button>
+      <button class="sidebar-tab active" onclick="switchSidebarTab('info', this)">Info</button>
       <button class="sidebar-tab" onclick="switchSidebarTab('toc', this)">Índice</button>
+      <button class="sidebar-tab" onclick="switchSidebarTab('annotations', this)">Marcas</button>
     </div>
     <div class="sidebar-content">
       <div class="sidebar-panel active" id="panel-info">
-        
-        <h2 id="docTitle">Cargando Título del Manuscrito...</h2>
-        
         <div class="sidebar-section">
-          <h3>Información de Publicación</h3>
+          <h3>Título</h3>
+          <p id="docTitle">Cargando…</p>
+        </div>
+        <div class="sidebar-section">
+          <h3>DOI</h3>
+          <a href="#" class="doi-link" id="docDoi" target="_blank" rel="noopener">DOI no registrado</a>
+        </div>
+        <div class="sidebar-section">
+          <h3>Propiedades</h3>
           <div class="meta-list">
             <div class="meta-row">
               <span class="meta-label">Páginas</span>
               <span class="meta-value" id="docPages">—</span>
             </div>
             <div class="meta-row">
-              <span class="meta-label">DOI</span>
-              <span class="meta-value"><a href="#" class="doi-link" id="docDoi" target="_blank">Pendiente</a></span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-label">Anotaciones</span>
+              <span class="meta-label">Marcas</span>
               <span class="meta-value" id="annotationCount">0</span>
             </div>
           </div>
         </div>
-        
+        <div class="sidebar-section">
+          <h3>Consejos</h3>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.65;">
+            Selecciona texto y usa la barra inferior para resaltar o copiar.<br>
+            En móvil, mantén pulsado para seleccionar.
+          </p>
+        </div>
       </div>
       <div class="sidebar-panel" id="panel-toc">
-        <div id="tocContent">
-          <p style="color:var(--text-muted);font-style:italic;font-size:12px;">Generando estructura...</p>
+        <div class="sidebar-section">
+          <div id="tocContent">
+            <p style="color:var(--text-muted);font-style:italic;font-size:13px;">Procesando índice…</p>
+          </div>
+        </div>
+      </div>
+      <div class="sidebar-panel" id="panel-annotations">
+        <div class="sidebar-section">
+          <div id="annotationsList">
+            <p style="color:var(--text-muted);font-style:italic;font-size:13px;">Sin marcas aún.</p>
+          </div>
         </div>
       </div>
     </div>
   </aside>
 
   <main class="pdf-container" id="pdfContainer">
-    <!-- El script del canvas de PDF JS inyectará las páginas aquí -->
+    <div class="loading-overlay" id="loading">
+      <div class="spinner"></div>
+      <div class="loading-text">Preparando entorno de lectura…</div>
+    </div>
   </main>
 </div>
 
-<!-- Buscador Rígido -->
-<div class="search-overlay" id="searchOverlay" onclick="closeSearch()"></div>
-<div class="search-panel" id="searchPanel">
+<!-- Buscador -->
+<div class="search-overlay" id="searchOverlay" onclick="closeSearch();clearSearchHighlights();"></div>
+<div class="search-panel" id="searchPanel" role="dialog" aria-label="Buscar en el documento">
+  <div class="search-handle"></div>
   <div class="search-header">
-    <input type="search" class="search-input" id="searchInput" placeholder="Buscar en el texto completo..." autocomplete="off">
-    <button class="search-close-btn" onclick="closeSearch()">
+    <input type="search" class="search-input" id="searchInput" placeholder="Buscar en el manuscrito…" enterkeyhint="search" autocomplete="off">
+    <button class="search-close-btn" onclick="closeSearch()" aria-label="Cerrar búsqueda">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
   </div>
   <div class="search-results" id="searchResults"></div>
 </div>
+
+<!-- Barra de selección -->
+<div class="selection-bar" id="selectionBar">
+  <button class="btn-sel btn-sel-hl" onclick="highlightCurrentSelection()">Resaltar</button>
+  <button class="btn-sel btn-sel-copy" onclick="copyCurrentSelection()">Copiar</button>
+  <button class="btn-sel btn-sel-note" onclick="noteFromSelection()">Nota</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
 
 <script>
 (function () {
