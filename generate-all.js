@@ -1258,15 +1258,15 @@ return `<!DOCTYPE html>
       </section>
       
       <section id="preview">
-        <h2>${isSpanish ? 'Visualización Completa' : 'Full Preview'}</h2>
-        <div class="pdf-container">
-          <embed src="${volume.pdfUrl}" type="application/pdf" width="100%" height="800px" />
-        </div>
-        <div class="action-buttons">
-          <a href="${volume.pdfUrl}" target="_blank" class="btn-outline">${isSpanish ? 'Ver en pantalla completa' : 'View Full Screen'}</a>
-          <a href="${volume.pdfUrl}" download class="btn-primary">${isSpanish ? 'Descargar volumen (PDF)' : 'Download Volume (PDF)'}</a>
-        </div>
-      </section>
+  <h2>${isSpanish ? 'Visualización Completa' : 'Full Preview'}</h2>
+  <div class="pdf-container">
+    <embed src="${volume.pdfUrl}" type="application/pdf" width="100%" height="800px" />
+  </div>
+  <div class="action-buttons">
+    <a href="${isSpanish ? '/viewer.html' : '/viewerEN.html'}?url=${encodeURIComponent(volume.pdfUrl)}&title=${encodeURIComponent(title)}" target="_blank" class="btn-outline">${isSpanish ? 'Ver en pantalla completa' : 'View Full Screen'}</a>
+    <a href="${volume.pdfUrl}" download class="btn-primary">${isSpanish ? 'Descargar volumen (PDF)' : 'Download Volume (PDF)'}</a>
+  </div>
+</section>
       
       <section id="license">
         <div style="display: flex; gap: 1.5rem; align-items: center; border-top: 1px solid var(--border-color); padding-top: 2rem; flex-wrap: wrap;">
@@ -1282,10 +1282,11 @@ return `<!DOCTYPE html>
     
     <aside class="sidebar">
       <div class="card">
-        <span class="card-title">${isSpanish ? 'Acceso Rápido' : 'Quick Access'}</span>
-        <a href="${volume.pdfUrl}" download class="btn-primary">${isSpanish ? 'Descargar PDF Completo' : 'Download Full PDF'}</a>
-        <a href="#toc" class="btn-outline">${isSpanish ? 'Explorar Artículos' : 'Explore Articles'}</a>
-      </div>
+  <span class="card-title">${isSpanish ? 'Acceso Rápido' : 'Quick Access'}</span>
+  <a href="${isSpanish ? '/viewer.html' : '/viewerEN.html'}?url=${encodeURIComponent(volume.pdfUrl)}&title=${encodeURIComponent(title)}" target="_blank" class="btn-primary">${isSpanish ? 'Abrir Visor Académico' : 'Open Academic Viewer'}</a>
+  <a href="${volume.pdfUrl}" download class="btn-outline">${isSpanish ? 'Descargar PDF Completo' : 'Download Full PDF'}</a>
+  <a href="#toc" class="btn-outline">${isSpanish ? 'Explorar Artículos' : 'Explore Articles'}</a>
+</div>
       
       <div class="card">
         <span class="card-title">${isSpanish ? 'Navegación' : 'Navigation'}</span>

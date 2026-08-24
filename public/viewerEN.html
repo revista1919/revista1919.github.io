@@ -2,466 +2,590 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Academic Viewer - The National Review of Sciences for Students</title>
 
-  <!-- PDF.js from CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js">
-  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --oxford-blue: #002147;
-      --oxford-dark: #00152e;
-      --elsevier-orange: #FF6C0C;
-      --elsevier-hover: #e65a00;
-      --bg-reader: #e3e8ee;
-      --bg-sidebar: #ffffff;
-      --text-main: #1f2937;
-      --text-muted: #6b7280;
-      --toolbar-height: 56px;
-      --sidebar-width: 320px;
-      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-      --shadow-paper: 0 1px 3px rgba(0,0,0,0.05), 0 10px 30px rgba(0, 33, 71, 0.12);
-      --transition-spring: cubic-bezier(0.25, 0.8, 0.25, 1);
+      /* Institutional high-end palette */
+      --brand-navy: #002147;
+      --brand-accent: #E8572A;
+      --bg-reader: #E5E8EB;
+      --bg-sidebar: #FFFFFF;
+      --bg-paper: #FFFFFF;
+      --border-hard: #D1D5DB;
+      --border-light: #E5E7EB;
+      --text-main: #111827;
+      --text-muted: #4B5563;
+      
+      /* Rigid editorial structure */
+      --radius: 2px;
+      --toolbar-height: 54px;
+      --sidebar-width: 340px;
+      
+      /* Flat defined shadows */
+      --shadow-paper: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-dropdown: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      --shadow-float: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+      
+      /* Dry pastel highlights */
+      --highlight-yellow: rgba(253, 224, 71, 0.4);
+      --highlight-green: rgba(134, 239, 172, 0.4);
+      --highlight-blue: rgba(147, 197, 253, 0.4);
+      --highlight-pink: rgba(249, 168, 212, 0.4);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      width: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
-      font-family: 'Inter', -apple-system, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg-reader);
-      overflow: hidden;
-      height: 100vh;
-      width: 100vw;
       display: flex;
       flex-direction: column;
       color: var(--text-main);
       -webkit-font-smoothing: antialiased;
-      user-select: none;
+      -moz-osx-font-smoothing: grayscale;
     }
 
+    /* ========== INSTITUTIONAL TOOLBAR ========== */
     .pdf-toolbar {
-      background: var(--oxford-blue);
-      border-bottom: 2px solid var(--elsevier-orange);
-      color: white;
-      padding: 0 20px;
+      background: #FFFFFF;
+      border-bottom: 2px solid var(--brand-navy);
+      color: var(--text-main);
+      padding: 0 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       z-index: 1000;
       height: var(--toolbar-height);
-      box-shadow: 0 4px 20px rgba(0, 33, 71, 0.2);
+      min-height: var(--toolbar-height);
       flex-shrink: 0;
-      user-select: none;
+      gap: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
-    .toolbar-group {
+    .brand-container {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 12px;
+      margin-right: 16px;
+      padding-right: 16px;
+      border-right: 1px solid var(--border-light);
+      flex-shrink: 0;
+    }
+    
+    .brand-logo {
+      width: 32px; 
+      height: 32px;
+      background-image: url('https://www.revistacienciasestudiantes.com/logoEN.png');
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    
+    .brand-text { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 2px; 
+    }
+    
+    .brand-title { 
+      font-family: 'Lora', serif; 
+      font-size: 14px; 
+      font-weight: 600; 
+      color: var(--brand-navy); 
+      line-height: 1; 
+      letter-spacing: -0.01em;
+    }
+    
+    .brand-subtitle { 
+      font-family: 'Inter', sans-serif;
+      font-size: 9px; 
+      color: var(--text-muted); 
+      text-transform: uppercase; 
+      letter-spacing: 0.08em; 
+      font-weight: 500;
     }
 
+    .toolbar-group { 
+      display: flex; 
+      align-items: center; 
+      gap: 4px; 
+    }
+    
+    .toolbar-left { 
+      flex: 1; 
+      display: flex; 
+      align-items: center; 
+      min-width: 0; 
+    }
+    
+    .toolbar-center { 
+      display: flex; 
+      justify-content: center; 
+      flex-shrink: 0; 
+    }
+    
+    .toolbar-right { 
+      flex: 1; 
+      display: flex; 
+      justify-content: flex-end; 
+      gap: 8px; 
+      min-width: 0; 
+    }
+
+    /* Institutional buttons */
     .btn {
       background: transparent;
       border: 1px solid transparent;
-      color: rgba(255, 255, 255, 0.85);
-      padding: 6px 12px;
-      border-radius: 6px;
+      color: var(--text-muted);
+      padding: 6px;
+      border-radius: var(--radius);
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      font-family: 'Inter', sans-serif;
       display: flex;
       align-items: center;
-      gap: 8px;
-      transition: all 0.2s var(--transition-spring);
+      justify-content: center;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      min-width: 36px;
+      min-height: 36px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      gap: 4px;
     }
-
-    .btn:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.1);
-      color: #ffffff;
+    
+    .btn:hover:not(:disabled) { 
+      background: #F3F4F6; 
+      color: var(--brand-navy); 
     }
-    .btn:active:not(:disabled) {
-      transform: scale(0.97);
+    
+    .btn:active:not(:disabled) { 
+      background: #E5E7EB; 
     }
-    .btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
+    
+    .btn.active { 
+      color: var(--brand-accent); 
+      background: transparent;
+      border-bottom: 2px solid var(--brand-accent);
+      border-radius: 0;
+      font-weight: 600;
     }
-    .btn.active {
-      background: rgba(255, 108, 12, 0.2);
-      color: var(--elsevier-orange);
-      border-color: rgba(255, 108, 12, 0.4);
+    
+    .btn-icon { 
+      width: 18px; 
+      height: 18px; 
+      flex-shrink: 0; 
     }
-    .btn-icon {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-    }
+    
     .btn-primary {
-      background: var(--elsevier-orange);
-      color: white !important;
+      background: var(--brand-navy);
+      color: #FFFFFF !important;
+      padding: 6px 16px;
+      border-radius: var(--radius);
+      font-size: 11px;
       font-weight: 600;
-      box-shadow: var(--shadow-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: 1px solid var(--brand-navy);
+      height: 34px;
     }
-    .btn-primary:hover:not(:disabled) {
-      background: var(--elsevier-hover);
-      box-shadow: 0 4px 12px rgba(255, 108, 12, 0.3);
+    
+    .btn-primary:hover:not(:disabled) { 
+      background: #FFFFFF; 
+      color: var(--brand-navy) !important;
+      border-color: var(--brand-navy);
     }
-    .divider {
-      width: 1px;
-      height: 20px;
-      background: rgba(255, 255, 255, 0.15);
-      margin: 0 10px;
+    
+    .btn-primary:disabled { 
+      opacity: 0.5; 
+      cursor: wait; 
     }
-
-    .search-bar {
-      opacity: 0;
-      visibility: hidden;
-      transform: translateX(-50%) translateY(-10px);
-      position: absolute;
-      top: calc(var(--toolbar-height) + 10px);
-      left: 50%;
-      background: rgba(255, 255, 255, 0.98);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(0, 33, 71, 0.1);
-      border-radius: 16px;
-      box-shadow: var(--shadow-lg);
-      padding: 20px;
-      z-index: 1100;
-      width: 440px;
-      max-width: 90vw;
-      transition: all 0.3s var(--transition-spring);
+    
+    .divider { 
+      width: 1px; 
+      height: 16px; 
+      background: var(--border-light); 
+      margin: 0 8px; 
     }
 
-    .search-bar.active {
-      opacity: 1;
-      visibility: visible;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    .search-input-group {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .search-input {
-      flex: 1;
-      padding: 12px 16px;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      font-size: 14px;
-      font-family: 'Inter', sans-serif;
-      transition: all 0.2s;
-      background: #f9fafb;
-    }
-
-    .search-input:focus {
-      outline: none;
-      border-color: var(--elsevier-orange);
-      background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(255, 108, 12, 0.1);
-    }
-
-    .search-results {
-      max-height: 360px;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-
-    .search-result-item {
-      padding: 12px;
-      cursor: pointer;
-      border-radius: 10px;
-      transition: background 0.15s;
-      border: 1px solid transparent;
-      margin-bottom: 6px;
-      background: #fafafa;
-    }
-    .search-result-item:hover {
-      background: #f0f4ff;
-      border-color: #d1d9e6;
-    }
-    .search-result-item .highlight {
-      background: #fef08a;
-      color: #92400e;
-      font-weight: 600;
-      padding: 0 2px;
-      border-radius: 2px;
-    }
-
+    /* ========== MAIN LAYOUT ========== */
     .viewer-wrapper {
       flex: 1;
       display: flex;
       overflow: hidden;
       position: relative;
+      min-height: 0;
     }
 
     .pdf-sidebar {
       width: var(--sidebar-width);
       background: var(--bg-sidebar);
-      border-right: 1px solid rgba(0, 33, 71, 0.1);
+      border-right: 1px solid var(--border-hard);
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
-      transition: margin-left 0.4s var(--transition-spring);
+      transition: transform 0.2s ease-in-out;
       flex-shrink: 0;
-      box-shadow: 1px 0 12px rgba(0,0,0,0.03);
       z-index: 50;
     }
-
-    .pdf-sidebar.hidden {
-      margin-left: calc(-1 * var(--sidebar-width));
+    
+    .pdf-sidebar.hidden { 
+      transform: translateX(-100%); 
+      margin-right: calc(-1 * var(--sidebar-width)); 
     }
 
+    /* Rigid sidebar tabs */
     .sidebar-tabs {
       display: flex;
-      border-bottom: 1px solid #e5e7eb;
-      background: #f9fafb;
-      padding: 0 10px;
+      border-bottom: 1px solid var(--border-hard);
+      background: #F9FAFB;
+      flex-shrink: 0;
+      padding: 0;
+      gap: 0;
     }
-
+    
     .sidebar-tab {
       flex: 1;
-      padding: 16px 8px;
-      background: none;
+      padding: 12px 0;
+      background: transparent;
       border: none;
+      border-bottom: 2px solid transparent;
       cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      position: relative;
-      transition: color 0.2s;
-    }
-
-    .sidebar-tab:hover {
-      color: var(--oxford-blue);
-    }
-    .sidebar-tab.active {
-      color: var(--oxford-blue);
-    }
-    .sidebar-tab::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: var(--elsevier-orange);
-      transform: scaleX(0);
-      transition: transform 0.3s var(--transition-spring);
-    }
-    .sidebar-tab.active::after {
-      transform: scaleX(1);
-    }
-
-    .sidebar-content {
-      flex: 1;
-      overflow-y: auto;
-      background: white;
-      padding: 0;
-    }
-    .sidebar-panel {
-      display: none;
-      padding: 24px;
-      animation: fadeIn 0.3s ease;
-    }
-    .sidebar-panel.active {
-      display: block;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .sidebar-section {
-      margin-bottom: 24px;
-    }
-    .sidebar-section h3 {
       font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      transition: color 0.15s, border-color 0.15s;
+      touch-action: manipulation;
+    }
+    
+    .sidebar-tab:hover { 
+      color: var(--brand-navy); 
+    }
+    
+    .sidebar-tab.active {
+      color: var(--brand-navy);
+      background: var(--bg-sidebar);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    .sidebar-content { 
+      flex: 1; 
+      overflow-y: auto; 
+      -webkit-overflow-scrolling: touch; 
+    }
+    
+    .sidebar-panel { 
+      display: none; 
+      padding: 24px 20px; 
+      animation: fadeIn 0.2s ease;
+    }
+    
+    .sidebar-panel.active { 
+      display: block; 
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .sidebar-section { 
+      margin-bottom: 32px; 
+    }
+    
+    .sidebar-section h3 {
+      font-size: 10px;
       text-transform: uppercase;
       color: var(--text-muted);
       margin-bottom: 12px;
-      letter-spacing: 0.08em;
-      font-weight: 700;
-    }
-    .sidebar-section p {
-      font-size: 13px;
-      margin-bottom: 8px;
-      line-height: 1.6;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 6px;
     }
 
-    .doi-badge {
-      display: inline-flex;
-      align-items: center;
-      background: #fff7ed;
-      color: var(--elsevier-hover);
-      padding: 6px 12px;
-      border-radius: 6px;
+    #docTitle {
+      font-family: 'Lora', serif;
+      font-size: 18px;
+      line-height: 1.35;
+      color: var(--text-main);
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    /* Definition list format for metadata */
+    .meta-list {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+    
+    .meta-row:last-child { 
+      border-bottom: none; 
+    }
+    
+    .meta-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    
+    .meta-value {
       font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
+      color: var(--brand-navy);
+      text-align: right;
+    }
+    
+    .doi-link {
+      color: var(--brand-navy);
       text-decoration: none;
-      border: 1px solid #fed7aa;
-      transition: all 0.2s;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 1px;
+      transition: border-color 0.15s;
       word-break: break-all;
     }
-    .doi-badge:hover {
-      background: #ffedd5;
-      box-shadow: var(--shadow-sm);
+    
+    .doi-link:hover { 
+      border-color: var(--brand-accent); 
+      color: var(--brand-accent); 
     }
 
     .toc-item {
-      padding: 8px 12px;
+      padding: 8px 0;
       cursor: pointer;
       font-size: 13px;
       color: var(--text-main);
-      border-radius: 6px;
-      transition: all 0.2s;
       display: flex;
       align-items: baseline;
       gap: 12px;
-      margin-bottom: 2px;
+      line-height: 1.4;
+      border-bottom: 1px dashed var(--border-light);
+      touch-action: manipulation;
     }
-    .toc-item:hover {
-      background: #f3f4f6;
-      color: var(--oxford-blue);
+    
+    .toc-item:hover, .toc-item:active { 
+      color: var(--brand-accent); 
     }
-    .toc-level-1 {
-      font-weight: 600;
+    
+    .toc-level-1 { 
+      font-weight: 500; 
     }
-    .toc-level-2 {
-      padding-left: 24px;
-      font-size: 12.5px;
-      color: var(--text-muted);
+    
+    .toc-level-2 { 
+      padding-left: 16px; 
+      font-size: 12px; 
+      color: var(--text-muted); 
     }
-    .toc-page {
-      color: var(--text-muted);
-      font-size: 11px;
-      margin-left: auto;
-      font-family: 'JetBrains Mono', monospace;
+    
+    .toc-level-3 { 
+      padding-left: 28px; 
+      font-size: 12px; 
+      color: var(--text-muted); 
+    }
+    
+    .toc-page { 
+      color: var(--text-muted); 
+      font-size: 11px; 
+      margin-left: auto; 
+      font-family: 'JetBrains Mono', monospace; 
+      flex-shrink: 0;
     }
 
+    /* ========== PDF CONTAINER ========== */
     .pdf-container {
       flex: 1;
       overflow: auto;
-      padding: 40px 20px 80px;
+      padding: 32px 16px 80px;
       background: var(--bg-reader);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 28px;
+      gap: 32px;
+      -webkit-overflow-scrolling: touch;
       scroll-behavior: smooth;
-      position: relative;
+      min-width: 0;
+      overscroll-behavior-y: contain;
     }
 
     .pdf-page-wrapper {
       position: relative;
-      background: white;
+      background: var(--bg-paper);
       box-shadow: var(--shadow-paper);
-      border-radius: 2px;
-      min-height: 800px;
-      width: 100%;
-      max-width: fit-content;
-      transition: transform 0.2s ease;
+      border: 1px solid var(--border-hard);
+      margin: 0 auto;
+      max-width: 100%;
     }
 
-    .pdf-canvas {
+    .pdf-canvas { 
+      display: block; 
+      max-width: 100%; 
+      height: auto; 
+      border-radius: 0;
+      filter: none;
+      -webkit-filter: none;
+      image-rendering: auto;
+      image-rendering: crisp-edges;
+    }
+
+    /* Text selection layer */
+    .textLayer { 
+      position: absolute; 
+      text-align: initial; 
+      inset: 0; 
+      overflow: hidden; 
+      opacity: 1; 
+      line-height: 1; 
+      -webkit-text-size-adjust: none;
+      -moz-text-size-adjust: none;
+      text-size-adjust: none;
+      forced-color-adjust: none;
+      transform-origin: 0 0; 
+      z-index: 2; 
+      box-sizing: content-box; 
+    }
+    
+    .textLayer :is(span, br) { 
+      color: transparent; 
+      position: absolute; 
+      white-space: pre; 
+      cursor: text; 
+      transform-origin: 0% 0%; 
+      box-sizing: content-box;
+    }
+    
+    .textLayer span.markedContent { 
+      top: 0; 
+      height: 0; 
+    }
+    
+    .textLayer ::selection { 
+      background: rgba(232, 87, 42, 0.35); 
+      color: transparent; 
+    }
+    
+    .textLayer ::-moz-selection { 
+      background: rgba(232, 87, 42, 0.35); 
+      color: transparent; 
+    }
+    
+    .textLayer .endOfContent {
       display: block;
-      background: white;
-      border-radius: 2px;
-      pointer-events: none;
+      position: absolute;
+      inset: 100% 0 0;
+      z-index: -1;
+      cursor: default;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    .textLayer.selecting .endOfContent,
+    .textLayer .endOfContent.active { 
+      top: 0; 
+    }
+    
+    .textLayer span.search-hit {
+      background: rgba(255, 200, 0, 0.55) !important;
+      border-radius: 0;
+    }
+    
+    .textLayer span.search-hit-active {
+      background: rgba(232, 87, 42, 0.65) !important;
+      outline: 2px solid var(--brand-accent);
+      outline-offset: 1px;
     }
 
-    .text-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0.25;
-      pointer-events: auto;
-      z-index: 5;
-      line-height: 1.0;
-      white-space: pre;
-      transform-origin: 0 0;
-      mix-blend-mode: multiply;
-      user-select: text;
-      -webkit-user-select: text;
-      cursor: text;
+    /* Annotation layer */
+    .annotation-layer { 
+      position: absolute; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      pointer-events: none; 
+      z-index: 3; 
     }
-    .text-layer ::selection {
-      background: rgba(255, 108, 12, 0.4);
+    
+    .annotation-highlight { 
+      position: absolute; 
+      mix-blend-mode: multiply; 
+      pointer-events: auto; 
+      cursor: pointer; 
+      border-radius: 0;
+      z-index: 4; 
+      transition: opacity 0.15s;
     }
-    .text-layer span {
-      color: transparent;
-      position: absolute;
-      white-space: pre;
-      cursor: text;
-      transform-origin: 0% 0%;
+    
+    .annotation-highlight:hover { 
+      opacity: 0.7; 
     }
-
-    .annotation-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 10;
+    
+    .annotation-highlight.color-yellow { 
+      background: var(--highlight-yellow); 
     }
-    .annotation-layer.active {
-      pointer-events: auto;
+    
+    .annotation-highlight.color-green { 
+      background: var(--highlight-green); 
     }
-
-    .annotation-highlight {
-      position: absolute;
-      background: rgba(254, 240, 138, 0.5);
-      mix-blend-mode: multiply;
-      border-bottom: 2px solid #eab308;
-      pointer-events: auto;
-      cursor: pointer;
-      transition: background 0.2s;
-      border-radius: 2px;
+    
+    .annotation-highlight.color-blue { 
+      background: var(--highlight-blue); 
     }
-    .annotation-highlight:hover {
-      background: rgba(254, 240, 138, 0.8);
+    
+    .annotation-highlight.color-pink { 
+      background: var(--highlight-pink); 
     }
 
+    /* Academic notes */
     .annotation-note {
       position: absolute;
-      background: #ffffff;
-      border-left: 4px solid var(--elsevier-orange);
-      border-radius: 0 8px 8px 0;
+      background: #FFFDF0;
+      border: 1px solid #EAB308;
+      border-top: 4px solid var(--brand-accent);
+      border-radius: 0 0 4px 4px;
       padding: 12px;
-      font-size: 13px;
-      font-family: 'Inter', sans-serif;
       pointer-events: auto;
-      min-width: 180px;
-      max-width: 250px;
-      box-shadow: var(--shadow-md);
+      width: 220px;
+      max-width: min(220px, 70vw);
+      box-shadow: var(--shadow-dropdown);
       z-index: 20;
-      transition: transform 0.2s, box-shadow 0.2s;
       cursor: grab;
+      transition: box-shadow 0.15s;
     }
+    
     .annotation-note:focus-within {
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: var(--shadow-lg);
+      box-shadow: var(--shadow-float);
       z-index: 21;
       cursor: text;
     }
+    
     .annotation-note textarea {
       width: 100%;
       border: none;
@@ -469,197 +593,707 @@
       font-size: 13px;
       font-family: 'Lora', serif;
       resize: none;
-      min-height: 80px;
+      min-height: 64px;
       color: var(--text-main);
       line-height: 1.5;
     }
-    .annotation-note textarea:focus {
-      outline: none;
+    
+    .annotation-note textarea:focus { 
+      outline: none; 
     }
+
     .annotation-delete {
       position: absolute;
-      top: -10px;
-      right: -10px;
-      width: 22px;
-      height: 22px;
+      top: -12px; 
+      right: -12px;
+      width: 28px; 
+      height: 28px;
       border-radius: 50%;
-      background: #ef4444;
-      color: white;
-      border: 2px solid white;
+      background: #FFFFFF;
+      color: #DC2626;
+      border: 1px solid var(--border-hard);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       opacity: 0;
-      transform: scale(0.8);
-      transition: all 0.2s var(--transition-spring);
+      transform: scale(0.85);
+      transition: all 0.15s;
+      font-size: 18px;
+      line-height: 1;
+      touch-action: manipulation;
     }
-    .annotation-note:hover .annotation-delete {
-      opacity: 1;
+    
+    .annotation-note:hover .annotation-delete,
+    .annotation-note:focus-within .annotation-delete { 
+      opacity: 1; 
       transform: scale(1);
     }
+    
+    .annotation-delete:hover { 
+      background: #DC2626; 
+      color: #FFFFFF; 
+      border-color: #DC2626; 
+    }
 
+    .pdf-link {
+      position: absolute;
+      z-index: 6;
+      cursor: pointer;
+      background: transparent;
+      touch-action: manipulation;
+      min-height: 22px;
+    }
+    
+    .pdf-link:hover, .pdf-link:active { 
+      background: rgba(232, 87, 42, 0.15); 
+    }
+
+    .dest-flash {
+      position: absolute;
+      z-index: 15;
+      pointer-events: none;
+      background: rgba(232, 87, 42, 0.22);
+      border: 2px solid var(--brand-accent);
+      border-radius: 0;
+      box-shadow: 0 0 0 4px rgba(232, 87, 42, 0.15);
+      animation: destPulse 2.2s ease forwards;
+    }
+    
+    @keyframes destPulse {
+      0% { opacity: 0; transform: scaleY(0.6); }
+      15% { opacity: 1; transform: scaleY(1); }
+      70% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* ========== SEARCH ========== */
+    .search-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, 0.2);
+      z-index: 1200;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease;
+    }
+    
+    .search-overlay.active { 
+      opacity: 1; 
+      visibility: visible; 
+    }
+
+    .search-panel {
+      position: fixed;
+      top: var(--toolbar-height); 
+      right: 16px;
+      width: 320px;
+      background: #FFFFFF;
+      border: 1px solid var(--border-hard);
+      box-shadow: var(--shadow-dropdown);
+      z-index: 1201;
+      transform: translateY(-10px);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      max-height: 400px;
+    }
+    
+    .search-panel.active { 
+      transform: translateY(0); 
+      opacity: 1; 
+      visibility: visible; 
+    }
+
+    .search-header {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid var(--border-hard);
+      background: #F9FAFB;
+      gap: 8px;
+    }
+    
+    .search-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border-hard);
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .search-input:focus { 
+      outline: none; 
+      border-color: var(--brand-navy); 
+      box-shadow: 0 0 0 3px rgba(0, 33, 71, 0.1);
+    }
+    
+    .search-close-btn {
+      background: transparent;
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      border-radius: var(--radius);
+      touch-action: manipulation;
+    }
+    
+    .search-close-btn:hover {
+      background: #F3F4F6;
+    }
+    
+    .search-results {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 0;
+    }
+    
+    .search-result-item {
+      padding: 12px;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-light);
+      touch-action: manipulation;
+    }
+    
+    .search-result-item strong { 
+      color: var(--brand-navy); 
+      display: block; 
+      font-size: 11px; 
+      margin-bottom: 4px; 
+      text-transform: uppercase; 
+    }
+    
+    .search-result-item:hover, 
+    .search-result-item:active { 
+      background: #F9FAFB; 
+    }
+    
+    .search-result-item .highlight {
+      background: #FEF08A;
+      color: #854D0E;
+      font-weight: 500;
+      padding: 0 2px;
+      border-radius: 0;
+    }
+
+    /* Color picker */
+    .color-picker {
+      position: fixed;
+      top: calc(var(--toolbar-height) + 8px);
+      right: 12px;
+      background: #FFFFFF;
+      border: 1px solid var(--border-hard);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-dropdown);
+      padding: 8px 10px;
+      display: none;
+      gap: 8px;
+      z-index: 100;
+      align-items: center;
+    }
+    
+    .color-picker.active { 
+      display: flex; 
+    }
+    
+    .color-option {
+      width: 26px; 
+      height: 26px;
+      border-radius: 0;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.1s;
+      touch-action: manipulation;
+    }
+    
+    .color-option:hover, .color-option:active { 
+      transform: scale(1.1); 
+    }
+    
+    .color-option.active { 
+      border-color: var(--brand-navy); 
+    }
+
+    /* Loading overlay */
     .loading-overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      inset: 0;
       background: var(--bg-reader);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 9999;
-      transition: opacity 0.5s ease, visibility 0.5s ease;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    
+    .spinner {
+      width: 40px; 
+      height: 40px;
+      border: 2px solid rgba(0, 33, 71, 0.1);
+      border-top: 2px solid var(--brand-accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+    
+    .loading-text { 
+      font-family: 'Lora', serif; 
+      color: var(--brand-navy); 
+      font-size: 15px; 
+      font-style: italic; 
+    }
+    
+    @keyframes spin { 
+      100% { transform: rotate(360deg); } 
+    }
+
+    /* Toast notifications */
+    .toast {
+      position: fixed;
+      bottom: calc(24px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--brand-navy);
+      color: white;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      box-shadow: var(--shadow-float);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.28s ease;
+      z-index: 2000;
+      max-width: 90vw;
+      text-align: center;
       pointer-events: none;
     }
-
-    .spinner {
-      width: 48px;
-      height: 48px;
-      border: 3px solid rgba(0, 33, 71, 0.1);
-      border-top: 3px solid var(--elsevier-orange);
-      border-radius: 50%;
-      animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
-      margin-bottom: 24px;
+    
+    .toast.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
     }
 
-    .loading-text {
-      font-family: 'Lora', serif;
-      color: var(--oxford-blue);
-      font-size: 16px;
-      font-style: italic;
-      letter-spacing: 0.02em;
+    /* Selection action bar */
+    .selection-bar {
+      position: fixed;
+      bottom: calc(16px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #FFFFFF;
+      border: 1px solid var(--border-hard);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-float);
+      padding: 8px 10px;
+      display: flex;
+      gap: 6px;
+      z-index: 1100;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.22s ease;
+      max-width: 96vw;
+    }
+    
+    .selection-bar.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+    
+    .selection-bar .btn-sel {
+      padding: 10px 14px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    
+    .btn-sel-hl { 
+      background: #FEF08A; 
+      color: #854D0E; 
+    }
+    
+    .btn-sel-hl:hover { 
+      background: #FDE047; 
+    }
+    
+    .btn-sel-copy { 
+      background: #F3F4F6; 
+      color: var(--brand-navy); 
+    }
+    
+    .btn-sel-copy:hover { 
+      background: #E5E7EB; 
+    }
+    
+    .btn-sel-note { 
+      background: #FFEDD5; 
+      color: #9A3412; 
+    }
+    
+    .btn-sel-note:hover { 
+      background: #FED7AA; 
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    /* Scrollbars */
+    ::-webkit-scrollbar { 
+      width: 8px; 
+      height: 8px; 
     }
-
-    ::-webkit-scrollbar {
-      width: 14px;
-      height: 14px;
+    
+    ::-webkit-scrollbar-track { 
+      background: transparent; 
     }
-    ::-webkit-scrollbar-track {
-      background: var(--bg-reader);
-    }
+    
     ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 7px;
-      border: 4px solid var(--bg-reader);
+      background: #CBD5E1;
+      border-radius: 0;
+      border: 2px solid var(--bg-reader);
     }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
+    
+    .sidebar-content::-webkit-scrollbar-thumb { 
+      border-color: var(--bg-sidebar); 
     }
 
+    /* ========== DOWNLOAD MENU ========== */
+    .download-menu {
+      position: fixed;
+      top: calc(var(--toolbar-height) + 4px);
+      right: 16px;
+      background: #FFFFFF;
+      border: 1px solid var(--border-hard);
+      box-shadow: var(--shadow-dropdown);
+      z-index: 1300;
+      min-width: 240px;
+      display: none;
+      flex-direction: column;
+      padding: 4px;
+    }
+    
+    .download-menu.open { 
+      display: flex; 
+    }
+    
+    .download-menu button {
+      background: transparent;
+      border: none;
+      border-radius: var(--radius);
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: background 0.15s;
+      touch-action: manipulation;
+    }
+    
+    .download-menu button:hover,
+    .download-menu button:active { 
+      background: #F9FAFB; 
+      color: var(--brand-navy); 
+    }
+    
+    .download-menu button strong { 
+      display: block; 
+      font-weight: 600; 
+      font-size: 12px; 
+      margin-bottom: 2px; 
+    }
+    
+    .download-menu button span { 
+      display: block; 
+      font-size: 11px; 
+      color: var(--text-muted); 
+    }
+
+    /* ========== MOBILE ADJUSTMENTS ========== */
     @media (max-width: 768px) {
-      .text-hide-mobile { display: none; }
-      .pdf-sidebar { position: absolute; height: 100%; z-index: 100; }
-      .search-bar { width: 90%; left: 5%; transform: translateY(-10px); }
-      .search-bar.active { transform: translateY(0); }
+      :root { 
+        --toolbar-height: 56px; 
+      }
+
+      .text-hide-mobile { 
+        display: none !important; 
+      }
+      
+      .brand-container { 
+        display: none; 
+      }
+      
+      .divider { 
+        display: none; 
+      }
+
+      .pdf-toolbar {
+        padding: 0 6px;
+        gap: 2px;
+      }
+      
+      .toolbar-left, .toolbar-right { 
+        flex: 0 0 auto; 
+      }
+      
+      .toolbar-center { 
+        flex: 1; 
+        justify-content: center; 
+      }
+
+      .pdf-sidebar {
+        position: absolute; 
+        left: 0; 
+        top: 0; 
+        bottom: 0;
+        height: 100%; 
+        width: min(var(--sidebar-width), 88vw);
+        border-right: 1px solid var(--border-hard);
+        box-shadow: var(--shadow-float);
+        z-index: 200;
+      }
+      
+      .pdf-sidebar.hidden {
+        transform: translateX(-105%);
+        margin-right: 0;
+      }
+
+      .sidebar-backdrop {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.3);
+        z-index: 150;
+      }
+      
+      .sidebar-backdrop.visible { 
+        display: block; 
+      }
+
+      .pdf-container { 
+        padding: 12px 6px 110px; 
+        gap: 16px; 
+      }
+      
+      .toolbar-center .toolbar-group {
+        background: #F3F4F6;
+        padding: 3px;
+        border-radius: var(--radius);
+        gap: 0;
+      }
+      
+      .btn {
+        min-width: 42px;
+        min-height: 42px;
+        padding: 8px;
+        border-radius: var(--radius);
+      }
+      
+      .btn-primary {
+        padding: 8px 10px;
+        min-width: 42px;
+      }
+      
+      #zoomLevel { 
+        width: 36px !important; 
+        font-size: 10px !important; 
+      }
+
+      .annotation-delete { 
+        opacity: 0.9; 
+        transform: scale(1); 
+      }
+
+      .pdf-link { 
+        min-height: 28px; 
+      }
+
+      .pdf-page-wrapper {
+        max-width: none;
+      }
+      
+      .pdf-canvas {
+        max-width: none;
+        filter: none;
+        -webkit-filter: none;
+      }
+
+      .search-panel { 
+        position: fixed;
+        left: 0; 
+        right: 0; 
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        border-radius: 12px 12px 0 0;
+        box-shadow: 0 -8px 32px rgba(0, 33, 71, 0.15);
+        max-height: min(70vh, 520px);
+        transform: translateY(110%);
+        padding-bottom: var(--safe-bottom);
+      }
+      
+      .search-panel.active { 
+        transform: translateY(0); 
+      }
+      
+      .search-handle {
+        width: 36px;
+        height: 4px;
+        background: #CBD5E1;
+        border-radius: 2px;
+        margin: 10px auto 6px;
+        flex-shrink: 0;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .sidebar-backdrop { 
+        display: none !important; 
+      }
     }
   </style>
 </head>
 <body>
 
 <header class="pdf-toolbar">
-  <div class="toolbar-group">
-    <button class="btn" onclick="goBack()" title="Back to article">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-      <span class="text-hide-mobile">Back</span>
-    </button>
-    <button class="btn" onclick="toggleSidebar()" title="Sidebar">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
-    </button>
-    <button class="btn" onclick="toggleSearch()" title="Search (Ctrl+F)">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-      <span class="text-hide-mobile">Search</span>
-    </button>
+  <div class="toolbar-left">
+    <div class="brand-container">
+      <div class="brand-logo"></div>
+      <div class="brand-text">
+        <span class="brand-title">The National Review of Sciences</span>
+        <span class="brand-subtitle">Manuscript Viewer</span>
+      </div>
+    </div>
+    <div class="toolbar-group">
+      <button class="btn" onclick="toggleSidebar()" title="Panel" aria-label="Side panel">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"></path></svg>
+      </button>
+      <button class="btn" onclick="toggleSearch()" title="Search" aria-label="Search">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path></svg>
+      </button>
+    </div>
   </div>
 
-  <div class="toolbar-group">
-    <button class="btn" id="selectTool" onclick="setTool('select')" title="Select text">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
-    </button>
-    <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Highlight (click and drag)">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-    </button>
-    <button class="btn" id="noteTool" onclick="setTool('note')" title="Add note (click on page)">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-    </button>
+  <div class="toolbar-center">
+    <div class="toolbar-group">
+      <button class="btn active" id="selectTool" onclick="setTool('select')" title="Select (V)" aria-label="Select text">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5"></path></svg>
+      </button>
+      <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Highlight (H)" aria-label="Highlight">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.89l12.683-12.683zM16.862 4.487L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path></svg>
+      </button>
+      <button class="btn" id="noteTool" onclick="setTool('note')" title="Note (N)" aria-label="Note">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"></path></svg>
+      </button>
+    </div>
   </div>
 
-  <div class="toolbar-group">
-    <button class="btn" onclick="zoomOut()" title="Zoom out">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
-    </button>
-    <span style="font-size: 13px; font-weight: 600; width: 45px; text-align: center;" id="zoomLevel">125%</span>
-    <button class="btn" onclick="zoomIn()" title="Zoom in">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-    </button>
-    <div class="divider"></div>
-    <button class="btn" onclick="printPDF()" title="Print">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-    </button>
-    <button class="btn btn-primary" onclick="downloadAnnotatedPDF()" title="Download with annotations">
-      <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+  <div class="toolbar-right">
+    <div class="toolbar-group">
+      <button class="btn" onclick="zoomOut()" title="Zoom out" aria-label="Zoom out">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"></path></svg>
+      </button>
+      <span style="font-size:11px;font-family:'JetBrains Mono';width:40px;text-align:center;color:var(--text-muted);" id="zoomLevel">100%</span>
+      <button class="btn" onclick="zoomIn()" title="Zoom in" aria-label="Zoom in">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"></path></svg>
+      </button>
+    </div>
+    <button class="btn btn-primary" id="downloadBtn" onclick="toggleDownloadMenu(event)" title="Download" aria-label="Download" aria-haspopup="true">
+      <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
       <span class="text-hide-mobile">Download</span>
     </button>
   </div>
 </header>
 
-<!-- Floating search bar -->
-<div class="search-bar" id="searchBar">
-  <div class="search-input-group">
-    <input type="text" class="search-input" id="searchInput" placeholder="Search document..." onkeyup="handleSearch(event)">
-    <button class="btn btn-primary" onclick="performSearch()">
-      <svg class="btn-icon" style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-    </button>
-  </div>
-  <div class="search-results" id="searchResults"></div>
+<div class="download-menu" id="downloadMenu" role="menu">
+  <button type="button" onclick="downloadPDF('none')">
+    <strong>Original PDF</strong>
+    <span>Without marks or comments</span>
+  </button>
+  <button type="button" onclick="downloadPDF('highlights')">
+    <strong>Highlights only</strong>
+    <span>Color marks on text</span>
+  </button>
+  <button type="button" onclick="downloadPDF('notes')">
+    <strong>Comments only</strong>
+    <span>Sticky notes (icon + popup)</span>
+  </button>
+  <button type="button" onclick="downloadPDF('all')">
+    <strong>Everything</strong>
+    <span>Highlights + comments</span>
+  </button>
+</div>
+
+<div class="color-picker" id="colorPicker">
+  <span style="font-size:11px;color:var(--text-muted);">Color</span>
+  <div class="color-option active" style="background:#FDE047;" data-color="yellow" onclick="selectHighlightColor('yellow', this)"></div>
+  <div class="color-option" style="background:#86EFAC;" data-color="green" onclick="selectHighlightColor('green', this)"></div>
+  <div class="color-option" style="background:#93C5FD;" data-color="blue" onclick="selectHighlightColor('blue', this)"></div>
+  <div class="color-option" style="background:#F9A8D4;" data-color="pink" onclick="selectHighlightColor('pink', this)"></div>
 </div>
 
 <div class="viewer-wrapper">
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
   <aside class="pdf-sidebar" id="pdfSidebar">
     <div class="sidebar-tabs">
-      <button class="sidebar-tab active" onclick="switchSidebarTab('info', this)">Details</button>
-      <button class="sidebar-tab" onclick="switchSidebarTab('toc', this)">Outline</button>
-      <button class="sidebar-tab" onclick="switchSidebarTab('annotations', this)">Notes</button>
+      <button class="sidebar-tab active" onclick="switchSidebarTab('info', this)">Info</button>
+      <button class="sidebar-tab" onclick="switchSidebarTab('toc', this)">Contents</button>
+      <button class="sidebar-tab" onclick="switchSidebarTab('annotations', this)">Marks</button>
     </div>
-
     <div class="sidebar-content">
       <div class="sidebar-panel active" id="panel-info">
         <div class="sidebar-section">
-          <h3>Manuscript</h3>
-          <p id="docTitle" style="font-weight: 600; color: var(--oxford-blue); font-size: 15px;">Loading document...</p>
+          <h3>Title</h3>
+          <p id="docTitle">Loading…</p>
         </div>
         <div class="sidebar-section">
-          <h3>Permanent Identifier (DOI)</h3>
-          <a href="#" class="doi-badge" id="docDoi" target="_blank">Link unavailable</a>
+          <h3>DOI</h3>
+          <a href="#" class="doi-link" id="docDoi" target="_blank" rel="noopener">DOI not registered</a>
         </div>
         <div class="sidebar-section">
-          <h3>Metadata</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
-            <div><span style="color:var(--text-muted); font-size: 11px; text-transform:uppercase; display:block;">Pages</span><strong style="font-size:14px;" id="docPages">-</strong></div>
-            <div><span style="color:var(--text-muted); font-size: 11px; text-transform:uppercase; display:block;">Annotations</span><strong style="font-size:14px;" id="annotationCount">0</strong></div>
+          <h3>Properties</h3>
+          <div class="meta-list">
+            <div class="meta-row">
+              <span class="meta-label">Pages</span>
+              <span class="meta-value" id="docPages">—</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Marks</span>
+              <span class="meta-value" id="annotationCount">0</span>
+            </div>
           </div>
         </div>
+        <div class="sidebar-section">
+          <h3>Tips</h3>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.65;">
+            Select text and use the bottom bar to highlight or copy.<br>
+            On mobile, long-press to select.
+          </p>
+        </div>
       </div>
-
       <div class="sidebar-panel" id="panel-toc">
         <div class="sidebar-section">
           <div id="tocContent">
-            <p style="color: var(--text-muted); font-style: italic; font-size: 13px;">Processing structure...</p>
+            <p style="color:var(--text-muted);font-style:italic;font-size:13px;">Processing contents…</p>
           </div>
         </div>
       </div>
-
       <div class="sidebar-panel" id="panel-annotations">
         <div class="sidebar-section">
           <div id="annotationsList">
-            <p style="color: var(--text-muted); font-style: italic; font-size: 13px;">No notes registered.</p>
+            <p style="color:var(--text-muted);font-style:italic;font-size:13px;">No marks yet.</p>
           </div>
         </div>
       </div>
@@ -669,533 +1303,1163 @@
   <main class="pdf-container" id="pdfContainer">
     <div class="loading-overlay" id="loading">
       <div class="spinner"></div>
-      <div class="loading-text" id="loadingText">Rendering manuscript...</div>
+      <div class="loading-text">Preparing reading environment…</div>
     </div>
   </main>
 </div>
 
+<!-- Search -->
+<div class="search-overlay" id="searchOverlay" onclick="closeSearch();clearSearchHighlights();"></div>
+<div class="search-panel" id="searchPanel" role="dialog" aria-label="Search document">
+  <div class="search-handle"></div>
+  <div class="search-header">
+    <input type="search" class="search-input" id="searchInput" placeholder="Search manuscript…" enterkeyhint="search" autocomplete="off">
+    <button class="search-close-btn" onclick="closeSearch()" aria-label="Close search">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<!-- Selection bar -->
+<div class="selection-bar" id="selectionBar">
+  <button class="btn-sel btn-sel-hl" onclick="highlightCurrentSelection()">Highlight</button>
+  <button class="btn-sel btn-sel-copy" onclick="copyCurrentSelection()">Copy</button>
+  <button class="btn-sel btn-sel-note" onclick="noteFromSelection()">Note</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-  (function() {
-    // Parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    let pdfUrl = urlParams.get('url') || urlParams.get('pdf');
-    const doi = urlParams.get('doi') || '';
-    const title = urlParams.get('title') || 'Untitled manuscript';
+(function () {
+  'use strict';
 
-    // Global state
-    let pdfDoc = null;
-    let scale = 1.25;
-    let currentTool = 'select';
-    let annotations = JSON.parse(localStorage.getItem('pdfAnnotations') || '{}');
-    let renderedPages = new Set();
-    let pageTextContentCache = {};
+  const urlParams = new URLSearchParams(window.location.search);
+  let pdfUrl = urlParams.get('url') || urlParams.get('pdf');
+  const doi = urlParams.get('doi') || '';
+  const title = urlParams.get('title') || 'Untitled manuscript';
+  const storageKey = 'pdfAnn_v2_' + (pdfUrl || 'default').replace(/[^a-z0-9]/gi, '').slice(-60);
 
-    // Normalize URL
-    function normalizeUrl(url) {
-      if (!url) return url;
-      const currentHost = window.location.hostname;
-      const domains = ['revista1919.github.io', 'www.revistacienciasestudiantes.com', 'revistacienciasestudiantes.com'];
-      for (const domain of domains) {
-        if (url.includes(domain)) {
-          url = url.replace(domain, currentHost);
-          break;
-        }
+  let pdfDoc = null;
+  let scale = 1.0;
+  let currentTool = 'select';
+  let currentHighlightColor = 'yellow';
+  let annotations = {};
+  try { annotations = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (e) { annotations = {}; }
+  let renderedPages = new Set();
+  let pageTextContentCache = {};
+  let pageViewports = {};
+  let pagePdfHeights = {};
+  let pendingSelection = null;
+
+  function normalizeUrl(url) {
+    if (!url) return url;
+    try {
+      const u = new URL(url, window.location.href);
+      const host = window.location.hostname;
+      const mirrors = new Set([
+        'revista1919.github.io',
+        'www.revistacienciasestudiantes.com',
+        'revistacienciasestudiantes.com'
+      ]);
+      if (mirrors.has(u.hostname) && mirrors.has(host) && u.hostname !== host) {
+        u.hostname = host;
       }
+      return u.href;
+    } catch (e) {
       return url;
     }
-    pdfUrl = normalizeUrl(pdfUrl);
+  }
+  pdfUrl = normalizeUrl(pdfUrl);
 
-    // Set up PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    // DOM references
-    const pdfContainer = document.getElementById('pdfContainer');
-    const loadingOverlay = document.getElementById('loading');
-    const docTitleEl = document.getElementById('docTitle');
-    const docDoiEl = document.getElementById('docDoi');
-    const docPagesEl = document.getElementById('docPages');
-    const annotationCountEl = document.getElementById('annotationCount');
-    const tocContentEl = document.getElementById('tocContent');
-    const annotationsListEl = document.getElementById('annotationsList');
-    const zoomLevelEl = document.getElementById('zoomLevel');
-    const searchBarEl = document.getElementById('searchBar');
-    const searchInputEl = document.getElementById('searchInput');
-    const searchResultsEl = document.getElementById('searchResults');
+  const pdfContainer = document.getElementById('pdfContainer');
+  const loadingOverlay = document.getElementById('loading');
+  const docTitleEl = document.getElementById('docTitle');
+  const docDoiEl = document.getElementById('docDoi');
+  const docPagesEl = document.getElementById('docPages');
+  const annotationCountEl = document.getElementById('annotationCount');
+  const tocContentEl = document.getElementById('tocContent');
+  const annotationsListEl = document.getElementById('annotationsList');
+  const zoomLevelEl = document.getElementById('zoomLevel');
+  const searchOverlay = document.getElementById('searchOverlay');
+  const searchPanel = document.getElementById('searchPanel');
+  const searchInputEl = document.getElementById('searchInput');
+  const searchResultsEl = document.getElementById('searchResults');
+  const colorPickerEl = document.getElementById('colorPicker');
+  const toastEl = document.getElementById('toast');
+  const selectionBar = document.getElementById('selectionBar');
+  const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+  const downloadBtn = document.getElementById('downloadBtn');
 
-    // Set title and DOI
-    docTitleEl.textContent = title;
-    if (doi) {
-      docDoiEl.href = 'https://doi.org/' + doi;
-      docDoiEl.textContent = 'doi.org/' + doi;
-    }
+  docTitleEl.textContent = title;
+  if (doi) {
+    docDoiEl.href = 'https://doi.org/' + doi;
+    docDoiEl.textContent = 'doi.org/' + doi;
+  }
 
-    // Intersection Observer for lazy rendering
-    const pageObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const pageNum = parseInt(entry.target.dataset.page);
-          if (!renderedPages.has(pageNum)) {
-            renderPage(pageNum, entry.target);
-          }
-        }
-      });
-    }, { root: pdfContainer, rootMargin: '120% 0px', threshold: 0 });
+  function computeInitialScale() {
+    const w = window.innerWidth;
+    if (w < 400) return 0.85;
+    if (w < 600) return 1.0;
+    if (w < 900) return 1.15;
+    return 1.25;
+  }
+  scale = computeInitialScale();
+  zoomLevelEl.textContent = Math.round(scale * 100) + '%';
 
-    // Load PDF
-    if (!pdfUrl) {
-      loadingOverlay.innerHTML = '<div style="background:#fee2e2; color:#dc2626; padding: 20px; border-radius:8px;">Error: URL required.</div>';
-    } else {
-      loadPdf();
-    }
+  function showToast(msg, ms) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
+  }
 
-    function loadPdf() {
-      pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
-        pdfDoc = pdf;
-        docPagesEl.textContent = pdf.numPages;
-        createPageContainers();
-        loadOutline();
-        setTimeout(() => {
-          loadingOverlay.style.opacity = '0';
-          loadingOverlay.style.visibility = 'hidden';
-        }, 500);
-      }).catch(function(error) {
-        loadingOverlay.innerHTML = '<div style="background:#fee2e2; color:#dc2626; padding: 20px; border-radius:8px;">Error loading PDF: ' + error.message + '</div>';
-      });
-    }
-
-    function createPageContainers() {
-      pdfContainer.innerHTML = '';
-      renderedPages.clear();
-      pageTextContentCache = {};
-
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const pageWrapper = document.createElement('div');
-        pageWrapper.className = 'pdf-page-wrapper';
-        pageWrapper.id = 'page-' + i;
-        pageWrapper.dataset.page = i;
-        pageWrapper.style.width = (800 * scale) + "px";
-        pageWrapper.style.height = (1035 * scale) + "px";
-        pdfContainer.appendChild(pageWrapper);
-        pageObserver.observe(pageWrapper);
+  const pageObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const pageNum = parseInt(entry.target.dataset.page, 10);
+        if (!renderedPages.has(pageNum)) renderPage(pageNum, entry.target);
       }
-      setTool(currentTool);
-      updateAnnotationCount();
-      updateAnnotationsList();
-    }
+    });
+  }, { root: pdfContainer, rootMargin: '180% 0px', threshold: 0 });
 
-    async function renderPage(pageNum, wrapperElement) {
-      renderedPages.add(pageNum);
+  if (!pdfUrl) {
+    loadingOverlay.innerHTML = '<div style="color:var(--brand-navy);font-family:Lora,serif;padding:24px;text-align:center;">Document URL required<br><small>(?url=… or ?pdf=…)</small></div>';
+  } else {
+    loadPdf();
+  }
 
-      try {
-        const page = await pdfDoc.getPage(pageNum);
-        const viewport = page.getViewport({ scale: scale });
-        const outputScale = window.devicePixelRatio || 1;
-
-        wrapperElement.style.width = Math.floor(viewport.width) + "px";
-        wrapperElement.style.height = Math.floor(viewport.height) + "px";
-
-        wrapperElement.innerHTML = '';
-
-        // Canvas layer
-        const canvas = document.createElement('canvas');
-        canvas.className = 'pdf-canvas';
-        canvas.width = Math.floor(viewport.width * outputScale);
-        canvas.height = Math.floor(viewport.height * outputScale);
-        canvas.style.width = Math.floor(viewport.width) + "px";
-        canvas.style.height = Math.floor(viewport.height) + "px";
-        wrapperElement.appendChild(canvas);
-
-        const ctx = canvas.getContext('2d');
-        const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
-
-        await page.render({ canvasContext: ctx, transform: transform, viewport: viewport }).promise;
-
-        // Text layer for selection and copying
-        const textLayerDiv = document.createElement('div');
-        textLayerDiv.className = 'text-layer';
-        textLayerDiv.style.setProperty('--scale-factor', viewport.scale);
-        textLayerDiv.style.width = Math.floor(viewport.width) + "px";
-        textLayerDiv.style.height = Math.floor(viewport.height) + "px";
-        wrapperElement.appendChild(textLayerDiv);
-
-        const textContent = await page.getTextContent();
-        pageTextContentCache[pageNum] = textContent.items.map(item => item.str).join(' ');
-
-        try {
-          pdfjsLib.renderTextLayer({
-            textContentSource: textContent,
-            container: textLayerDiv,
-            viewport: viewport,
-            textDivs: []
-          });
-        } catch (e) {
-          textLayerDiv.innerHTML = '';
-        }
-
-        // Annotation layer
-        const annotationLayer = document.createElement('div');
-        annotationLayer.className = 'annotation-layer';
-        annotationLayer.id = 'annotations-' + pageNum;
-        if (currentTool !== 'select') annotationLayer.classList.add('active');
-        wrapperElement.appendChild(annotationLayer);
-
-        loadAnnotationsForPage(pageNum);
-      } catch (err) {
-        console.warn('Render error page ' + pageNum, err);
-      }
-    }
-
-    function loadOutline() {
-      pdfDoc.getOutline().then(function(outline) {
-        if (!outline || outline.length === 0) {
-          tocContentEl.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">Structure unavailable.</p>';
-          return;
-        }
-        let html = '';
-        outline.forEach(item => html += renderOutlineItem(item, 1));
-        tocContentEl.innerHTML = html;
-      }).catch(() => {
-        tocContentEl.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">Outline unavailable.</p>';
-      });
-    }
-
-    function renderOutlineItem(item, level) {
-      let pageRef = 1;
-      if (item.dest) {
-        if (Array.isArray(item.dest) && item.dest[0] && typeof item.dest[0] === 'object' && item.dest[0].num !== undefined) {
-          pageRef = item.dest[0].num + 1;
-        }
-      }
-      let html = `<div class="toc-item toc-level-${level}" onclick="scrollToPage(${pageRef})" style="cursor:pointer;"><span>${item.title}</span><span class="toc-page">p. ${pageRef}</span></div>`;
-      if (item.items && item.items.length > 0) {
-        item.items.forEach(child => html += renderOutlineItem(child, level + 1));
-      }
-      return html;
-    }
-
-    window.scrollToPage = function(pageNum) {
-      const page = document.getElementById('page-' + pageNum);
-      if (page) {
-        page.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        const target = pdfContainer.querySelector(`[data-page="${pageNum}"]`);
-        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    };
-
-    window.toggleSidebar = function() {
-      document.getElementById('pdfSidebar').classList.toggle('hidden');
-    };
-
-    window.switchSidebarTab = function(tab, btnElement) {
-      document.querySelectorAll('.sidebar-tab').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.sidebar-panel').forEach(panel => panel.classList.remove('active'));
-      btnElement.classList.add('active');
-      document.getElementById('panel-' + tab).classList.add('active');
-    };
-
-    window.setTool = function(tool) {
-      currentTool = tool;
-      document.getElementById('selectTool').classList.toggle('active', tool === 'select');
-      document.getElementById('highlightTool').classList.toggle('active', tool === 'highlight');
-      document.getElementById('noteTool').classList.toggle('active', tool === 'note');
-
-      document.querySelectorAll('.annotation-layer').forEach(layer => {
-        layer.classList.toggle('active', tool !== 'select');
-      });
-
-      pdfContainer.style.cursor = tool === 'highlight' ? 'crosshair' : (tool === 'note' ? 'text' : 'default');
-    };
-
-    window.zoomIn = function() {
-      scale = Math.min(scale + 0.25, 3.0);
-      updateZoom();
-    };
-
-    window.zoomOut = function() {
-      scale = Math.max(scale - 0.25, 0.5);
-      updateZoom();
-    };
-
-    function updateZoom() {
-      zoomLevelEl.textContent = Math.round(scale * 100) + '%';
-      pageObserver.disconnect();
+  function loadPdf() {
+    pdfjsLib.getDocument({
+      url: pdfUrl,
+      withCredentials: false,
+      cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+      cMapPacked: true
+    }).promise.then(pdf => {
+      pdfDoc = pdf;
+      docPagesEl.textContent = pdf.numPages;
       createPageContainers();
-    }
-
-    window.toggleSearch = function() {
-      searchBarEl.classList.toggle('active');
-      if (searchBarEl.classList.contains('active')) {
-        searchInputEl.focus();
-      }
-    };
-
-    window.handleSearch = function(event) {
-      if (event.key === 'Enter') performSearch();
-    };
-
-    window.performSearch = async function() {
-      const query = searchInputEl.value.trim();
-      if (!query || !pdfDoc) return;
-
-      searchResultsEl.innerHTML = '<p style="color:#9ca3af;">Searching...</p>';
-
-      const results = [];
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        let text = '';
-        if (pageTextContentCache[i]) {
-          text = pageTextContentCache[i];
-        } else {
-          try {
-            const page = await pdfDoc.getPage(i);
-            const content = await page.getTextContent();
-            text = content.items.map(item => item.str).join(' ');
-            pageTextContentCache[i] = text;
-          } catch(e) { continue; }
-        }
-        const regex = new RegExp(query, 'gi');
-        let match;
-        while ((match = regex.exec(text)) !== null) {
-          const start = Math.max(0, match.index - 40);
-          const end = Math.min(text.length, match.index + query.length + 40);
-          results.push({ page: i, text: text.substring(start, end), index: match.index });
-        }
-      }
-
-      if (results.length === 0) {
-        searchResultsEl.innerHTML = '<p style="color:#9ca3af;">No results for "' + query + '".</p>';
-        return;
-      }
-
-      let html = `<p style="font-weight:600; margin-bottom:8px;">${results.length} matches</p>`;
-      results.slice(0, 50).forEach((result) => {
-        const highlighted = result.text.replace(new RegExp(query, 'gi'), '<span class="highlight">$&</span>');
-        html += `<div class="search-result-item" onclick="scrollToPage(${result.page})"><strong>Page ${result.page}</strong><br>${highlighted}...</div>`;
-      });
-      searchResultsEl.innerHTML = html;
-    };
-
-    function loadAnnotationsForPage(pageNum) {
-      const layer = document.getElementById('annotations-' + pageNum);
-      if (!layer) return;
-      layer.innerHTML = '';
-      const pageAnnotations = annotations[pageNum] || [];
-
-      pageAnnotations.forEach((annotation, index) => {
-        if (annotation.type === 'note') {
-          const div = document.createElement('div');
-          div.className = 'annotation-note';
-          div.style.left = annotation.x + 'px';
-          div.style.top = annotation.y + 'px';
-          div.innerHTML = `<button class="annotation-delete" onclick="deleteAnnotation(${pageNum}, ${index})">×</button>`;
-          const textarea = document.createElement('textarea');
-          textarea.value = annotation.text || '';
-          textarea.placeholder = 'Editorial comment...';
-          textarea.onchange = function() {
-            annotation.text = textarea.value;
-            saveAnnotations();
-            updateAnnotationCount();
-            updateAnnotationsList();
-          };
-          div.appendChild(textarea);
-          layer.appendChild(div);
-        } else if (annotation.type === 'highlight') {
-          const div = document.createElement('div');
-          div.className = 'annotation-highlight';
-          div.style.left = annotation.x + 'px';
-          div.style.top = annotation.y + 'px';
-          div.style.width = annotation.width + 'px';
-          div.style.height = annotation.height + 'px';
-          div.title = 'Highlight';
-          layer.appendChild(div);
-        }
-      });
-    }
-
-    // Click for notes
-    pdfContainer.addEventListener('click', function(e) {
-      if (currentTool === 'note') {
-        const wrapper = e.target.closest('.pdf-page-wrapper');
-        if (wrapper && !e.target.closest('.annotation-note')) {
-          const pageNum = parseInt(wrapper.dataset.page);
-          const rect = wrapper.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-
-          if (!annotations[pageNum]) annotations[pageNum] = [];
-          annotations[pageNum].push({ type: 'note', x: x, y: y, text: '' });
-          saveAnnotations();
-          loadAnnotationsForPage(pageNum);
-          updateAnnotationsList();
-          updateAnnotationCount();
-        }
-      }
+      loadOutline();
+      setTimeout(() => {
+        loadingOverlay.style.opacity = '0';
+        loadingOverlay.style.visibility = 'hidden';
+      }, 350);
+    }).catch(err => {
+      console.error(err);
+      loadingOverlay.innerHTML = '<div style="color:#D32F2F;font-family:Lora,serif;max-width:360px;text-align:center;padding:20px;">Error loading document<br><small>' + (err.message || err) + '</small></div>';
     });
+  }
 
-    // Highlight tool: click and drag
-    let highlightStartX, highlightStartY, highlightStartPage, isHighlighting = false;
-    let highlightOverlay = null;
+  function createPageContainers() {
+    pageObserver.disconnect();
+    pdfContainer.innerHTML = '';
+    renderedPages.clear();
+    pageTextContentCache = {};
+    pageViewports = {};
+    pagePdfHeights = {};
 
-    pdfContainer.addEventListener('mousedown', function(e) {
-      if (currentTool !== 'highlight') return;
-      const wrapper = e.target.closest('.pdf-page-wrapper');
-      if (!wrapper) return;
-      e.preventDefault();
-      isHighlighting = true;
-      highlightStartPage = parseInt(wrapper.dataset.page);
-      const rect = wrapper.getBoundingClientRect();
-      highlightStartX = e.clientX - rect.left;
-      highlightStartY = e.clientY - rect.top;
-
-      highlightOverlay = document.createElement('div');
-      highlightOverlay.style.position = 'absolute';
-      highlightOverlay.style.left = highlightStartX + 'px';
-      highlightOverlay.style.top = highlightStartY + 'px';
-      highlightOverlay.style.width = '0px';
-      highlightOverlay.style.height = '0px';
-      highlightOverlay.style.background = 'rgba(255, 108, 12, 0.3)';
-      highlightOverlay.style.border = '1px dashed #FF6C0C';
-      highlightOverlay.style.zIndex = '15';
-      highlightOverlay.style.pointerEvents = 'none';
-      wrapper.appendChild(highlightOverlay);
-    });
-
-    pdfContainer.addEventListener('mousemove', function(e) {
-      if (!isHighlighting || !highlightOverlay) return;
-      const wrapper = e.target.closest('.pdf-page-wrapper');
-      if (!wrapper || parseInt(wrapper.dataset.page) !== highlightStartPage) return;
-      const rect = wrapper.getBoundingClientRect();
-      const currentX = e.clientX - rect.left;
-      const currentY = e.clientY - rect.top;
-      const width = currentX - highlightStartX;
-      const height = currentY - highlightStartY;
-      highlightOverlay.style.width = Math.abs(width) + 'px';
-      highlightOverlay.style.height = Math.abs(height) + 'px';
-      highlightOverlay.style.left = (width > 0 ? highlightStartX : currentX) + 'px';
-      highlightOverlay.style.top = (height > 0 ? highlightStartY : currentY) + 'px';
-    });
-
-    pdfContainer.addEventListener('mouseup', function(e) {
-      if (!isHighlighting) return;
-      isHighlighting = false;
-      if (!highlightOverlay) return;
-      const wrapper = highlightOverlay.parentElement;
-      if (!wrapper) return;
-      const pageNum = parseInt(wrapper.dataset.page);
-      const left = parseFloat(highlightOverlay.style.left);
-      const top = parseFloat(highlightOverlay.style.top);
-      const width = parseFloat(highlightOverlay.style.width);
-      const height = parseFloat(highlightOverlay.style.height);
-
-      if (width > 5 && height > 5) {
-        if (!annotations[pageNum]) annotations[pageNum] = [];
-        annotations[pageNum].push({ type: 'highlight', x: left, y: top, width: width, height: height });
-        saveAnnotations();
-        loadAnnotationsForPage(pageNum);
-        updateAnnotationCount();
-        updateAnnotationsList();
-      }
-      highlightOverlay.remove();
-      highlightOverlay = null;
-    });
-
-    window.deleteAnnotation = function(pageNum, index) {
-      if (annotations[pageNum]) {
-        annotations[pageNum].splice(index, 1);
-        saveAnnotations();
-        loadAnnotationsForPage(pageNum);
-        updateAnnotationsList();
-        updateAnnotationCount();
-      }
-    };
-
-    function saveAnnotations() {
-      localStorage.setItem('pdfAnnotations', JSON.stringify(annotations));
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      const wrap = document.createElement('div');
+      wrap.className = 'pdf-page-wrapper';
+      wrap.id = 'page-' + i;
+      wrap.dataset.page = String(i);
+      wrap.style.width = Math.floor(595 * scale) + 'px';
+      wrap.style.height = Math.floor(842 * scale) + 'px';
+      pdfContainer.appendChild(wrap);
+      pageObserver.observe(wrap);
     }
-
-    function updateAnnotationCount() {
-      let count = 0;
-      for (const pageAnns of Object.values(annotations)) {
-        count += pageAnns.length;
-      }
-      annotationCountEl.textContent = count;
-    }
-
-    function updateAnnotationsList() {
-      let html = '';
-      let count = 0;
-      for (const [pageNum, pageAnns] of Object.entries(annotations)) {
-        pageAnns.forEach((ann) => {
-          count++;
-          html += `<div style="padding: 12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; margin-bottom:8px; cursor:pointer;" onclick="scrollToPage(${pageNum})">`;
-          html += `<strong style="font-size:12px; color:var(--elsevier-orange);">Page ${pageNum} · ${ann.type === 'highlight' ? 'Highlight' : 'Note'}</strong>`;
-          html += `<p style="font-size:13px; margin:4px 0 0;">${ann.text || '<em>No text</em>'}</p></div>`;
-        });
-      }
-      if (count === 0) {
-        annotationsListEl.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">No notes registered.</p>';
-      } else {
-        annotationsListEl.innerHTML = html;
-      }
-    }
-
-    window.printPDF = function() {
-      window.print();
-    };
-
-    window.downloadAnnotatedPDF = function() {
-      const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.download = title.replace(/[^a-z0-9]/gi, '_') + '.pdf';
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      if (Object.keys(annotations).length > 0) {
-        const blob = new Blob([JSON.stringify(annotations, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = title.replace(/[^a-z0-9]/gi, '_') + '_annotations.json';
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    };
-
-    window.goBack = function() {
-      if (document.referrer) {
-        window.history.back();
-      } else {
-        window.close();
-      }
-    };
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault();
-        toggleSearch();
-      }
-      if (e.key === 'Escape') {
-        searchBarEl.classList.remove('active');
-      }
-      if (e.key === 'h' || e.key === 'H') {
-        setTool('highlight');
-      }
-      if (e.key === 'n' || e.key === 'N') {
-        setTool('note');
-      }
-      if (e.key === 'v' || e.key === 'V') {
-        setTool('select');
-      }
-    });
-
-    // Initialize UI
-    setTool('select');
+    setTool(currentTool);
     updateAnnotationCount();
     updateAnnotationsList();
-  })();
+  }
+
+  async function renderPage(pageNum, wrapper) {
+    if (renderedPages.has(pageNum)) return;
+    renderedPages.add(pageNum);
+
+    try {
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale });
+      const outputScale = Math.min(window.devicePixelRatio || 1, 2);
+      const baseViewport = page.getViewport({ scale: 1 });
+      pagePdfHeights[pageNum] = baseViewport.height;
+      pageViewports[pageNum] = viewport;
+
+      wrapper.style.width = Math.floor(viewport.width) + 'px';
+      wrapper.style.height = Math.floor(viewport.height) + 'px';
+      wrapper.innerHTML = '';
+
+      const canvas = document.createElement('canvas');
+      canvas.className = 'pdf-canvas';
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
+      canvas.style.width = Math.floor(viewport.width) + 'px';
+      canvas.style.height = Math.floor(viewport.height) + 'px';
+      wrapper.appendChild(canvas);
+
+      const ctx = canvas.getContext('2d', { alpha: false });
+      const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+      await page.render({ canvasContext: ctx, transform, viewport }).promise;
+
+      const textLayerDiv = document.createElement('div');
+      textLayerDiv.className = 'textLayer';
+      textLayerDiv.style.width = Math.floor(viewport.width) + 'px';
+      textLayerDiv.style.height = Math.floor(viewport.height) + 'px';
+      textLayerDiv.style.setProperty('--scale-factor', String(scale));
+      wrapper.appendChild(textLayerDiv);
+
+      const textContent = await page.getTextContent();
+      pageTextContentCache[pageNum] = textContent.items.map(it => it.str).join(' ');
+
+      const endOfContent = document.createElement('div');
+      endOfContent.className = 'endOfContent';
+      textLayerDiv.appendChild(endOfContent);
+
+      try {
+        await pdfjsLib.renderTextLayer({
+          textContentSource: textContent,
+          container: textLayerDiv,
+          viewport,
+          textDivs: []
+        }).promise;
+      } catch (e) { console.warn('textLayer', pageNum, e); }
+
+      textLayerDiv.addEventListener('mousedown', () => textLayerDiv.classList.add('selecting'));
+      textLayerDiv.addEventListener('touchstart', () => textLayerDiv.classList.add('selecting'), { passive: true });
+
+      const annLayer = document.createElement('div');
+      annLayer.className = 'annotation-layer';
+      annLayer.id = 'annotations-' + pageNum;
+      wrapper.appendChild(annLayer);
+
+      loadAnnotationsForPage(pageNum);
+      await processPageLinks(pageNum, page, viewport, wrapper);
+    } catch (err) {
+      console.warn('render', pageNum, err);
+      renderedPages.delete(pageNum);
+    }
+  }
+
+  async function resolveDestination(dest) {
+    if (!dest) return null;
+    try {
+      let explicit = dest;
+      if (typeof dest === 'string') {
+        explicit = await pdfDoc.getDestination(dest);
+      }
+      if (!Array.isArray(explicit) || !explicit[0]) return null;
+
+      const pageIndex = await pdfDoc.getPageIndex(explicit[0]);
+      const pageNum = pageIndex + 1;
+      let pdfY = null;
+      const fit = explicit[1];
+      if (fit && typeof fit === 'object') {
+        if (fit.name === 'XYZ' && explicit[3] != null) pdfY = explicit[3];
+        else if (fit.name === 'FitH' && explicit[2] != null) pdfY = explicit[2];
+        else if (fit.name === 'FitR' && explicit[5] != null) pdfY = explicit[5];
+      } else if (typeof explicit[1] === 'string') {
+        if (explicit[1] === 'XYZ' && explicit[3] != null) pdfY = explicit[3];
+        if (explicit[1] === 'FitH' && explicit[2] != null) pdfY = explicit[2];
+      }
+      return { pageNum, pdfY };
+    } catch (e) {
+      console.warn('resolveDestination', e);
+      return null;
+    }
+  }
+
+  window.scrollToDestination = async function (dest) {
+    const resolved = await resolveDestination(dest);
+    if (!resolved) {
+      showToast('Could not resolve link');
+      return;
+    }
+    await scrollToPagePosition(resolved.pageNum, resolved.pdfY);
+  };
+
+  window.scrollToPage = function (pageNum) {
+    scrollToPagePosition(pageNum, null);
+  };
+
+  async function scrollToPagePosition(pageNum, pdfY) {
+    let pageEl = document.getElementById('page-' + pageNum);
+    if (!pageEl) return;
+
+    if (!renderedPages.has(pageNum)) {
+      pageEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+      await new Promise(r => setTimeout(r, 120));
+      if (!renderedPages.has(pageNum)) await renderPage(pageNum, pageEl);
+      await new Promise(r => setTimeout(r, 80));
+      pageEl = document.getElementById('page-' + pageNum);
+    }
+
+    const viewport = pageViewports[pageNum];
+    const pdfH = pagePdfHeights[pageNum];
+
+    if (pdfY != null && viewport && pdfH) {
+      const viewY = viewport.convertToViewportPoint(0, pdfY)[1];
+      const pageTop = pageEl.offsetTop;
+      const containerRect = pdfContainer.getBoundingClientRect();
+      const targetScroll = pageTop + viewY - containerRect.height * 0.28;
+      pdfContainer.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+      flashDestination(pageEl, viewport, pdfY);
+    } else {
+      pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pageEl.style.boxShadow = '0 0 0 3px var(--brand-accent), var(--shadow-paper)';
+      setTimeout(() => { pageEl.style.boxShadow = 'var(--shadow-paper)'; }, 1800);
+    }
+
+    if (window.innerWidth <= 768) {
+      const sb = document.getElementById('pdfSidebar');
+      if (!sb.classList.contains('hidden')) toggleSidebar();
+    }
+  }
+
+  function flashDestination(pageEl, viewport, pdfY) {
+    pageEl.querySelectorAll('.dest-flash').forEach(el => el.remove());
+
+    const viewY = viewport.convertToViewportPoint(0, pdfY)[1];
+    const flash = document.createElement('div');
+    flash.className = 'dest-flash';
+    flash.style.left = '4%';
+    flash.style.width = '92%';
+    flash.style.top = Math.max(0, viewY - 18) + 'px';
+    flash.style.height = '36px';
+    pageEl.appendChild(flash);
+    setTimeout(() => flash.remove(), 2300);
+  }
+
+  async function processPageLinks(pageNum, page, viewport, wrapper) {
+    try {
+      const annots = await page.getAnnotations({ intent: 'display' });
+      for (const annotation of annots) {
+        if (annotation.subtype !== 'Link') continue;
+
+        const rect = viewport.convertToViewportRectangle(annotation.rect);
+        let left = Math.min(rect[0], rect[2]);
+        let top = Math.min(rect[1], rect[3]);
+        let width = Math.abs(rect[0] - rect[2]);
+        let height = Math.abs(rect[1] - rect[3]);
+        const minH = window.innerWidth <= 768 ? 28 : 16;
+        if (height < minH) {
+          const pad = (minH - height) / 2;
+          top -= pad;
+          height = minH;
+        }
+        if (width < 12) width = 12;
+
+        if (annotation.url) {
+          const a = document.createElement('a');
+          a.href = annotation.url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.className = 'pdf-link';
+          a.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${height}px;`;
+          a.title = annotation.url;
+          wrapper.appendChild(a);
+        } else if (annotation.dest) {
+          const div = document.createElement('div');
+          div.className = 'pdf-link';
+          div.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${height}px;`;
+          div.title = 'Go to section';
+          const destCopy = annotation.dest;
+          const go = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            scrollToDestination(destCopy);
+          };
+          div.addEventListener('click', go);
+          div.addEventListener('touchend', go, { passive: false });
+          wrapper.appendChild(div);
+        }
+      }
+    } catch (e) { console.warn('links', pageNum, e); }
+  }
+
+  function loadOutline() {
+    pdfDoc.getOutline().then(async outline => {
+      if (!outline || !outline.length) {
+        tocContentEl.innerHTML = '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">This PDF does not include a table of contents.</p>';
+        return;
+      }
+      tocContentEl.innerHTML = await renderOutlineTree(outline, 1);
+    }).catch(() => {
+      tocContentEl.innerHTML = '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">Table of contents not available.</p>';
+    });
+  }
+
+  async function renderOutlineTree(items, level) {
+    let html = '';
+    for (const item of items) {
+      const destJson = item.dest ? JSON.stringify(item.dest).replace(/"/g, '&quot;') : '';
+      const safeTitle = (item.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      let pageLabel = '';
+      if (item.dest) {
+        const r = await resolveDestination(item.dest);
+        if (r) pageLabel = `<span class="toc-page">p. ${r.pageNum}</span>`;
+      }
+      const lvl = Math.min(level, 3);
+      html += `<div class="toc-item toc-level-${lvl}" data-dest="${destJson}" role="button">` +
+        `<span>${safeTitle}</span>${pageLabel}</div>`;
+      if (item.items && item.items.length) {
+        html += await renderOutlineTree(item.items, level + 1);
+      }
+    }
+    return html;
+  }
+
+  tocContentEl.addEventListener('click', (e) => {
+    const item = e.target.closest('.toc-item');
+    if (!item) return;
+    const destStr = item.getAttribute('data-dest');
+    if (destStr) {
+      try {
+        const dest = JSON.parse(destStr.replace(/&quot;/g, '"'));
+        scrollToDestination(dest);
+      } catch (err) {
+        const m = item.querySelector('.toc-page');
+        if (m) {
+          const n = parseInt(m.textContent.replace(/\D/g, ''), 10);
+          if (n) scrollToPage(n);
+        }
+      }
+    }
+  });
+
+  window.toggleSidebar = function () {
+    const sb = document.getElementById('pdfSidebar');
+    const isHidden = sb.classList.toggle('hidden');
+    if (window.innerWidth <= 768) {
+      sidebarBackdrop.classList.toggle('visible', !isHidden);
+    }
+  };
+
+  if (window.innerWidth <= 768) {
+    document.getElementById('pdfSidebar').classList.add('hidden');
+  }
+
+  window.switchSidebarTab = function (tab, btn) {
+    document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+  };
+
+  window.setTool = function (tool) {
+    currentTool = tool;
+    document.getElementById('selectTool').classList.toggle('active', tool === 'select');
+    document.getElementById('highlightTool').classList.toggle('active', tool === 'highlight');
+    document.getElementById('noteTool').classList.toggle('active', tool === 'note');
+    colorPickerEl.classList.toggle('active', tool === 'highlight');
+    if (tool === 'highlight') showToast('Select text to highlight', 2000);
+  };
+
+  window.selectHighlightColor = function (color, el) {
+    currentHighlightColor = color;
+    document.querySelectorAll('.color-option').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+  };
+
+  window.zoomIn = function () {
+    scale = Math.min(scale + 0.2, 2.8);
+    updateZoom();
+  };
+  window.zoomOut = function () {
+    scale = Math.max(scale - 0.2, 0.5);
+    updateZoom();
+  };
+  let zoomDebounce = null;
+  function updateZoom() {
+    zoomLevelEl.textContent = Math.round(scale * 100) + '%';
+    createPageContainers();
+  }
+  function setScaleClamped(s) {
+    scale = Math.min(2.8, Math.max(0.5, s));
+    zoomLevelEl.textContent = Math.round(scale * 100) + '%';
+    if (zoomDebounce) clearTimeout(zoomDebounce);
+    zoomDebounce = setTimeout(() => updateZoom(), 80);
+  }
+
+  pdfContainer.addEventListener('wheel', function (e) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.08 : 0.08;
+    setScaleClamped(scale + delta);
+  }, { passive: false });
+
+  let pinchStartDist = 0;
+  let pinchStartScale = 1;
+  function touchDistance(t0, t1) {
+    const dx = t0.clientX - t1.clientX;
+    const dy = t0.clientY - t1.clientY;
+    return Math.hypot(dx, dy);
+  }
+  pdfContainer.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) {
+      pinchStartDist = touchDistance(e.touches[0], e.touches[1]);
+      pinchStartScale = scale;
+    }
+  }, { passive: true });
+  pdfContainer.addEventListener('touchmove', function (e) {
+    if (e.touches.length !== 2 || !pinchStartDist) return;
+    e.preventDefault();
+    const dist = touchDistance(e.touches[0], e.touches[1]);
+    const factor = dist / pinchStartDist;
+    setScaleClamped(pinchStartScale * factor);
+  }, { passive: false });
+  pdfContainer.addEventListener('touchend', function (e) {
+    if (e.touches.length < 2) pinchStartDist = 0;
+  }, { passive: true });
+
+  window.toggleSearch = function () {
+    const open = !searchPanel.classList.contains('active');
+    if (open) {
+      searchOverlay.classList.add('active');
+      searchPanel.classList.add('active');
+      setTimeout(() => { searchInputEl.focus(); searchInputEl.select(); }, 280);
+    } else {
+      closeSearch();
+    }
+  };
+
+  window.closeSearch = function () {
+    searchOverlay.classList.remove('active');
+    searchPanel.classList.remove('active');
+  };
+
+  searchInputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); performSearch(); }
+    if (e.key === 'Escape') {
+      closeSearch();
+      clearSearchHighlights();
+    }
+  });
+
+  let lastSearchQuery = '';
+  let searchClearTimer = null;
+
+  window.clearSearchHighlights = function clearSearchHighlights() {
+    if (searchClearTimer) {
+      clearTimeout(searchClearTimer);
+      searchClearTimer = null;
+    }
+    document.querySelectorAll('.search-highlight-temp, .search-hit, .search-hit-active').forEach(el => {
+      el.style.background = '';
+      el.classList.remove('search-highlight-temp', 'search-hit', 'search-hit-active');
+    });
+  };
+
+  function highlightQueryOnPage(pageNum, query, scrollToFirst) {
+    const wrap = document.getElementById('page-' + pageNum);
+    if (!wrap) return null;
+    const tl = wrap.querySelector('.textLayer');
+    if (!tl) return null;
+    const q = (query || '').toLowerCase();
+    if (!q) return null;
+    let first = null;
+    tl.querySelectorAll('span').forEach(span => {
+      const t = span.textContent || '';
+      if (t.toLowerCase().includes(q)) {
+        if (!first) first = span;
+      }
+    });
+    if (first && scrollToFirst) {
+      first.classList.add('search-hit', 'search-hit-active', 'search-highlight-temp');
+      const spanRect = first.getBoundingClientRect();
+      const contRect = pdfContainer.getBoundingClientRect();
+      const delta = spanRect.top - contRect.top - contRect.height * 0.3;
+      pdfContainer.scrollBy({ top: delta, behavior: 'smooth' });
+      if (searchClearTimer) clearTimeout(searchClearTimer);
+      searchClearTimer = setTimeout(() => {
+        clearSearchHighlights();
+      }, 3200);
+    }
+    return first;
+  }
+
+  window.performSearch = async function () {
+    const query = searchInputEl.value.trim();
+    if (!query || !pdfDoc) return;
+    lastSearchQuery = query;
+
+    searchResultsEl.innerHTML = '<p style="color:var(--text-muted);padding:8px;">Searching…</p>';
+    clearSearchHighlights();
+
+    const results = [];
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'gi');
+
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      let text = pageTextContentCache[i];
+      if (!text) {
+        try {
+          const page = await pdfDoc.getPage(i);
+          const content = await page.getTextContent();
+          text = content.items.map(it => it.str).join(' ');
+          pageTextContentCache[i] = text;
+        } catch (e) { continue; }
+      }
+      regex.lastIndex = 0;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        const start = Math.max(0, match.index - 40);
+        const end = Math.min(text.length, match.index + query.length + 40);
+        results.push({ page: i, text: text.substring(start, end), index: match.index });
+        if (results.length >= 60) break;
+      }
+      if (results.length >= 60) break;
+    }
+
+    if (!results.length) {
+      searchResultsEl.innerHTML = '<p style="color:var(--text-muted);padding:8px;">No results for "' + query.replace(/</g, '&lt;') + '".</p>';
+      return;
+    }
+
+    let html = `<p style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--brand-navy);">${results.length} result${results.length !== 1 ? 's' : ''}</p>`;
+    results.forEach((r, idx) => {
+      const highlighted = r.text
+        .replace(/</g, '&lt;')
+        .replace(new RegExp(escaped, 'gi'), '<span class="highlight">$&</span>');
+      html += `<div class="search-result-item" data-page="${r.page}" data-idx="${idx}"><strong>Page ${r.page}</strong>…${highlighted}…</div>`;
+    });
+    searchResultsEl.innerHTML = html;
+  };
+
+  searchResultsEl.addEventListener('click', async e => {
+    const item = e.target.closest('.search-result-item');
+    if (!item) return;
+    const page = parseInt(item.dataset.page, 10);
+    const query = lastSearchQuery;
+    closeSearch();
+    clearSearchHighlights();
+
+    let pageEl = document.getElementById('page-' + page);
+    if (pageEl) {
+      pageEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+      if (!renderedPages.has(page)) {
+        await renderPage(page, pageEl);
+        await new Promise(r => setTimeout(r, 120));
+      }
+    }
+
+    const hit = highlightQueryOnPage(page, query, true);
+    if (!hit) scrollToPage(page);
+    showToast('Result on page ' + page);
+  });
+
+  function saveAnnotations() {
+    try { localStorage.setItem(storageKey, JSON.stringify(annotations)); } catch (e) {}
+  }
+
+  function updateAnnotationCount() {
+    let n = 0;
+    Object.values(annotations).forEach(a => { if (Array.isArray(a)) n += a.length; });
+    annotationCountEl.textContent = String(n);
+  }
+
+  function updateAnnotationsList() {
+    let html = '';
+    let n = 0;
+    Object.keys(annotations).map(Number).sort((a, b) => a - b).forEach(pageNum => {
+      (annotations[pageNum] || []).forEach((ann, idx) => {
+        n++;
+        const label = ann.type === 'highlight' ? 'Highlight' : 'Note';
+        const preview = ann.text
+          ? (ann.text.length > 90 ? ann.text.slice(0, 90) + '…' : ann.text)
+          : '<em>(no text)</em>';
+        html += `<div style="padding:12px;background:#F8FAFC;border:1px solid var(--border-light);border-radius:4px;margin-bottom:8px;cursor:pointer;" data-goto="${pageNum}">` +
+          `<strong style="font-size:11px;color:var(--brand-navy);display:block;margin-bottom:4px;text-transform:uppercase;">Page ${pageNum} · ${label}</strong>` +
+          `<p style="font-size:13px;margin:0;font-family:'Lora',serif;">${preview.replace(/</g, '&lt;')}</p></div>`;
+      });
+    });
+    annotationsListEl.innerHTML = n
+      ? html
+      : '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">No marks yet.</p>';
+  }
+
+  annotationsListEl.addEventListener('click', e => {
+    const card = e.target.closest('[data-goto]');
+    if (card) scrollToPage(parseInt(card.dataset.goto, 10));
+  });
+
+  function loadAnnotationsForPage(pageNum) {
+    const layer = document.getElementById('annotations-' + pageNum);
+    if (!layer) return;
+    layer.innerHTML = '';
+    const viewport = pageViewports[pageNum];
+    if (!viewport) return;
+    const list = annotations[pageNum] || [];
+
+    list.forEach((annotation, index) => {
+      if (annotation.type === 'note') {
+        const x = (annotation.nx != null ? annotation.nx : 0.1) * viewport.width;
+        const y = (annotation.ny != null ? annotation.ny : 0.1) * viewport.height;
+        const div = document.createElement('div');
+        div.className = 'annotation-note';
+        div.style.left = x + 'px';
+        div.style.top = y + 'px';
+        const del = document.createElement('button');
+        del.className = 'annotation-delete';
+        del.textContent = '×';
+        del.title = 'Delete';
+        del.addEventListener('click', e => { e.stopPropagation(); deleteAnnotation(pageNum, index); });
+        div.appendChild(del);
+        const ta = document.createElement('textarea');
+        ta.value = annotation.text || '';
+        ta.placeholder = 'Comment…';
+        ta.addEventListener('change', () => {
+          annotation.text = ta.value;
+          saveAnnotations();
+          updateAnnotationsList();
+        });
+        div.appendChild(ta);
+        layer.appendChild(div);
+      } else if (annotation.type === 'highlight' && annotation.rects) {
+        annotation.rects.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'annotation-highlight color-' + (annotation.color || 'yellow');
+          div.style.left = (r.nx * viewport.width) + 'px';
+          div.style.top = (r.ny * viewport.height) + 'px';
+          div.style.width = (r.nw * viewport.width) + 'px';
+          div.style.height = (r.nh * viewport.height) + 'px';
+          div.title = annotation.text ? annotation.text.slice(0, 100) : 'Highlight';
+          div.addEventListener('click', e => {
+            e.stopPropagation();
+            if (confirm('Delete this highlight?')) deleteAnnotation(pageNum, index);
+          });
+          layer.appendChild(div);
+        });
+      }
+    });
+  }
+
+  window.deleteAnnotation = function (pageNum, index) {
+    if (!annotations[pageNum]) return;
+    annotations[pageNum].splice(index, 1);
+    if (!annotations[pageNum].length) delete annotations[pageNum];
+    saveAnnotations();
+    loadAnnotationsForPage(pageNum);
+    updateAnnotationsList();
+    updateAnnotationCount();
+    showToast('Deleted');
+  };
+
+  function getSelectionContext() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    const text = sel.toString().trim();
+    if (!text) return null;
+    let node = range.commonAncestorContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    const pageWrapper = node.closest && node.closest('.pdf-page-wrapper');
+    if (!pageWrapper) return null;
+    const pageNum = parseInt(pageWrapper.dataset.page, 10);
+    return { sel, range, text, pageWrapper, pageNum };
+  }
+
+  function getRectsForRange(range, pageWrapper) {
+    const pageRect = pageWrapper.getBoundingClientRect();
+    const clientRects = range.getClientRects();
+    const rects = [];
+    for (let i = 0; i < clientRects.length; i++) {
+      const r = clientRects[i];
+      if (r.width < 1 || r.height < 1) continue;
+      const left = r.left - pageRect.left;
+      const top = r.top - pageRect.top;
+      if (left + r.width < 0 || top + r.height < 0 || left > pageRect.width || top > pageRect.height) continue;
+      rects.push({
+        x: Math.max(0, left),
+        y: Math.max(0, top),
+        width: Math.min(r.width, pageRect.width - Math.max(0, left)),
+        height: Math.min(r.height, pageRect.height - Math.max(0, top))
+      });
+    }
+    return rects;
+  }
+
+  function showSelectionBar() {
+    const ctx = getSelectionContext();
+    if (!ctx) {
+      selectionBar.classList.remove('show');
+      pendingSelection = null;
+      return;
+    }
+    pendingSelection = ctx;
+    selectionBar.classList.add('show');
+  }
+
+  function hideSelectionBar() {
+    selectionBar.classList.remove('show');
+  }
+
+  document.addEventListener('selectionchange', () => {
+    clearTimeout(showSelectionBar._t);
+    showSelectionBar._t = setTimeout(showSelectionBar, 80);
+  });
+
+  document.addEventListener('mouseup', () => {
+    setTimeout(() => {
+      if (currentTool === 'highlight') {
+        const ctx = getSelectionContext();
+        if (ctx) {
+          applyHighlight(ctx);
+          window.getSelection().removeAllRanges();
+          hideSelectionBar();
+        }
+      } else {
+        showSelectionBar();
+      }
+    }, 30);
+  });
+
+  document.addEventListener('touchend', () => {
+    setTimeout(showSelectionBar, 120);
+  }, { passive: true });
+
+  function applyHighlight(ctx) {
+    const viewport = pageViewports[ctx.pageNum];
+    if (!viewport) return;
+    const raw = getRectsForRange(ctx.range, ctx.pageWrapper);
+    if (!raw.length) return;
+    const normalized = raw.map(r => ({
+      nx: r.x / viewport.width,
+      ny: r.y / viewport.height,
+      nw: r.width / viewport.width,
+      nh: r.height / viewport.height
+    }));
+    if (!annotations[ctx.pageNum]) annotations[ctx.pageNum] = [];
+    annotations[ctx.pageNum].push({
+      type: 'highlight',
+      color: currentHighlightColor,
+      text: cleanCopiedText(ctx.text),
+      rects: normalized,
+      created: Date.now()
+    });
+    saveAnnotations();
+    loadAnnotationsForPage(ctx.pageNum);
+    updateAnnotationCount();
+    updateAnnotationsList();
+    showToast('Text highlighted');
+  }
+
+  window.highlightCurrentSelection = function () {
+    const ctx = pendingSelection || getSelectionContext();
+    if (!ctx) { showToast('Select text first'); return; }
+    applyHighlight(ctx);
+    window.getSelection().removeAllRanges();
+    hideSelectionBar();
+  };
+
+  function cleanCopiedText(raw) {
+    if (!raw) return '';
+    let t = String(raw);
+    t = t.replace(/[\u00ad\u200b\u2060]/g, '');
+    t = t.replace(/-\s*[\r\n]+\s*/g, '');
+    try {
+      t = t.replace(/(\p{L}{2,})-(\p{Ll}{2,})/gu, '$1$2');
+    } catch (e) {
+      t = t.replace(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,})-([a-záéíóúüñ]{2,})/g, '$1$2');
+    }
+    t = t.replace(/[\r\n]+/g, ' ');
+    t = t.replace(/[ \t\f\v]+/g, ' ');
+    return t.trim();
+  }
+
+  window.copyCurrentSelection = async function () {
+    const ctx = pendingSelection || getSelectionContext();
+    if (!ctx) { showToast('Nothing to copy'); return; }
+    try {
+      const plain = cleanCopiedText(ctx.text);
+      const html = '<meta charset="utf-8"><span style="font-family:Lora,Georgia,serif;">' +
+        plain.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+        '</span>';
+      if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/plain': new Blob([plain], { type: 'text/plain' }),
+            'text/html': new Blob([html], { type: 'text/html' })
+          })
+        ]);
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(plain);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = plain;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+      showToast('Copied');
+    } catch (e) {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = cleanCopiedText(ctx.text);
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        showToast('Copied');
+      } catch (e2) {
+        showToast('Could not copy');
+      }
+    }
+    hideSelectionBar();
+  };
+
+  window.noteFromSelection = function () {
+    const ctx = pendingSelection || getSelectionContext();
+    if (!ctx) {
+      setTool('note');
+      showToast('Tap the page to place note');
+      hideSelectionBar();
+      return;
+    }
+    const viewport = pageViewports[ctx.pageNum];
+    if (!viewport) return;
+    const raw = getRectsForRange(ctx.range, ctx.pageWrapper);
+    const first = raw[0] || { x: 20, y: 20 };
+    if (!annotations[ctx.pageNum]) annotations[ctx.pageNum] = [];
+    annotations[ctx.pageNum].push({
+      type: 'note',
+      nx: first.x / viewport.width,
+      ny: first.y / viewport.height,
+      text: ctx.text.slice(0, 500),
+      created: Date.now()
+    });
+    saveAnnotations();
+    loadAnnotationsForPage(ctx.pageNum);
+    updateAnnotationCount();
+    updateAnnotationsList();
+    window.getSelection().removeAllRanges();
+    hideSelectionBar();
+    showToast('Note created with text');
+  };
+
+  pdfContainer.addEventListener('click', e => {
+    if (currentTool !== 'note') return;
+    if (e.target.closest('.annotation-note') || e.target.closest('.annotation-highlight') || e.target.closest('.pdf-link')) return;
+    const wrapper = e.target.closest('.pdf-page-wrapper');
+    if (!wrapper) return;
+    const pageNum = parseInt(wrapper.dataset.page, 10);
+    const viewport = pageViewports[pageNum];
+    if (!viewport) return;
+    const rect = wrapper.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (!annotations[pageNum]) annotations[pageNum] = [];
+    annotations[pageNum].push({
+      type: 'note',
+      nx: x / viewport.width,
+      ny: y / viewport.height,
+      text: '',
+      created: Date.now()
+    });
+    saveAnnotations();
+    loadAnnotationsForPage(pageNum);
+    updateAnnotationsList();
+    updateAnnotationCount();
+    setTimeout(() => {
+      const notes = document.querySelectorAll('#annotations-' + pageNum + ' .annotation-note textarea');
+      if (notes.length) notes[notes.length - 1].focus();
+    }, 40);
+    showToast('Note added');
+  });
+
+  const downloadMenu = document.getElementById('downloadMenu');
+
+  window.toggleDownloadMenu = function (e) {
+    if (e) e.stopPropagation();
+    downloadMenu.classList.toggle('open');
+  };
+
+  document.addEventListener('click', (e) => {
+    if (!downloadMenu.contains(e.target) && e.target !== downloadBtn && !downloadBtn.contains(e.target)) {
+      downloadMenu.classList.remove('open');
+    }
+  });
+
+  function safeFilename(suffix) {
+    return (title || 'manuscript').replace(/[^\w\s\-]/gi, '_').trim().slice(0, 70) + (suffix || '') + '.pdf';
+  }
+
+  function triggerBlobDownload(bytes, name) {
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function addStickyNoteAnnotation(pdfLibDoc, page, pageRef, text, xPdf, yPdf) {
+    const { PDFName, PDFString, PDFArray, PDFNumber, PDFDict } = PDFLib;
+    const context = pdfLibDoc.context;
+    const size = 18;
+    const rect = [xPdf, yPdf, xPdf + size, yPdf + size];
+
+    const annotDict = context.obj({
+      Type: PDFName.of('Annot'),
+      Subtype: PDFName.of('Text'),
+      Rect: rect,
+      Contents: PDFString.of(String(text || 'Comment').slice(0, 2000)),
+      T: PDFString.of('Reviewer'),
+      Name: PDFName.of('Comment'),
+      Open: false,
+      C: [1, 0.42, 0.05],
+      F: 4,
+      CA: 1
+    });
+    const annotRef = context.register(annotDict);
+
+    let annots = page.node.lookup(PDFName.of('Annots'));
+    if (!annots) {
+      annots = context.obj([]);
+      page.node.set(PDFName.of('Annots'), annots);
+    }
+    annots.push(annotRef);
+  }
+
+  window.downloadPDF = async function (mode) {
+    downloadMenu.classList.remove('open');
+    if (!pdfUrl || !pdfDoc) return;
+
+    if (mode === 'none') {
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = safeFilename('');
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.click();
+      showToast('Original PDF');
+      return;
+    }
+
+    downloadBtn.disabled = true;
+    showToast('Generating PDF…', 5000);
+
+    try {
+      const res = await fetch(pdfUrl);
+      if (!res.ok) throw new Error('fetch PDF');
+      const existingBytes = await res.arrayBuffer();
+
+      const { PDFDocument, rgb, PDFName } = PDFLib;
+      const pdfLibDoc = await PDFDocument.load(existingBytes, { ignoreEncryption: true });
+      const pages = pdfLibDoc.getPages();
+
+      const colorMap = {
+        yellow: rgb(1, 0.92, 0.23),
+        green: rgb(0.45, 0.9, 0.55),
+        blue: rgb(0.5, 0.75, 0.98),
+        pink: rgb(0.95, 0.6, 0.8)
+      };
+
+      const wantHL = mode === 'highlights' || mode === 'all';
+      const wantNotes = mode === 'notes' || mode === 'all';
+
+      for (const [pageKey, anns] of Object.entries(annotations)) {
+        const pageIndex = parseInt(pageKey, 10) - 1;
+        if (pageIndex < 0 || pageIndex >= pages.length || !Array.isArray(anns)) continue;
+        const page = pages[pageIndex];
+        const { width, height } = page.getSize();
+
+        for (const ann of anns) {
+          if (wantHL && ann.type === 'highlight' && ann.rects) {
+            const c = colorMap[ann.color] || colorMap.yellow;
+            for (const r of ann.rects) {
+              const x = r.nx * width;
+              const w = Math.max(r.nw * width, 1);
+              const h = Math.max(r.nh * height, 1.5);
+              const y = height - (r.ny * height) - h;
+              page.drawRectangle({
+                x, y, width: w, height: h,
+                color: c,
+                opacity: 0.32,
+                borderWidth: 0
+              });
+            }
+          }
+          if (wantNotes && ann.type === 'note') {
+            let nx = (ann.nx != null ? ann.nx : 0.05);
+            let ny = (ann.ny != null ? ann.ny : 0.05);
+            if (nx > 0.15 && nx < 0.85) nx = 0.92;
+            const xPdf = Math.min(nx * width, width - 22);
+            const yPdf = height - (ny * height) - 18;
+            const content = (ann.text || 'Review comment').trim() || 'Comment';
+            try {
+              addStickyNoteAnnotation(pdfLibDoc, page, page.ref, content, Math.max(4, xPdf), Math.max(4, yPdf));
+            } catch (noteErr) {
+              console.warn(noteErr);
+              page.drawRectangle({
+                x: Math.max(4, xPdf),
+                y: Math.max(4, yPdf),
+                width: 14,
+                height: 14,
+                color: rgb(1, 0.42, 0.05),
+                opacity: 0.85,
+                borderWidth: 0
+              });
+            }
+          }
+        }
+      }
+
+      const outBytes = await pdfLibDoc.save();
+      const suffix = mode === 'highlights' ? '_highlights' : (mode === 'notes' ? '_comments' : '_reviewed');
+      triggerBlobDownload(outBytes, safeFilename(suffix));
+      showToast(mode === 'highlights' ? 'PDF with highlights' : (mode === 'notes' ? 'PDF with comments' : 'Complete PDF'));
+    } catch (err) {
+      console.error(err);
+      showToast('Error generating. Downloading original…');
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = safeFilename('');
+      a.target = '_blank';
+      a.click();
+    } finally {
+      downloadBtn.disabled = false;
+    }
+  };
+
+  document.addEventListener('keydown', e => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea') return;
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      e.preventDefault();
+      toggleSearch();
+    }
+    if (e.key === 'Escape') {
+      closeSearch();
+      hideSelectionBar();
+      if (window.innerWidth <= 768) {
+        const sb = document.getElementById('pdfSidebar');
+        if (!sb.classList.contains('hidden')) toggleSidebar();
+      }
+    }
+    if (e.key === 'h' || e.key === 'H') setTool('highlight');
+    if (e.key === 'n' || e.key === 'N') setTool('note');
+    if (e.key === 'v' || e.key === 'V') setTool('select');
+  });
+
+  document.addEventListener('click', e => {
+    if (!selectionBar.contains(e.target) && !e.target.closest('.textLayer')) {
+      setTimeout(() => {
+        if (!getSelectionContext()) hideSelectionBar();
+      }, 50);
+    }
+  });
+
+  setTool('select');
+  updateAnnotationCount();
+  updateAnnotationsList();
+})();
 </script>
 </body>
 </html>
