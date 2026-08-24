@@ -2193,45 +2193,7 @@ function cleanCopiedText(raw) {
   
   return t.trim();
 }
-function selectionToRichHtml(range) {
-  const walker = document.createTreeWalker(
-    range.commonAncestorContainer.nodeType === 1
-      ? range.commonAncestorContainer
-      : range.commonAncestorContainer.parentElement,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode(node) {
-        return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-      }
-    }
-  );
-  let html = '';
-  let n;
-  while ((n = walker.nextNode())) {
-    let piece = n.textContent || '';
-    if (!piece) continue;
-    // Recortar si el range no cubre todo el text node
-    if (n === range.startContainer) piece = piece.slice(range.startOffset);
-    if (n === range.endContainer) {
-      const end = (n === range.startContainer)
-        ? range.endOffset - range.startOffset
-        : range.endOffset;
-      piece = piece.slice(0, Math.max(0, end));
-    }
-    piece = cleanCopiedText(piece);
-    if (!piece) continue;
 
-    const span = n.parentElement;
-    const font = (span && (span.style.fontFamily || span.getAttribute('data-font-name') || '')) + '';
-    const isBold = /bold|black|heavy|semibold/i.test(font);
-    const isItalic = /italic|oblique/i.test(font);
-    let open = '', close = '';
-    if (isBold) { open += '<strong>'; close = '</strong>' + close; }
-    if (isItalic) { open += '<em>'; close = '</em>' + close; }
-    html += open + piece.replace(/&/g,'&amp;').replace(/</g,'&lt;') + close + ' ';
-  }
-  return html.replace(/\s+/g, ' ').trim();
-}
 function selectionToRichHtml(range) {
   const walker = document.createTreeWalker(
     range.commonAncestorContainer.nodeType === 1

@@ -2192,61 +2192,86 @@ function getRectsForRange(range, pageWrapper) {
     hideSelectionBar();
   };
 
-/** Limpia guiones de partición silábica y saltos de línea del PDF */
+/** Cleans hyphenation breaks and preserves PDF paragraphs */
 function cleanCopiedText(raw) {
   if (!raw) return '';
   let t = String(raw);
   t = t.replace(/[\u00ad\u200b\u2060\ufeff]/g, ''); // soft hyphen / invisibles
-  t = t.replace(/-\s*[\r\n]+\s*/g, '');             // palabra-\ncontinuación
+  t = t.replace(/-\s*[\r\n]+\s*/g, '');             // word-\ncontinuation
   try {
     t = t.replace(/(\p{L}{2,})-(\p{Ll}{2,})/gu, '$1$2');
   } catch (e) {
     t = t.replace(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,})-([a-záéíóúüñ]{2,})/g, '$1$2');
   }
   
-  // Detectar párrafos: línea que termina en puntuación + siguiente empieza con mayúscula
-  // o doble salto de línea = párrafo nuevo
-  t = t.replace(/([.!?»"'])\s*\r?\n\s*([A-ZÁÉÍÓÚÜÑ])/g, '$1\n\n$2');
-  
-  // Doble salto de línea o más = párrafo nuevo (preservar)
+  // Preserve double line breaks as paragraph breaks
   t = t.replace(/(\r?\n){2,}/g, '\n\n');
   
-  // Salto de línea simple = espacio (continuación de línea)
+  // Single line break = space (line continuation)
   t = t.replace(/[\r\n]+/g, ' ');
   
-  // Limpiar espacios múltiples pero preservar los párrafos
-  t = t.replace(/\n[ \t\f\v]+/g, '\n');
-  t = t.replace(/[ \t\f\v]+\n/g, '\n');
+  // Clean extra spaces
   t = t.replace(/[ \t\f\v]+/g, ' ');
   t = t.replace(/\u00a0/g, ' ');
   
-  // Normalizar espacios alrededor de saltos de párrafo
+  // Normalize spaces around paragraph breaks
   t = t.replace(/ *\n+ */g, '\n\n');
   
   return t.trim();
 }
+function selectionToRichHtml(range) {
+  const walker = document.createTreeWalker(
+    range.commonAncestorContainer.nodeType === 1
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    }
+  );
+  let html = '';
+  let n;
+  while ((n = walker.nextNode())) {
+    let piece = n.textContent || '';
+    if (!piece) continue;
+    // Recortar si el range no cubre todo el text node
+    if (n === range.startContainer) piece = piece.slice(range.startOffset);
+    if (n === range.endContainer) {
+      const end = (n === range.startContainer)
+        ? range.endOffset - range.startOffset
+        : range.endOffset;
+      piece = piece.slice(0, Math.max(0, end));
+    }
+    piece = cleanCopiedText(piece);
+    if (!piece) continue;
+
+    const span = n.parentElement;
+    const font = (span && (span.style.fontFamily || span.getAttribute('data-font-name') || '')) + '';
+    const isBold = /bold|black|heavy|semibold/i.test(font);
+    const isItalic = /italic|oblique/i.test(font);
+    let open = '', close = '';
+    if (isBold) { open += '<strong>'; close = '</strong>' + close; }
+    if (isItalic) { open += '<em>'; close = '</em>' + close; }
+    html += open + piece.replace(/&/g,'&amp;').replace(/</g,'&lt;') + close + ' ';
+  }
+  return html.replace(/\s+/g, ' ').trim();
+}
 window.copyCurrentSelection = async function () {
   const ctx = pendingSelection || getSelectionContext();
-  if (!ctx) { showToast('Nada que copiar'); return; }
+  if (!ctx) { showToast('Nothing to copy'); return; }
   try {
     const plain = cleanCopiedText(ctx.text);
-    let rich = '';
-    try { rich = selectionToRichHtml(ctx.range); } catch (e) { rich = ''; }
     
-    // Si no hay HTML enriquecido, convertir párrafos a <p>
-    let htmlBody;
-    if (rich) {
-      htmlBody = rich;
-    } else {
-      // Dividir por párrafos y envolver cada uno en <p>
-      const paragraphs = plain.split(/\n\n+/);
-      htmlBody = paragraphs.map(p => {
-        const safe = p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        return '<p style="margin:0 0 1em 0;">' + safe + '</p>';
-      }).join('');
-    }
+    // Split by paragraphs and wrap each in <p>
+    const paragraphs = plain.split(/\n\n+/);
+    const htmlBody = paragraphs.map(p => {
+      const safe = p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return '<p>' + safe + '</p>';
+    }).join('');
     
-    const html = '<meta charset="utf-8"><div style="font-family:Georgia,\'Times New Roman\',serif;font-size:12pt;line-height:1.5;">' + htmlBody + '</div>';
+    const html = '<meta charset="utf-8"><div>' + htmlBody + '</div>';
     
     if (navigator.clipboard && window.ClipboardItem) {
       await navigator.clipboard.write([
@@ -2265,7 +2290,7 @@ window.copyCurrentSelection = async function () {
       document.execCommand('copy');
       ta.remove();
     }
-    showToast('Copiado');
+    showToast('Copied');
   } catch (e) {
     try {
       const ta = document.createElement('textarea');
@@ -2274,7 +2299,7 @@ window.copyCurrentSelection = async function () {
       ta.select();
       document.execCommand('copy');
       ta.remove();
-      showToast('Copiado');
+      showToast('Copiado!');
     } catch (e2) {
       showToast('No se pudo copiar');
     }
