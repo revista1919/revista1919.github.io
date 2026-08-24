@@ -2091,25 +2091,32 @@
     return { sel, range, text, pageWrapper, pageNum };
   }
 
-  function getRectsForRange(range, pageWrapper) {
-    const pageRect = pageWrapper.getBoundingClientRect();
-    const clientRects = range.getClientRects();
-    const rects = [];
-    for (let i = 0; i < clientRects.length; i++) {
-      const r = clientRects[i];
-      if (r.width < 1 || r.height < 1) continue;
-      const left = r.left - pageRect.left;
-      const top = r.top - pageRect.top;
-      if (left + r.width < 0 || top + r.height < 0 || left > pageRect.width || top > pageRect.height) continue;
-      rects.push({
-        x: Math.max(0, left),
-        y: Math.max(0, top),
-        width: Math.min(r.width, pageRect.width - Math.max(0, left)),
-        height: Math.min(r.height, pageRect.height - Math.max(0, top))
-      });
-    }
-    return rects;
+function getRectsForRange(range, pageWrapper) {
+  const pageRect = pageWrapper.getBoundingClientRect();
+  const clientRects = range.getClientRects();
+  const rects = [];
+  const padX = 1.5; // px: cubre la primera letra
+  const padY = 0.5;
+  
+  for (let i = 0; i < clientRects.length; i++) {
+    const r = clientRects[i];
+    if (r.width < 1 || r.height < 1) continue;
+    
+    const left = r.left - pageRect.left;
+    const top = r.top - pageRect.top;
+    
+    if (left + r.width < 0 || top + r.height < 0 || left > pageRect.width || top > pageRect.height) continue;
+    
+    rects.push({
+      x: Math.max(0, left - padX),
+      y: Math.max(0, top - padY),
+      width: Math.min(r.width + padX * 2, pageRect.width - Math.max(0, left - padX)),
+      height: Math.min(r.height + padY * 2, pageRect.height - Math.max(0, top - padY))
+    });
   }
+  
+  return rects;
+}
 
   function showSelectionBar() {
     const ctx = getSelectionContext();
@@ -2186,69 +2193,66 @@
   };
 
   /** Limpia guiones de partición silábica y saltos de línea del PDF */
-  function cleanCopiedText(raw) {
-    if (!raw) return '';
-    let t = String(raw);
-    // Soft hyphen (U+00AD) y guiones invisibles
-    t = t.replace(/[\u00ad\u200b\u2060]/g, '');
-    // Guión al final de línea + salto → unir palabra
-    t = t.replace(/-\s*[\r\n]+\s*/g, '');
-    // Guión de partición: "inves-tigación" → "investigación"
-    // (2+ letras, guión, 2+ minúsculas). Compatible sin \p{L}
-    try {
-      t = t.replace(/(\p{L}{2,})-(\p{Ll}{2,})/gu, '$1$2');
-    } catch (e) {
-      t = t.replace(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,})-([a-záéíóúüñ]{2,})/g, '$1$2');
-    }
-    // Saltos de línea → espacio
-    t = t.replace(/[\r\n]+/g, ' ');
-    // Espacios múltiples
-    t = t.replace(/[ \t\f\v]+/g, ' ');
-    return t.trim();
+function cleanCopiedText(raw) {
+  if (!raw) return '';
+  let t = String(raw);
+  t = t.replace(/[\u00ad\u200b\u2060\ufeff]/g, ''); // soft hyphen / invisibles
+  t = t.replace(/-\s*[\r\n]+\s*/g, '');             // palabra-\ncontinuación
+  try {
+    t = t.replace(/(\p{L}{2,})-(\p{Ll}{2,})/gu, '$1$2');
+  } catch (e) {
+    t = t.replace(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,})-([a-záéíóúüñ]{2,})/g, '$1$2');
   }
+  // Saltos → un solo espacio (nada de párrafos vacíos)
+  t = t.replace(/[\r\n]+/g, ' ');
+  t = t.replace(/\u00a0/g, ' ');
+  t = t.replace(/[ \t\f\v]+/g, ' ');
+  return t.trim();
+}
 
-  window.copyCurrentSelection = async function () {
-    const ctx = pendingSelection || getSelectionContext();
-    if (!ctx) { showToast('Nada que copiar'); return; }
-    try {
-      const plain = cleanCopiedText(ctx.text);
-      const html = '<meta charset="utf-8"><span style="font-family:Lora,Georgia,serif;">' +
-        plain.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
-        '</span>';
-      if (navigator.clipboard && window.ClipboardItem) {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            'text/plain': new Blob([plain], { type: 'text/plain' }),
-            'text/html': new Blob([html], { type: 'text/html' })
-          })
-        ]);
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(plain);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = plain;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
-      }
-      showToast('Copiado');
-    } catch (e) {
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = cleanCopiedText(ctx.text);
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
-        showToast('Copiado');
-      } catch (e2) {
-        showToast('No se pudo copiar');
-      }
+window.copyCurrentSelection = async function () {
+  const ctx = pendingSelection || getSelectionContext();
+  if (!ctx) { showToast('Nada que copiar'); return; }
+  try {
+    const plain = cleanCopiedText(ctx.text);
+    let rich = '';
+    try { rich = selectionToRichHtml(ctx.range); } catch (e) { rich = ''; }
+    const htmlBody = rich || plain.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const html = '<meta charset="utf-8"><span style="font-family:Georgia,\'Times New Roman\',serif;font-size:12pt;line-height:1.5;">' + htmlBody + '</span>';
+    
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+          'text/html': new Blob([html], { type: 'text/html' })
+        })
+      ]);
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(plain);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = plain;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
     }
-    hideSelectionBar();
-  };
-
+    showToast('Copiado');
+  } catch (e) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = cleanCopiedText(ctx.text);
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      showToast('Copiado');
+    } catch (e2) {
+      showToast('No se pudo copiar');
+    }
+  }
+  hideSelectionBar();
+};
   window.noteFromSelection = function () {
     const ctx = pendingSelection || getSelectionContext();
     if (!ctx) {
