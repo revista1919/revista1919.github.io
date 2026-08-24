@@ -291,7 +291,7 @@
 
     .pdf-canvas { display: block; border-radius: 2px; max-width: 100%; height: auto; }
 
-    /* Text layer */
+    /* Text layer — CSS alineado con pdf.js oficial (evita texto achatado en móvil) */
     .textLayer {
       position: absolute;
       text-align: initial;
@@ -300,28 +300,52 @@
       opacity: 1;
       line-height: 1;
       -webkit-text-size-adjust: none;
+      -moz-text-size-adjust: none;
       text-size-adjust: none;
+      forced-color-adjust: none;
       transform-origin: 0 0;
       z-index: 2;
+      box-sizing: content-box;
     }
-    .textLayer span, .textLayer br {
+    .textLayer :is(span, br) {
       color: transparent;
       position: absolute;
       white-space: pre;
       cursor: text;
       transform-origin: 0% 0%;
+      box-sizing: content-box;
     }
-    .textLayer ::selection { background: rgba(255, 108, 12, 0.32); }
-    .textLayer ::-moz-selection { background: rgba(255, 108, 12, 0.32); }
+    .textLayer span.markedContent { top: 0; height: 0; }
+    /* Selección más visible en móvil */
+    .textLayer ::selection {
+      background: rgba(255, 108, 12, 0.45);
+      color: transparent;
+    }
+    .textLayer ::-moz-selection {
+      background: rgba(255, 108, 12, 0.45);
+      color: transparent;
+    }
     .textLayer .endOfContent {
       display: block;
       position: absolute;
       inset: 100% 0 0;
       z-index: -1;
       cursor: default;
+      -webkit-user-select: none;
       user-select: none;
     }
-    .textLayer.selecting .endOfContent { top: 0; }
+    .textLayer.selecting .endOfContent,
+    .textLayer .endOfContent.active { top: 0; }
+    /* Match de búsqueda activo */
+    .textLayer span.search-hit {
+      background: rgba(255, 200, 0, 0.55) !important;
+      border-radius: 2px;
+    }
+    .textLayer span.search-hit-active {
+      background: rgba(255, 108, 12, 0.65) !important;
+      outline: 2px solid var(--elsevier-orange);
+      outline-offset: 1px;
+    }
 
     /* Annotation layer */
     .annotation-layer {
@@ -409,8 +433,10 @@
       cursor: pointer;
       background: transparent;
       touch-action: manipulation;
+      /* Área mínima táctil ~44px de alto en móvil */
+      min-height: 22px;
     }
-    .pdf-link:hover, .pdf-link:active { background: rgba(255, 108, 12, 0.14); }
+    .pdf-link:hover, .pdf-link:active { background: rgba(255, 108, 12, 0.18); }
 
     /* Destino temporal (flash al navegar) */
     .dest-flash {
@@ -660,9 +686,18 @@
 
     /* ========== MOBILE ========== */
     @media (max-width: 768px) {
+      :root { --toolbar-height: 56px; }
+
       .text-hide-mobile { display: none !important; }
       .brand-container { display: none; }
       .divider { display: none; }
+
+      .pdf-toolbar {
+        padding: 0 6px;
+        gap: 2px;
+      }
+      .toolbar-left, .toolbar-right { flex: 0 0 auto; }
+      .toolbar-center { flex: 1; justify-content: center; }
 
       .pdf-sidebar {
         position: absolute;
@@ -686,14 +721,71 @@
       }
       .sidebar-backdrop.visible { display: block; }
 
-      .pdf-container { padding: 16px 8px 100px; gap: 20px; }
-      .toolbar-center .toolbar-group { background: rgba(0,0,0,0.25); padding: 2px; border-radius: 10px; }
-      .btn { min-width: 44px; min-height: 44px; padding: 10px; }
-      .btn-primary { padding: 10px 12px; }
+      .pdf-container { padding: 12px 6px 110px; gap: 16px; }
+      .toolbar-center .toolbar-group {
+        background: rgba(0,0,0,0.28);
+        padding: 3px;
+        border-radius: 12px;
+        gap: 0;
+      }
+      .btn {
+        min-width: 42px;
+        min-height: 42px;
+        padding: 8px;
+        border-radius: 10px;
+      }
+      .btn-primary {
+        padding: 8px 10px;
+        min-width: 42px;
+      }
+      #zoomLevel { width: 36px !important; font-size: 10px !important; }
 
-      /* En móvil, mostrar delete de notas siempre un poco visible */
-      .annotation-delete { opacity: 0.85; transform: scale(1); }
+      .annotation-delete { opacity: 0.9; transform: scale(1); }
+
+      .pdf-link { min-height: 28px; }
+
+      /* Página no se comprime: ancho natural, scroll horizontal si hace falta */
+      .pdf-page-wrapper {
+        max-width: none;
+      }
+      .pdf-canvas {
+        max-width: none;
+      }
     }
+
+    /* Menú de descarga */
+    .download-menu {
+      position: fixed;
+      top: calc(var(--toolbar-height) + 6px);
+      right: 10px;
+      background: white;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      box-shadow: var(--shadow-float);
+      z-index: 1300;
+      min-width: 220px;
+      padding: 6px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .download-menu.open { display: flex; }
+    .download-menu button {
+      background: transparent;
+      border: none;
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text-main);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .download-menu button:hover,
+    .download-menu button:active { background: #F1F5F9; }
+    .download-menu button strong { display: block; font-weight: 600; color: var(--oxford-blue); }
+    .download-menu button span { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
     @media (min-width: 769px) {
       .sidebar-backdrop { display: none !important; }
@@ -745,12 +837,31 @@
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"></path></svg>
       </button>
     </div>
-    <button class="btn btn-primary" id="downloadBtn" onclick="downloadAnnotatedPDF()" title="Descargar con anotaciones" aria-label="Descargar">
+    <button class="btn btn-primary" id="downloadBtn" onclick="toggleDownloadMenu(event)" title="Descargar" aria-label="Descargar" aria-haspopup="true">
       <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
       <span class="text-hide-mobile">Descargar</span>
     </button>
   </div>
 </header>
+
+<div class="download-menu" id="downloadMenu" role="menu">
+  <button type="button" onclick="downloadPDF('none')">
+    <strong>PDF original</strong>
+    <span>Sin marcas ni comentarios</span>
+  </button>
+  <button type="button" onclick="downloadPDF('highlights')">
+    <strong>Solo resaltados</strong>
+    <span>Marcas de color sobre el texto</span>
+  </button>
+  <button type="button" onclick="downloadPDF('notes')">
+    <strong>Solo comentarios</strong>
+    <span>Notas adhesivas (icono + popup)</span>
+  </button>
+  <button type="button" onclick="downloadPDF('all')">
+    <strong>Todo</strong>
+    <span>Resaltados + comentarios</span>
+  </button>
+</div>
 
 <div class="color-picker" id="colorPicker">
   <span style="font-size:11px;color:var(--text-muted);">Color</span>
@@ -1153,10 +1264,18 @@
         if (annotation.subtype !== 'Link') continue;
 
         const rect = viewport.convertToViewportRectangle(annotation.rect);
-        const left = Math.min(rect[0], rect[2]);
-        const top = Math.min(rect[1], rect[3]);
-        const width = Math.abs(rect[0] - rect[2]);
-        const height = Math.abs(rect[1] - rect[3]);
+        let left = Math.min(rect[0], rect[2]);
+        let top = Math.min(rect[1], rect[3]);
+        let width = Math.abs(rect[0] - rect[2]);
+        let height = Math.abs(rect[1] - rect[3]);
+        // Ampliar área táctil en móvil sin desplazarse demasiado
+        const minH = window.innerWidth <= 768 ? 28 : 16;
+        if (height < minH) {
+          const pad = (minH - height) / 2;
+          top -= pad;
+          height = minH;
+        }
+        if (width < 12) width = 12;
 
         if (annotation.url) {
           const a = document.createElement('a');
@@ -1164,25 +1283,22 @@
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
           a.className = 'pdf-link';
-          a.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${Math.max(height, 14)}px;`;
+          a.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${height}px;`;
           a.title = annotation.url;
           wrapper.appendChild(a);
         } else if (annotation.dest) {
           const div = document.createElement('div');
           div.className = 'pdf-link';
-          div.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${Math.max(height, 14)}px;`;
+          div.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${height}px;`;
           div.title = 'Ir a sección';
           const destCopy = annotation.dest;
-          div.addEventListener('click', (e) => {
+          const go = (e) => {
             e.preventDefault();
             e.stopPropagation();
             scrollToDestination(destCopy);
-          });
-          // Touch: evitar delay
-          div.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            scrollToDestination(destCopy);
-          }, { passive: false });
+          };
+          div.addEventListener('click', go);
+          div.addEventListener('touchend', go, { passive: false });
           wrapper.appendChild(div);
         }
       }
@@ -1311,16 +1427,51 @@
     if (e.key === 'Escape') closeSearch();
   });
 
+  let lastSearchQuery = '';
+
   function clearSearchHighlights() {
-    document.querySelectorAll('.search-highlight-temp').forEach(el => {
+    document.querySelectorAll('.search-highlight-temp, .search-hit, .search-hit-active').forEach(el => {
       el.style.background = '';
-      el.classList.remove('search-highlight-temp');
+      el.classList.remove('search-highlight-temp', 'search-hit', 'search-hit-active');
     });
+  }
+
+  /** Marca spans de la text layer que contienen la query y opcionalmente centra el primero */
+  function highlightQueryOnPage(pageNum, query, scrollToFirst) {
+    const wrap = document.getElementById('page-' + pageNum);
+    if (!wrap) return null;
+    const tl = wrap.querySelector('.textLayer');
+    if (!tl) return null;
+    const q = (query || '').toLowerCase();
+    if (!q) return null;
+    let first = null;
+    tl.querySelectorAll('span').forEach(span => {
+      const t = span.textContent || '';
+      if (t.toLowerCase().includes(q)) {
+        span.classList.add('search-hit', 'search-highlight-temp');
+        if (!first) first = span;
+      }
+    });
+    if (first && scrollToFirst) {
+      first.classList.add('search-hit-active');
+      // Scroll del contenedor hasta el span
+      const spanRect = first.getBoundingClientRect();
+      const contRect = pdfContainer.getBoundingClientRect();
+      const delta = spanRect.top - contRect.top - contRect.height * 0.3;
+      pdfContainer.scrollBy({ top: delta, behavior: 'smooth' });
+      // Flash extra
+      first.style.transition = 'background 0.3s';
+      setTimeout(() => {
+        first.classList.remove('search-hit-active');
+      }, 2800);
+    }
+    return first;
   }
 
   window.performSearch = async function () {
     const query = searchInputEl.value.trim();
     if (!query || !pdfDoc) return;
+    lastSearchQuery = query;
 
     searchResultsEl.innerHTML = '<p style="color:var(--text-muted);padding:8px;">Buscando…</p>';
     clearSearchHighlights();
@@ -1344,7 +1495,7 @@
       while ((match = regex.exec(text)) !== null) {
         const start = Math.max(0, match.index - 40);
         const end = Math.min(text.length, match.index + query.length + 40);
-        results.push({ page: i, text: text.substring(start, end) });
+        results.push({ page: i, text: text.substring(start, end), index: match.index });
         if (results.length >= 60) break;
       }
       if (results.length >= 60) break;
@@ -1356,35 +1507,57 @@
     }
 
     let html = `<p style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--oxford-blue);">${results.length} resultado${results.length !== 1 ? 's' : ''}</p>`;
-    results.forEach(r => {
+    results.forEach((r, idx) => {
       const highlighted = r.text
         .replace(/</g, '&lt;')
         .replace(new RegExp(escaped, 'gi'), '<span class="highlight">$&</span>');
-      html += `<div class="search-result-item" data-page="${r.page}"><strong>Página ${r.page}</strong>…${highlighted}…</div>`;
+      html += `<div class="search-result-item" data-page="${r.page}" data-idx="${idx}"><strong>Página ${r.page}</strong>…${highlighted}…</div>`;
     });
     searchResultsEl.innerHTML = html;
 
-    const qLower = query.toLowerCase();
-    results.slice(0, 25).forEach(r => {
-      const wrap = document.getElementById('page-' + r.page);
-      if (!wrap || !renderedPages.has(r.page)) return;
-      const tl = wrap.querySelector('.textLayer');
-      if (!tl) return;
-      tl.querySelectorAll('span').forEach(span => {
-        if (span.textContent && span.textContent.toLowerCase().includes(qLower)) {
-          span.style.background = 'rgba(253, 224, 71, 0.5)';
-          span.classList.add('search-highlight-temp');
-        }
-      });
+    // Pre-marcar páginas ya visibles
+    const pagesSeen = new Set();
+    results.forEach(r => {
+      if (pagesSeen.has(r.page)) return;
+      pagesSeen.add(r.page);
+      if (renderedPages.has(r.page)) highlightQueryOnPage(r.page, query, false);
     });
   };
 
-  searchResultsEl.addEventListener('click', e => {
+  searchResultsEl.addEventListener('click', async e => {
     const item = e.target.closest('.search-result-item');
     if (!item) return;
     const page = parseInt(item.dataset.page, 10);
+    const query = lastSearchQuery;
     closeSearch();
-    scrollToPage(page);
+
+    // Ir a la página y esperar render
+    let pageEl = document.getElementById('page-' + page);
+    if (pageEl) {
+      pageEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+      if (!renderedPages.has(page)) {
+        await renderPage(page, pageEl);
+        await new Promise(r => setTimeout(r, 100));
+      }
+    }
+
+    // Resaltar y centrar el match exacto
+    clearSearchHighlights();
+    // Marcar todas las páginas con hits ligeros
+    for (let i = 1; i <= (pdfDoc ? pdfDoc.numPages : 0); i++) {
+      if (renderedPages.has(i) && pageTextContentCache[i] &&
+          pageTextContentCache[i].toLowerCase().includes(query.toLowerCase())) {
+        highlightQueryOnPage(i, query, false);
+      }
+    }
+    const hit = highlightQueryOnPage(page, query, true);
+    if (!hit) {
+      // Fallback: scroll a página + flash de página
+      scrollToPage(page);
+      showToast('Resultado en página ' + page);
+    } else {
+      showToast('Resultado en página ' + page);
+    }
   });
 
   // ---------- Anotaciones ----------
@@ -1691,21 +1864,93 @@
     showToast('Nota añadida');
   });
 
-  // ---------- Descargar PDF con anotaciones incrustadas (pdf-lib) ----------
-  window.downloadAnnotatedPDF = async function () {
+  // ---------- Menú de descarga ----------
+  const downloadMenu = document.getElementById('downloadMenu');
+
+  window.toggleDownloadMenu = function (e) {
+    if (e) e.stopPropagation();
+    downloadMenu.classList.toggle('open');
+  };
+
+  document.addEventListener('click', (e) => {
+    if (!downloadMenu.contains(e.target) && e.target !== downloadBtn && !downloadBtn.contains(e.target)) {
+      downloadMenu.classList.remove('open');
+    }
+  });
+
+  function safeFilename(suffix) {
+    return (title || 'manuscrito').replace(/[^\wáéíóúñü\s\-]/gi, '_').trim().slice(0, 70) + (suffix || '') + '.pdf';
+  }
+
+  function triggerBlobDownload(bytes, name) {
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /** Sticky note real (Subtype Text): solo icono pequeño, contenido en popup */
+  function addStickyNoteAnnotation(pdfLibDoc, page, pageRef, text, xPdf, yPdf) {
+    const { PDFName, PDFString, PDFArray, PDFNumber, PDFDict } = PDFLib;
+    const context = pdfLibDoc.context;
+    const size = 18;
+    // Rect pequeño solo para el icono (no tapa el cuerpo del texto)
+    const rect = [xPdf, yPdf, xPdf + size, yPdf + size];
+
+    const annotDict = context.obj({
+      Type: PDFName.of('Annot'),
+      Subtype: PDFName.of('Text'),
+      Rect: rect,
+      Contents: PDFString.of(String(text || 'Comentario').slice(0, 2000)),
+      T: PDFString.of('Revisor'),
+      Name: PDFName.of('Comment'),
+      Open: false,
+      C: [1, 0.42, 0.05],
+      F: 4, // print
+      CA: 1
+    });
+    const annotRef = context.register(annotDict);
+
+    let annots = page.node.lookup(PDFName.of('Annots'));
+    if (!annots) {
+      annots = context.obj([]);
+      page.node.set(PDFName.of('Annots'), annots);
+    }
+    annots.push(annotRef);
+  }
+
+  window.downloadPDF = async function (mode) {
+    downloadMenu.classList.remove('open');
     if (!pdfUrl || !pdfDoc) return;
+
+    // Solo original
+    if (mode === 'none') {
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = safeFilename('');
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.click();
+      showToast('PDF original');
+      return;
+    }
+
     downloadBtn.disabled = true;
-    showToast('Generando PDF con marcas…', 4000);
+    showToast('Generando PDF…', 5000);
 
     try {
       const res = await fetch(pdfUrl);
-      if (!res.ok) throw new Error('No se pudo obtener el PDF');
+      if (!res.ok) throw new Error('fetch PDF');
       const existingBytes = await res.arrayBuffer();
 
-      const { PDFDocument, rgb, StandardFonts } = PDFLib;
+      const { PDFDocument, rgb, PDFName } = PDFLib;
       const pdfLibDoc = await PDFDocument.load(existingBytes, { ignoreEncryption: true });
       const pages = pdfLibDoc.getPages();
-      const font = await pdfLibDoc.embedFont(StandardFonts.Helvetica);
 
       const colorMap = {
         yellow: rgb(1, 0.92, 0.23),
@@ -1714,6 +1959,9 @@
         pink: rgb(0.95, 0.6, 0.8)
       };
 
+      const wantHL = mode === 'highlights' || mode === 'all';
+      const wantNotes = mode === 'notes' || mode === 'all';
+
       for (const [pageKey, anns] of Object.entries(annotations)) {
         const pageIndex = parseInt(pageKey, 10) - 1;
         if (pageIndex < 0 || pageIndex >= pages.length || !Array.isArray(anns)) continue;
@@ -1721,66 +1969,59 @@
         const { width, height } = page.getSize();
 
         for (const ann of anns) {
-          if (ann.type === 'highlight' && ann.rects) {
+          if (wantHL && ann.type === 'highlight' && ann.rects) {
             const c = colorMap[ann.color] || colorMap.yellow;
             for (const r of ann.rects) {
-              // Normalizado (origen arriba) → PDF (origen abajo)
               const x = r.nx * width;
-              const w = r.nw * width;
-              const h = r.nh * height;
+              const w = Math.max(r.nw * width, 1);
+              const h = Math.max(r.nh * height, 1.5);
               const y = height - (r.ny * height) - h;
               page.drawRectangle({
-                x, y, width: w, height: Math.max(h, 2),
+                x, y, width: w, height: h,
                 color: c,
-                opacity: 0.35,
+                opacity: 0.32,
                 borderWidth: 0
               });
             }
-          } else if (ann.type === 'note') {
-            const nx = (ann.nx != null ? ann.nx : 0.05) * width;
-            const nyTop = (ann.ny != null ? ann.ny : 0.05) * height;
-            const noteY = height - nyTop - 14;
-            // Icono / marca
-            page.drawRectangle({
-              x: nx,
-              y: noteY,
-              width: 12,
-              height: 12,
-              color: rgb(1, 0.42, 0.05),
-              opacity: 0.9
-            });
-            const noteText = (ann.text || 'Nota').slice(0, 120);
-            page.drawText(noteText, {
-              x: nx + 16,
-              y: noteY + 2,
-              size: 8,
-              font,
-              color: rgb(0, 0.11, 0.24),
-              maxWidth: Math.min(220, width - nx - 24),
-              lineHeight: 10
-            });
+          }
+          if (wantNotes && ann.type === 'note') {
+            // Preferir margen derecho para no tapar el texto
+            let nx = (ann.nx != null ? ann.nx : 0.05);
+            let ny = (ann.ny != null ? ann.ny : 0.05);
+            // Si está muy centrado, empujar al margen derecho
+            if (nx > 0.15 && nx < 0.85) nx = 0.92;
+            const xPdf = Math.min(nx * width, width - 22);
+            const yPdf = height - (ny * height) - 18;
+            const content = (ann.text || 'Comentario de revisión').trim() || 'Comentario';
+            try {
+              addStickyNoteAnnotation(pdfLibDoc, page, page.ref, content, Math.max(4, xPdf), Math.max(4, yPdf));
+            } catch (noteErr) {
+              // Fallback visual mínimo si falla la anotación nativa
+              console.warn(noteErr);
+              page.drawRectangle({
+                x: Math.max(4, xPdf),
+                y: Math.max(4, yPdf),
+                width: 14,
+                height: 14,
+                color: rgb(1, 0.42, 0.05),
+                opacity: 0.85,
+                borderWidth: 0
+              });
+            }
           }
         }
       }
 
       const outBytes = await pdfLibDoc.save();
-      const blob = new Blob([outBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = (title || 'manuscrito').replace(/[^\wáéíóúñü\s\-]/gi, '_').trim().slice(0, 80) + '_revisado.pdf';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      showToast('PDF descargado con anotaciones');
+      const suffix = mode === 'highlights' ? '_resaltados' : (mode === 'notes' ? '_comentarios' : '_revisado');
+      triggerBlobDownload(outBytes, safeFilename(suffix));
+      showToast(mode === 'highlights' ? 'PDF con resaltados' : (mode === 'notes' ? 'PDF con comentarios' : 'PDF completo'));
     } catch (err) {
       console.error(err);
-      showToast('Error al generar PDF. Se descarga el original.');
-      // Fallback: original
+      showToast('Error al generar. Descargando original…');
       const a = document.createElement('a');
       a.href = pdfUrl;
-      a.download = (title || 'manuscrito') + '.pdf';
+      a.download = safeFilename('');
       a.target = '_blank';
       a.click();
     } finally {
