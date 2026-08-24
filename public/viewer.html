@@ -16,29 +16,31 @@
 
   <style>
     :root {
-      --oxford-blue: #001C3D;
-      --oxford-dark: #000F24;
-      --elsevier-orange: #FF6C0C;
-      --elsevier-hover: #E55A00;
-      --bg-reader: #EDF1F5;
+      /* Paleta institucional de alta gama */
+      --brand-navy: #002147;
+      --brand-accent: #E8572A;
+      --bg-reader: #E5E8EB;
       --bg-sidebar: #FFFFFF;
       --bg-paper: #FFFFFF;
-      --border-subtle: #E2E8F0;
-      --text-main: #1E293B;
-      --text-muted: #64748B;
-      --text-inverse: #F8FAFC;
-      --toolbar-height: 52px;
-      --sidebar-width: 320px;
-      --shadow-sm: 0 1px 2px rgba(0, 28, 61, 0.05);
-      --shadow-md: 0 4px 12px rgba(0, 28, 61, 0.08);
-      --shadow-paper: 0 2px 8px rgba(0, 0, 0, 0.04), 0 16px 32px rgba(0, 28, 61, 0.08);
-      --shadow-float: 0 12px 32px rgba(0, 28, 61, 0.15);
-      --transition-smooth: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-      /* Resaltados más suaves para no tapar el texto */
-      --highlight-yellow: rgba(253, 224, 71, 0.28);
-      --highlight-green: rgba(134, 239, 172, 0.28);
-      --highlight-blue: rgba(147, 197, 253, 0.28);
-      --highlight-pink: rgba(249, 168, 212, 0.28);
+      --border-hard: #D1D5DB;
+      --border-light: #E5E7EB;
+      --text-main: #111827;
+      --text-muted: #4B5563;
+      
+      /* Estructura rígida editorial */
+      --radius: 2px;
+      --toolbar-height: 54px;
+      --sidebar-width: 340px;
+      
+      /* Sombras planas y definidas */
+      --shadow-paper: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-dropdown: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      
+      /* Resaltados en tonos pastel secos */
+      --highlight-yellow: rgba(253, 224, 71, 0.4);
+      --highlight-green: rgba(134, 239, 172, 0.4);
+      --highlight-blue: rgba(147, 197, 253, 0.4);
+      --highlight-pink: rgba(249, 168, 212, 0.4);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
@@ -60,89 +62,155 @@
       flex-direction: column;
       color: var(--text-main);
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* ========== TOOLBAR ========== */
+    /* ========== TOOLBAR INSTITUCIONAL ========== */
     .pdf-toolbar {
-      background: var(--oxford-blue);
-      border-bottom: 2px solid var(--elsevier-orange);
-      color: var(--text-inverse);
-      padding: 0 10px;
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--border-hard);
+      color: var(--text-main);
+      padding: 0 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       z-index: 1000;
       height: var(--toolbar-height);
       min-height: var(--toolbar-height);
-      box-shadow: var(--shadow-md);
       flex-shrink: 0;
-      gap: 4px;
+      gap: 8px;
     }
 
     .brand-container {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-right: 12px;
-      padding-right: 12px;
-      border-right: 1px solid rgba(255,255,255,0.15);
+      gap: 12px;
+      margin-right: 16px;
+      padding-right: 16px;
+      border-right: 1px solid var(--border-light);
       flex-shrink: 0;
     }
+    
     .brand-logo {
-      width: 36px; height: 36px;
+      width: 32px; 
+      height: 32px;
       background-image: url('https://www.revistacienciasestudiantes.com/logo.png');
       background-size: contain;
       background-position: center;
       background-repeat: no-repeat;
-      border-radius: 6px;
     }
-    .brand-text { display: flex; flex-direction: column; }
-    .brand-title { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.95); line-height: 1.2; }
-    .brand-subtitle { font-size: 9px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.4px; }
+    
+    .brand-text { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 2px; 
+    }
+    
+    .brand-title { 
+      font-family: 'Lora', serif; 
+      font-size: 14px; 
+      font-weight: 600; 
+      color: var(--brand-navy); 
+      line-height: 1; 
+      letter-spacing: -0.01em;
+    }
+    
+    .brand-subtitle { 
+      font-family: 'Inter', sans-serif;
+      font-size: 9px; 
+      color: var(--text-muted); 
+      text-transform: uppercase; 
+      letter-spacing: 0.08em; 
+      font-weight: 500;
+    }
 
-    .toolbar-group { display: flex; align-items: center; gap: 2px; }
-    .toolbar-left { flex: 1; display: flex; align-items: center; min-width: 0; }
-    .toolbar-center { display: flex; justify-content: center; flex-shrink: 0; }
-    .toolbar-right { flex: 1; display: flex; justify-content: flex-end; gap: 4px; min-width: 0; }
+    .toolbar-group { 
+      display: flex; 
+      align-items: center; 
+      gap: 4px; 
+    }
+    
+    .toolbar-left { 
+      flex: 1; 
+      display: flex; 
+      align-items: center; 
+      min-width: 0; 
+    }
+    
+    .toolbar-center { 
+      display: flex; 
+      justify-content: center; 
+      flex-shrink: 0; 
+    }
+    
+    .toolbar-right { 
+      flex: 1; 
+      display: flex; 
+      justify-content: flex-end; 
+      gap: 8px; 
+      min-width: 0; 
+    }
 
+    /* Botones institucionales sin efectos rebote */
     .btn {
       background: transparent;
-      border: none;
-      color: rgba(255,255,255,0.8);
-      padding: 8px;
-      border-radius: 8px;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 6px;
+      border-radius: var(--radius);
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      font-family: inherit;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      transition: var(--transition-smooth);
-      min-width: 40px;
-      min-height: 40px;
-      -webkit-user-select: none;
-      user-select: none;
-      touch-action: manipulation;
+      transition: background 0.15s, color 0.15s;
+      min-width: 36px;
+      min-height: 36px;
     }
-    .btn:hover:not(:disabled) { background: rgba(255,255,255,0.12); color: #fff; }
-    .btn:active:not(:disabled) { transform: scale(0.94); background: rgba(255,255,255,0.18); }
-    .btn.active { background: rgba(255,108,12,0.25); color: var(--elsevier-orange); }
-    .btn-icon { width: 20px; height: 20px; flex-shrink: 0; }
+    
+    .btn:hover:not(:disabled) { 
+      background: #F3F4F6; 
+      color: var(--brand-navy); 
+    }
+    
+    .btn.active { 
+      color: var(--brand-accent); 
+      background: transparent;
+      border-bottom: 2px solid var(--brand-accent);
+      border-radius: 0;
+    }
+    
+    .btn-icon { 
+      width: 18px; 
+      height: 18px; 
+      flex-shrink: 0; 
+    }
+    
     .btn-primary {
-      background: var(--elsevier-orange);
-      color: white !important;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-weight: 500;
+      background: var(--brand-navy);
+      color: #FFFFFF !important;
+      padding: 6px 16px;
+      border-radius: var(--radius);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: 1px solid var(--brand-navy);
+      height: 34px;
     }
-    .btn-primary:hover:not(:disabled) { background: var(--elsevier-hover); }
-    .btn-primary:disabled { opacity: 0.5; cursor: wait; }
+    
+    .btn-primary:hover:not(:disabled) { 
+      background: #FFFFFF; 
+      color: var(--brand-navy) !important;
+    }
+    
+    .divider { 
+      width: 1px; 
+      height: 16px; 
+      background: var(--border-light); 
+      margin: 0 8px; 
+    }
 
-    .divider { width: 1px; height: 18px; background: rgba(255,255,255,0.2); margin: 0 4px; }
-
-    /* ========== LAYOUT ========== */
+    /* ========== LAYOUT PRINCIPAL ========== */
     .viewer-wrapper {
       flex: 1;
       display: flex;
@@ -154,242 +222,283 @@
     .pdf-sidebar {
       width: var(--sidebar-width);
       background: var(--bg-sidebar);
-      border-right: 1px solid var(--border-subtle);
+      border-right: 1px solid var(--border-hard);
       display: flex;
       flex-direction: column;
-      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      transition: transform 0.2s ease-in-out;
       flex-shrink: 0;
       z-index: 50;
-      box-shadow: var(--shadow-sm);
     }
-    .pdf-sidebar.hidden { transform: translateX(-100%); margin-right: calc(-1 * var(--sidebar-width)); }
+    
+    .pdf-sidebar.hidden { 
+      transform: translateX(-100%); 
+      margin-right: calc(-1 * var(--sidebar-width)); 
+    }
 
+    /* Pestañas de barra lateral rígidas */
     .sidebar-tabs {
       display: flex;
-      border-bottom: 1px solid var(--border-subtle);
-      background: #FAFAFA;
-      padding: 6px 8px 0;
-      gap: 2px;
+      border-bottom: 1px solid var(--border-hard);
+      background: #F9FAFB;
       flex-shrink: 0;
     }
+    
     .sidebar-tab {
       flex: 1;
-      padding: 12px 6px;
+      padding: 12px 0;
       background: transparent;
       border: none;
+      border-bottom: 2px solid transparent;
       cursor: pointer;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-muted);
-      border-radius: 6px 6px 0 0;
-      transition: var(--transition-smooth);
-      touch-action: manipulation;
-    }
-    .sidebar-tab:hover { color: var(--oxford-blue); }
-    .sidebar-tab.active {
-      color: var(--oxford-blue);
-      font-weight: 600;
-      background: var(--bg-sidebar);
-      box-shadow: 0 -2px 0 var(--elsevier-orange) inset;
-    }
-
-    .sidebar-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-    .sidebar-panel { display: none; padding: 20px; animation: fadeUp 0.25s ease; }
-    .sidebar-panel.active { display: block; }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .sidebar-section { margin-bottom: 24px; }
-    .sidebar-section h3 {
       font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      transition: color 0.15s;
+    }
+    
+    .sidebar-tab:hover { 
+      color: var(--brand-navy); 
+    }
+    
+    .sidebar-tab.active {
+      color: var(--brand-navy);
+      background: var(--bg-sidebar);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    .sidebar-content { 
+      flex: 1; 
+      overflow-y: auto; 
+      -webkit-overflow-scrolling: touch; 
+    }
+    
+    .sidebar-panel { 
+      display: none; 
+      padding: 24px 20px; 
+    }
+    
+    .sidebar-panel.active { 
+      display: block; 
+    }
+
+    .sidebar-section { 
+      margin-bottom: 32px; 
+    }
+    
+    .sidebar-section h3 {
+      font-size: 10px;
       text-transform: uppercase;
       color: var(--text-muted);
-      margin-bottom: 8px;
-      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+      letter-spacing: 0.1em;
       font-weight: 600;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 6px;
     }
 
     #docTitle {
       font-family: 'Lora', serif;
-      font-size: 15px;
-      line-height: 1.4;
-      color: var(--oxford-blue);
-      font-weight: 600;
+      font-size: 18px;
+      line-height: 1.35;
+      color: var(--text-main);
+      font-weight: 500;
+      margin-bottom: 16px;
     }
 
-    .doi-badge {
-      display: inline-flex;
-      background: #F8FAFC;
-      color: var(--oxford-blue);
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
+    /* Metadatos en formato lista de definición */
+    .meta-list {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+    
+    .meta-row:last-child { 
+      border-bottom: none; 
+    }
+    
+    .meta-label {
       font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    
+    .meta-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--brand-navy);
+      text-align: right;
+    }
+    
+    .doi-link {
+      color: var(--brand-navy);
       text-decoration: none;
-      border: 1px solid var(--border-subtle);
-      word-break: break-all;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 1px;
+      transition: border-color 0.15s;
     }
-    .doi-badge:hover { border-color: var(--elsevier-orange); color: var(--elsevier-orange); }
-
-    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .meta-card {
-      background: #F8FAFC;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border-subtle);
+    
+    .doi-link:hover { 
+      border-color: var(--brand-accent); 
+      color: var(--brand-accent); 
     }
-    .meta-card span { font-size: 10px; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 4px; }
-    .meta-card strong { font-size: 14px; color: var(--oxford-blue); font-family: 'JetBrains Mono', monospace; }
 
     .toc-item {
-      padding: 10px 10px;
+      padding: 8px 0;
       cursor: pointer;
       font-size: 13px;
       color: var(--text-main);
-      border-radius: 6px;
-      transition: var(--transition-smooth);
       display: flex;
       align-items: baseline;
-      gap: 10px;
+      gap: 12px;
       line-height: 1.4;
-      touch-action: manipulation;
+      border-bottom: 1px dashed var(--border-light);
     }
-    .toc-item:hover, .toc-item:active { background: #F1F5F9; color: var(--oxford-blue); }
-    .toc-level-1 { font-weight: 500; }
-    .toc-level-2 { padding-left: 18px; font-size: 12px; color: var(--text-muted); }
-    .toc-level-3 { padding-left: 32px; font-size: 12px; color: var(--text-muted); }
-    .toc-page { color: var(--text-muted); font-size: 11px; margin-left: auto; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
+    
+    .toc-item:hover { 
+      color: var(--brand-accent); 
+    }
+    
+    .toc-level-1 { 
+      font-weight: 500; 
+    }
+    
+    .toc-level-2 { 
+      padding-left: 16px; 
+      font-size: 12px; 
+      color: var(--text-muted); 
+    }
+    
+    .toc-level-3 { 
+      padding-left: 28px; 
+      font-size: 12px; 
+      color: var(--text-muted); 
+    }
+    
+    .toc-page { 
+      color: var(--text-muted); 
+      font-size: 11px; 
+      margin-left: auto; 
+      font-family: 'JetBrains Mono', monospace; 
+    }
 
-    /* ========== PDF CONTAINER ========== */
+    /* ========== CONTENEDOR PDF ========== */
     .pdf-container {
       flex: 1;
       overflow: auto;
-      padding: 24px 12px 80px;
+      padding: 32px 16px 80px;
       background: var(--bg-reader);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 28px;
-      scroll-behavior: smooth;
+      gap: 32px;
       -webkit-overflow-scrolling: touch;
-      min-width: 0;
-      overscroll-behavior-y: contain;
     }
 
     .pdf-page-wrapper {
       position: relative;
       background: var(--bg-paper);
       box-shadow: var(--shadow-paper);
-      border-radius: 2px;
+      border: 1px solid var(--border-hard);
       margin: 0 auto;
-      transition: box-shadow 0.3s ease;
       max-width: 100%;
     }
 
-    .pdf-canvas { display: block; border-radius: 2px; max-width: 100%; height: auto; }
-
-    /* Text layer — CSS alineado con pdf.js oficial (evita texto achatado en móvil) */
-    .textLayer {
-      position: absolute;
-      text-align: initial;
-      inset: 0;
-      overflow: hidden;
-      opacity: 1;
-      line-height: 1;
-      -webkit-text-size-adjust: none;
-      -moz-text-size-adjust: none;
-      text-size-adjust: none;
-      forced-color-adjust: none;
-      transform-origin: 0 0;
-      z-index: 2;
-      box-sizing: content-box;
-    }
-    .textLayer :is(span, br) {
-      color: transparent;
-      position: absolute;
-      white-space: pre;
-      cursor: text;
-      transform-origin: 0% 0%;
-      box-sizing: content-box;
-    }
-    .textLayer span.markedContent { top: 0; height: 0; }
-    /* Selección más visible en móvil */
-    .textLayer ::selection {
-      background: rgba(255, 108, 12, 0.45);
-      color: transparent;
-    }
-    .textLayer ::-moz-selection {
-      background: rgba(255, 108, 12, 0.45);
-      color: transparent;
-    }
-    .textLayer .endOfContent {
-      display: block;
-      position: absolute;
-      inset: 100% 0 0;
-      z-index: -1;
-      cursor: default;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-    .textLayer.selecting .endOfContent,
-    .textLayer .endOfContent.active { top: 0; }
-    /* Match de búsqueda activo */
-    .textLayer span.search-hit {
-      background: rgba(255, 200, 0, 0.55) !important;
-      border-radius: 2px;
-    }
-    .textLayer span.search-hit-active {
-      background: rgba(255, 108, 12, 0.65) !important;
-      outline: 2px solid var(--elsevier-orange);
-      outline-offset: 1px;
+    .pdf-canvas { 
+      display: block; 
+      max-width: 100%; 
+      height: auto; 
     }
 
-    /* Annotation layer */
-    .annotation-layer {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      pointer-events: none;
-      z-index: 3;
+    /* Capa de texto para selección */
+    .textLayer { 
+      position: absolute; 
+      text-align: initial; 
+      inset: 0; 
+      overflow: hidden; 
+      opacity: 1; 
+      line-height: 1; 
+      transform-origin: 0 0; 
+      z-index: 2; 
+      box-sizing: content-box; 
+    }
+    
+    .textLayer :is(span, br) { 
+      color: transparent; 
+      position: absolute; 
+      white-space: pre; 
+      cursor: text; 
+      transform-origin: 0% 0%; 
+    }
+    
+    .textLayer ::selection { 
+      background: rgba(232, 87, 42, 0.3); 
+      color: transparent; 
+    }
+    
+    .textLayer ::-moz-selection { 
+      background: rgba(232, 87, 42, 0.3); 
+      color: transparent; 
+    }
+    
+    /* Capa de anotaciones */
+    .annotation-layer { 
+      position: absolute; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      pointer-events: none; 
+      z-index: 3; 
+    }
+    
+    .annotation-highlight { 
+      position: absolute; 
+      mix-blend-mode: multiply; 
+      pointer-events: auto; 
+      cursor: pointer; 
+      z-index: 4; 
+    }
+    
+    .annotation-highlight.color-yellow { 
+      background: var(--highlight-yellow); 
+    }
+    
+    .annotation-highlight.color-green { 
+      background: var(--highlight-green); 
+    }
+    
+    .annotation-highlight.color-blue { 
+      background: var(--highlight-blue); 
+    }
+    
+    .annotation-highlight.color-pink { 
+      background: var(--highlight-pink); 
     }
 
-    .annotation-highlight {
-      position: absolute;
-      mix-blend-mode: multiply;
-      pointer-events: auto;
-      cursor: pointer;
-      border-radius: 1px;
-      z-index: 4;
-      transition: opacity 0.15s;
-    }
-    .annotation-highlight:hover { opacity: 0.7; }
-    .annotation-highlight.color-yellow { background: var(--highlight-yellow); }
-    .annotation-highlight.color-green { background: var(--highlight-green); }
-    .annotation-highlight.color-blue { background: var(--highlight-blue); }
-    .annotation-highlight.color-pink { background: var(--highlight-pink); }
-
+    /* Notas académicas sin aspecto de burbuja */
     .annotation-note {
       position: absolute;
-      background: #FFFAEB;
-      border-top: 3px solid var(--elsevier-orange);
-      border-radius: 2px 2px 8px 8px;
-      padding: 10px;
+      background: #FFFDF0;
+      border: 1px solid #EAB308;
+      border-top: 4px solid var(--brand-accent);
+      padding: 12px;
       pointer-events: auto;
-      width: 200px;
-      max-width: min(200px, 70vw);
-      box-shadow: var(--shadow-md);
+      width: 220px;
+      max-width: min(220px, 70vw);
+      box-shadow: var(--shadow-dropdown);
       z-index: 20;
-      transition: var(--transition-smooth);
       cursor: grab;
     }
-    .annotation-note:focus-within {
-      box-shadow: var(--shadow-float);
-      z-index: 21;
-      cursor: text;
-    }
+    
     .annotation-note textarea {
       width: 100%;
       border: none;
@@ -398,397 +507,216 @@
       font-family: 'Lora', serif;
       resize: none;
       min-height: 64px;
-      color: var(--oxford-blue);
-      line-height: 1.45;
+      color: var(--text-main);
+      line-height: 1.5;
     }
-    .annotation-note textarea:focus { outline: none; }
+    
+    .annotation-note textarea:focus { 
+      outline: none; 
+    }
 
     .annotation-delete {
       position: absolute;
-      top: -10px; right: -10px;
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      background: white;
-      color: #EF4444;
-      border: 1px solid var(--border-subtle);
-      box-shadow: var(--shadow-sm);
+      top: -12px; 
+      right: -12px;
+      width: 24px; 
+      height: 24px;
+      background: #FFFFFF;
+      color: #DC2626;
+      border: 1px solid var(--border-hard);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       opacity: 0;
-      transform: scale(0.85);
-      transition: var(--transition-smooth);
-      font-size: 18px;
+      font-size: 14px;
       line-height: 1;
-      touch-action: manipulation;
     }
+    
     .annotation-note:hover .annotation-delete,
-    .annotation-note:focus-within .annotation-delete { opacity: 1; transform: scale(1); }
-    .annotation-delete:hover { background: #EF4444; color: white; border-color: #EF4444; }
-
-    .pdf-link {
-      position: absolute;
-      z-index: 6;
-      cursor: pointer;
-      background: transparent;
-      touch-action: manipulation;
-      /* Área mínima táctil ~44px de alto en móvil */
-      min-height: 22px;
-    }
-    .pdf-link:hover, .pdf-link:active { background: rgba(255, 108, 12, 0.18); }
-
-    /* Destino temporal (flash al navegar) */
-    .dest-flash {
-      position: absolute;
-      z-index: 15;
-      pointer-events: none;
-      background: rgba(255, 108, 12, 0.22);
-      border: 2px solid var(--elsevier-orange);
-      border-radius: 3px;
-      box-shadow: 0 0 0 4px rgba(255, 108, 12, 0.15);
-      animation: destPulse 2.2s ease forwards;
-    }
-    @keyframes destPulse {
-      0% { opacity: 0; transform: scaleY(0.6); }
-      15% { opacity: 1; transform: scaleY(1); }
-      70% { opacity: 1; }
-      100% { opacity: 0; }
+    .annotation-note:focus-within .annotation-delete { 
+      opacity: 1; 
     }
 
-    /* ========== SEARCH (bottom sheet style) ========== */
+    /* ========== BUSCADOR ESTRUCTURADO ========== */
     .search-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 15, 36, 0.35);
+      background: rgba(17, 24, 39, 0.2);
       z-index: 1200;
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.25s ease, visibility 0.25s ease;
-      backdrop-filter: blur(2px);
+      transition: opacity 0.2s ease;
     }
-    .search-overlay.active { opacity: 1; visibility: visible; }
+    
+    .search-overlay.active { 
+      opacity: 1; 
+      visibility: visible; 
+    }
 
     .search-panel {
       position: fixed;
-      left: 0; right: 0; bottom: 0;
-      background: white;
-      border-radius: 16px 16px 0 0;
-      box-shadow: 0 -8px 32px rgba(0, 28, 61, 0.18);
+      top: var(--toolbar-height); 
+      right: 16px;
+      width: 320px;
+      background: #FFFFFF;
+      border: 1px solid var(--border-hard);
+      box-shadow: var(--shadow-dropdown);
       z-index: 1201;
-      transform: translateY(110%);
-      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-      max-height: min(70vh, 520px);
+      transform: translateY(-10px);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
       display: flex;
       flex-direction: column;
-      padding-bottom: var(--safe-bottom);
+      max-height: 400px;
     }
-    .search-panel.active { transform: translateY(0); }
-
-    .search-handle {
-      width: 36px;
-      height: 4px;
-      background: #CBD5E1;
-      border-radius: 2px;
-      margin: 10px auto 6px;
-      flex-shrink: 0;
+    
+    .search-panel.active { 
+      transform: translateY(0); 
+      opacity: 1; 
+      visibility: visible; 
     }
 
     .search-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 4px 16px 12px;
-      border-bottom: 1px solid var(--border-subtle);
-      flex-shrink: 0;
+      padding: 12px;
+      border-bottom: 1px solid var(--border-hard);
+      background: #F9FAFB;
     }
+    
     .search-input {
       flex: 1;
-      padding: 12px 14px;
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      font-size: 16px; /* evita zoom iOS */
+      padding: 8px 12px;
+      border: 1px solid var(--border-hard);
+      border-radius: var(--radius);
+      font-size: 13px;
       font-family: 'Inter', sans-serif;
-      background: #F8FAFC;
     }
-    .search-input:focus {
-      outline: none;
-      background: white;
-      border-color: var(--elsevier-orange);
-      box-shadow: 0 0 0 3px rgba(255, 108, 12, 0.12);
+    
+    .search-input:focus { 
+      outline: none; 
+      border-color: var(--brand-navy); 
     }
+    
     .search-close-btn {
-      background: #F1F5F9;
+      background: transparent;
       border: none;
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
+      padding: 8px;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       color: var(--text-muted);
-      flex-shrink: 0;
-      touch-action: manipulation;
     }
-    .search-close-btn:active { background: #E2E8F0; }
-
+    
     .search-results {
       flex: 1;
       overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      padding: 12px 16px 20px;
+      padding: 0;
     }
+    
     .search-result-item {
       padding: 12px;
       cursor: pointer;
-      border-radius: 8px;
-      margin-bottom: 4px;
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.5;
       color: var(--text-muted);
-      touch-action: manipulation;
+      border-bottom: 1px solid var(--border-light);
     }
-    .search-result-item strong { color: var(--oxford-blue); display: block; margin-bottom: 2px; font-size: 12px; }
-    .search-result-item:active, .search-result-item:hover { background: #F1F5F9; }
-    .search-result-item .highlight {
-      background: #FEF08A;
-      color: #854D0E;
-      font-weight: 500;
-      padding: 0 2px;
-      border-radius: 2px;
+    
+    .search-result-item strong { 
+      color: var(--brand-navy); 
+      display: block; 
+      font-size: 11px; 
+      margin-bottom: 4px; 
+      text-transform: uppercase; 
     }
-
-    /* Color picker */
-    .color-picker {
-      position: fixed;
-      top: calc(var(--toolbar-height) + 8px);
-      right: 12px;
-      background: white;
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      box-shadow: var(--shadow-md);
-      padding: 8px 10px;
-      display: none;
-      gap: 8px;
-      z-index: 100;
-      align-items: center;
-    }
-    .color-picker.active { display: flex; }
-    .color-option {
-      width: 26px; height: 26px;
-      border-radius: 50%;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: transform 0.1s;
-      touch-action: manipulation;
-    }
-    .color-option:hover, .color-option:active { transform: scale(1.12); }
-    .color-option.active { border-color: var(--oxford-blue); }
-
-    /* Loading */
-    .loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: var(--bg-reader);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      transition: opacity 0.4s ease, visibility 0.4s ease;
-    }
-    .spinner {
-      width: 40px; height: 40px;
-      border: 2px solid rgba(0, 28, 61, 0.1);
-      border-top: 2px solid var(--elsevier-orange);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 16px;
-    }
-    .loading-text { font-family: 'Lora', serif; color: var(--oxford-blue); font-size: 15px; font-style: italic; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      bottom: calc(24px + var(--safe-bottom));
-      left: 50%;
-      transform: translateX(-50%) translateY(16px);
-      background: var(--oxford-blue);
-      color: white;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 13px;
-      box-shadow: var(--shadow-float);
-      opacity: 0;
-      visibility: hidden;
-      transition: all 0.28s ease;
-      z-index: 2000;
-      max-width: 90vw;
-      text-align: center;
-      pointer-events: none;
-    }
-    .toast.show {
-      opacity: 1;
-      visibility: visible;
-      transform: translateX(-50%) translateY(0);
+    
+    .search-result-item:hover { 
+      background: #F9FAFB; 
     }
 
-    /* Selection action bar (móvil: resaltar tras seleccionar) */
-    .selection-bar {
-      position: fixed;
-      bottom: calc(16px + var(--safe-bottom));
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: white;
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      box-shadow: var(--shadow-float);
-      padding: 8px 10px;
-      display: flex;
-      gap: 6px;
-      z-index: 1100;
-      opacity: 0;
-      visibility: hidden;
-      transition: all 0.22s ease;
-      max-width: 96vw;
-    }
-    .selection-bar.show {
-      opacity: 1;
-      visibility: visible;
-      transform: translateX(-50%) translateY(0);
-    }
-    .selection-bar .btn-sel {
-      padding: 10px 14px;
-      border: none;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      font-family: inherit;
-      cursor: pointer;
-      touch-action: manipulation;
-      white-space: nowrap;
-    }
-    .btn-sel-hl { background: #FEF08A; color: #854D0E; }
-    .btn-sel-copy { background: #F1F5F9; color: var(--oxford-blue); }
-    .btn-sel-note { background: #FFEDD5; color: #9A3412; }
-
-    /* Scrollbars */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb {
-      background: #CBD5E1;
-      border-radius: 8px;
-      border: 2px solid var(--bg-reader);
-    }
-    .sidebar-content::-webkit-scrollbar-thumb { border-color: var(--bg-sidebar); }
-
-    /* ========== MOBILE ========== */
-    @media (max-width: 768px) {
-      :root { --toolbar-height: 56px; }
-
-      .text-hide-mobile { display: none !important; }
-      .brand-container { display: none; }
-      .divider { display: none; }
-
-      .pdf-toolbar {
-        padding: 0 6px;
-        gap: 2px;
-      }
-      .toolbar-left, .toolbar-right { flex: 0 0 auto; }
-      .toolbar-center { flex: 1; justify-content: center; }
-
-      .pdf-sidebar {
-        position: absolute;
-        left: 0; top: 0; bottom: 0;
-        height: 100%;
-        width: min(var(--sidebar-width), 88vw);
-        z-index: 200;
-        box-shadow: var(--shadow-float);
-      }
-      .pdf-sidebar.hidden {
-        transform: translateX(-105%);
-        margin-right: 0;
-      }
-
-      .sidebar-backdrop {
-        display: none;
-        position: absolute;
-        inset: 0;
-        background: rgba(0, 15, 36, 0.4);
-        z-index: 150;
-      }
-      .sidebar-backdrop.visible { display: block; }
-
-      .pdf-container { padding: 12px 6px 110px; gap: 16px; }
-      .toolbar-center .toolbar-group {
-        background: rgba(0,0,0,0.28);
-        padding: 3px;
-        border-radius: 12px;
-        gap: 0;
-      }
-      .btn {
-        min-width: 42px;
-        min-height: 42px;
-        padding: 8px;
-        border-radius: 10px;
-      }
-      .btn-primary {
-        padding: 8px 10px;
-        min-width: 42px;
-      }
-      #zoomLevel { width: 36px !important; font-size: 10px !important; }
-
-      .annotation-delete { opacity: 0.9; transform: scale(1); }
-
-      .pdf-link { min-height: 28px; }
-
-      /* Página no se comprime: ancho natural, scroll horizontal si hace falta */
-      .pdf-page-wrapper {
-        max-width: none;
-      }
-      .pdf-canvas {
-        max-width: none;
-      }
-    }
-
-    /* Menú de descarga */
+    /* ========== MENÚ DE DESCARGA ========== */
     .download-menu {
       position: fixed;
-      top: calc(var(--toolbar-height) + 6px);
-      right: 10px;
-      background: white;
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      box-shadow: var(--shadow-float);
+      top: calc(var(--toolbar-height) + 4px);
+      right: 16px;
+      background: #FFFFFF;
+      border: 1px solid var(--border-hard);
+      box-shadow: var(--shadow-dropdown);
       z-index: 1300;
-      min-width: 220px;
-      padding: 6px;
+      min-width: 240px;
       display: none;
       flex-direction: column;
-      gap: 2px;
     }
-    .download-menu.open { display: flex; }
+    
+    .download-menu.open { 
+      display: flex; 
+    }
+    
     .download-menu button {
       background: transparent;
       border: none;
+      border-bottom: 1px solid var(--border-light);
       text-align: left;
-      padding: 12px 14px;
-      border-radius: 8px;
+      padding: 12px 16px;
       font-size: 13px;
       font-family: inherit;
       color: var(--text-main);
       cursor: pointer;
-      touch-action: manipulation;
     }
-    .download-menu button:hover,
-    .download-menu button:active { background: #F1F5F9; }
-    .download-menu button strong { display: block; font-weight: 600; color: var(--oxford-blue); }
-    .download-menu button span { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    
+    .download-menu button:last-child { 
+      border-bottom: none; 
+    }
+    
+    .download-menu button:hover { 
+      background: #F9FAFB; 
+      color: var(--brand-navy); 
+    }
+    
+    .download-menu button strong { 
+      display: block; 
+      font-weight: 600; 
+      font-size: 12px; 
+      margin-bottom: 2px; 
+    }
+    
+    .download-menu button span { 
+      display: block; 
+      font-size: 11px; 
+      color: var(--text-muted); 
+    }
 
-    @media (min-width: 769px) {
-      .sidebar-backdrop { display: none !important; }
+    /* ========== AJUSTES MÓVILES ========== */
+    @media (max-width: 768px) {
+      .brand-container { 
+        display: none; 
+      }
+      
+      .pdf-sidebar {
+        position: absolute; 
+        left: 0; 
+        top: 0; 
+        bottom: 0;
+        height: 100%; 
+        width: 85vw;
+        border-right: 1px solid var(--border-hard);
+        box-shadow: 10px 0 20px rgba(0,0,0,0.1);
+      }
+      
+      .btn { 
+        min-width: 44px; 
+        min-height: 44px; 
+      }
+      
+      .search-panel { 
+        top: 0; 
+        right: 0; 
+        width: 100%; 
+        height: 100%; 
+        max-height: none; 
+        transform: translateY(-100%); 
+      }
     }
   </style>
 </head>
@@ -804,10 +732,10 @@
       </div>
     </div>
     <div class="toolbar-group">
-      <button class="btn" onclick="toggleSidebar()" title="Panel" aria-label="Panel lateral">
+      <button class="btn" onclick="toggleSidebar()" title="Índice y Metadatos">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"></path></svg>
       </button>
-      <button class="btn" onclick="toggleSearch()" title="Buscar" aria-label="Buscar">
+      <button class="btn" onclick="toggleSearch()" title="Buscar en el documento">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path></svg>
       </button>
     </div>
@@ -815,141 +743,97 @@
 
   <div class="toolbar-center">
     <div class="toolbar-group">
-      <button class="btn active" id="selectTool" onclick="setTool('select')" title="Seleccionar (V)" aria-label="Seleccionar texto">
+      <button class="btn active" id="selectTool" onclick="setTool('select')" title="Seleccionar texto">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5"></path></svg>
       </button>
-      <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Resaltar (H)" aria-label="Resaltar">
-        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.89l12.683-12.683zM16.862 4.487L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path></svg>
-      </button>
-      <button class="btn" id="noteTool" onclick="setTool('note')" title="Nota (N)" aria-label="Nota">
-        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"></path></svg>
+      <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Resaltar">
+        <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.89l12.683-12.683z"></path></svg>
       </button>
     </div>
   </div>
 
   <div class="toolbar-right">
     <div class="toolbar-group">
-      <button class="btn" onclick="zoomOut()" title="Alejar" aria-label="Alejar">
+      <button class="btn" onclick="zoomOut()" title="Alejar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"></path></svg>
       </button>
-      <span style="font-size:11px;font-family:'JetBrains Mono';width:40px;text-align:center;color:rgba(255,255,255,0.85);" id="zoomLevel">100%</span>
-      <button class="btn" onclick="zoomIn()" title="Acercar" aria-label="Acercar">
+      <span style="font-size:11px;font-family:'JetBrains Mono';width:40px;text-align:center;color:var(--text-muted);" id="zoomLevel">100%</span>
+      <button class="btn" onclick="zoomIn()" title="Acercar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"></path></svg>
       </button>
     </div>
-    <button class="btn btn-primary" id="downloadBtn" onclick="toggleDownloadMenu(event)" title="Descargar" aria-label="Descargar" aria-haspopup="true">
-      <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
-      <span class="text-hide-mobile">Descargar</span>
+    <div class="divider"></div>
+    <button class="btn-primary" id="downloadBtn" onclick="toggleDownloadMenu(event)">
+      Descargar
     </button>
   </div>
 </header>
 
-<div class="download-menu" id="downloadMenu" role="menu">
+<div class="download-menu" id="downloadMenu">
   <button type="button" onclick="downloadPDF('none')">
-    <strong>PDF original</strong>
-    <span>Sin marcas ni comentarios</span>
-  </button>
-  <button type="button" onclick="downloadPDF('highlights')">
-    <strong>Solo resaltados</strong>
-    <span>Marcas de color sobre el texto</span>
-  </button>
-  <button type="button" onclick="downloadPDF('notes')">
-    <strong>Solo comentarios</strong>
-    <span>Notas adhesivas (icono + popup)</span>
+    <strong>Manuscrito Original</strong>
+    <span>Versión limpia, sin anotaciones</span>
   </button>
   <button type="button" onclick="downloadPDF('all')">
-    <strong>Todo</strong>
-    <span>Resaltados + comentarios</span>
+    <strong>Documento con Notas</strong>
+    <span>Incluye marcas y comentarios del lector</span>
   </button>
-</div>
-
-<div class="color-picker" id="colorPicker">
-  <span style="font-size:11px;color:var(--text-muted);">Color</span>
-  <div class="color-option active" style="background:#FDE047;" data-color="yellow" onclick="selectHighlightColor('yellow', this)"></div>
-  <div class="color-option" style="background:#86EFAC;" data-color="green" onclick="selectHighlightColor('green', this)"></div>
-  <div class="color-option" style="background:#93C5FD;" data-color="blue" onclick="selectHighlightColor('blue', this)"></div>
-  <div class="color-option" style="background:#F9A8D4;" data-color="pink" onclick="selectHighlightColor('pink', this)"></div>
 </div>
 
 <div class="viewer-wrapper">
-  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
   <aside class="pdf-sidebar" id="pdfSidebar">
     <div class="sidebar-tabs">
-      <button class="sidebar-tab active" onclick="switchSidebarTab('info', this)">Info</button>
+      <button class="sidebar-tab active" onclick="switchSidebarTab('info', this)">Metadatos</button>
       <button class="sidebar-tab" onclick="switchSidebarTab('toc', this)">Índice</button>
-      <button class="sidebar-tab" onclick="switchSidebarTab('annotations', this)">Marcas</button>
     </div>
     <div class="sidebar-content">
       <div class="sidebar-panel active" id="panel-info">
+        
+        <h2 id="docTitle">Cargando Título del Manuscrito...</h2>
+        
         <div class="sidebar-section">
-          <h3>Título</h3>
-          <p id="docTitle">Cargando…</p>
-        </div>
-        <div class="sidebar-section">
-          <h3>DOI</h3>
-          <a href="#" class="doi-badge" id="docDoi" target="_blank" rel="noopener">DOI no registrado</a>
-        </div>
-        <div class="sidebar-section">
-          <h3>Propiedades</h3>
-          <div class="meta-grid">
-            <div class="meta-card"><span>Páginas</span><strong id="docPages">—</strong></div>
-            <div class="meta-card"><span>Marcas</span><strong id="annotationCount">0</strong></div>
+          <h3>Información de Publicación</h3>
+          <div class="meta-list">
+            <div class="meta-row">
+              <span class="meta-label">Páginas</span>
+              <span class="meta-value" id="docPages">—</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">DOI</span>
+              <span class="meta-value"><a href="#" class="doi-link" id="docDoi" target="_blank">Pendiente</a></span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Anotaciones</span>
+              <span class="meta-value" id="annotationCount">0</span>
+            </div>
           </div>
         </div>
-        <div class="sidebar-section">
-          <h3>Consejos</h3>
-          <p style="font-size:12px;color:var(--text-muted);line-height:1.65;">
-            Selecciona texto y usa la barra inferior para resaltar o copiar.<br>
-            En móvil, mantén pulsado para seleccionar.
-          </p>
-        </div>
+        
       </div>
       <div class="sidebar-panel" id="panel-toc">
-        <div class="sidebar-section">
-          <div id="tocContent">
-            <p style="color:var(--text-muted);font-style:italic;font-size:13px;">Procesando índice…</p>
-          </div>
-        </div>
-      </div>
-      <div class="sidebar-panel" id="panel-annotations">
-        <div class="sidebar-section">
-          <div id="annotationsList">
-            <p style="color:var(--text-muted);font-style:italic;font-size:13px;">Sin marcas aún.</p>
-          </div>
+        <div id="tocContent">
+          <p style="color:var(--text-muted);font-style:italic;font-size:12px;">Generando estructura...</p>
         </div>
       </div>
     </div>
   </aside>
 
   <main class="pdf-container" id="pdfContainer">
-    <div class="loading-overlay" id="loading">
-      <div class="spinner"></div>
-      <div class="loading-text">Preparando entorno de lectura…</div>
-    </div>
+    <!-- El script del canvas de PDF JS inyectará las páginas aquí -->
   </main>
 </div>
 
-<!-- Buscador tipo bottom sheet -->
-<div class="search-overlay" id="searchOverlay" onclick="closeSearch();clearSearchHighlights();"></div>
-<div class="search-panel" id="searchPanel" role="dialog" aria-label="Buscar en el documento">
-  <div class="search-handle"></div>
+<!-- Buscador Rígido -->
+<div class="search-overlay" id="searchOverlay" onclick="closeSearch()"></div>
+<div class="search-panel" id="searchPanel">
   <div class="search-header">
-    <input type="search" class="search-input" id="searchInput" placeholder="Buscar en el manuscrito…" enterkeyhint="search" autocomplete="off">
-    <button class="search-close-btn" onclick="closeSearch()" aria-label="Cerrar búsqueda">
+    <input type="search" class="search-input" id="searchInput" placeholder="Buscar en el texto completo..." autocomplete="off">
+    <button class="search-close-btn" onclick="closeSearch()">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
   </div>
   <div class="search-results" id="searchResults"></div>
 </div>
-
-<!-- Barra de selección (móvil / desktop) -->
-<div class="selection-bar" id="selectionBar">
-  <button class="btn-sel btn-sel-hl" onclick="highlightCurrentSelection()">Resaltar</button>
-  <button class="btn-sel btn-sel-copy" onclick="copyCurrentSelection()">Copiar</button>
-  <button class="btn-sel btn-sel-note" onclick="noteFromSelection()">Nota</button>
-</div>
-
-<div class="toast" id="toast"></div>
 
 <script>
 (function () {
