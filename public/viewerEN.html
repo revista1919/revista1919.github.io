@@ -493,29 +493,57 @@
     </main>
   </div>
   
-  <script>
-    // ========== CONFIGURATION ==========
+<script>
+    // ========== CONFIGURACIÓN ==========
     const urlParams = new URLSearchParams(window.location.search);
-    const pdfUrl = urlParams.get('url') || urlParams.get('pdf');
+    let pdfUrl = urlParams.get('url') || urlParams.get('pdf');
     const doi = urlParams.get('doi') || '';
-    const title = urlParams.get('title') || 'Academic document';
+    const title = urlParams.get('title') || 'Documento académico';
     
-    // ========== STATE ==========
+    // ========== ESTADO ==========
     let pdfDoc = null;
     let pageNum = 1;
     let scale = 1.25;
     let pageRendering = false;
     let pageNumPending = null;
     let sidebarVisible = true;
+    let useIframeFallback = false;
     
-    // ========== INITIALIZATION ==========
+    // ========== NORMALIZACIÓN DE URL ==========
+    function normalizePdfUrl(url) {
+      if (!url) return url;
+      
+      const currentHost = window.location.hostname;
+      
+      // Dominios equivalentes
+      const domainMap = {
+        'revista1919.github.io': currentHost,
+        'www.revistacienciasestudiantes.com': currentHost,
+        'revistacienciasestudiantes.com': currentHost
+      };
+      
+      // Reemplazar cualquier dominio equivalente con el host actual
+      for (const [fromDomain, toDomain] of Object.entries(domainMap)) {
+        if (url.includes(fromDomain)) {
+          url = url.replace(fromDomain, toDomain);
+          break;
+        }
+      }
+      
+      return url;
+    }
+    
+    // Normalizar URL al cargar
+    pdfUrl = normalizePdfUrl(pdfUrl);
+    
+    // ========== INICIALIZACIÓN ==========
     if (!pdfUrl) {
-      showError('Error: No valid document specified in the URL.');
+      showError('Error: No se ha especificado un documento válido en la URL.');
     } else {
-      // Configure PDF.js
+      // Configurar PDF.js
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       
-      // Update sidebar information
+      // Actualizar información en sidebar
       document.getElementById('docTitle').textContent = title;
       if (doi) {
         const doiLink = document.getElementById('docDoi');
@@ -523,37 +551,87 @@
         doiLink.textContent = 'https://doi.org/' + doi;
       }
       
-      // Load PDF
+      // Intentar cargar con PDF.js primero
+      loadWithPdfJs();
+    }
+    
+    // ========== ESTRATEGIA 1: PDF.js ==========
+    function loadWithPdfJs() {
       pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
         pdfDoc = pdf;
         document.getElementById('totalPages').textContent = pdf.numPages;
         document.getElementById('docPages').textContent = pdf.numPages;
         document.getElementById('pageInput').max = pdf.numPages;
         
-        // Calculate document size
         calculateDocSize(pdfUrl);
-        
-        // Hide loader
         hideLoading();
-        
-        // Render first page
         renderPage(pageNum);
       }).catch(function(error) {
-        showError('PDF reading error:<br>' + error.message);
+        console.log('PDF.js falló, usando iframe:', error);
+        loadWithIframe();
       });
     }
     
-    // ========== RENDERING FUNCTIONS ==========
+    // ========== ESTRATEGIA 2: Iframe directo ==========
+    function loadWithIframe() {
+      useIframeFallback = true;
+      
+      const container = document.getElementById('pdfContainer');
+      const loading = document.getElementById('loading');
+      
+      // Ocultar loading
+      if (loading) loading.style.display = 'none';
+      
+      // Limpiar contenedor
+      container.innerHTML = '';
+      
+      // Crear iframe
+      const iframe = document.createElement('iframe');
+      iframe.src = pdfUrl;
+      iframe.style.width = '100%';
+      iframe.style.height = '100%';
+      iframe.style.border = 'none';
+      iframe.setAttribute('frameborder', '0');
+      iframe.setAttribute('allowfullscreen', 'true');
+      
+      // Agregar al contenedor
+      container.appendChild(iframe);
+      
+      // Deshabilitar controles de paginación (el iframe tiene los suyos)
+      document.getElementById('prevPage').disabled = true;
+      document.getElementById('nextPage').disabled = true;
+      document.getElementById('pageInput').disabled = true;
+      
+      // Mostrar mensaje
+      const message = document.createElement('div');
+      message.style.cssText = 'position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; z-index: 100;';
+      message.textContent = 'Usando visor nativo del navegador';
+      container.appendChild(message);
+      
+      // Actualizar estadísticas
+      document.getElementById('docPages').textContent = 'N/D';
+      document.getElementById('docSize').textContent = 'No disponible';
+    }
+    
+    // ========== ESTRATEGIA 3: Abrir en nueva pestaña ==========
+    function openInNewTab() {
+      window.open(pdfUrl, '_blank');
+    }
+    
+    // ========== FUNCIONES DE RENDERIZADO (solo PDF.js) ==========
     function renderPage(num) {
+      if (useIframeFallback) return;
+      
       pageRendering = true;
       
       pdfDoc.getPage(num).then(function(page) {
         const canvas = document.getElementById('pdfCanvas');
+        if (!canvas) return;
+        
         const ctx = canvas.getContext('2d');
         
         const viewport = page.getViewport({ scale: scale });
         
-        // High-DPI support for retina displays
         const outputScale = window.devicePixelRatio || 1;
         
         canvas.width = Math.floor(viewport.width * outputScale);
@@ -575,12 +653,10 @@
         renderTask.promise.then(function() {
           pageRendering = false;
           
-          // Update UI
           document.getElementById('pageInput').value = num;
           document.getElementById('prevPage').disabled = (num <= 1);
           document.getElementById('nextPage').disabled = (num >= pdfDoc.numPages);
           
-          // Scroll to top
           document.getElementById('pdfContainer').scrollTop = 0;
           
           if (pageNumPending !== null) {
@@ -588,6 +664,9 @@
             pageNumPending = null;
           }
         });
+      }).catch(function(error) {
+        console.error('Error renderizando página:', error);
+        loadWithIframe();
       });
     }
     
@@ -599,9 +678,9 @@
       }
     }
     
-    // ========== NAVIGATION ==========
+    // ========== NAVEGACIÓN ==========
     function changePage(delta) {
-      if (!pdfDoc) return;
+      if (!pdfDoc || useIframeFallback) return;
       const newPage = pageNum + delta;
       if (newPage >= 1 && newPage <= pdfDoc.numPages) {
         pageNum = newPage;
@@ -610,7 +689,7 @@
     }
     
     function goToPage() {
-      if (!pdfDoc) return;
+      if (!pdfDoc || useIframeFallback) return;
       const input = document.getElementById('pageInput');
       const newPage = parseInt(input.value);
       if (newPage >= 1 && newPage <= pdfDoc.numPages) {
@@ -627,19 +706,21 @@
     }
     
     function zoomIn() {
+      if (useIframeFallback) return;
       scale = Math.min(scale + 0.25, 4.0);
       updateZoomText();
       if (pdfDoc) queueRenderPage(pageNum);
     }
     
     function zoomOut() {
+      if (useIframeFallback) return;
       scale = Math.max(scale - 0.25, 0.5);
       updateZoomText();
       if (pdfDoc) queueRenderPage(pageNum);
     }
     
     function fitToWidth() {
-      if (!pdfDoc) return;
+      if (!pdfDoc || useIframeFallback) return;
       const container = document.getElementById('pdfContainer');
       const containerWidth = container.clientWidth - 80;
       
@@ -651,9 +732,16 @@
       });
     }
     
-    // ========== UTILITIES ==========
+    // ========== UTILIDADES ==========
     function downloadPDF() {
-      window.open(pdfUrl, '_blank');
+      // Usar enlace directo de descarga
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = title.replace(/[^a-z0-9]/gi, '_') + '.pdf';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
     
     function goBack() {
@@ -672,17 +760,29 @@
     
     function showError(message) {
       const loader = document.getElementById('loading');
+      if (!loader) return;
+      
       loader.innerHTML = '<div class="error-msg">' + message + '</div>';
+      
+      // Agregar botón para abrir en nueva pestaña
+      const btnContainer = document.createElement('div');
+      btnContainer.style.marginTop = '20px';
+      btnContainer.innerHTML = '<button onclick="openInNewTab()" style="background: #FF6C0C; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600;">Abrir PDF en nueva pestaña</button>';
+      loader.appendChild(btnContainer);
     }
     
     function hideLoading() {
       const loader = document.getElementById('loading');
-      loader.style.opacity = '0';
-      setTimeout(() => loader.style.display = 'none', 300);
+      if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => {
+          if (loader) loader.style.display = 'none';
+        }, 300);
+      }
     }
     
     function calculateDocSize(url) {
-      fetch(url).then(response => {
+      fetch(url, { method: 'HEAD' }).then(response => {
         if (response.ok) {
           const size = response.headers.get('Content-Length');
           if (size) {
@@ -690,18 +790,21 @@
             const sizeMB = (size / (1024 * 1024)).toFixed(2);
             document.getElementById('docSize').textContent = 
               size > 1024 * 1024 ? sizeMB + ' MB' : sizeKB + ' KB';
+          } else {
+            document.getElementById('docSize').textContent = 'No disponible';
           }
+        } else {
+          document.getElementById('docSize').textContent = 'No disponible';
         }
       }).catch(() => {
-        document.getElementById('docSize').textContent = 'Not available';
+        document.getElementById('docSize').textContent = 'No disponible';
       });
     }
     
-    // ========== KEYBOARD SHORTCUTS ==========
+    // ========== ATAJOS DE TECLADO ==========
     document.addEventListener('keydown', function(e) {
-      if (!pdfDoc) return;
+      if (!pdfDoc || useIframeFallback) return;
       
-      // Don't interfere with page input
       if (document.activeElement.id === 'pageInput') {
         if (e.key === 'Enter') {
           goToPage();
@@ -738,17 +841,11 @@
           queueRenderPage(pdfDoc.numPages);
           e.preventDefault();
           break;
-        case 'f':
-          if (e.ctrlKey || e.metaKey) {
-            alert('Text search: Coming soon');
-            e.preventDefault();
-          }
-          break;
       }
     });
     
-    // ========== FINAL INITIALIZATION ==========
+    // ========== INICIALIZACIÓN FINAL ==========
     updateZoomText();
-  </script>
+</script>
 </body>
 </html>
