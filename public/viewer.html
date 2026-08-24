@@ -5,58 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Visor Académico - Revista Nacional de las Ciencias para Estudiantes</title>
 
-  <!-- PDF.js desde CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-  <!-- Fuentes académicas premium -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      /* Paleta Institucional Premium */
       --oxford-blue: #001C3D;
       --oxford-dark: #000F24;
       --elsevier-orange: #FF6C0C;
       --elsevier-hover: #E55A00;
-      
-      /* Fondos y Superficies */
       --bg-reader: #EDF1F5;
       --bg-sidebar: #FFFFFF;
       --bg-paper: #FFFFFF;
       --border-subtle: #E2E8F0;
-      
-      /* Tipografía */
       --text-main: #1E293B;
       --text-muted: #64748B;
       --text-inverse: #F8FAFC;
-      
-      /* Dimensiones */
       --toolbar-height: 52px;
       --sidebar-width: 340px;
-      
-      /* Sombras Académicas (Dispersión suave) */
       --shadow-sm: 0 1px 2px rgba(0, 28, 61, 0.05);
       --shadow-md: 0 4px 12px rgba(0, 28, 61, 0.08);
       --shadow-paper: 0 2px 8px rgba(0, 0, 0, 0.04), 0 16px 32px rgba(0, 28, 61, 0.08);
       --shadow-float: 0 12px 32px rgba(0, 28, 61, 0.15);
-      
-      /* Transiciones */
       --transition-smooth: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-      
-      /* Colores de Anotación */
-      --highlight-yellow: rgba(253, 224, 71, 0.4);
-      --highlight-green: rgba(134, 239, 172, 0.4);
-      --highlight-blue: rgba(147, 197, 253, 0.4);
-      --highlight-pink: rgba(249, 168, 212, 0.4);
+      --highlight-yellow: rgba(253, 224, 71, 0.45);
+      --highlight-green: rgba(134, 239, 172, 0.45);
+      --highlight-blue: rgba(147, 197, 253, 0.45);
+      --highlight-pink: rgba(249, 168, 212, 0.45);
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -69,7 +50,6 @@
       color: var(--text-main);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      user-select: none;
     }
 
     /* BARRA SUPERIOR */
@@ -87,7 +67,6 @@
       flex-shrink: 0;
     }
 
-    /* Identidad de la Revista */
     .brand-container {
       display: flex;
       align-items: center;
@@ -108,12 +87,7 @@
       flex-shrink: 0;
     }
 
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
+    .brand-text { display: flex; flex-direction: column; justify-content: center; }
     .brand-title {
       font-size: 12px;
       font-weight: 600;
@@ -121,7 +95,6 @@
       line-height: 1.2;
       color: rgba(255, 255, 255, 0.95);
     }
-
     .brand-subtitle {
       font-size: 10px;
       font-weight: 400;
@@ -130,12 +103,7 @@
       letter-spacing: 0.5px;
     }
 
-    .toolbar-group {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
+    .toolbar-group { display: flex; align-items: center; gap: 4px; }
     .toolbar-left { flex: 1; display: flex; align-items: center; }
     .toolbar-center { display: flex; justify-content: center; }
     .toolbar-right { flex: 1; display: flex; justify-content: flex-end; gap: 8px; }
@@ -155,24 +123,13 @@
       gap: 6px;
       transition: var(--transition-smooth);
     }
-
-    .btn:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.1);
-      color: #ffffff;
-    }
+    .btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
     .btn:active:not(:disabled) { transform: scale(0.96); }
-    
     .btn.active {
-      background: rgba(255, 108, 12, 0.15);
+      background: rgba(255, 108, 12, 0.2);
       color: var(--elsevier-orange);
     }
-    
-    .btn-icon {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-    }
-    
+    .btn-icon { width: 18px; height: 18px; flex-shrink: 0; }
     .btn-primary {
       background: var(--elsevier-orange);
       color: white !important;
@@ -208,10 +165,7 @@
       z-index: 50;
       box-shadow: var(--shadow-sm);
     }
-
-    .pdf-sidebar.hidden {
-      margin-left: calc(-1 * var(--sidebar-width));
-    }
+    .pdf-sidebar.hidden { margin-left: calc(-1 * var(--sidebar-width)); }
 
     .sidebar-tabs {
       display: flex;
@@ -232,9 +186,7 @@
       color: var(--text-muted);
       border-radius: 6px 6px 0 0;
       transition: var(--transition-smooth);
-      position: relative;
     }
-
     .sidebar-tab:hover { color: var(--oxford-blue); background: rgba(0,0,0,0.02); }
     .sidebar-tab.active {
       color: var(--oxford-blue);
@@ -243,12 +195,7 @@
       box-shadow: 0 -2px 0 var(--elsevier-orange) inset;
     }
 
-    .sidebar-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0;
-    }
-
+    .sidebar-content { flex: 1; overflow-y: auto; padding: 0; }
     .sidebar-panel { display: none; padding: 24px; animation: fadeUp 0.3s ease; }
     .sidebar-panel.active { display: block; }
 
@@ -267,7 +214,6 @@
       font-weight: 600;
     }
 
-    /* Tipografía refinada para títulos */
     #docTitle {
       font-family: 'Lora', serif;
       font-size: 16px;
@@ -292,21 +238,26 @@
     }
     .doi-badge:hover { border-color: var(--elsevier-orange); color: var(--elsevier-orange); }
 
-    .meta-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .meta-card {
       background: #F8FAFC;
       padding: 12px;
       border-radius: 6px;
       border: 1px solid var(--border-subtle);
     }
-    .meta-card span { font-size: 10px; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 4px;}
-    .meta-card strong { font-size: 14px; color: var(--oxford-blue); font-family: 'JetBrains Mono', monospace; }
+    .meta-card span {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .meta-card strong {
+      font-size: 14px;
+      color: var(--oxford-blue);
+      font-family: 'JetBrains Mono', monospace;
+    }
 
-    /* Índice / TOC */
     .toc-item {
       padding: 6px 10px;
       cursor: pointer;
@@ -322,7 +273,13 @@
     .toc-item:hover { background: #F1F5F9; color: var(--oxford-blue); }
     .toc-level-1 { font-weight: 500; }
     .toc-level-2 { padding-left: 20px; font-size: 12px; color: var(--text-muted); }
-    .toc-page { color: var(--text-muted); font-size: 11px; margin-left: auto; font-family: 'JetBrains Mono', monospace; }
+    .toc-level-3 { padding-left: 36px; font-size: 12px; color: var(--text-muted); }
+    .toc-page {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+    }
 
     /* CONTENEDOR DEL PDF */
     .pdf-container {
@@ -348,47 +305,77 @@
 
     .pdf-canvas { display: block; border-radius: 2px; }
 
-    /* CAPAS (Texto y Anotaciones) */
-    .text-layer {
+    /* ========== TEXT LAYER (PDF.js oficial + mejoras) ========== */
+    .textLayer {
+      position: absolute;
+      text-align: initial;
+      inset: 0;
+      overflow: hidden;
+      opacity: 1;
+      line-height: 1;
+      -webkit-text-size-adjust: none;
+      -moz-text-size-adjust: none;
+      text-size-adjust: none;
+      forced-color-adjust: none;
+      transform-origin: 0 0;
+      z-index: 2;
+    }
+
+    .textLayer span,
+    .textLayer br {
+      color: transparent;
+      position: absolute;
+      white-space: pre;
+      cursor: text;
+      transform-origin: 0% 0%;
+    }
+
+    /* Selección nativa del navegador */
+    .textLayer ::selection {
+      background: rgba(255, 108, 12, 0.35);
+    }
+    .textLayer ::-moz-selection {
+      background: rgba(255, 108, 12, 0.35);
+    }
+
+    /* endOfContent: evita que la selección se expanda a toda la página */
+    .textLayer .endOfContent {
+      display: block;
+      position: absolute;
+      inset: 100% 0 0;
+      z-index: -1;
+      cursor: default;
+      user-select: none;
+    }
+    .textLayer.selecting .endOfContent {
+      top: 0;
+    }
+
+    /* ========== CAPA DE ANOTACIONES ========== */
+    .annotation-layer {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      opacity: 0.25;
-      pointer-events: auto;
-      z-index: 5;
-      line-height: 1.0;
-      white-space: pre;
-      transform-origin: 0 0;
-      mix-blend-mode: multiply;
-      user-select: text;
-      -webkit-user-select: text;
-      cursor: text;
+      pointer-events: none;
+      z-index: 3;
     }
-    .text-layer ::selection { background: rgba(255, 108, 12, 0.3); }
-    .text-layer span { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
-
-    .annotation-layer {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      pointer-events: none; z-index: 10;
-    }
-    .annotation-layer.active { pointer-events: auto; }
 
     .annotation-highlight {
       position: absolute;
       mix-blend-mode: multiply;
       pointer-events: auto;
       cursor: pointer;
-      border-radius: 3px;
-      z-index: 15;
-      transition: opacity 0.2s;
+      border-radius: 2px;
+      z-index: 4;
+      transition: opacity 0.15s;
     }
-    .annotation-highlight:hover { opacity: 0.7; }
-    .annotation-highlight.color-yellow { background: var(--highlight-yellow); border-bottom: 2px solid #EAB308; }
-    .annotation-highlight.color-green { background: var(--highlight-green); border-bottom: 2px solid #22C55E; }
-    .annotation-highlight.color-blue { background: var(--highlight-blue); border-bottom: 2px solid #3B82F6; }
-    .annotation-highlight.color-pink { background: var(--highlight-pink); border-bottom: 2px solid #EC4899; }
+    .annotation-highlight:hover { opacity: 0.75; }
+    .annotation-highlight.color-yellow { background: var(--highlight-yellow); }
+    .annotation-highlight.color-green { background: var(--highlight-green); }
+    .annotation-highlight.color-blue { background: var(--highlight-blue); }
+    .annotation-highlight.color-pink { background: var(--highlight-pink); }
 
-    /* Notas estilo Post-it Académico */
+    /* Notas estilo Post-it */
     .annotation-note {
       position: absolute;
       background: #FFFAEB;
@@ -420,7 +407,7 @@
       line-height: 1.5;
     }
     .annotation-note textarea:focus { outline: none; }
-    
+
     .annotation-delete {
       position: absolute;
       top: -12px; right: -12px;
@@ -431,7 +418,9 @@
       border: 1px solid var(--border-subtle);
       box-shadow: var(--shadow-sm);
       cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       opacity: 0;
       transform: scale(0.8);
       transition: var(--transition-smooth);
@@ -441,25 +430,39 @@
     .annotation-note:hover .annotation-delete { opacity: 1; transform: scale(1); }
     .annotation-delete:hover { background: #EF4444; color: white; border-color: #EF4444; }
 
-    /* BUSCADOR PREMIUM */
+    /* Enlaces del PDF */
+    .pdf-link {
+      position: absolute;
+      z-index: 5;
+      cursor: pointer;
+      background: transparent;
+    }
+    .pdf-link:hover { background: rgba(255, 108, 12, 0.12); }
+
+    /* BUSCADOR */
     .search-bar {
-      opacity: 0; visibility: hidden;
+      opacity: 0;
+      visibility: hidden;
       transform: translateX(-50%) translateY(-10px);
       position: absolute;
       top: calc(var(--toolbar-height) + 16px);
       left: 50%;
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.97);
       backdrop-filter: blur(12px);
       border: 1px solid var(--border-subtle);
       border-radius: 12px;
       box-shadow: var(--shadow-float);
       padding: 16px;
       z-index: 1100;
-      width: 400px;
+      width: 420px;
       transition: var(--transition-smooth);
     }
-    .search-bar.active { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
-    
+    .search-bar.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
     .search-input-group { display: flex; gap: 8px; margin-bottom: 12px; }
     .search-input {
       flex: 1;
@@ -472,45 +475,79 @@
       transition: var(--transition-smooth);
     }
     .search-input:focus {
-      outline: none; background: white;
+      outline: none;
+      background: white;
       border-color: var(--elsevier-orange);
       box-shadow: 0 0 0 3px rgba(255, 108, 12, 0.1);
     }
-    
-    .search-results { max-height: 300px; overflow-y: auto; padding-right: 4px; }
+
+    .search-results { max-height: 320px; overflow-y: auto; padding-right: 4px; }
     .search-result-item {
-      padding: 10px; cursor: pointer; border-radius: 6px;
-      border: 1px solid transparent; margin-bottom: 4px;
-      font-size: 12px; line-height: 1.5; color: var(--text-muted);
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      margin-bottom: 4px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-muted);
     }
-    .search-result-item strong { color: var(--oxford-blue); display: block; margin-bottom: 2px; }
+    .search-result-item strong {
+      color: var(--oxford-blue);
+      display: block;
+      margin-bottom: 2px;
+    }
     .search-result-item:hover { background: #F1F5F9; }
-    .search-result-item .highlight { background: #FEF08A; color: #854D0E; font-weight: 500; padding: 0 2px; border-radius: 2px; }
+    .search-result-item .highlight {
+      background: #FEF08A;
+      color: #854D0E;
+      font-weight: 500;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
 
     /* SELECTOR DE COLOR */
     .color-picker {
-      position: fixed; top: 70px; right: 24px;
-      background: white; border: 1px solid var(--border-subtle);
-      border-radius: 8px; box-shadow: var(--shadow-md);
-      padding: 8px; display: none; gap: 6px; z-index: 100;
+      position: fixed;
+      top: 70px;
+      right: 24px;
+      background: white;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      box-shadow: var(--shadow-md);
+      padding: 8px;
+      display: none;
+      gap: 6px;
+      z-index: 100;
+      align-items: center;
     }
     .color-picker.active { display: flex; }
     .color-option {
-      width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
-      border: 2px solid transparent; transition: transform 0.1s;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.1s;
     }
     .color-option:hover { transform: scale(1.15); }
     .color-option.active { border-color: var(--oxford-blue); }
 
-    /* LOADING ELEGANTE */
+    /* LOADING */
     .loading-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: var(--bg-reader);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      z-index: 9999; transition: opacity 0.4s ease, visibility 0.4s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
     }
     .spinner {
-      width: 40px; height: 40px;
+      width: 40px;
+      height: 40px;
       border: 2px solid rgba(0, 28, 61, 0.1);
       border-top: 2px solid var(--elsevier-orange);
       border-radius: 50%;
@@ -520,28 +557,51 @@
     .loading-text {
       font-family: 'Lora', serif;
       color: var(--oxford-blue);
-      font-size: 15px; font-style: italic;
+      font-size: 15px;
+      font-style: italic;
     }
     @keyframes spin { 100% { transform: rotate(360deg); } }
 
-    /* SCROLLBAR PREMIUM */
+    /* SCROLLBAR */
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
-      background: #CBD5E1; border-radius: 10px;
+      background: #CBD5E1;
+      border-radius: 10px;
       border: 3px solid var(--bg-reader);
     }
     ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
     .sidebar-content::-webkit-scrollbar-thumb { border-color: var(--bg-sidebar); }
 
-    .internal-link { pointer-events: auto !important; cursor: pointer !important; }
-    .internal-link:hover { background: rgba(255, 108, 12, 0.15); }
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--oxford-blue);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      box-shadow: var(--shadow-float);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      z-index: 2000;
+    }
+    .toast.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
 
     @media (max-width: 768px) {
       .text-hide-mobile { display: none; }
       .brand-container { display: none; }
       .pdf-sidebar { position: absolute; height: 100%; z-index: 100; }
-      .search-bar { width: 90%; left: 5%; }
+      .search-bar { width: 90%; left: 5%; transform: translateY(-10px); }
+      .search-bar.active { transform: translateY(0); }
     }
   </style>
 </head>
@@ -556,12 +616,11 @@
         <span class="brand-subtitle">Visor de Manuscritos</span>
       </div>
     </div>
-    
     <div class="toolbar-group">
       <button class="btn" onclick="toggleSidebar()" title="Panel lateral">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"></path></svg>
       </button>
-      <button class="btn" onclick="toggleSearch()" title="Buscar en documento">
+      <button class="btn" onclick="toggleSearch()" title="Buscar (Ctrl+F)">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path></svg>
         <span class="text-hide-mobile">Buscar</span>
       </button>
@@ -570,13 +629,13 @@
 
   <div class="toolbar-center">
     <div class="toolbar-group" style="background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px;">
-      <button class="btn" id="selectTool" onclick="setTool('select')" title="Seleccionar">
+      <button class="btn active" id="selectTool" onclick="setTool('select')" title="Seleccionar texto (V)">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5"></path></svg>
       </button>
-      <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Subrayar">
+      <button class="btn" id="highlightTool" onclick="setTool('highlight')" title="Resaltar texto seleccionado (H)">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.89l12.683-12.683zM16.862 4.487L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path></svg>
       </button>
-      <button class="btn" id="noteTool" onclick="setTool('note')" title="Nota al margen">
+      <button class="btn" id="noteTool" onclick="setTool('note')" title="Nota al margen (N)">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"></path></svg>
       </button>
     </div>
@@ -587,13 +646,13 @@
       <button class="btn" onclick="zoomOut()" title="Alejar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"></path></svg>
       </button>
-      <span style="font-size: 12px; font-family: 'JetBrains Mono'; width: 44px; text-align: center;" id="zoomLevel">125%</span>
+      <span style="font-size: 12px; font-family: 'JetBrains Mono'; width: 48px; text-align: center;" id="zoomLevel">125%</span>
       <button class="btn" onclick="zoomIn()" title="Acercar">
         <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"></path></svg>
       </button>
     </div>
     <div class="divider"></div>
-    <button class="btn btn-primary" onclick="downloadAnnotatedPDF()" title="Exportar PDF">
+    <button class="btn btn-primary" onclick="downloadAnnotated()" title="Descargar PDF + revisiones">
       <svg class="btn-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
       <span class="text-hide-mobile">Descargar</span>
     </button>
@@ -602,17 +661,18 @@
 
 <div class="search-bar" id="searchBar">
   <div class="search-input-group">
-    <input type="text" class="search-input" id="searchInput" placeholder="Término de búsqueda..." onkeyup="handleSearch(event)">
+    <input type="text" class="search-input" id="searchInput" placeholder="Término de búsqueda..." autocomplete="off">
     <button class="btn btn-primary" onclick="performSearch()">Buscar</button>
   </div>
   <div class="search-results" id="searchResults"></div>
 </div>
 
 <div class="color-picker" id="colorPicker">
-  <div class="color-option active" style="background: var(--highlight-yellow);" data-color="yellow" onclick="selectHighlightColor('yellow', this)"></div>
-  <div class="color-option" style="background: var(--highlight-green);" data-color="green" onclick="selectHighlightColor('green', this)"></div>
-  <div class="color-option" style="background: var(--highlight-blue);" data-color="blue" onclick="selectHighlightColor('blue', this)"></div>
-  <div class="color-option" style="background: var(--highlight-pink);" data-color="pink" onclick="selectHighlightColor('pink', this)"></div>
+  <span style="font-size:11px;color:var(--text-muted);margin-right:4px;">Color:</span>
+  <div class="color-option active" style="background:#FDE047;" data-color="yellow" onclick="selectHighlightColor('yellow', this)"></div>
+  <div class="color-option" style="background:#86EFAC;" data-color="green" onclick="selectHighlightColor('green', this)"></div>
+  <div class="color-option" style="background:#93C5FD;" data-color="blue" onclick="selectHighlightColor('blue', this)"></div>
+  <div class="color-option" style="background:#F9A8D4;" data-color="pink" onclick="selectHighlightColor('pink', this)"></div>
 </div>
 
 <div class="viewer-wrapper">
@@ -622,7 +682,6 @@
       <button class="sidebar-tab" onclick="switchSidebarTab('toc', this)">Estructura</button>
       <button class="sidebar-tab" onclick="switchSidebarTab('annotations', this)">Revisiones</button>
     </div>
-
     <div class="sidebar-content">
       <div class="sidebar-panel active" id="panel-info">
         <div class="sidebar-section">
@@ -646,8 +705,15 @@
             </div>
           </div>
         </div>
+        <div class="sidebar-section">
+          <h3>Atajos de teclado</h3>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.7;">
+            <kbd>V</kbd> Seleccionar · <kbd>H</kbd> Resaltar<br>
+            <kbd>N</kbd> Nota · <kbd>Ctrl+F</kbd> Buscar<br>
+            <kbd>Esc</kbd> Cerrar búsqueda
+          </p>
+        </div>
       </div>
-
       <div class="sidebar-panel" id="panel-toc">
         <div class="sidebar-section">
           <div id="tocContent">
@@ -655,7 +721,6 @@
           </div>
         </div>
       </div>
-
       <div class="sidebar-panel" id="panel-annotations">
         <div class="sidebar-section">
           <div id="annotationsList">
@@ -674,681 +739,791 @@
   </main>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-  (function() {
-    // Parámetros
-    const urlParams = new URLSearchParams(window.location.search);
-    let pdfUrl = urlParams.get('url') || urlParams.get('pdf');
-    const doi = urlParams.get('doi') || '';
-    const title = urlParams.get('title') || 'Manuscrito sin título';
+(function () {
+  'use strict';
 
-    // Estado global
-    let pdfDoc = null;
-    let scale = 1.25;
-    let currentTool = 'select';
-    let currentHighlightColor = 'yellow';
-    let annotations = JSON.parse(localStorage.getItem('pdfAnnotations') || '{}');
-    let renderedPages = new Set();
-    let pageTextContentCache = {};
+  // ---------- Parámetros URL ----------
+  const urlParams = new URLSearchParams(window.location.search);
+  let pdfUrl = urlParams.get('url') || urlParams.get('pdf');
+  const doi = urlParams.get('doi') || '';
+  const title = urlParams.get('title') || 'Manuscrito sin título';
+  const storageKey = 'pdfAnnotations_' + (pdfUrl || 'default').slice(-80);
 
-    // Normalizar URL
-    function normalizeUrl(url) {
-      if (!url) return url;
-      const currentHost = window.location.hostname;
-      const domains = ['revista1919.github.io', 'www.revistacienciasestudiantes.com', 'revistacienciasestudiantes.com'];
-      for (const domain of domains) {
-        if (url.includes(domain)) {
-          url = url.replace(domain, currentHost);
-          break;
+  // ---------- Estado ----------
+  let pdfDoc = null;
+  let scale = 1.25;
+  let currentTool = 'select';
+  let currentHighlightColor = 'yellow';
+  let annotations = {};
+  try {
+    annotations = JSON.parse(localStorage.getItem(storageKey) || '{}');
+  } catch (e) { annotations = {}; }
+  let renderedPages = new Set();
+  let pageTextContentCache = {};
+  let pageViewports = {}; // pageNum -> viewport at current scale
+
+  // ---------- Normalizar URL (dominios de la revista) ----------
+  function normalizeUrl(url) {
+    if (!url) return url;
+    const currentHost = window.location.hostname;
+    const domains = ['revista1919.github.io', 'www.revistacienciasestudiantes.com', 'revistacienciasestudiantes.com'];
+    for (const domain of domains) {
+      if (url.includes(domain)) {
+        url = url.replace(domain, currentHost);
+        break;
+      }
+    }
+    return url;
+  }
+  pdfUrl = normalizeUrl(pdfUrl);
+
+  // ---------- PDF.js worker ----------
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  // ---------- DOM ----------
+  const pdfContainer = document.getElementById('pdfContainer');
+  const loadingOverlay = document.getElementById('loading');
+  const docTitleEl = document.getElementById('docTitle');
+  const docDoiEl = document.getElementById('docDoi');
+  const docPagesEl = document.getElementById('docPages');
+  const annotationCountEl = document.getElementById('annotationCount');
+  const tocContentEl = document.getElementById('tocContent');
+  const annotationsListEl = document.getElementById('annotationsList');
+  const zoomLevelEl = document.getElementById('zoomLevel');
+  const searchBarEl = document.getElementById('searchBar');
+  const searchInputEl = document.getElementById('searchInput');
+  const searchResultsEl = document.getElementById('searchResults');
+  const colorPickerEl = document.getElementById('colorPicker');
+  const toastEl = document.getElementById('toast');
+
+  docTitleEl.textContent = title;
+  if (doi) {
+    docDoiEl.href = 'https://doi.org/' + doi;
+    docDoiEl.textContent = 'doi.org/' + doi;
+  }
+
+  // ---------- Toast ----------
+  function showToast(msg, ms) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
+  }
+
+  // ---------- Intersection Observer (lazy render) ----------
+  const pageObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const pageNum = parseInt(entry.target.dataset.page, 10);
+        if (!renderedPages.has(pageNum)) {
+          renderPage(pageNum, entry.target);
         }
       }
-      return url;
+    });
+  }, { root: pdfContainer, rootMargin: '150% 0px', threshold: 0 });
+
+  // ---------- Carga ----------
+  if (!pdfUrl) {
+    loadingOverlay.innerHTML =
+      '<div style="color:var(--oxford-blue);font-family:Lora,serif;">Se requiere URL del documento (?url=... o ?pdf=...).</div>';
+  } else {
+    loadPdf();
+  }
+
+  function loadPdf() {
+    loadingOverlay.querySelector('.loading-text').textContent = 'Cargando manuscrito...';
+    pdfjsLib.getDocument({
+      url: pdfUrl,
+      withCredentials: false,
+      cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+      cMapPacked: true
+    }).promise.then(function (pdf) {
+      pdfDoc = pdf;
+      docPagesEl.textContent = pdf.numPages + ' págs';
+      createPageContainers();
+      loadOutline();
+      setTimeout(() => {
+        loadingOverlay.style.opacity = '0';
+        loadingOverlay.style.visibility = 'hidden';
+      }, 400);
+    }).catch(function (error) {
+      console.error(error);
+      loadingOverlay.innerHTML =
+        '<div style="color:#D32F2F;font-family:Lora,serif;max-width:420px;text-align:center;">Error de lectura documental:<br><small>' +
+        (error.message || error) + '</small></div>';
+    });
+  }
+
+  function createPageContainers() {
+    // Desconectar observer anterior
+    pageObserver.disconnect();
+    pdfContainer.innerHTML = '';
+    renderedPages.clear();
+    pageTextContentCache = {};
+    pageViewports = {};
+
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      const pageWrapper = document.createElement('div');
+      pageWrapper.className = 'pdf-page-wrapper';
+      pageWrapper.id = 'page-' + i;
+      pageWrapper.dataset.page = String(i);
+      // Placeholder aproximado A4
+      pageWrapper.style.width = Math.floor(595 * scale) + 'px';
+      pageWrapper.style.height = Math.floor(842 * scale) + 'px';
+      pdfContainer.appendChild(pageWrapper);
+      pageObserver.observe(pageWrapper);
     }
-    pdfUrl = normalizeUrl(pdfUrl);
+    setTool(currentTool);
+    updateAnnotationCount();
+    updateAnnotationsList();
+  }
 
-    // Configurar PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  // ---------- Render de página ----------
+  async function renderPage(pageNum, wrapperElement) {
+    if (renderedPages.has(pageNum)) return;
+    renderedPages.add(pageNum);
 
-    // Referencias DOM
-    const pdfContainer = document.getElementById('pdfContainer');
-    const loadingOverlay = document.getElementById('loading');
-    const docTitleEl = document.getElementById('docTitle');
-    const docDoiEl = document.getElementById('docDoi');
-    const docPagesEl = document.getElementById('docPages');
-    const annotationCountEl = document.getElementById('annotationCount');
-    const tocContentEl = document.getElementById('tocContent');
-    const annotationsListEl = document.getElementById('annotationsList');
-    const zoomLevelEl = document.getElementById('zoomLevel');
-    const searchBarEl = document.getElementById('searchBar');
-    const searchInputEl = document.getElementById('searchInput');
-    const searchResultsEl = document.getElementById('searchResults');
-    const colorPickerEl = document.getElementById('colorPicker');
+    try {
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: scale });
+      const outputScale = window.devicePixelRatio || 1;
 
-    // Establecer título y DOI
-    docTitleEl.textContent = title;
-    if (doi) {
-      docDoiEl.href = 'https://doi.org/' + doi;
-      docDoiEl.textContent = 'doi.org/' + doi;
-    }
+      pageViewports[pageNum] = viewport;
 
-    // Intersection Observer para lazy rendering
-    const pageObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const pageNum = parseInt(entry.target.dataset.page);
-          if (!renderedPages.has(pageNum)) {
-            renderPage(pageNum, entry.target);
-          }
-        }
-      });
-    }, { root: pdfContainer, rootMargin: '120% 0px', threshold: 0 });
+      wrapperElement.style.width = Math.floor(viewport.width) + 'px';
+      wrapperElement.style.height = Math.floor(viewport.height) + 'px';
+      wrapperElement.innerHTML = '';
 
-    // Cargar PDF
-    if (!pdfUrl) {
-      loadingOverlay.innerHTML = '<div style="color:var(--oxford-blue); font-family:Lora;">Se requiere URL del documento.</div>';
-    } else {
-      loadPdf();
-    }
+      // 1. Canvas
+      const canvas = document.createElement('canvas');
+      canvas.className = 'pdf-canvas';
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
+      canvas.style.width = Math.floor(viewport.width) + 'px';
+      canvas.style.height = Math.floor(viewport.height) + 'px';
+      wrapperElement.appendChild(canvas);
 
-    function loadPdf() {
-      pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
-        pdfDoc = pdf;
-        docPagesEl.textContent = pdf.numPages;
-        createPageContainers();
-        loadOutline();
-        setTimeout(() => {
-          loadingOverlay.style.opacity = '0';
-          loadingOverlay.style.visibility = 'hidden';
-        }, 500);
-      }).catch(function(error) {
-        loadingOverlay.innerHTML = '<div style="color:#D32F2F; font-family:Lora;">Error de lectura documental: ' + error.message + '</div>';
-      });
-    }
+      const ctx = canvas.getContext('2d', { alpha: false });
+      const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
 
-    function createPageContainers() {
-      pdfContainer.innerHTML = '';
-      renderedPages.clear();
-      pageTextContentCache = {};
+      await page.render({
+        canvasContext: ctx,
+        transform: transform,
+        viewport: viewport
+      }).promise;
 
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const pageWrapper = document.createElement('div');
-        pageWrapper.className = 'pdf-page-wrapper';
-        pageWrapper.id = 'page-' + i;
-        pageWrapper.dataset.page = i;
-        pageWrapper.style.width = (800 * scale) + "px";
-        pageWrapper.style.height = (1035 * scale) + "px";
-        pdfContainer.appendChild(pageWrapper);
-        pageObserver.observe(pageWrapper);
-      }
-      setTool(currentTool);
-      updateAnnotationCount();
-      updateAnnotationsList();
-    }
+      // 2. Text layer (selección de texto)
+      const textLayerDiv = document.createElement('div');
+      textLayerDiv.className = 'textLayer';
+      textLayerDiv.style.width = Math.floor(viewport.width) + 'px';
+      textLayerDiv.style.height = Math.floor(viewport.height) + 'px';
+      // Variable CSS que usa el text layer moderno de pdf.js
+      textLayerDiv.style.setProperty('--scale-factor', String(scale));
+      wrapperElement.appendChild(textLayerDiv);
 
-    // Renderizar página completa con canvas + textLayer + anotaciones
-    async function renderPage(pageNum, wrapperElement) {
-      renderedPages.add(pageNum);
+      const textContent = await page.getTextContent();
+      pageTextContentCache[pageNum] = textContent.items
+        .map(item => item.str)
+        .join(' ');
+
+      // endOfContent (mejora selección, evita expansión a toda la página)
+      const endOfContent = document.createElement('div');
+      endOfContent.className = 'endOfContent';
+      textLayerDiv.appendChild(endOfContent);
 
       try {
-        const page = await pdfDoc.getPage(pageNum);
-        const viewport = page.getViewport({ scale: scale });
-        const outputScale = window.devicePixelRatio || 1;
-
-        wrapperElement.style.width = Math.floor(viewport.width) + "px";
-        wrapperElement.style.height = Math.floor(viewport.height) + "px";
-
-        // Limpiar contenido previo
-        wrapperElement.innerHTML = '';
-
-        // 1. Canvas
-        const canvas = document.createElement('canvas');
-        canvas.className = 'pdf-canvas';
-        canvas.width = Math.floor(viewport.width * outputScale);
-        canvas.height = Math.floor(viewport.height * outputScale);
-        canvas.style.width = Math.floor(viewport.width) + "px";
-        canvas.style.height = Math.floor(viewport.height) + "px";
-        wrapperElement.appendChild(canvas);
-
-        const ctx = canvas.getContext('2d');
-        const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
-
-        await page.render({ canvasContext: ctx, transform: transform, viewport: viewport }).promise;
-
-        // 2. Text layer (para selección y copiado)
-        const textLayerDiv = document.createElement('div');
-        textLayerDiv.className = 'text-layer';
-        textLayerDiv.style.width = Math.floor(viewport.width) + "px";
-        textLayerDiv.style.height = Math.floor(viewport.height) + "px";
-        wrapperElement.appendChild(textLayerDiv);
-
-        const textContent = await page.getTextContent();
-        pageTextContentCache[pageNum] = textContent.items.map(item => item.str).join(' ');
-
-        // Renderizar textLayer usando pdf.js
-        pdfjsLib.renderTextLayer({
+        await pdfjsLib.renderTextLayer({
           textContentSource: textContent,
           container: textLayerDiv,
           viewport: viewport,
           textDivs: []
-        }).promise.then(() => {
-          // Convertir spans en enlaces si es necesario
-          const spans = textLayerDiv.querySelectorAll('span');
-          spans.forEach(span => {
-            if (span.textContent.includes('http') || span.textContent.includes('www.')) {
-              span.style.pointerEvents = 'auto';
-              span.style.cursor = 'pointer';
-              span.classList.add('internal-link');
-            }
-          });
-        }).catch(() => {
-          console.warn('Text layer rendering issue for page', pageNum);
-        });
-
-        // 3. Annotation layer
-        const annotationLayer = document.createElement('div');
-        annotationLayer.className = 'annotation-layer';
-        annotationLayer.id = 'annotations-' + pageNum;
-        if (currentTool !== 'select') annotationLayer.classList.add('active');
-        wrapperElement.appendChild(annotationLayer);
-
-        // Cargar anotaciones existentes para esta página
-        loadAnnotationsForPage(pageNum);
-
-        // 4. Procesar enlaces internos y externos
-        await processPageLinks(pageNum, page, viewport);
-      } catch (err) {
-        console.warn('Render error page ' + pageNum, err);
+        }).promise;
+      } catch (tlErr) {
+        console.warn('Text layer issue page', pageNum, tlErr);
       }
-    }
 
-    // Procesar enlaces internos y externos
-    async function processPageLinks(pageNum, page, viewport) {
-      try {
-        const annotations = await page.getAnnotations();
-        const wrapper = document.getElementById('page-' + pageNum);
-        
-        annotations.forEach(annotation => {
-          if (annotation.subtype === 'Link' && annotation.url) {
-            // Enlace externo
-            const linkElement = document.createElement('a');
-            linkElement.href = annotation.url;
-            linkElement.target = '_blank';
-            linkElement.className = 'internal-link';
-            linkElement.style.position = 'absolute';
-            linkElement.style.left = annotation.rect[0] + 'px';
-            linkElement.style.top = annotation.rect[1] + 'px';
-            linkElement.style.width = (annotation.rect[2] - annotation.rect[0]) + 'px';
-            linkElement.style.height = (annotation.rect[3] - annotation.rect[1]) + 'px';
-            linkElement.style.zIndex = '25';
-            linkElement.style.pointerEvents = 'auto';
-            linkElement.style.cursor = 'pointer';
-            linkElement.title = annotation.url;
-            wrapper.appendChild(linkElement);
-          } else if (annotation.subtype === 'Link' && annotation.dest) {
-            // Enlace interno
-            const linkElement = document.createElement('div');
-            linkElement.className = 'internal-link';
-            linkElement.style.position = 'absolute';
-            linkElement.style.left = annotation.rect[0] + 'px';
-            linkElement.style.top = annotation.rect[1] + 'px';
-            linkElement.style.width = (annotation.rect[2] - annotation.rect[0]) + 'px';
-            linkElement.style.height = (annotation.rect[3] - annotation.rect[1]) + 'px';
-            linkElement.style.zIndex = '25';
-            linkElement.style.pointerEvents = 'auto';
-            linkElement.style.cursor = 'pointer';
-            
-            let targetPage = pageNum;
-            if (typeof annotation.dest === 'string') {
-              // Resolver destino por nombre
-              try {
-                pdfDoc.getDestination(annotation.dest).then(function(dest) {
-                  if (dest && dest[0]) {
-                    pdfDoc.getPageIndex(dest[0]).then(function(pageIndex) {
-                      targetPage = pageIndex + 1;
-                      linkElement.onclick = function() {
-                        scrollToPage(targetPage);
-                      };
-                      linkElement.title = 'Ir a página ' + targetPage;
-                    });
-                  }
-                });
-              } catch(e) {
-                console.warn('Error resolving link destination', e);
-              }
-            } else if (Array.isArray(annotation.dest) && annotation.dest[0]) {
-              try {
-                pdfDoc.getPageIndex(annotation.dest[0]).then(function(pageIndex) {
-                  targetPage = pageIndex + 1;
-                  linkElement.onclick = function() {
-                    scrollToPage(targetPage);
-                  };
-                  linkElement.title = 'Ir a página ' + targetPage;
-                });
-              } catch(e) {
-                console.warn('Error resolving link destination', e);
-              }
-            }
-            
-            wrapper.appendChild(linkElement);
-          }
-        });
-      } catch(e) {
-        console.warn('Error processing links for page', pageNum, e);
-      }
-    }
-
-    // Cargar outline/índice
-    function loadOutline() {
-      pdfDoc.getOutline().then(function(outline) {
-        if (!outline || outline.length === 0) {
-          tocContentEl.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">Estructura no disponible.</p>';
-          return;
-        }
-        let html = '';
-        const processOutlineItems = async function(items) {
-          for (const item of items) {
-            html += await renderOutlineItem(item, 1);
-          }
-        };
-        
-        processOutlineItems(outline).then(() => {
-          tocContentEl.innerHTML = html;
-        });
-      }).catch(() => {
-        tocContentEl.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">Índice no disponible.</p>';
+      // Mejorar selección: class "selecting" al arrastrar
+      textLayerDiv.addEventListener('mousedown', () => {
+        textLayerDiv.classList.add('selecting');
       });
-    }
+      document.addEventListener('mouseup', () => {
+        textLayerDiv.classList.remove('selecting');
+      }, { once: true });
 
-    async function renderOutlineItem(item, level) {
+      // 3. Annotation layer
+      const annotationLayer = document.createElement('div');
+      annotationLayer.className = 'annotation-layer';
+      annotationLayer.id = 'annotations-' + pageNum;
+      wrapperElement.appendChild(annotationLayer);
+
+      loadAnnotationsForPage(pageNum);
+
+      // 4. Enlaces del PDF (internos / externos)
+      await processPageLinks(pageNum, page, viewport, wrapperElement);
+
+    } catch (err) {
+      console.warn('Render error page ' + pageNum, err);
+      renderedPages.delete(pageNum);
+    }
+  }
+
+  // ---------- Enlaces ----------
+  async function processPageLinks(pageNum, page, viewport, wrapper) {
+    try {
+      const annots = await page.getAnnotations({ intent: 'display' });
+      annots.forEach(annotation => {
+        if (annotation.subtype !== 'Link') return;
+
+        // rect en coordenadas PDF → viewport
+        const rect = viewport.convertToViewportRectangle(annotation.rect);
+        const left = Math.min(rect[0], rect[2]);
+        const top = Math.min(rect[1], rect[3]);
+        const width = Math.abs(rect[0] - rect[2]);
+        const height = Math.abs(rect[1] - rect[3]);
+
+        if (annotation.url) {
+          const a = document.createElement('a');
+          a.href = annotation.url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.className = 'pdf-link';
+          a.style.left = left + 'px';
+          a.style.top = top + 'px';
+          a.style.width = width + 'px';
+          a.style.height = height + 'px';
+          a.title = annotation.url;
+          wrapper.appendChild(a);
+        } else if (annotation.dest) {
+          const div = document.createElement('div');
+          div.className = 'pdf-link';
+          div.style.left = left + 'px';
+          div.style.top = top + 'px';
+          div.style.width = width + 'px';
+          div.style.height = height + 'px';
+          div.title = 'Ir a sección';
+
+          const resolveDest = async () => {
+            let dest = annotation.dest;
+            if (typeof dest === 'string') {
+              dest = await pdfDoc.getDestination(dest);
+            }
+            if (Array.isArray(dest) && dest[0]) {
+              const pageIndex = await pdfDoc.getPageIndex(dest[0]);
+              const targetPage = pageIndex + 1;
+              div.onclick = () => scrollToPage(targetPage);
+              div.title = 'Ir a página ' + targetPage;
+            }
+          };
+          resolveDest().catch(() => {});
+          wrapper.appendChild(div);
+        }
+      });
+    } catch (e) {
+      console.warn('Links page', pageNum, e);
+    }
+  }
+
+  // ---------- Outline / Índice ----------
+  function loadOutline() {
+    pdfDoc.getOutline().then(function (outline) {
+      if (!outline || outline.length === 0) {
+        tocContentEl.innerHTML =
+          '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">Estructura no disponible en este PDF.</p>';
+        return;
+      }
+      renderOutlineTree(outline, 1).then(html => {
+        tocContentEl.innerHTML = html;
+      });
+    }).catch(() => {
+      tocContentEl.innerHTML =
+        '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">Índice no disponible.</p>';
+    });
+  }
+
+  async function renderOutlineTree(items, level) {
+    let html = '';
+    for (const item of items) {
       let pageRef = 1;
       if (item.dest) {
         try {
-          if (typeof item.dest === 'string') {
-            const dest = await pdfDoc.getDestination(item.dest);
-            if (dest && dest[0]) {
-              pageRef = await pdfDoc.getPageIndex(dest[0]) + 1;
-            }
-          } else if (Array.isArray(item.dest) && item.dest[0]) {
-            pageRef = await pdfDoc.getPageIndex(item.dest[0]) + 1;
+          let dest = item.dest;
+          if (typeof dest === 'string') {
+            dest = await pdfDoc.getDestination(dest);
           }
-        } catch(e) {
-          console.warn('Error resolving outline destination', e);
-        }
+          if (Array.isArray(dest) && dest[0]) {
+            pageRef = (await pdfDoc.getPageIndex(dest[0])) + 1;
+          }
+        } catch (e) { /* ignore */ }
       }
-      
-      let html = `<div class="toc-item toc-level-${level}" onclick="scrollToPage(${pageRef})" style="cursor:pointer;"><span>${item.title}</span><span class="toc-page">p. ${pageRef}</span></div>`;
-      if (item.items && item.items.length > 0) {
-        for (const child of item.items) {
-          html += await renderOutlineItem(child, level + 1);
-        }
+      const lvl = Math.min(level, 3);
+      const safeTitle = (item.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      html += `<div class="toc-item toc-level-${lvl}" onclick="scrollToPage(${pageRef})">` +
+        `<span>${safeTitle}</span><span class="toc-page">p. ${pageRef}</span></div>`;
+      if (item.items && item.items.length) {
+        html += await renderOutlineTree(item.items, level + 1);
       }
-      return html;
+    }
+    return html;
+  }
+
+  // ---------- UI globals ----------
+  window.scrollToPage = function (pageNum) {
+    const page = document.getElementById('page-' + pageNum);
+    if (page) {
+      page.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      page.style.boxShadow = '0 0 0 3px var(--elsevier-orange), var(--shadow-paper)';
+      setTimeout(() => { page.style.boxShadow = 'var(--shadow-paper)'; }, 1800);
+    }
+  };
+
+  window.toggleSidebar = function () {
+    document.getElementById('pdfSidebar').classList.toggle('hidden');
+  };
+
+  window.switchSidebarTab = function (tab, btnElement) {
+    document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
+    btnElement.classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+  };
+
+  window.setTool = function (tool) {
+    currentTool = tool;
+    document.getElementById('selectTool').classList.toggle('active', tool === 'select');
+    document.getElementById('highlightTool').classList.toggle('active', tool === 'highlight');
+    document.getElementById('noteTool').classList.toggle('active', tool === 'note');
+
+    if (tool === 'highlight') {
+      colorPickerEl.classList.add('active');
+      showToast('Selecciona texto y se resaltará al soltar', 2500);
+    } else {
+      colorPickerEl.classList.remove('active');
     }
 
-    // Funciones globales de interfaz
-    window.scrollToPage = function(pageNum) {
-      const page = document.getElementById('page-' + pageNum);
-      if (page) {
-        page.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        page.style.boxShadow = '0 0 0 3px var(--elsevier-orange), var(--shadow-paper)';
-        setTimeout(() => {
-          page.style.boxShadow = 'var(--shadow-paper)';
-        }, 2000);
-      }
-    };
+    // Cursor
+    const cursor = tool === 'highlight' ? 'text' : (tool === 'note' ? 'crosshair' : 'default');
+    pdfContainer.style.cursor = cursor;
+    document.querySelectorAll('.textLayer').forEach(tl => {
+      tl.style.cursor = tool === 'note' ? 'crosshair' : 'text';
+    });
+  };
 
-    window.toggleSidebar = function() {
-      document.getElementById('pdfSidebar').classList.toggle('hidden');
-    };
+  window.selectHighlightColor = function (color, element) {
+    currentHighlightColor = color;
+    document.querySelectorAll('.color-option').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+  };
 
-    window.switchSidebarTab = function(tab, btnElement) {
-      document.querySelectorAll('.sidebar-tab').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.sidebar-panel').forEach(panel => panel.classList.remove('active'));
-      btnElement.classList.add('active');
-      document.getElementById('panel-' + tab).classList.add('active');
-    };
+  window.zoomIn = function () {
+    scale = Math.min(scale + 0.25, 3.0);
+    updateZoom();
+  };
+  window.zoomOut = function () {
+    scale = Math.max(scale - 0.25, 0.5);
+    updateZoom();
+  };
 
-    window.setTool = function(tool) {
-      currentTool = tool;
-      document.getElementById('selectTool').classList.toggle('active', tool === 'select');
-      document.getElementById('highlightTool').classList.toggle('active', tool === 'highlight');
-      document.getElementById('noteTool').classList.toggle('active', tool === 'note');
+  function updateZoom() {
+    zoomLevelEl.textContent = Math.round(scale * 100) + '%';
+    // Re-escalar anotaciones: las guardamos en coordenadas normalizadas (0-1)
+    createPageContainers();
+  }
 
-      document.querySelectorAll('.annotation-layer').forEach(layer => {
-        layer.classList.toggle('active', tool !== 'select');
-      });
-
-      if (tool === 'highlight') {
-        colorPickerEl.style.display = 'flex';
-      } else {
-        colorPickerEl.style.display = 'none';
-      }
-
-      pdfContainer.style.cursor = tool === 'highlight' ? 'crosshair' : (tool === 'note' ? 'text' : 'default');
-    };
-
-    window.selectHighlightColor = function(color, element) {
-      currentHighlightColor = color;
-      document.querySelectorAll('.color-option').forEach(el => el.classList.remove('active'));
-      element.classList.add('active');
-    };
-
-    window.zoomIn = function() {
-      scale = Math.min(scale + 0.25, 3.0);
-      updateZoom();
-    };
-
-    window.zoomOut = function() {
-      scale = Math.max(scale - 0.25, 0.5);
-      updateZoom();
-    };
-
-    function updateZoom() {
-      zoomLevelEl.textContent = Math.round(scale * 100) + '%';
-      pageObserver.disconnect();
-      createPageContainers();
-    }
-
-    window.toggleSearch = function() {
-      searchBarEl.classList.toggle('active');
-      if (searchBarEl.classList.contains('active')) {
-        searchInputEl.focus();
-        searchInputEl.select();
-      }
-    };
-
-    window.handleSearch = function(event) {
-      if (event.key === 'Enter') performSearch();
-      if (event.key === 'Escape') {
-        searchBarEl.classList.remove('active');
-        clearSearchHighlights();
-      }
-    };
-
-    function clearSearchHighlights() {
-      document.querySelectorAll('.search-highlight-temp').forEach(el => {
-        el.style.background = '';
-        el.classList.remove('search-highlight-temp');
-      });
-    }
-
-    window.performSearch = async function() {
-      const query = searchInputEl.value.trim();
-      if (!query || !pdfDoc) return;
-
-      searchResultsEl.innerHTML = '<p style="color:var(--text-muted);">Consultando documento...</p>';
+  // ---------- Búsqueda ----------
+  window.toggleSearch = function () {
+    searchBarEl.classList.toggle('active');
+    if (searchBarEl.classList.contains('active')) {
+      searchInputEl.focus();
+      searchInputEl.select();
+    } else {
       clearSearchHighlights();
+    }
+  };
 
-      const results = [];
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        let text = '';
-        if (pageTextContentCache[i]) {
-          text = pageTextContentCache[i];
-        } else {
-          try {
-            const page = await pdfDoc.getPage(i);
-            const content = await page.getTextContent();
-            text = content.items.map(item => item.str).join(' ');
-            pageTextContentCache[i] = text;
-          } catch(e) { continue; }
-        }
-        const regex = new RegExp(query, 'gi');
-        let match;
-        while ((match = regex.exec(text)) !== null) {
-          const start = Math.max(0, match.index - 40);
-          const end = Math.min(text.length, match.index + query.length + 40);
-          results.push({ page: i, text: text.substring(start, end), index: match.index });
-        }
+  searchInputEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') performSearch();
+    if (e.key === 'Escape') {
+      searchBarEl.classList.remove('active');
+      clearSearchHighlights();
+    }
+  });
+
+  function clearSearchHighlights() {
+    document.querySelectorAll('.search-highlight-temp').forEach(el => {
+      el.style.background = '';
+      el.classList.remove('search-highlight-temp');
+    });
+  }
+
+  window.performSearch = async function () {
+    const query = searchInputEl.value.trim();
+    if (!query || !pdfDoc) return;
+
+    searchResultsEl.innerHTML = '<p style="color:var(--text-muted);">Consultando documento...</p>';
+    clearSearchHighlights();
+
+    const results = [];
+    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      let text = pageTextContentCache[i];
+      if (!text) {
+        try {
+          const page = await pdfDoc.getPage(i);
+          const content = await page.getTextContent();
+          text = content.items.map(item => item.str).join(' ');
+          pageTextContentCache[i] = text;
+        } catch (e) { continue; }
       }
-
-      if (results.length === 0) {
-        searchResultsEl.innerHTML = '<p style="color:var(--text-muted);">Sin hallazgos para "' + query + '".</p>';
-        return;
+      let match;
+      regex.lastIndex = 0;
+      while ((match = regex.exec(text)) !== null) {
+        const start = Math.max(0, match.index - 45);
+        const end = Math.min(text.length, match.index + query.length + 45);
+        results.push({
+          page: i,
+          text: text.substring(start, end),
+          index: match.index
+        });
+        if (results.length >= 80) break;
       }
+      if (results.length >= 80) break;
+    }
 
-      let html = `<p style="font-weight:600; font-size:13px; margin-bottom:12px;">${results.length} registros encontrados</p>`;
-      results.slice(0, 50).forEach((result, idx) => {
-        const highlighted = result.text.replace(new RegExp(query, 'gi'), '<span class="highlight">$&</span>');
-        html += `<div class="search-result-item" onclick="scrollToPage(${result.page})"><strong>Página ${result.page}</strong>${highlighted}...</div>`;
+    if (results.length === 0) {
+      searchResultsEl.innerHTML =
+        '<p style="color:var(--text-muted);">Sin hallazgos para «' + query.replace(/</g, '&lt;') + '».</p>';
+      return;
+    }
+
+    let html = `<p style="font-weight:600;font-size:13px;margin-bottom:12px;">${results.length} registro${results.length !== 1 ? 's' : ''} encontrado${results.length !== 1 ? 's' : ''}</p>`;
+    results.slice(0, 50).forEach(result => {
+      const highlighted = result.text
+        .replace(/</g, '&lt;')
+        .replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '<span class="highlight">$&</span>');
+      html += `<div class="search-result-item" onclick="scrollToPage(${result.page})">` +
+        `<strong>Página ${result.page}</strong>...${highlighted}...</div>`;
+    });
+    searchResultsEl.innerHTML = html;
+
+    // Resaltar en páginas ya renderizadas
+    const qLower = query.toLowerCase();
+    for (const result of results.slice(0, 30)) {
+      const pageWrapper = document.getElementById('page-' + result.page);
+      if (!pageWrapper || !renderedPages.has(result.page)) continue;
+      const textLayer = pageWrapper.querySelector('.textLayer');
+      if (!textLayer) continue;
+      textLayer.querySelectorAll('span').forEach(span => {
+        if (span.textContent && span.textContent.toLowerCase().includes(qLower)) {
+          span.style.background = 'rgba(253, 224, 71, 0.55)';
+          span.classList.add('search-highlight-temp');
+        }
       });
-      searchResultsEl.innerHTML = html;
+    }
+  };
 
-      for (const result of results.slice(0, 20)) {
-        const pageWrapper = document.getElementById('page-' + result.page);
-        if (pageWrapper && renderedPages.has(result.page)) {
-          const textLayer = pageWrapper.querySelector('.text-layer');
-          if (textLayer) {
-            const spans = textLayer.querySelectorAll('span');
-            spans.forEach(span => {
-              if (span.textContent.toLowerCase().includes(query.toLowerCase())) {
-                span.style.background = 'rgba(253, 224, 71, 0.6)';
-                span.classList.add('search-highlight-temp');
-              }
-            });
-          }
-        }
-      }
-    };
+  // ---------- Anotaciones: carga y guardado ----------
+  function saveAnnotations() {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(annotations));
+    } catch (e) {
+      console.warn('localStorage full or unavailable', e);
+    }
+  }
 
-    function loadAnnotationsForPage(pageNum) {
-      const layer = document.getElementById('annotations-' + pageNum);
-      if (!layer) return;
-      layer.innerHTML = '';
-      const pageAnnotations = annotations[pageNum] || [];
+  function updateAnnotationCount() {
+    let count = 0;
+    for (const pageAnns of Object.values(annotations)) {
+      if (Array.isArray(pageAnns)) count += pageAnns.length;
+    }
+    annotationCountEl.textContent = String(count);
+  }
 
-      pageAnnotations.forEach((annotation, index) => {
-        if (annotation.type === 'note') {
-          const div = document.createElement('div');
-          div.className = 'annotation-note';
-          div.style.left = annotation.x + 'px';
-          div.style.top = annotation.y + 'px';
-          div.innerHTML = `<button class="annotation-delete" onclick="deleteAnnotation(${pageNum}, ${index})">×</button>`;
-          const textarea = document.createElement('textarea');
-          textarea.value = annotation.text || '';
-          textarea.placeholder = 'Comentario de revisión...';
-          textarea.onchange = function() {
-            annotation.text = textarea.value;
-            saveAnnotations();
-            updateAnnotationCount();
-            updateAnnotationsList();
-          };
-          div.appendChild(textarea);
-          layer.appendChild(div);
-        } else if (annotation.type === 'highlight') {
+  function updateAnnotationsList() {
+    let html = '';
+    let count = 0;
+    const pages = Object.keys(annotations).map(Number).sort((a, b) => a - b);
+    for (const pageNum of pages) {
+      const pageAnns = annotations[pageNum] || [];
+      pageAnns.forEach((ann, idx) => {
+        count++;
+        const label = ann.type === 'highlight' ? 'Resaltado' : 'Nota';
+        const preview = ann.text
+          ? (ann.text.length > 80 ? ann.text.slice(0, 80) + '…' : ann.text)
+          : '<em>(sin texto)</em>';
+        html += `<div style="padding:12px;background:#F8FAFC;border:1px solid var(--border-subtle);border-radius:6px;margin-bottom:8px;cursor:pointer;" onclick="scrollToPage(${pageNum})">` +
+          `<strong style="font-size:11px;color:var(--oxford-blue);display:block;margin-bottom:4px;text-transform:uppercase;">Página ${pageNum} · ${label}</strong>` +
+          `<p style="font-size:13px;margin:0;font-family:'Lora',serif;color:var(--text-main);">${preview}</p></div>`;
+      });
+    }
+    if (count === 0) {
+      annotationsListEl.innerHTML =
+        '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">Sin revisiones pendientes.</p>';
+    } else {
+      annotationsListEl.innerHTML = html;
+    }
+  }
+
+  function loadAnnotationsForPage(pageNum) {
+    const layer = document.getElementById('annotations-' + pageNum);
+    if (!layer) return;
+    layer.innerHTML = '';
+
+    const pageAnnotations = annotations[pageNum] || [];
+    const viewport = pageViewports[pageNum];
+    if (!viewport) return;
+
+    pageAnnotations.forEach((annotation, index) => {
+      if (annotation.type === 'note') {
+        // Coordenadas normalizadas 0–1
+        const x = (annotation.nx != null ? annotation.nx : annotation.x / (annotation.pageWidth || viewport.width)) * viewport.width;
+        const y = (annotation.ny != null ? annotation.ny : annotation.y / (annotation.pageHeight || viewport.height)) * viewport.height;
+
+        const div = document.createElement('div');
+        div.className = 'annotation-note';
+        div.style.left = x + 'px';
+        div.style.top = y + 'px';
+        div.innerHTML = `<button class="annotation-delete" data-page="${pageNum}" data-index="${index}" title="Eliminar">×</button>`;
+
+        const textarea = document.createElement('textarea');
+        textarea.value = annotation.text || '';
+        textarea.placeholder = 'Comentario de revisión...';
+        textarea.addEventListener('change', function () {
+          annotation.text = textarea.value;
+          saveAnnotations();
+          updateAnnotationCount();
+          updateAnnotationsList();
+        });
+        div.appendChild(textarea);
+        layer.appendChild(div);
+
+        div.querySelector('.annotation-delete').addEventListener('click', function (e) {
+          e.stopPropagation();
+          deleteAnnotation(pageNum, index);
+        });
+      } else if (annotation.type === 'highlight') {
+        // rects: array de { nx, ny, nw, nh } normalizados
+        const rects = annotation.rects || [];
+        rects.forEach((r, ri) => {
+          const left = r.nx * viewport.width;
+          const top = r.ny * viewport.height;
+          const width = r.nw * viewport.width;
+          const height = r.nh * viewport.height;
+
           const div = document.createElement('div');
           div.className = 'annotation-highlight color-' + (annotation.color || 'yellow');
-          div.style.left = annotation.x + 'px';
-          div.style.top = annotation.y + 'px';
-          div.style.width = annotation.width + 'px';
-          div.style.height = annotation.height + 'px';
-          div.title = 'Texto resaltado';
-          div.onclick = function(e) {
+          div.style.left = left + 'px';
+          div.style.top = top + 'px';
+          div.style.width = width + 'px';
+          div.style.height = height + 'px';
+          div.title = annotation.text ? annotation.text.slice(0, 120) : 'Texto resaltado';
+          div.dataset.page = pageNum;
+          div.dataset.index = index;
+
+          div.addEventListener('click', function (e) {
             e.stopPropagation();
-            if (confirm('¿Remover este resaltado?')) {
+            if (confirm('¿Eliminar este resaltado?')) {
               deleteAnnotation(pageNum, index);
             }
-          };
+          });
           layer.appendChild(div);
-        }
+        });
+      }
+    });
+  }
+
+  window.deleteAnnotation = function (pageNum, index) {
+    if (annotations[pageNum]) {
+      annotations[pageNum].splice(index, 1);
+      if (annotations[pageNum].length === 0) delete annotations[pageNum];
+      saveAnnotations();
+      loadAnnotationsForPage(pageNum);
+      updateAnnotationsList();
+      updateAnnotationCount();
+      showToast('Anotación eliminada');
+    }
+  };
+
+  // ---------- Resaltado por SELECCIÓN DE TEXTO (como Acrobat) ----------
+  function getSelectionRectsRelativeToPage(range, pageWrapper) {
+    const pageRect = pageWrapper.getBoundingClientRect();
+    const clientRects = range.getClientRects();
+    const rects = [];
+    for (let i = 0; i < clientRects.length; i++) {
+      const r = clientRects[i];
+      // Filtrar rects vacíos o fuera de la página
+      if (r.width < 1 || r.height < 1) continue;
+      const left = r.left - pageRect.left;
+      const top = r.top - pageRect.top;
+      // Solo rects que intersectan la página
+      if (left + r.width < 0 || top + r.height < 0 ||
+          left > pageRect.width || top > pageRect.height) continue;
+      rects.push({
+        x: Math.max(0, left),
+        y: Math.max(0, top),
+        width: Math.min(r.width, pageRect.width - left),
+        height: Math.min(r.height, pageRect.height - top)
       });
     }
+    return rects;
+  }
 
-    pdfContainer.addEventListener('click', function(e) {
-      if (currentTool === 'note') {
-        const wrapper = e.target.closest('.pdf-page-wrapper');
-        if (wrapper && !e.target.closest('.annotation-note')) {
-          const pageNum = parseInt(wrapper.dataset.page);
-          const rect = wrapper.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
+  function createHighlightFromSelection() {
+    if (currentTool !== 'highlight') return;
 
-          if (!annotations[pageNum]) annotations[pageNum] = [];
-          annotations[pageNum].push({ type: 'note', x: x, y: y, text: '' });
-          saveAnnotations();
-          loadAnnotationsForPage(pageNum);
-          updateAnnotationsList();
-          updateAnnotationCount();
-          
-          setTimeout(() => {
-            const notes = document.querySelectorAll('#annotations-' + pageNum + ' .annotation-note textarea');
-            if (notes.length > 0) {
-              notes[notes.length - 1].focus();
-            }
-          }, 100);
-        }
-      }
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const selectedText = selection.toString().trim();
+    if (!selectedText) return;
+
+    // Encontrar el page-wrapper que contiene la selección
+    let node = range.commonAncestorContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    const pageWrapper = node.closest ? node.closest('.pdf-page-wrapper') : null;
+    if (!pageWrapper) return;
+
+    const pageNum = parseInt(pageWrapper.dataset.page, 10);
+    const viewport = pageViewports[pageNum];
+    if (!viewport) return;
+
+    const rawRects = getSelectionRectsRelativeToPage(range, pageWrapper);
+    if (rawRects.length === 0) return;
+
+    // Normalizar a 0–1 para que sobrevivan al zoom
+    const normalizedRects = rawRects.map(r => ({
+      nx: r.x / viewport.width,
+      ny: r.y / viewport.height,
+      nw: r.width / viewport.width,
+      nh: r.height / viewport.height
+    }));
+
+    if (!annotations[pageNum]) annotations[pageNum] = [];
+    annotations[pageNum].push({
+      type: 'highlight',
+      color: currentHighlightColor,
+      text: selectedText,
+      rects: normalizedRects,
+      created: Date.now()
     });
 
-    let highlightStartX, highlightStartY, highlightStartPage, isHighlighting = false;
-    let highlightOverlay = null;
-
-    pdfContainer.addEventListener('mousedown', function(e) {
-      if (currentTool !== 'highlight') return;
-      if (e.target.closest('.annotation-highlight') || e.target.closest('.annotation-note')) return;
-      
-      const wrapper = e.target.closest('.pdf-page-wrapper');
-      if (!wrapper) return;
-      e.preventDefault();
-      isHighlighting = true;
-      highlightStartPage = parseInt(wrapper.dataset.page);
-      const rect = wrapper.getBoundingClientRect();
-      highlightStartX = e.clientX - rect.left;
-      highlightStartY = e.clientY - rect.top;
-
-      highlightOverlay = document.createElement('div');
-      highlightOverlay.style.position = 'absolute';
-      highlightOverlay.style.left = highlightStartX + 'px';
-      highlightOverlay.style.top = highlightStartY + 'px';
-      highlightOverlay.style.width = '0px';
-      highlightOverlay.style.height = '0px';
-      highlightOverlay.style.background = 'rgba(255, 108, 12, 0.2)';
-      highlightOverlay.style.border = '1px solid var(--elsevier-orange)';
-      highlightOverlay.style.zIndex = '15';
-      highlightOverlay.style.pointerEvents = 'none';
-      wrapper.appendChild(highlightOverlay);
-    });
-
-    pdfContainer.addEventListener('mousemove', function(e) {
-      if (!isHighlighting || !highlightOverlay) return;
-      const wrapper = e.target.closest('.pdf-page-wrapper');
-      if (!wrapper || parseInt(wrapper.dataset.page) !== highlightStartPage) return;
-      const rect = wrapper.getBoundingClientRect();
-      const currentX = e.clientX - rect.left;
-      const currentY = e.clientY - rect.top;
-      const width = currentX - highlightStartX;
-      const height = currentY - highlightStartY;
-      highlightOverlay.style.width = Math.abs(width) + 'px';
-      highlightOverlay.style.height = Math.abs(height) + 'px';
-      highlightOverlay.style.left = (width > 0 ? highlightStartX : currentX) + 'px';
-      highlightOverlay.style.top = (height > 0 ? highlightStartY : currentY) + 'px';
-    });
-
-    pdfContainer.addEventListener('mouseup', function(e) {
-      if (!isHighlighting) return;
-      isHighlighting = false;
-      if (!highlightOverlay) return;
-      const wrapper = highlightOverlay.parentElement;
-      if (!wrapper) return;
-      const pageNum = parseInt(wrapper.dataset.page);
-      const left = parseFloat(highlightOverlay.style.left);
-      const top = parseFloat(highlightOverlay.style.top);
-      const width = parseFloat(highlightOverlay.style.width);
-      const height = parseFloat(highlightOverlay.style.height);
-
-      if (width > 5 && height > 5) {
-        if (!annotations[pageNum]) annotations[pageNum] = [];
-        annotations[pageNum].push({ 
-          type: 'highlight', 
-          x: left, y: top, width: width, height: height,
-          color: currentHighlightColor
-        });
-        saveAnnotations();
-        loadAnnotationsForPage(pageNum);
-        updateAnnotationCount();
-        updateAnnotationsList();
-      }
-      highlightOverlay.remove();
-      highlightOverlay = null;
-    });
-
-    window.deleteAnnotation = function(pageNum, index) {
-      if (annotations[pageNum]) {
-        annotations[pageNum].splice(index, 1);
-        saveAnnotations();
-        loadAnnotationsForPage(pageNum);
-        updateAnnotationsList();
-        updateAnnotationCount();
-      }
-    };
-
-    function saveAnnotations() {
-      localStorage.setItem('pdfAnnotations', JSON.stringify(annotations));
-    }
-
-    function updateAnnotationCount() {
-      let count = 0;
-      for (const pageAnns of Object.values(annotations)) {
-        count += pageAnns.length;
-      }
-      annotationCountEl.textContent = count;
-    }
-
-    function updateAnnotationsList() {
-      let html = '';
-      let count = 0;
-      for (const [pageNum, pageAnns] of Object.entries(annotations)) {
-        pageAnns.forEach((ann) => {
-          count++;
-          html += `<div style="padding: 12px; background:#F8FAFC; border:1px solid var(--border-subtle); border-radius:6px; margin-bottom:8px; cursor:pointer;" onclick="scrollToPage(${pageNum})">`;
-          html += `<strong style="font-size:11px; color:var(--oxford-blue); display:block; margin-bottom:4px; text-transform:uppercase;">Página ${pageNum} · ${ann.type === 'highlight' ? 'Marca' : 'Revisión'}</strong>`;
-          html += `<p style="font-size:13px; margin:0; font-family:'Lora',serif;">${ann.text || '<em>(Marca visual)</em>'}</p></div>`;
-        });
-      }
-      if (count === 0) {
-        annotationsListEl.innerHTML = '<p style="color: var(--text-muted); font-style: italic; font-size:13px;">Sin revisiones pendientes.</p>';
-      } else {
-        annotationsListEl.innerHTML = html;
-      }
-    }
-
-    window.downloadAnnotatedPDF = function() {
-      const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.download = title.replace(/[^a-z0-9]/gi, '_') + '.pdf';
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      if (Object.keys(annotations).length > 0) {
-        const blob = new Blob([JSON.stringify(annotations, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = title.replace(/[^a-z0-9]/gi, '_') + '_revisiones.json';
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    };
-
-    document.addEventListener('keydown', function(e) {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault();
-        toggleSearch();
-      }
-      if (e.key === 'Escape') {
-        searchBarEl.classList.remove('active');
-        clearSearchHighlights();
-      }
-      if (e.key === 'h' || e.key === 'H') setTool('highlight');
-      if (e.key === 'n' || e.key === 'N') setTool('note');
-      if (e.key === 'v' || e.key === 'V') setTool('select');
-    });
-
-    setTool('select');
+    saveAnnotations();
+    loadAnnotationsForPage(pageNum);
     updateAnnotationCount();
     updateAnnotationsList();
-  })();
+
+    selection.removeAllRanges();
+    showToast('Texto resaltado');
+  }
+
+  // mouseup / pointerup para capturar la selección
+  pdfContainer.addEventListener('mouseup', function (e) {
+    if (currentTool === 'highlight') {
+      // Pequeño delay para que el navegador termine de actualizar la selección
+      setTimeout(createHighlightFromSelection, 10);
+    }
+  });
+
+  // ---------- Notas (clic en la página) ----------
+  pdfContainer.addEventListener('click', function (e) {
+    if (currentTool !== 'note') return;
+    if (e.target.closest('.annotation-note') || e.target.closest('.annotation-highlight')) return;
+    if (e.target.closest('.pdf-link')) return;
+
+    const wrapper = e.target.closest('.pdf-page-wrapper');
+    if (!wrapper) return;
+
+    const pageNum = parseInt(wrapper.dataset.page, 10);
+    const viewport = pageViewports[pageNum];
+    if (!viewport) return;
+
+    const rect = wrapper.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (!annotations[pageNum]) annotations[pageNum] = [];
+    annotations[pageNum].push({
+      type: 'note',
+      nx: x / viewport.width,
+      ny: y / viewport.height,
+      text: '',
+      created: Date.now()
+    });
+
+    saveAnnotations();
+    loadAnnotationsForPage(pageNum);
+    updateAnnotationsList();
+    updateAnnotationCount();
+
+    setTimeout(() => {
+      const notes = document.querySelectorAll('#annotations-' + pageNum + ' .annotation-note textarea');
+      if (notes.length) notes[notes.length - 1].focus();
+    }, 50);
+
+    showToast('Nota añadida');
+  });
+
+  // ---------- Descargar ----------
+  window.downloadAnnotated = function () {
+    // 1. PDF original
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = (title || 'manuscrito').replace(/[^a-z0-9áéíóúñü\s\-]/gi, '_').trim() + '.pdf';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // 2. JSON de revisiones (si hay)
+    const hasAnns = Object.keys(annotations).some(k => (annotations[k] || []).length > 0);
+    if (hasAnns) {
+      const payload = {
+        title: title,
+        doi: doi,
+        pdfUrl: pdfUrl,
+        exportedAt: new Date().toISOString(),
+        annotations: annotations
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = (title || 'manuscrito').replace(/[^a-z0-9áéíóúñü\s\-]/gi, '_').trim() + '_revisiones.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('PDF + archivo de revisiones descargados');
+    } else {
+      showToast('PDF descargado (sin revisiones)');
+    }
+  };
+
+  // ---------- Atajos de teclado ----------
+  document.addEventListener('keydown', function (e) {
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea') return;
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      e.preventDefault();
+      toggleSearch();
+    }
+    if (e.key === 'Escape') {
+      searchBarEl.classList.remove('active');
+      clearSearchHighlights();
+    }
+    if (e.key === 'h' || e.key === 'H') setTool('highlight');
+    if (e.key === 'n' || e.key === 'N') setTool('note');
+    if (e.key === 'v' || e.key === 'V') setTool('select');
+  });
+
+  // Inicio
+  setTool('select');
+  updateAnnotationCount();
+  updateAnnotationsList();
+})();
 </script>
 </body>
 </html>
