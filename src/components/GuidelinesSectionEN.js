@@ -8,213 +8,240 @@ function GuidelinesSection() {
     { name: 'Consensus', url: 'https://consensus.app/', desc: 'AI-powered scientific evidence search engine.' }
   ];
 
+  const keySpecs = [
+    { label: 'Length', val: '1,000–10,000 words (including references)' },
+    { label: 'Format', val: 'Microsoft Word (.docx). Anonymized document for double-blind peer review.' },
+    { label: 'Citation', val: 'Chicago 17th ed. (Author-Date)', link: 'https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html' },
+    { label: 'Languages', val: 'Spanish and English (title, abstract, and keywords in both)' },
+    { label: 'Keywords', val: '2–6 free terms + controlled vocabulary codes (JEL, MeSH, ACM, UNESCO)', link: 'https://www.revistacienciasestudiantes.com/policies.html#tabla-vocabularios' },
+    { label: 'Originality', val: 'Maximum similarity allowed: 15%' },
+    { label: 'Ethics', val: 'Committee approval when applicable; statement in the manuscript.' }
+  ];
+
   return (
-    <section className="py-20 bg-[#fafafa]">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-          {/* Author Guidelines */}
+    <section className="py-24 md:py-32 bg-[#fafafa] text-[#002147] font-sans overflow-hidden">
+      <div className="max-w-6xl mx-auto px-6 md:px-12">
+        
+        {/* Section Title */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+          className="mb-16 md:mb-20"
+        >
+          <div className="w-14 h-[3px] bg-[#FF5722] mb-6 rounded-full" />
+          <h2 className="text-3xl md:text-4xl font-serif font-bold tracking-tight">
+            Author Guidelines
+          </h2>
+          <p className="mt-4 text-gray-600 max-w-2xl text-lg font-light leading-relaxed">
+            Everything you need to prepare and submit your manuscript with clarity and editorial rigor.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+          
+          {/* ——— Left Column ——— */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="lg:col-span-1"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            viewport={{ once: true }}
+            className="lg:col-span-5 space-y-10"
           >
-            <h2 className="text-3xl font-serif font-bold mb-8">Author Guidelines</h2>
-            
-            {/* Quick Guide Notice */}
-            <div className="bg-[#001f3f] text-white p-6 rounded-lg mb-8">
-              <p className="text-sm font-serif italic leading-relaxed mb-4">
-                First time publishing? We have an <strong>Interactive Quick Guide</strong> with a visual checklist. 
-                It takes 5 minutes and tells you exactly what you need. 
-                Full policies are still here if you want to go deeper.
+            {/* Quick Guide CTA */}
+            <div className="bg-[#002147] text-white p-7 md:p-8 rounded-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[#FF5722] rounded-full translate-x-10 -translate-y-10 opacity-80" />
+              <p className="relative z-10 text-[15px] font-light leading-relaxed mb-6">
+                First time publishing? We have an <strong className="font-semibold">Interactive Quick Guide</strong> with a visual checklist. 
+                It takes 5 minutes and tells you exactly what you need.
               </p>
               <a 
-                href="/quickEN.html" 
-                className="inline-block bg-[#c0a86a] text-[#001f3f] px-6 py-3 text-[10px] uppercase font-bold tracking-[0.2em] hover:bg-white transition-colors"
+                href="/quick.html" 
+                className="relative z-10 inline-flex items-center gap-2 bg-[#FF5722] text-white px-5 py-3 text-xs font-semibold tracking-wide uppercase hover:bg-white hover:text-[#002147] transition-colors duration-300"
               >
-                Open Quick Guide (5 min) →
+                Open Quick Guide
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
               </a>
             </div>
 
-            {/* Links to Complete Guides */}
-            <div className="space-y-3 mb-8">
-              {/* Quick Guide as first highlighted link */}
+            {/* Guide Links */}
+            <div className="space-y-3">
               <a 
-                href="/quickEN.html" 
-                className="block p-4 bg-white rounded-lg border-2 border-[#c0a86a] hover:shadow-lg transition-all group"
+                href="/quick.html" 
+                className="group block p-5 bg-white border border-[#FF5722]/40 rounded-xl hover:border-[#FF5722] hover:shadow-md transition-all duration-300"
               >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-[#001f3f] group-hover:text-[#007398] transition-colors mb-1">
+                <div className="flex items-start justify-between gap-3 mb-1.5">
+                  <h3 className="text-sm font-semibold text-[#002147] group-hover:text-[#FF5722] transition-colors">
                     Interactive Quick Guide
                   </h3>
-                  <span className="text-[8px] font-black uppercase text-white bg-[#c0a86a] px-2 py-1 rounded-full">Recommended</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white bg-[#FF5722] px-2.5 py-1 rounded-full flex-shrink-0">
+                    Recommended
+                  </span>
                 </div>
-                <p className="text-xs text-gray-500 font-serif">
-                  Visual checklist with the essentials for submitting your manuscript. Includes links to controlled vocabularies.
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Visual checklist with the essentials. Includes links to controlled vocabularies.
                 </p>
               </a>
 
-              <a 
-                href="/authorEN.html" 
-                className="block p-4 bg-white rounded-lg border border-gray-200 hover:border-[#007398] hover:shadow-md transition-all group"
-              >
-                <h3 className="text-sm font-bold text-[#001f3f] group-hover:text-[#007398] transition-colors mb-1">
-                  Complete Author Guidelines
-                </h3>
-                <p className="text-xs text-gray-500 font-serif">
-                  Detailed instructions for manuscript preparation and submission.
-                </p>
-              </a>
-
-              <a 
-                href="/practicesEN.html" 
-                className="block p-4 bg-white rounded-lg border border-gray-200 hover:border-[#007398] hover:shadow-md transition-all group"
-              >
-                <h3 className="text-sm font-bold text-[#001f3f] group-hover:text-[#007398] transition-colors mb-1">
-                  Good Practices Guide
-                </h3>
-                <p className="text-xs text-gray-500 font-serif">
-                  Ethical standards and best practices for academic publishing.
-                </p>
-              </a>
-
-              <a 
-                href="/open-accessEN.html" 
-                className="block p-4 bg-white rounded-lg border border-gray-200 hover:border-[#007398] hover:shadow-md transition-all group"
-              >
-                <h3 className="text-sm font-bold text-[#001f3f] group-hover:text-[#007398] transition-colors mb-1">
-                  Open Access Policies
-                </h3>
-                <p className="text-xs text-gray-500 font-serif">
-                  Information about licenses, copyright, and open access.
-                </p>
-              </a>
+              {[
+                { href: '/author.html', title: 'Complete Author Guidelines', desc: 'Detailed instructions for manuscript preparation and submission.' },
+                { href: '/practices.html', title: 'Good Practices Guide', desc: 'Ethical standards and best practices for academic publishing.' },
+                { href: '/open-access.html', title: 'Open Access Policies', desc: 'Licenses, copyright, and open access.' }
+              ].map((item) => (
+                <a 
+                  key={item.href}
+                  href={item.href} 
+                  className="group block p-5 bg-white border border-gray-200 rounded-xl hover:border-[#002147]/30 hover:shadow-sm transition-all duration-300"
+                >
+                  <h3 className="text-sm font-semibold text-[#002147] group-hover:text-[#FF5722] transition-colors mb-1">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    {item.desc}
+                  </p>
+                </a>
+              ))}
             </div>
 
-            <ul className="space-y-6">
-              {[
-                { label: 'Length', val: '1,000–10,000 words (including references)' },
-                { label: 'Format', val: 'Microsoft Word (.docx). Anonymized document for double-blind peer review.' },
-                { label: 'Citation', val: 'Chicago 17th ed. (Author-Date)', link: 'https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html' },
-                { label: 'Languages', val: 'Spanish and English (title, abstract, and keywords in both)' },
-                { label: 'Keywords', val: '2–6, free terms, plus specialized codes in controlled vocabulary (JEL, MeSH, ACM, UNESCO)', link: 'https://www.revistacienciasestudiantes.com/policiesEN.html#controlled-vocabularies' },
-                { label: 'Originality', val: 'Maximum similarity allowed: 15%' },
-                { label: 'Ethics', val: 'Committee approval when applicable; statement in the manuscript.' }
-              ].map((item, i) => (
-                <li key={i} className="border-b border-gray-200 pb-2">
-                  <span className="text-[10px] uppercase font-black text-gray-400 block tracking-widest">{item.label}</span>
-                  {item.link ? (
-                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-gray-900 font-medium hover:text-[#007398] underline decoration-gray-300">
-                      {item.val}
-                    </a>
-                  ) : (
-                    <span className="text-gray-900 font-medium">{item.val}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
+            {/* Key Specifications */}
+            <div>
+              <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-gray-400 mb-5">
+                Essential Requirements
+              </h3>
+              <ul className="space-y-5">
+                {keySpecs.map((item, i) => (
+                  <li key={i} className="border-b border-gray-200 pb-4 last:border-0">
+                    <span className="text-[11px] uppercase font-semibold tracking-wider text-gray-400 block mb-1">
+                      {item.label}
+                    </span>
+                    {item.link ? (
+                      <a 
+                        href={item.link} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[15px] text-[#002147] font-medium hover:text-[#FF5722] underline decoration-gray-300 underline-offset-2 transition-colors"
+                      >
+                        {item.val}
+                      </a>
+                    ) : (
+                      <span className="text-[15px] text-[#002147] font-medium">
+                        {item.val}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </motion.div>
 
-          {/* Videos, Resources, and Citation Guide */}
-          <div className="lg:col-span-2 space-y-12">
+          {/* ——— Right Column ——— */}
+          <div className="lg:col-span-7 space-y-14">
             
-            {/* Chicago Citation Guide (Author-Date) */}
+            {/* Chicago Citation Style */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.6, delay: 0.15 }}
+              viewport={{ once: true }}
             >
-              <h3 className="text-xs uppercase tracking-[0.3em] font-black text-gray-400 mb-6 italic underline">
-                Citation Style: Chicago 17th ed. (Author-Date)
-              </h3>
-              <p className="text-sm text-gray-600 mb-6 font-serif leading-relaxed">
-                The Journal requires the use of the <strong>author-date</strong> system from the <em>Chicago Manual of Style</em>, 
-                17th edition. Citations are inserted in the text in parentheses (Author Year, page) and the complete 
-                list of references is included at the end of the manuscript under the heading "References." 
-                Below are examples of the most common document types, based 
-                directly on the official guide. For cases not covered, consult the complete manual 
-                at <a href="https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html" target="_blank" rel="noopener noreferrer" className="text-[#007398] underline">Chicago Manual of Style Online</a>.
+              <div className="flex items-center gap-3 mb-6">
+                <span className="w-2 h-2 bg-[#FF5722] rounded-full" />
+                <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-gray-500">
+                  Citation Style · Chicago 17th ed. (Author-Date)
+                </h3>
+              </div>
+
+              <p className="text-[15px] text-gray-600 mb-8 leading-relaxed">
+                The <strong className="text-[#002147]">author-date</strong> system from the <em>Chicago Manual of Style</em> is used. 
+                Citations go in parentheses within the text and complete references at the end under the heading "References." 
+                Consult the{' '}
+                <a 
+                  href="https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-[#FF5722] underline underline-offset-2 hover:text-[#002147] transition-colors"
+                >
+                  official guide
+                </a>
+                {' '}for cases not covered here.
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Book */}
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Book</h4>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Reference</p>
-                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
-                    Binder, Amy J., and Jeffrey L. Kidder. 2022. <em>The Channels of Student Activism: How the Left and Right Are Winning (and Losing) in Campus Politics Today</em>. University of Chicago Press.
-                  </p>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">In-text</p>
-                  <p className="text-sm text-gray-800 font-serif">(Binder and Kidder 2022, 117–18)</p>
-                </div>
-
-                {/* Edited Book Chapter */}
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Edited Book Chapter</h4>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Reference</p>
-                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
-                    Doyle, Kathleen. 2023. "The Queen Mary Psalter." In <em>The Book by Design: The Remarkable Story of the World's Greatest Invention</em>, edited by P. J. M. Marks and Stephen Parkin. University of Chicago Press.
-                  </p>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">In-text</p>
-                  <p className="text-sm text-gray-800 font-serif">(Doyle 2023, 64)</p>
-                </div>
-
-                {/* Journal Article */}
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Journal Article</h4>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Reference</p>
-                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
-                    Dittmar, Emily L., and Douglas W. Schemske. 2023. "Temporal Variation in Selection Influences Microgeographic Local Adaptation." <em>American Naturalist</em> 202 (4): 471–85. https://doi.org/10.1086/725865.
-                  </p>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">In-text</p>
-                  <p className="text-sm text-gray-800 font-serif">(Dittmar and Schemske 2023, 480)</p>
-                  <p className="text-[11px] text-gray-400 mt-2">For 3 or more authors: (Snyder et al. 2025, 9–10)</p>
-                </div>
-
-                {/* Thesis or Dissertation */}
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Thesis or Dissertation</h4>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Reference</p>
-                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
-                    Blajer de la Garza, Yuna. 2019. "A House Is Not a Home: Citizenship and Belonging in Contemporary Democracies." PhD diss., University of Chicago. ProQuest (13865986).
-                  </p>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">In-text</p>
-                  <p className="text-sm text-gray-800 font-serif">(Blajer de la Garza 2019, 66–67)</p>
-                </div>
-
-                {/* Web Page */}
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Web Page</h4>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Reference</p>
-                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
-                    Google. 2023. "Privacy Policy." Privacy & Terms. Effective November 15. https://policies.google.com/privacy.
-                  </p>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">In-text</p>
-                  <p className="text-sm text-gray-800 font-serif">(Google 2023)</p>
-                  <p className="text-[11px] text-gray-400 mt-2">No date: (Yale University n.d.) and add access date.</p>
-                </div>
-
-                {/* News or Magazine Article */}
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#001f3f] mb-3">Press or Magazine Article</h4>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">Reference</p>
-                  <p className="text-sm text-gray-800 mb-3 font-serif leading-relaxed">
-                    Blum, Dani. 2023. "Are Flax Seeds All That?" <em>New York Times</em>, December 13. https://www.nytimes.com/2023/12/13/well/eat/flax-seeds-benefits.html.
-                  </p>
-                  <p className="text-[11px] text-gray-500 mb-2 font-mono uppercase">In-text</p>
-                  <p className="text-sm text-gray-800 font-serif">(Blum 2023)</p>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {[
+                  {
+                    title: 'Book',
+                    ref: 'Binder, Amy J., and Jeffrey L. Kidder. 2022. The Channels of Student Activism: How the Left and Right Are Winning (and Losing) in Campus Politics Today. University of Chicago Press.',
+                    text: '(Binder and Kidder 2022, 117–18)'
+                  },
+                  {
+                    title: 'Edited Book Chapter',
+                    ref: 'Doyle, Kathleen. 2023. "The Queen Mary Psalter." In The Book by Design: The Remarkable Story of the World\'s Greatest Invention, edited by P. J. M. Marks and Stephen Parkin. University of Chicago Press.',
+                    text: '(Doyle 2023, 64)'
+                  },
+                  {
+                    title: 'Journal Article',
+                    ref: 'Dittmar, Emily L., and Douglas W. Schemske. 2023. "Temporal Variation in Selection Influences Microgeographic Local Adaptation." American Naturalist 202 (4): 471–85. https://doi.org/10.1086/725865.',
+                    text: '(Dittmar and Schemske 2023, 480)',
+                    note: '3 or more authors: (Snyder et al. 2025, 9–10)'
+                  },
+                  {
+                    title: 'Thesis or Dissertation',
+                    ref: 'Blajer de la Garza, Yuna. 2019. "A House Is Not a Home: Citizenship and Belonging in Contemporary Democracies." PhD diss., University of Chicago. ProQuest (13865986).',
+                    text: '(Blajer de la Garza 2019, 66–67)'
+                  },
+                  {
+                    title: 'Web Page',
+                    ref: 'Google. 2023. "Privacy Policy." Privacy & Terms. Effective November 15. https://policies.google.com/privacy.',
+                    text: '(Google 2023)',
+                    note: 'No date: (Yale University n.d.) + access date.'
+                  },
+                  {
+                    title: 'Press Article',
+                    ref: 'Blum, Dani. 2023. "Are Flax Seeds All That?" New York Times, December 13. https://www.nytimes.com/2023/12/13/well/eat/flax-seeds-benefits.html.',
+                    text: '(Blum 2023)'
+                  }
+                ].map((ex) => (
+                  <div 
+                    key={ex.title}
+                    className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300"
+                  >
+                    <h4 className="text-[11px] font-semibold tracking-wider uppercase text-[#002147] mb-3">
+                      {ex.title}
+                    </h4>
+                    <p className="text-[11px] text-gray-400 mb-1.5 uppercase tracking-wide">Reference</p>
+                    <p className="text-[13px] text-gray-700 mb-3 leading-relaxed font-serif">
+                      {ex.ref}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mb-1.5 uppercase tracking-wide">In-text</p>
+                    <p className="text-[13px] text-gray-800 font-medium">
+                      {ex.text}
+                    </p>
+                    {ex.note && (
+                      <p className="text-[11px] text-gray-400 mt-2 leading-snug">
+                        {ex.note}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
               
-              <div className="mt-6 p-4 bg-[#f0f4f8] rounded-lg border-l-4 border-[#001f3f]">
-                <p className="text-xs text-gray-600 font-serif leading-relaxed">
-                  <strong>Important note:</strong> Place of publication is no longer required for books 
-                  (CMOS 14.30). For articles with more than six authors, list the first three followed by 
-                  "et al." in the reference. In-text, use "et al." from three authors. 
-                  Personal communications (emails, messages) are cited only in the text and not included 
-                  in the references. For any other document type, refer to the 
-                  <a href="https://www.revistacienciasestudiantes.com/policiesEN.html" target="_blank" rel="noopener noreferrer" className="text-[#007398] underline"> Full Editorial Policies</a> and the 
-                  <a href="https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html" target="_blank" rel="noopener noreferrer" className="text-[#007398] underline"> official Chicago manual</a>.
+              {/* Important Note */}
+              <div className="mt-6 p-5 bg-white border-l-[3px] border-[#FF5722] rounded-r-xl">
+                <p className="text-[13px] text-gray-600 leading-relaxed">
+                  <strong className="text-[#002147]">Note:</strong> Place of publication is no longer required for books (CMOS 14.30). 
+                  For more than six authors, list the first three followed by "et al." 
+                  Personal communications are cited only in the text. 
+                  Consult the{' '}
+                  <a href="https://www.revistacienciasestudiantes.com/policies.html" className="text-[#FF5722] underline underline-offset-2 hover:text-[#002147]">
+                    Editorial Policies
+                  </a>
+                  {' '}and the{' '}
+                  <a href="https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html" target="_blank" rel="noopener noreferrer" className="text-[#FF5722] underline underline-offset-2 hover:text-[#002147]">
+                    official manual
+                  </a>.
                 </p>
               </div>
             </motion.div>
@@ -223,38 +250,81 @@ function GuidelinesSection() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
             >
-              <h3 className="text-xs uppercase tracking-[0.3em] font-black text-gray-400 mb-6 italic underline">Audiovisual Workshops</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="aspect-video bg-black rounded-sm overflow-hidden shadow-xl">
-                  <iframe width="100%" height="100%" src="https://www.youtube.com/embed/wyPhAGW6-94" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Workshop 1" />
+              <div className="flex items-center gap-3 mb-6">
+                <span className="w-2 h-2 bg-[#FF5722] rounded-full" />
+                <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-gray-500">
+                  Audiovisual Workshops
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="aspect-video bg-[#002147] rounded-xl overflow-hidden shadow-lg">
+                  <iframe 
+                    width="100%" 
+                    height="100%" 
+                    src="https://www.youtube.com/embed/wyPhAGW6-94" 
+                    frameBorder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowFullScreen 
+                    title="Workshop 1"
+                    className="w-full h-full"
+                  />
                 </div>
-                <div className="aspect-video bg-black rounded-sm overflow-hidden shadow-xl">
-                  <iframe width="100%" height="100%" src="https://www.youtube.com/embed/videoseries?list=PL8yQlmhs7KsBerg9X63QnZnlNAopwzDmw" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Playlist" />
+                <div className="aspect-video bg-[#002147] rounded-xl overflow-hidden shadow-lg">
+                  <iframe 
+                    width="100%" 
+                    height="100%" 
+                    src="https://www.youtube.com/embed/videoseries?list=PL8yQlmhs7KsBerg9X63QnZnlNAopwzDmw" 
+                    frameBorder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowFullScreen 
+                    title="Workshop Playlist"
+                    className="w-full h-full"
+                  />
                 </div>
               </div>
             </motion.div>
 
-            {/* Academic Tools Highlight */}
+            {/* Academic Tools */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="bg-white border border-gray-200 p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden rounded-lg shadow-md"
+              transition={{ duration: 0.6, delay: 0.25 }}
+              viewport={{ once: true }}
+              className="bg-white border border-gray-100 p-7 md:p-8 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-6 relative"
             >
-              <div className="absolute top-0 right-0 bg-[#007398] text-white text-[8px] font-bold px-3 py-1 uppercase tracking-tighter">
+              <span className="absolute top-4 right-4 text-[10px] font-bold uppercase tracking-wider text-white bg-[#FF5722] px-2.5 py-1 rounded-full">
                 Recommended
-              </div>
-              <img src="https://www.revistacienciasestudiantes.com/academic-tools/assets/logoP.png" className="w-24 h-24 object-contain grayscale hover:grayscale-0 transition-all" alt="Logo" />
-              <div>
-                <h4 className="text-xl font-serif font-bold mb-2">Academic Tools</h4>
-                <p className="text-sm text-gray-500 mb-4 font-serif italic">Comprehensive platform for PDF management, automatic citation, and academic text processing.</p>
-                <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase text-[#007398]">
-                  <span>• PDF Management</span> <span>• Citation Generator</span> <span>• Text Analysis</span>
+              </span>
+              
+              <img 
+                src="https://www.revistacienciasestudiantes.com/academic-tools/assets/logoP.png" 
+                className="w-20 h-20 object-contain flex-shrink-0" 
+                alt="Academic Tools" 
+              />
+              
+              <div className="flex-1">
+                <h4 className="text-xl font-serif font-bold text-[#002147] mb-1.5">
+                  Academic Tools
+                </h4>
+                <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+                  Comprehensive platform for PDF management, automatic citation, and academic text processing.
+                </p>
+                <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px] font-semibold uppercase tracking-wide text-[#002147]/70 mb-5">
+                  <span>PDF Management</span>
+                  <span>Citation Generator</span>
+                  <span>Text Analysis</span>
                 </div>
-                <a href="https://www.revistacienciasestudiantes.com/academic-tools" className="mt-6 inline-block text-[11px] font-black uppercase tracking-widest border-b-2 border-black pb-1 hover:border-[#007398] hover:text-[#007398] transition-all">
-                  Access the Suite →
+                <a 
+                  href="https://www.revistacienciasestudiantes.com/academic-tools" 
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#FF5722] hover:text-[#002147] transition-colors"
+                >
+                  Access the Suite
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
                 </a>
               </div>
             </motion.div>
@@ -263,20 +333,30 @@ function GuidelinesSection() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              viewport={{ once: true }}
             >
-              <h3 className="text-xs uppercase tracking-[0.3em] font-black text-gray-400 mb-6 italic underline">Recommended Resources</h3>
-              <div className="grid grid-cols-1 gap-4">
-                {resources.map((resource, i) => (
+              <div className="flex items-center gap-3 mb-6">
+                <span className="w-2 h-2 bg-[#FF5722] rounded-full" />
+                <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-gray-500">
+                  Recommended Resources
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {resources.map((resource) => (
                   <a
-                    key={i}
+                    key={resource.name}
                     href={resource.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                    className="group block p-5 bg-white border border-gray-100 rounded-xl hover:border-[#002147]/20 hover:shadow-md transition-all duration-300"
                   >
-                    <h4 className="text-sm font-bold text-[#007398] mb-1">{resource.name}</h4>
-                    <p className="text-gray-600 text-xs">{resource.desc}</p>
+                    <h4 className="text-sm font-semibold text-[#002147] group-hover:text-[#FF5722] transition-colors mb-1.5">
+                      {resource.name}
+                    </h4>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {resource.desc}
+                    </p>
                   </a>
                 ))}
               </div>
