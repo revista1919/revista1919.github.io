@@ -69,7 +69,7 @@ function AboutSection() {
               {/* Cover Image */}
               <div className="relative h-52 md:h-56 overflow-hidden">
                 <img 
-                  src="https://academiadetalentos.uc.cl/wp-content/uploads/2026/06/IMG_20251114_185713582_HDR-1-1024x768.jpg"
+                  src="https://www.revistacienciasestudiantes.com/images/img-1787683945345-vfjy7c.webp"
                   alt="Penta UC Talent Academy"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
