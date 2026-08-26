@@ -2775,91 +2775,70 @@ correspondingAuthorPhoneCountryCode: correspondingAuthor.phoneCountryCode || '',
 {/* 📱 Teléfono - SOLO si es autor de correspondencia */}
 {author.isCorresponding && (
   <div className="md:col-span-2">
-    <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-      {isSpanish ? 'Teléfono de contacto' : 'Contact phone'} *
-      <HelpCapsule
-        title={isSpanish ? '¿Qué número debo poner?' : 'What number should I enter?'}
-        text={isSpanish
-          ? 'Selecciona tu país (la bandera) y escribe SOLO tu número local, SIN el código de país y SIN el 0 inicial. Ejemplo para Chile: si tu número es +56 9 1234 5678, selecciona 🇨🇱 y escribe 9 1234 5678.'
-          : 'Select your country (the flag) and write ONLY your local number, WITHOUT the country code and WITHOUT the leading 0. Example for US: if your number is +1 555 123 4567, select 🇺🇸 and write 555 123 4567.'}
-      />
-    </label>
     
-    <div className="relative">
-      <PhoneInput
-        international
-        defaultCountry="CL"
-        value={author.phoneCountryCode + author.phone}
-        onChange={(value) => {
-          if (value) {
-            const match = value.match(/^(\+\d{1,3})(\d+)$/);
-            if (match) {
-              handleAuthorChange(index, 'phoneCountryCode', match[1]);
-              handleAuthorChange(index, 'phone', match[2]);
-            }
-          } else {
-            handleAuthorChange(index, 'phoneCountryCode', '+56');
-            handleAuthorChange(index, 'phone', '');
-          }
-        }}
-        placeholder={isSpanish ? "9 1234 5678" : "555 123 4567"}
-        className={`PhoneInput ${validationErrors[`author_${index}_phone`] ? 'PhoneInput--error' : ''}`}
-      />
+    {/* Label limpio */}
+    <div className="mb-2">
+      <label className="flex items-center text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+        {isSpanish ? 'Teléfono de contacto' : 'Contact phone'} 
+        <span className="text-red-500 ml-1">*</span>
+        <HelpCapsule
+          title={isSpanish ? '¿Qué número debo poner?' : 'What number should I enter?'}
+          text={isSpanish
+            ? 'Selecciona tu país con la bandera y escribe solo tu número local, sin el código de país ni el 0 inicial. Ejemplo: +56 9 1234 5678 → selecciona 🇨🇱 y escribe 9 1234 5678.'
+            : 'Select your country with the flag and write only your local number, without the country code or leading 0. Example: +1 555 123 4567 → select 🇺🇸 and write 555 123 4567.'}
+        />
+      </label>
       
-      {/* Icono de teléfono */}
-      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-        </svg>
-      </div>
-    </div>
-    
-    {/* ✅ AYUDA VISUAL ADICIONAL */}
-    <div className="mt-2 flex items-start gap-2 bg-sky-50 border border-sky-200 rounded-lg p-3">
-      <svg className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <p className="text-xs text-sky-700 font-sans leading-relaxed">
-        {isSpanish ? (
-          <>
-            <strong>Instrucción:</strong> Selecciona tu país con la bandera 🇨🇱 y escribe tu número{' '}
-            <strong>SIN el código de país</strong> y <strong>SIN el 0 inicial</strong>.<br />
-            <span className="text-sky-600 text-[11px]">
-              Ejemplo: Si tu número es <strong>+56 9 1234 5678</strong>, escribe <strong>9 1234 5678</strong>
-            </span>
-          </>
-        ) : (
-          <>
-            <strong>Instruction:</strong> Select your country with the flag 🇺🇸 and write your number{' '}
-            <strong>WITHOUT the country code</strong> and <strong>WITHOUT the leading 0</strong>.<br />
-            <span className="text-sky-600 text-[11px]">
-              Example: If your number is <strong>+1 555 123 4567</strong>, write <strong>555 123 4567</strong>
-            </span>
-          </>
-        )}
+      {/* Instrucción natural y sutil */}
+      <p className="text-[13px] text-slate-500 leading-relaxed">
+        {isSpanish 
+          ? 'Selecciona tu país e ingresa solo tu número local (sin código de país ni el 0 inicial).' 
+          : 'Select your country and enter your local number only (without country code or leading 0).'}
       </p>
     </div>
     
-    {/* ✅ PREVISUALIZACIÓN EN TIEMPO REAL */}
-    {author.phone && (
-      <div className="mt-2 flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-        <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    {/* Input limpio */}
+    <PhoneInput
+      international
+      defaultCountry="CL"
+      value={author.phoneCountryCode + author.phone}
+      onChange={(value) => {
+        if (value) {
+          const match = value.match(/^(\+\d{1,3})(\d+)$/);
+          if (match) {
+            handleAuthorChange(index, 'phoneCountryCode', match[1]);
+            handleAuthorChange(index, 'phone', match[2]);
+          }
+        } else {
+          handleAuthorChange(index, 'phoneCountryCode', '+56');
+          handleAuthorChange(index, 'phone', '');
+        }
+      }}
+      placeholder={isSpanish ? "Ej: 9 1234 5678" : "Ex: 555 123 4567"}
+      className={`PhoneInput ${validationErrors[`author_${index}_phone`] ? 'PhoneInput--error' : ''}`}
+    />
+    
+    {/* Previsualización minimalista */}
+    {author.phone && !validationErrors[`author_${index}_phone`] && (
+      <div className="mt-2 flex items-center gap-1.5 px-1">
+        <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
-        <p className="text-xs text-emerald-700 font-sans">
-          {isSpanish ? 'Número registrado:' : 'Registered number:'}{' '}
-          <strong className="font-mono text-sm">
+        <p className="text-[13px] text-slate-600">
+          {isSpanish ? 'Se registrará como:' : 'Will be registered as:'}{' '}
+          <strong className="font-medium text-slate-800">
             {author.phoneCountryCode} {author.phone}
           </strong>
         </p>
       </div>
     )}
     
+    {/* Error limpio */}
     {validationErrors[`author_${index}_phone`] && (
       <motion.p 
         initial={{ opacity: 0, y: -5 }} 
         animate={{ opacity: 1, y: 0 }}
-        className="text-red-500 text-xs mt-1.5 flex items-center gap-1"
+        className="text-red-500 text-xs mt-1.5 flex items-center gap-1 px-1"
       >
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
