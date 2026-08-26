@@ -30,6 +30,8 @@ try {
   console.error('Error initializing Firebase:', error);
 }
 
+const CHECK_SUBSCRIPTION_URL = 'https://us-central1-usuarios-rnce.cloudfunctions.net/checkSubscription';
+
 const Icons = {
   email: (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -206,9 +208,30 @@ export default function NewsletterSubscription({
     cancel: isSpanish ? 'Cancelar' : 'Cancel',
     successTitle: isSpanish ? '¡Gracias por suscribirte!' : 'Thank you for subscribing!',
     successMessage: isSpanish ? 'Recibirás noticias según tus preferencias' : 'You will receive news according to your preferences',
+    alreadySubscribed: isSpanish ? 'Este correo ya está suscrito a nuestro boletín' : 'This email is already subscribed to our newsletter',
     invalidName: isSpanish ? 'Por favor ingresa tu nombre' : 'Please enter your name',
     invalidEmail: isSpanish ? 'Por favor ingresa un correo válido' : 'Please enter a valid email',
     generalError: isSpanish ? 'Error al procesar la suscripción' : 'Error processing subscription'
+  };
+
+  const checkExistingSubscription = async (email) => {
+    try {
+      const response = await fetch(`${CHECK_SUBSCRIPTION_URL}?email=${encodeURIComponent(email.toLowerCase())}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.subscription || null;
+      
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      return null;
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -228,6 +251,14 @@ export default function NewsletterSubscription({
     setError('');
 
     try {
+      const existing = await checkExistingSubscription(correo);
+      
+      if (existing && existing.active) {
+        setError(texts.alreadySubscribed);
+        setSubscribing(false);
+        return;
+      }
+
       const emailNormalizado = correo.toLowerCase().trim();
       const emailId = emailNormalizado.replace(/[^a-z0-9]/g, '_');
       const docRef = doc(db, 'newsletter', emailId);
@@ -267,7 +298,12 @@ export default function NewsletterSubscription({
 
     } catch (error) {
       console.error('Error subscribing:', error);
-      setError(texts.generalError);
+      
+      if (error.code === 'permission-denied') {
+        setError(texts.alreadySubscribed);
+      } else {
+        setError(texts.generalError);
+      }
       
       if (onError) onError(error);
     } finally {
@@ -480,4 +516,4 @@ export default function NewsletterSubscription({
       </AnimatePresence>
     </motion.div>
   );
-    }
+}
