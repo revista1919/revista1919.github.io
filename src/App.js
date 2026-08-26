@@ -1048,12 +1048,9 @@ function App() {
         </AnimatePresence>
       </main>
       <NewsletterModal 
-  delay={120000}
-  scrollTrigger={0.7}
-  cookieExpirationDays={365}
-  position="right"         // Lateral derecho
-  size="md"                // Tamaño mediano
-  slideIn={true}           // Animación de deslizamiento
+  delay={45000}              // 45 segundos
+  scrollTrigger={0.5}        // 50% del scroll
+  cookieExpirationDays={90}  // 90 días = 3 meses
 />
       <AnimatePresence>
         {isMenuOpen && (

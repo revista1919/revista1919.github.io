@@ -5,24 +5,30 @@ import NewsletterSubscription from './NewsletterSubscription';
 import { useLanguage } from '../hooks/useLanguage';
 
 const NewsletterModal = ({ 
-  delay = 30000, // 30 segundos por defecto
-  scrollTrigger = 0.4, // 40% del scroll
+  delay = 45000, // 45 segundos
+  scrollTrigger = 0.5, // 50% del scroll
   cookieKey = 'newsletter_modal_dismissed',
-  cookieExpirationDays = 7 // Reaparece después de 7 días si se cierra
+  cookieExpirationDays = 90 // 3 meses (90 días)
 }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
   const [isOpen, setIsOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
 
-  // Textos bilingües
+  // Textos bilingües con tono editorial
   const texts = {
-    title: isSpanish ? 'Mantente Informado' : 'Stay Informed',
+    eyebrow: isSpanish ? 'Boletín Científico' : 'Scientific Newsletter',
+    title: isSpanish ? 'Únase a Nuestra Comunidad Académica' : 'Join Our Academic Community',
     subtitle: isSpanish 
-      ? 'Recibe las últimas publicaciones científicas directamente en tu correo' 
-      : 'Receive the latest scientific publications directly in your inbox',
+      ? 'Reciba las últimas investigaciones revisadas por pares directamente en su correo electrónico' 
+      : 'Receive the latest peer-reviewed research directly in your inbox',
+    placeholder: isSpanish ? 'Su correo institucional' : 'Your institutional email',
+    subscribe: isSpanish ? 'Suscribirse' : 'Subscribe',
     close: isSpanish ? 'Cerrar' : 'Close',
-    noThanks: isSpanish ? 'No, gracias' : 'No, thanks'
+    noThanks: isSpanish ? 'No, gracias' : 'No, thanks',
+    success: isSpanish 
+      ? 'Suscripción exitosa. Bienvenido a nuestra comunidad.' 
+      : 'Subscription successful. Welcome to our community.'
   };
 
   // Verificar si el modal ya fue descartado
@@ -38,13 +44,6 @@ const NewsletterModal = ({
     date.setTime(date.getTime() + (cookieExpirationDays * 24 * 60 * 60 * 1000));
     const expires = `expires=${date.toUTCString()}`;
     document.cookie = `${cookieKey}=true; ${expires}; path=/`;
-  };
-
-  // Función para abrir el modal
-  const openModal = () => {
-    if (!checkCookie() && !hasInteracted) {
-      setIsOpen(true);
-    }
   };
 
   // Efecto para abrir después del delay
@@ -75,18 +74,6 @@ const NewsletterModal = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [scrollTrigger, hasInteracted]);
 
-  // Bloquear scroll del body cuando el modal está abierto
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
   // Manejar cierre
   const handleClose = () => {
     setIsOpen(false);
@@ -98,65 +85,66 @@ const NewsletterModal = ({
   const handleSuccess = () => {
     setHasInteracted(true);
     setCookie();
-    // Mantener abierto por 2 segundos para mostrar el mensaje de éxito
+    // Mantener abierto por 2.5 segundos para mostrar el mensaje de éxito
     setTimeout(() => {
       setIsOpen(false);
-    }, 2000);
+    }, 2500);
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="fixed bottom-6 right-6 z-[90] max-w-md w-[calc(100%-3rem)]"
         >
-          {/* Overlay */}
+          {/* Tarjeta flotante estilo editorial */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={handleClose}
-            className="absolute inset-0 bg-[#1a1a1a]/80 backdrop-blur-sm"
-          />
-
-          {/* Modal Card */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="relative bg-white rounded-sm shadow-2xl w-full max-w-lg overflow-hidden"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="relative bg-white shadow-xl overflow-hidden"
+            style={{
+              borderTop: '3px solid #007398',
+              borderBottom: '1px solid #e5e5e5',
+              borderLeft: '1px solid #e5e5e5',
+              borderRight: '1px solid #e5e5e5'
+            }}
           >
-            {/* Barra de acento superior */}
-            <div className="h-2 w-full bg-[#007398]" />
-
-            {/* Botón de cierre */}
+            {/* Botón de cierre minimalista */}
             <button
               onClick={handleClose}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 transition-colors bg-white/80 rounded-full p-2 backdrop-blur-sm"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 transition-colors p-1"
               aria-label={texts.close}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            {/* Contenido */}
+            {/* Contenido con padding editorial */}
             <div className="p-8">
-              {/* Header del modal */}
-              <div className="text-center mb-8">
-                <h3 className="text-3xl font-serif font-bold text-gray-900 mb-3">
-                  {texts.title}
-                </h3>
-                <div className="w-12 h-1 bg-[#007398] mx-auto mb-4" />
-                <p className="text-gray-600 font-serif italic text-sm">
-                  {texts.subtitle}
-                </p>
-              </div>
+              {/* Eyebrow text */}
+              <p className="text-xs font-semibold uppercase tracking-widest text-[#007398] mb-3">
+                {texts.eyebrow}
+              </p>
+
+              {/* Título serif */}
+              <h3 className="text-2xl font-serif font-bold text-gray-900 mb-4 leading-tight">
+                {texts.title}
+              </h3>
+
+              {/* Línea divisoria */}
+              <div className="w-12 h-px bg-gray-300 mb-4"></div>
+
+              {/* Subtítulo */}
+              <p className="text-gray-600 font-serif italic text-sm leading-relaxed mb-6">
+                {texts.subtitle}
+              </p>
 
               {/* Componente de suscripción */}
               <NewsletterSubscription 
@@ -165,13 +153,15 @@ const NewsletterModal = ({
                 onSuccess={handleSuccess}
               />
 
-              {/* Botón de no gracias */}
-              <button
-                onClick={handleClose}
-                className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors mt-4"
-              >
-                {texts.noThanks}
-              </button>
+              {/* Separador sutil */}
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <button
+                  onClick={handleClose}
+                  className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors font-serif italic"
+                >
+                  {texts.noThanks}
+                </button>
+              </div>
             </div>
           </motion.div>
         </motion.div>
