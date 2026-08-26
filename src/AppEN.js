@@ -1000,7 +1000,7 @@ function AppEN() {
       <NewsletterModal 
         delay={30000}
         scrollTrigger={0.5}
-        cookieExpirationDays={7}
+        cookieExpirationDays={180}
       />
       <AnimatePresence>
         {isMenuOpen && (
