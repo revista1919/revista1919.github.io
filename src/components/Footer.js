@@ -1,31 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
+import NewsletterSubscription from './NewsletterSubscription';
 
 function Footer() {
-  const [nombre, setNombre] = useState('');
-  const [correo, setCorreo] = useState('');
-  const [enviado, setEnviado] = useState(false);
-  const scriptURL = "https://script.google.com/macros/s/AKfycbyAmrjSmCkMTeLhzrLbtPd46hO9-uEenRPcD2B_Jp52g3GSEDYQr1SezZnC9WoWfBySng/exec";
-  
   const currentYear = new Date().getFullYear();
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new URLSearchParams();
-    formData.append('nombre', nombre);
-    formData.append('correo', correo);
-    fetch(scriptURL, {
-      method: "POST",
-      body: formData
-    })
-      .then(r => r.text())
-      .then(res => {
-        setEnviado(true);
-        setNombre('');
-        setCorreo('');
-      })
-      .catch(err => alert("Error al enviar: " + err));
-  };
   
   const SocialIcon = ({ href, iconPath, label }) => (
     <a
@@ -62,36 +40,7 @@ function Footer() {
             </p>
           </div>
           <div>
-            {!enviado ? (
-              <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4">
-                <input
-                  type="text"
-                  placeholder="Nombre"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  required
-                  className="bg-transparent border-b border-gray-700 py-2 px-1 text-sm focus:border-[#007398] outline-none transition-colors flex-1"
-                />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={correo}
-                  onChange={(e) => setCorreo(e.target.value)}
-                  required
-                  className="bg-transparent border-b border-gray-700 py-2 px-1 text-sm focus:border-[#007398] outline-none transition-colors flex-1"
-                />
-                <button
-                  type="submit"
-                  className="text-[10px] uppercase tracking-[0.2em] font-bold border border-gray-600 px-6 py-3 hover:bg-white hover:text-black transition-all"
-                >
-                  Suscribirse
-                </button>
-              </form>
-            ) : (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[#007398] text-sm italic font-serif">
-                ¡Gracias por suscribirte!
-              </motion.p>
-            )}
+            <NewsletterSubscription variant="footer" showTitle={false} />
           </div>
         </div>
         <div className="h-[1px] bg-gradient-to-r from-transparent via-gray-800 to-transparent mb-12"></div>
@@ -122,11 +71,10 @@ function Footer() {
             />
           </div>
           
-          {/* SECCIÓN MODIFICADA: Contacto con dos enlaces */}
+          {/* Contacto */}
           <div className="text-center md:text-right">
             <span className="text-[10px] uppercase tracking-[0.3em] text-gray-500 block mb-1">Contacto Oficial</span>
             
-            {/* Enlace para escritorio (Gmail) - visible en md y mayores */}
             <a 
               href="https://mail.google.com/mail/?view=cm&fs=1&to=contact@revistacienciasestudiantes.com" 
               target="_blank" 
@@ -136,7 +84,6 @@ function Footer() {
               contact@revistacienciasestudiantes.com
             </a>
             
-            {/* Enlace para móvil (mailto) - visible solo en móviles */}
             <a 
               href="mailto:contact@revistacienciasestudiantes.com" 
               className="text-sm font-light hover:text-[#007398] transition-colors md:hidden"
@@ -146,7 +93,7 @@ function Footer() {
           </div>
         </div>
         
-        {/* Sección Inferior: Copyright */}
+        {/* Copyright */}
         <div className="pt-8 border-t border-gray-900 flex flex-col items-center gap-4">
           <p className="text-[9px] text-gray-600 uppercase tracking-[0.4em] text-center">
             © {currentYear} Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839. Todos los derechos reservados.

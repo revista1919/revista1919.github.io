@@ -12,6 +12,7 @@ import Header from './components/HeaderEN';
 import SearchAndFilters from './components/SearchAndFiltersEN';
 import ArticleCard from './components/ArticleCardEN';
 import VolumeCard from './components/VolumeCardEN';
+import NewsletterModal from './components/NewsletterModal';
 import CollectionViewEN from './components/CollectionViewEN';
 import SingleCollectionViewEN from './components/SingleCollectionViewEN';
 import ReviewerResponsePage from './components/ReviewerResponsePage';
@@ -995,6 +996,12 @@ function AppEN() {
           </Routes>
         </AnimatePresence>
       </main>
+      {/* MODAL DE NEWSLETTER */}
+      <NewsletterModal 
+        delay={30000}
+        scrollTrigger={0.5}
+        cookieExpirationDays={7}
+      />
       <AnimatePresence>
         {isMenuOpen && (
           <>

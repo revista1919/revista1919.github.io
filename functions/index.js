@@ -17308,3 +17308,668 @@ exports.saveReviewerProfile = onCall(async (request) => {
     throw new HttpsError('internal', error.message);
   }
 });
+const NEWS_URL = 'https://www.revistacienciasestudiantes.com/news/news.json';
+const CUTOFF_DATE = new Date('2026-08-25T00:00:00Z').getTime();
+const EMAIL_QUEUE_COLLECTION = 'mail';
+const NEWSLETTER_COLLECTION = 'newsletter';
+const UNSUBSCRIBE_COLLECTION = 'unsubscribes';
+const NEWSLETTER_HISTORY = 'newsletter_history';
+
+// ==================== FUNCIONES AUXILIARES ====================
+
+function decodeContent(encoded) {
+  if (!encoded) return '';
+  try {
+    return Buffer.from(encoded, 'base64').toString('utf-8');
+  } catch (e) {
+    return encoded;
+  }
+}
+
+function cleanString(str) {
+  return str || '';
+}
+
+function generateSlug(text) {
+  if (!text) return '';
+  text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+// Obtener y filtrar noticias según preferencias
+async function fetchNews() {
+  try {
+    const response = await fetch(NEWS_URL);
+    if (!response.ok) throw new Error(`Error: ${response.status}`);
+    
+    const items = await response.json();
+    
+    return items.map(item => {
+      const fechaIso = item.fecha || '';
+      const fechaDate = new Date(fechaIso);
+      const timestamp = isNaN(fechaDate.getTime()) ? 0 : fechaDate.getTime();
+      const slug = item.slug || generateSlug(`${item.titulo || item.title || ''} ${fechaIso}`);
+      
+      return {
+        titulo: item.titulo || '',
+        cuerpo: decodeContent(item.cuerpo),
+        title: item.title || '',
+        content: decodeContent(item.content),
+        fechaIso: fechaIso,
+        photo: item.photo || '',
+        timestamp: timestamp,
+        slug: slug,
+        // Nuevos campos para preferencias
+        area: item.area || item.categoria || 'general',
+        categoria: item.categoria || item.category || 'general',
+        etiquetas: item.etiquetas || item.tags || []
+      };
+    }).filter(n => n.timestamp > CUTOFF_DATE)
+      .sort((a, b) => b.timestamp - a.timestamp);
+  } catch (e) {
+    console.error('Error fetching news:', e);
+    return [];
+  }
+}
+
+// Filtrar noticias según preferencias del suscriptor
+function filterNewsByPreferences(allNews, preferences) {
+  // Si no hay preferencias o está vacío, enviar todas
+  if (!preferences || Object.keys(preferences).length === 0) {
+    return allNews;
+  }
+  
+  return allNews.filter(news => {
+    let matches = true;
+    
+    // Filtrar por áreas de interés
+    if (preferences.areas && preferences.areas.length > 0) {
+      matches = matches && preferences.areas.some(area => 
+        news.area?.toLowerCase() === area.toLowerCase() ||
+        news.categoria?.toLowerCase() === area.toLowerCase() ||
+        news.etiquetas?.some(tag => tag.toLowerCase() === area.toLowerCase())
+      );
+    }
+    
+    // Filtrar por categorías específicas
+    if (preferences.categorias && preferences.categorias.length > 0) {
+      matches = matches && preferences.categorias.some(cat => 
+        news.categoria?.toLowerCase() === cat.toLowerCase()
+      );
+    }
+    
+    // Filtrar por etiquetas
+    if (preferences.etiquetas && preferences.etiquetas.length > 0) {
+      matches = matches && preferences.etiquetas.some(tag => 
+        news.etiquetas?.some(newsTag => newsTag.toLowerCase() === tag.toLowerCase())
+      );
+    }
+    
+    return matches;
+  });
+}
+
+// ==================== FUNCIONES DE DESUSCRIPCIÓN ====================
+
+async function unsubscribeUser(email, reason = 'user_request') {
+  const db = admin.firestore();
+  
+  try {
+    // Buscar al suscriptor por email
+    const snapshot = await db.collection(NEWSLETTER_COLLECTION)
+      .where('email', '==', email)
+      .limit(1)
+      .get();
+    
+    if (snapshot.empty) {
+      return { success: false, message: 'Email no encontrado' };
+    }
+    
+    const doc = snapshot.docs[0];
+    
+    // Marcar como inactivo en lugar de borrar (mejor práctica)
+    await doc.ref.update({
+      active: false,
+      unsubscribedAt: admin.firestore.FieldValue.serverTimestamp(),
+      unsubscribeReason: reason
+    });
+    
+    // Guardar en colección de desuscripciones para auditoría
+    await db.collection(UNSUBSCRIBE_COLLECTION).add({
+      email,
+      unsubscribedAt: admin.firestore.FieldValue.serverTimestamp(),
+      reason,
+      previousDocId: doc.id
+    });
+    
+    console.log(`✅ Usuario desuscrito: ${email} (razón: ${reason})`);
+    return { success: true, message: 'Desuscripción exitosa' };
+    
+  } catch (error) {
+    console.error('Error desuscribiendo:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+// Generar token de desuscripción seguro
+function generateUnsubscribeToken(email) {
+  const crypto = require('crypto');
+  const secret = process.env.UNSUBSCRIBE_SECRET || 'tu_secreto_aqui';
+  const hash = crypto.createHmac('sha256', secret).update(email).digest('hex');
+  return hash.substring(0, 32);
+}
+
+function verifyUnsubscribeToken(email, token) {
+  const expectedToken = generateUnsubscribeToken(email);
+  return token === expectedToken;
+}
+
+// ==================== GENERACIÓN DE HTML ====================
+
+function generateSubject(lang, noticias) {
+  if (noticias.length === 0) return '';
+  
+  const principal = noticias[0];
+  const titulo = lang === 'en' ? principal.title : principal.titulo;
+  const revista = lang === 'en' ? 'National Review' : 'Revista Nacional';
+  const novedades = lang === 'en' ? 'NEWS' : 'NOVEDADES';
+  const ymas = lang === 'en' ? 'and more' : 'y más';
+  const boletin = lang === 'en' ? 'New Bulletin' : 'Nuevo Boletín';
+  
+  return `[${novedades}] ${revista}: ${cleanString(titulo)} ${ymas} - ${boletin}`;
+}
+
+function generateElegantHTML(nombre, noticias, email, lang, unsubscribeToken, preferences = null) {
+  const isEn = lang === 'en';
+  const revistaName = isEn ? 'The National Review of Sciences for Students' : 'Revista Nacional de las Ciencias';
+  const lema = isEn ? 'A journal by and for students' : 'Una revista por y para estudiantes';
+  const greeting = isEn ? 'Dear' : 'Estimado/a';
+  const intro = isEn ? 'It is a pleasure to greet you. Here are the latest updates:' : 'Es un placer saludarle. Aquí tiene las últimas actualizaciones:';
+  const editionTitle = isEn ? 'In this edition:' : 'En esta edición:';
+  const featuredLabel = isEn ? 'Featured Article' : 'Artículo Principal';
+  const readOnline = isEn ? 'Read online' : 'Leer online';
+  const viewArchive = isEn ? 'View Archive' : 'Ver Archivo';
+  const homepageText = isEn ? 'Homepage' : 'Página principal';
+  const archiveUrl = isEn ? 'https://www.revistacienciasestudiantes.com/en/new/' : 'https://www.revistacienciasestudiantes.com/new/';
+  const mainSite = isEn ? 'https://www.revistacienciasestudiantes.com/en/' : 'https://www.revistacienciasestudiantes.com';
+  const followText = isEn ? 'Follow us on social media' : 'Síguenos en nuestras redes';
+  const preferencesText = isEn ? 'Manage preferences' : 'Gestionar preferencias';
+
+  // URL de desuscripción directa a Cloud Function
+  const unsubscribeUrl = `https://YOUR-PROJECT.cloudfunctions.net/unsubscribeNewsletter?email=${encodeURIComponent(email)}&token=${unsubscribeToken}`;
+  const preferencesUrl = `https://YOUR-PROJECT.cloudfunctions.net/managePreferences?email=${encodeURIComponent(email)}&token=${unsubscribeToken}`;
+
+  // Si hay preferencias, mostrar áreas filtradas
+  let preferencesHTML = '';
+  if (preferences && preferences.areas && preferences.areas.length > 0) {
+    const areasList = preferences.areas.join(', ');
+    preferencesHTML = `
+      <p style="font-family: sans-serif; font-size: 11px; color: #666; margin: 0 0 20px 0;">
+        ${isEn ? 'Showing news from areas:' : 'Mostrando noticias de las áreas:'} 
+        <strong>${areasList}</strong>
+      </p>
+    `;
+  }
+
+  let indiceHTML = '';
+  if (noticias.length > 1) {
+    const itemsIndice = noticias.map((n, i) => {
+      const tit = isEn ? n.title : n.titulo;
+      return `<li style="margin-bottom: 8px;">
+        <a href="#noticia-${i}" style="color: #007398; text-decoration: none; font-family: 'Georgia', serif; font-size: 14px; font-style: italic;">
+          ${cleanString(tit)}
+        </a>
+      </li>`;
+    }).join('');
+    
+    indiceHTML = `
+      <div style="margin-bottom: 40px; padding: 25px; border-left: 3px solid #007398; background-color: #f9f9f9;">
+        <p style="font-family: sans-serif; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: #555; margin-top: 0;">
+          ${editionTitle}
+        </p>
+        <ul style="margin: 0; padding-left: 15px;">${itemsIndice}</ul>
+      </div>
+    `;
+  }
+
+  let noticiasHTML = '';
+  noticias.forEach((n, index) => {
+    const tit = isEn ? n.title : n.titulo;
+    const cont = isEn ? n.content : n.cuerpo;
+    const photo = n.photo;
+    const slugUrl = `https://www.revistacienciasestudiantes.com/news/${n.slug}${isEn ? '.EN' : ''}.html`;
+    const fechaStr = new Date(n.fechaIso).toLocaleDateString(isEn ? 'en-US' : 'es-CL', { 
+      day: '2-digit', month: 'long', year: 'numeric' 
+    });
+
+    let articleHTML = '';
+    if (index === 0) {
+      articleHTML = `
+        <div id="noticia-${index}" style="margin-bottom: 50px;">
+          ${photo ? `<img src="${photo}" alt="${tit}" style="max-width:100%; height:auto; border-radius:8px; margin:0 0 20px 0; display:block;">` : ''}
+          <h2 style="color: #1a1a1a; font-family: 'Georgia', serif; font-size: 28px; line-height: 1.2; margin: 0 0 10px 0; font-weight: bold;">
+            ${cleanString(tit)}
+          </h2>
+          <div style="font-family: sans-serif; font-size: 12px; color: #007398; margin-bottom: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+            ${featuredLabel} • ${fechaStr}
+          </div>
+          <div class="article-content" style="font-family: 'Georgia', serif; font-size: 17px; line-height: 1.7; color: #333; text-align: justify;">
+            ${cont}
+          </div>
+        </div>
+      `;
+    } else {
+      articleHTML = `
+        <div id="noticia-${index}" style="margin-bottom: 40px; padding-top: 30px; border-top: 1px solid #eeeeee;">
+          <h3 style="color: #1a1a1a; font-family: 'Georgia', serif; font-size: 22px; margin: 0 0 10px 0;">
+            ${cleanString(tit)}
+          </h3>
+          ${photo ? `<img src="${photo}" alt="${tit}" style="max-width:100%; height:auto; border-radius:8px; margin:20px 0; display:block;">` : ''}
+          <div class="article-content" style="font-family: 'Georgia', serif; font-size: 15px; line-height: 1.6; color: #555;">
+            ${cont}
+          </div>
+        </div>
+      `;
+    }
+    noticiasHTML += articleHTML;
+  });
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { margin: 0; padding: 0; background-color: #f3f4f6; }
+        .article-content img { max-width: 100% !important; height: auto !important; border-radius: 4px; margin: 20px 0; display: block; }
+      </style>
+    </head>
+    <body style="background-color: #f3f4f6; padding: 20px 0;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb;">
+        <tr>
+          <td style="padding: 50px 40px 30px 40px; text-align: center;">
+            <h1 style="font-family: 'Georgia', serif; font-size: 32px; color: #1a1a1a; margin: 0; letter-spacing: -1px;">
+              ${revistaName}
+            </h1>
+            <p style="font-family: sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 4px; color: #007398; margin: 12px 0 0 0; font-weight: bold;">
+              ${lema}
+            </p>
+            <hr style="width: 50px; border: 1px solid #1a1a1a; margin-top: 25px;">
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 0 40px 40px 40px;">
+            <p style="font-family: 'Georgia', serif; font-size: 16px; color: #1a1a1a; margin-bottom: 30px;">
+              ${greeting} <strong>${nombre}</strong>, ${intro}
+            </p>
+            ${preferencesHTML}
+            ${indiceHTML}
+            ${noticiasHTML}
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px; border-top: 2px solid #1a1a1a; padding-top: 30px;">
+              <tr>
+                <td align="center">
+                  <a href="${archiveUrl}" style="display: inline-block; background-color: #007398; color: #ffffff; padding: 16px 30px; font-family: sans-serif; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; text-decoration: none; border-radius: 2px; margin: 10px;">
+                    ${viewArchive}
+                  </a>
+                  <br>
+                  <a href="${mainSite}" style="color: #007398; font-size: 14px; text-decoration: underline; margin: 10px;">
+                    ${homepageText}
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 40px; background-color: #fafafa; border-top: 1px solid #eeeeee; text-align: center;">
+            <p style="font-family: sans-serif; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: #999; margin-bottom: 20px;">
+              ${followText}
+            </p>
+            <div style="margin-bottom: 25px;">
+              <a href="https://www.instagram.com/revistanacionalcienciae" style="text-decoration: none; margin: 0 12px;">
+                <img src="https://cdn-icons-png.flaticon.com/512/1384/1384063.png" width="24" height="24" alt="Instagram">
+              </a>
+              <a href="https://www.youtube.com/@RevistaNacionaldelasCienciaspa" style="text-decoration: none; margin: 0 12px;">
+                <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" width="24" height="24" alt="YouTube">
+              </a>
+              <a href="https://www.tiktok.com/@revistacienciaestudiante" style="text-decoration: none; margin: 0 12px;">
+                <img src="https://cdn-icons-png.flaticon.com/512/3046/3046121.png" width="24" height="24" alt="TikTok">
+              </a>
+            </div>
+            <p style="font-family: sans-serif; font-size: 12px; color: #666;">
+              <a href="mailto:contact@revistacienciasestudiantes.com" style="color: #666; text-decoration: none;">
+                contact@revistacienciasestudiantes.com
+              </a>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 30px 40px; background-color: #1a1a1a; text-align: center;">
+            <p style="font-family: sans-serif; font-size: 10px; color: #888; margin: 0; line-height: 1.8;">
+              © 2026 ${revistaName}<br>
+              Este correo fue enviado a ${email}.<br>
+              <a href="${preferencesUrl}" style="color: #007398; text-decoration: underline; margin-right: 15px;">
+                ${preferencesText}
+              </a>
+              <a href="${unsubscribeUrl}" style="color: #007398; text-decoration: underline;">
+                ${isEn ? 'Unsubscribe instantly' : 'Cancelar suscripción instantáneamente'}
+              </a>
+            </p>
+          </td>
+        </tr>
+      </table>
+      <div style="height: 50px;"></div>
+    </body>
+    </html>
+  `;
+}
+
+// ==================== FUNCIÓN PRINCIPAL ====================
+
+async function queueEmail(to, subject, htmlBody) {
+  try {
+    if (!to || !subject || !htmlBody) {
+      throw new Error('to, subject y htmlBody son requeridos');
+    }
+    
+    const db = admin.firestore();
+    const emailData = {
+      to: [to],
+      message: {
+        subject: subject,
+        html: htmlBody,
+        text: htmlBody.replace(/<[^>]*>/g, '')
+      },
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+    
+    await db.collection(EMAIL_QUEUE_COLLECTION).add(emailData);
+    return true;
+  } catch (error) {
+    console.error(`Error queueing email para ${to}:`, error.message);
+    return false;
+  }
+}
+
+async function sendNewsletter() {
+  const db = admin.firestore();
+  const startTime = Date.now();
+  
+  console.log('🚀 Iniciando envío de newsletter...');
+  
+  try {
+    // Obtener todas las noticias nuevas
+    const allNews = await fetchNews();
+    
+    if (allNews.length === 0) {
+      console.log('ℹ️ No hay noticias nuevas.');
+      return { success: true, sent: 0, reason: 'no_news' };
+    }
+    
+    // Obtener suscriptores activos
+    const subscribersSnapshot = await db.collection(NEWSLETTER_COLLECTION)
+      .where('active', '==', true)
+      .get();
+    
+    const subscribers = [];
+    subscribersSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.email) {
+        subscribers.push({
+          id: doc.id,
+          email: data.email,
+          nombre: data.nombre || data.email.split('@')[0],
+          idioma: (data.idioma || 'es').toLowerCase(),
+          preferences: data.preferences || {},
+          lastSentAt: data.lastSentAt || null
+        });
+      }
+    });
+    
+    console.log(`👥 ${subscribers.length} suscriptores activos`);
+    
+    if (subscribers.length === 0) {
+      return { success: true, sent: 0, reason: 'no_subscribers' };
+    }
+    
+    // Enviar a cada suscriptor según sus preferencias
+    let sentCount = 0;
+    let errorCount = 0;
+    let filteredCount = 0;
+    const batchSize = 50;
+    
+    for (let i = 0; i < subscribers.length; i += batchSize) {
+      const batch = subscribers.slice(i, i + batchSize);
+      
+      await Promise.all(batch.map(async (subscriber) => {
+        try {
+          // Filtrar noticias según preferencias
+          const filteredNews = filterNewsByPreferences(allNews, subscriber.preferences);
+          
+          if (filteredNews.length === 0) {
+            console.log(`⏭️ ${subscriber.email}: Sin noticias para sus preferencias`);
+            filteredCount++;
+            return;
+          }
+          
+          const lang = subscriber.idioma === 'en' ? 'en' : 'es';
+          const subject = generateSubject(lang, filteredNews);
+          const unsubscribeToken = generateUnsubscribeToken(subscriber.email);
+          
+          const htmlBody = generateElegantHTML(
+            subscriber.nombre,
+            filteredNews,
+            subscriber.email,
+            lang,
+            unsubscribeToken,
+            subscriber.preferences
+          );
+          
+          const queued = await queueEmail(subscriber.email, subject, htmlBody);
+          
+          if (queued) {
+            sentCount++;
+            await db.collection(NEWSLETTER_COLLECTION).doc(subscriber.id).update({
+              lastSentAt: admin.firestore.FieldValue.serverTimestamp(),
+              lastSentNews: filteredNews.map(n => n.slug)
+            });
+          } else {
+            errorCount++;
+          }
+        } catch (subscriberError) {
+          console.error(`Error procesando ${subscriber.email}:`, subscriberError);
+          errorCount++;
+        }
+      }));
+      
+      console.log(`📊 Progreso: ${Math.min(i + batchSize, subscribers.length)}/${subscribers.length}`);
+    }
+    
+    // Registrar historial
+    await db.collection(NEWSLETTER_HISTORY).add({
+      sentAt: admin.firestore.FieldValue.serverTimestamp(),
+      newsCount: allNews.length,
+      subscribersCount: subscribers.length,
+      sentCount,
+      filteredCount,
+      errorCount,
+      durationMs: Date.now() - startTime
+    });
+    
+    console.log(`✅ Newsletter enviada: ${sentCount} exitosos, ${filteredCount} filtrados, ${errorCount} errores`);
+    
+    return {
+      success: true,
+      sent: sentCount,
+      filtered: filteredCount,
+      errors: errorCount,
+      total: subscribers.length,
+      newsCount: allNews.length,
+      durationMs: Date.now() - startTime
+    };
+    
+  } catch (error) {
+    console.error('Error en sendNewsletter:', error);
+    throw error;
+  }
+}
+
+// ==================== CLOUD FUNCTIONS ====================
+
+// Enviar newsletter (manual o programada)
+exports.sendNewsletter = functions
+  .runWith({
+    timeoutSeconds: 540,
+    memory: '1GB'
+  })
+  .https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, GET');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
+    
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+    
+    try {
+      const result = await sendNewsletter();
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+// Endpoint de desuscripción
+exports.unsubscribeNewsletter = functions
+  .runWith({
+    timeoutSeconds: 60,
+    memory: '256MB'
+  })
+  .https.onRequest(async (req, res) => {
+    const { email, token } = req.query;
+    
+    if (!email || !token) {
+      res.status(400).send(`
+        <html><body style="font-family: sans-serif; text-align: center; margin-top: 50px;">
+          <h2>Error: Parámetros inválidos</h2>
+        </body></html>
+      `);
+      return;
+    }
+    
+    // Verificar token
+    if (!verifyUnsubscribeToken(email, token)) {
+      res.status(403).send(`
+        <html><body style="font-family: sans-serif; text-align: center; margin-top: 50px;">
+          <h2>Error: Token inválido</h2>
+          <p>Por favor, usa el enlace de desuscripción de tu correo.</p>
+        </body></html>
+      `);
+      return;
+    }
+    
+    const result = await unsubscribeUser(email);
+    
+    if (result.success) {
+      res.status(200).send(`
+        <html>
+        <head>
+          <style>
+            body { font-family: 'Georgia', serif; text-align: center; margin-top: 50px; background-color: #f3f4f6; }
+            .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; }
+            h1 { color: #1a1a1a; }
+            p { color: #666; line-height: 1.6; }
+            .icon { font-size: 48px; margin-bottom: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">✅</div>
+            <h1>Desuscripción Exitosa</h1>
+            <p>Tu correo <strong>${email}</strong> ha sido removido de nuestra lista.</p>
+            <p>Lamentamos verte partir. Si cambias de opinión, siempre puedes volver a suscribirte.</p>
+            <a href="https://www.revistacienciasestudiantes.com" style="color: #007398;">Volver al sitio</a>
+          </div>
+        </body>
+        </html>
+      `);
+    } else {
+      res.status(404).send(`
+        <html><body style="font-family: sans-serif; text-align: center; margin-top: 50px;">
+          <h2>Email no encontrado</h2>
+        </body></html>
+      `);
+    }
+  });
+
+// Endpoint para gestionar preferencias
+exports.managePreferences = functions
+  .runWith({
+    timeoutSeconds: 60,
+    memory: '256MB'
+  })
+  .https.onRequest(async (req, res) => {
+    const { email, token } = req.query;
+    
+    if (!email || !token) {
+      res.status(400).send('Parámetros inválidos');
+      return;
+    }
+    
+    if (!verifyUnsubscribeToken(email, token)) {
+      res.status(403).send('Token inválido');
+      return;
+    }
+    
+    // Aquí mostrarías un formulario para actualizar preferencias
+    res.status(200).send(`
+      <html>
+      <head>
+        <style>
+          body { font-family: 'Georgia', serif; text-align: center; margin-top: 50px; background-color: #f3f4f6; }
+          .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; }
+          h1 { color: #1a1a1a; }
+          .area { display: block; margin: 10px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Gestionar Preferencias</h1>
+          <p>Selecciona las áreas que te interesan:</p>
+          <form action="/updatePreferences" method="POST">
+            <input type="hidden" name="email" value="${email}">
+            <input type="hidden" name="token" value="${token}">
+            <label class="area"><input type="checkbox" name="areas" value="biologia"> Biología</label>
+            <label class="area"><input type="checkbox" name="areas" value="quimica"> Química</label>
+            <label class="area"><input type="checkbox" name="areas" value="fisica"> Física</label>
+            <label class="area"><input type="checkbox" name="areas" value="matematica"> Matemática</label>
+            <label class="area"><input type="checkbox" name="areas" value="computacion"> Computación</label>
+            <button type="submit" style="margin-top: 20px; padding: 10px 20px; background: #007398; color: white; border: none; border-radius: 4px; cursor: pointer;">
+              Guardar Preferencias
+            </button>
+          </form>
+        </div>
+      </body>
+      </html>
+    `);
+  });
+
+// Envío programado
+exports.sendNewsletterScheduled = functions
+  .runWith({
+    timeoutSeconds: 540,
+    memory: '1GB'
+  })
+  .pubsub
+  .schedule('0 9 * * *')
+  .timeZone('America/Santiago')
+  .onRun(async (context) => {
+    console.log('📅 Ejecutando newsletter programada...');
+    return await sendNewsletter();
+  });

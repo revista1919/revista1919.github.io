@@ -18,6 +18,7 @@ import ReviewerResponsePage from './components/ReviewerResponsePage';
 import ArticleCard from './components/ArticleCard';
 import VolumeCard from './components/VolumeCard';
 import Tabs from './components/Tabs';
+import NewsletterModal from './components/NewsletterModal';
 import SubmitSection from './components/SubmitSection';
 import AdminSection from './components/AdminSection';
 import AboutSection from './components/AboutSection';
@@ -1046,6 +1047,12 @@ function App() {
           </Routes>
         </AnimatePresence>
       </main>
+      {/* MODAL DE NEWSLETTER */}
+      <NewsletterModal 
+        delay={30000}
+        scrollTrigger={0.5}
+        cookieExpirationDays={7}
+      />
       <AnimatePresence>
         {isMenuOpen && (
           <>

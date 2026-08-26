@@ -1,32 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
+import NewsletterSubscription from './NewsletterSubscription';
 
 function FooterEN() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const scriptURL = "https://script.google.com/macros/s/AKfycbyAmrjSmCkMTeLhzrLbtPd46hO9-uEenRPcD2B_Jp52g3GSEDYQr1SezZnC9WoWfBySng/exec";
-  
-  // Obtener año actual para copyright dinámico
   const currentYear = new Date().getFullYear();
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new URLSearchParams();
-    formData.append("nombre", name);
-    formData.append("correo", email);
-    formData.append("idiom", "en");
-    fetch(scriptURL, { method: "POST", body: formData })
-      .then(r => r.text())
-      .then(() => {
-        setSubmitted(true);
-        setName('');
-        setEmail('');
-      })
-      .catch(err => alert("Error sending: " + err));
-  };
   
-  // Internal component for elegant and uniform icons
   const SocialIcon = ({ href, iconPath, label }) => (
     <a
       href={href}
@@ -62,36 +40,7 @@ function FooterEN() {
             </p>
           </div>
           <div>
-            {!submitted ? (
-              <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4">
-                <input
-                  type="text"
-                  placeholder="Your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  className="bg-transparent border-b border-gray-700 py-2 px-1 text-sm focus:border-[#007398] outline-none transition-colors flex-1"
-                />
-                <input
-                  type="email"
-                  placeholder="Your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-transparent border-b border-gray-700 py-2 px-1 text-sm focus:border-[#007398] outline-none transition-colors flex-1"
-                />
-                <button
-                  type="submit"
-                  className="text-[10px] uppercase tracking-[0.2em] font-bold border border-gray-600 px-6 py-3 hover:bg-white hover:text-black transition-all"
-                >
-                  Subscribe
-                </button>
-              </form>
-            ) : (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[#007398] text-sm italic font-serif">
-                Thank you for subscribing!
-              </motion.p>
-            )}
+            <NewsletterSubscription variant="footer" showTitle={false} />
           </div>
         </div>
         <div className="h-[1px] bg-gradient-to-r from-transparent via-gray-800 to-transparent mb-12"></div>
@@ -122,11 +71,10 @@ function FooterEN() {
             />
           </div>
           
-          {/* MODIFIED SECTION: Contact with two links */}
+          {/* Contact */}
           <div className="text-center md:text-right">
             <span className="text-[10px] uppercase tracking-[0.3em] text-gray-500 block mb-1">Official Contact</span>
             
-            {/* Desktop link (Gmail) - visible on md and up */}
             <a 
               href="https://mail.google.com/mail/?view=cm&fs=1&to=contact@revistacienciasestudiantes.com" 
               target="_blank" 
@@ -136,7 +84,6 @@ function FooterEN() {
               contact@revistacienciasestudiantes.com
             </a>
             
-            {/* Mobile link (mailto) - visible only on mobile */}
             <a 
               href="mailto:contact@revistacienciasestudiantes.com" 
               className="text-sm font-light hover:text-[#007398] transition-colors md:hidden"
@@ -146,7 +93,7 @@ function FooterEN() {
           </div>
         </div>
         
-        {/* Lower Section: Copyright with dynamic year and links to HTML files */}
+        {/* Copyright */}
         <div className="pt-8 border-t border-gray-900 flex flex-col items-center gap-4">
           <p className="text-[9px] text-gray-600 uppercase tracking-[0.4em] text-center">
             © {currentYear} National Review of Sciences for Students · ISSN 3087-2839. All rights reserved.
