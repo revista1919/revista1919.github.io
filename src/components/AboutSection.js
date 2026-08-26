@@ -1,125 +1,148 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { AcademicCapIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 
 function AboutSection() {
   const fadeUp = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 15 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
   };
 
-  // Solo las indexaciones más relevantes
-  const indexingPlatforms = [
-    { name: 'ISSN', url: 'https://www.issn.org', logo: 'https://www.issn.org/wp-content/themes/themeissn/img/logo.jpg' },
-    { name: 'Zenodo', url: 'https://zenodo.org', logo: 'https://about.zenodo.org/static/img/logos/zenodo-black-2500.png' },
-    { name: 'OpenAIRE', url: 'https://www.openaire.eu', logo: 'https://tse4.mm.bing.net/th/id/OIP.Ok4TXwQO3PnlhTOywrfwggHaDx?r=0&pid=Api&h=220&P=0' },
-    { name: 'Google Scholar', url: 'https://scholar.google.com', logo: 'https://images.seeklogo.com/logo-png/48/1/google-scholar-logo-png_seeklogo-484488.png' },
-    { name: 'Latindex', url: 'https://www.latindex.org', logo: 'https://tse1.mm.bing.net/th/id/OIP.Kdslv0V6b9hey7IyvJyMdwHaEu?r=0&pid=Api&h=220&P=0' }
-  ];
-
   return (
-    <section className="py-24 md:py-32 bg-white text-[#002147] font-sans border-t border-slate-200">
-      <div className="max-w-6xl mx-auto px-6 md:px-12">
+    <section className="py-20 bg-white">
+      <div className="max-w-5xl mx-auto px-6">
         
-        {/* TÍTULO PRINCIPAL */}
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="mb-20 md:mb-28 border-b-2 border-[#002147] pb-10">
-          <span className="text-[#e86125] font-bold text-[10px] tracking-[0.25em] uppercase mb-4 block">
-            Sobre la Revista
-          </span>
-          <h2 className="text-4xl md:text-6xl font-serif font-bold tracking-tight leading-[1.1] max-w-4xl text-[#002147]">
-            Impulsando a la próxima generación del <span className="text-[#e86125] italic">rigor científico.</span>
+        {/* ENCABEZADO EDITORIAL */}
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeUp}
+          className="mb-12 text-center"
+        >
+          <h2 className="text-3xl sm:text-4xl font-serif text-black mb-3 tracking-tight">
+            Impulsando a la próxima generación del <span className="italic text-[#e86125]">rigor científico.</span>
           </h2>
+          <p className="text-[15px] text-[#666666] max-w-2xl mx-auto font-sans">
+            Una revista científica arbitrada por pares, dedicada a difundir e impulsar la investigación temprana a nivel escolar y universitario.
+          </p>
+          <div className="h-[2px] w-16 bg-[#e86125] mx-auto mt-6"></div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 mb-24 md:mb-32">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mb-12">
           
-          {/* COLUMNA DE TEXTO - Contenido esencial */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="lg:col-span-7">
-            <div className="prose prose-lg prose-slate text-slate-700 font-serif leading-relaxed">
-              <p className="text-xl">
-                La <strong className="text-[#002147] font-sans">Revista Nacional de las Ciencias para Estudiantes</strong> es una publicación académica que democratiza el acceso a la ciencia, demostrando que el talento investigativo temprano posee validez y rigor empírico.
+          {/* Texto Institucional */}
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="lg:col-span-7 space-y-8"
+          >
+            <p className="text-[15px] text-[#2b2b2b] leading-relaxed font-sans">
+              La <strong className="text-black">Revista Nacional de las Ciencias para Estudiantes</strong> es una publicación académica de alto estándar. Nuestro propósito es democratizar el acceso a la publicación científica y demostrar que el talento investigativo no tiene por qué esperar a un posgrado.
+            </p>
+            
+            {/* Cita tipo revista */}
+            <blockquote className="border-l-4 border-[#e86125] pl-6 py-2">
+              <p className="font-serif text-xl md:text-2xl font-light text-black leading-snug">
+                "Operamos como una iniciativa científica independiente, libre de afiliaciones institucionales restrictivas, lo que nos garantiza una autonomía editorial total."
               </p>
-              
-              <blockquote className="my-10 pl-6 border-l-4 border-[#e86125] text-2xl font-bold text-[#002147] italic">
-                "Operamos como una iniciativa científica independiente, con autonomía editorial absoluta."
-              </blockquote>
-              
-              <div className="flex items-start gap-3 mt-8">
-                <AcademicCapIcon className="w-6 h-6 text-[#e86125] flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="text-sm font-bold font-sans uppercase tracking-widest text-[#002147] mb-2">
-                    Comité Científico
-                  </h3>
-                  <p className="text-base">
-                    Respaldo de académicos activos de las principales universidades. Cada manuscrito se somete a <strong className="text-[#002147] font-sans">revisión por pares doble ciego</strong>.
-                  </p>
-                </div>
+            </blockquote>
+            
+            <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">
+              <h3 className="text-[13px] font-bold font-sans uppercase tracking-wider text-black px-6 pt-5 pb-3 border-b border-[#e6e8ea]">
+                Comité Científico
+              </h3>
+              <div className="px-6 py-4">
+                <p className="text-[14px] text-[#2b2b2b] leading-relaxed font-sans">
+                  El rigor de nuestras publicaciones está respaldado por un Comité Científico integrado por destacados académicos de las principales universidades del país. Ellos garantizan que cada artículo cumpla estrictamente con los estándares internacionales mediante <span className="italic">double-blind peer review</span>.
+                </p>
               </div>
             </div>
           </motion.div>
 
-          {/* COLUMNA LATERAL — PentaUC */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="lg:col-span-5">
-            <div className="border border-slate-300 p-2 bg-slate-50 rounded-sm">
-              <div className="bg-white border border-slate-200 p-8">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-6">
-                  <span className="text-[#e86125] font-bold text-[10px] tracking-widest uppercase">Prensa</span>
-                  <img src="https://cdn.brandfetch.io/pentauc.cl/fallback/lettermark/theme/dark/h/256/w/256/icon?c=1bfwsmEH20zzEfSNTed" alt="Penta UC" className="h-6 w-6 grayscale opacity-80" />
-                </div>
-                
-                <h4 className="text-2xl font-serif font-bold mb-4 text-[#002147] leading-tight">
-                  Reconocidos por Penta UC
-                </h4>
-                
-                <div className="aspect-[4/3] mb-6 overflow-hidden bg-slate-100 border border-slate-200 rounded-sm">
+          {/* Cuadro de Prensa (Penta UC) */}
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="lg:col-span-5"
+          >
+            <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">
+              <div className="relative aspect-[4/3] bg-[#f4f5f7] overflow-hidden rounded-t-sm">
+                <img 
+                  src="https://www.revistacienciasestudiantes.com/images/img-1787683945345-vfjy7c.webp"
+                  alt="Academia de Talentos Penta UC"
+                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
+                />
+                <div className="absolute top-0 left-0 bg-white p-3 border-r border-b border-[#e6e8ea]">
                   <img 
-                    src="https://www.revistacienciasestudiantes.com/images/img-1787683945345-vfjy7c.webp"
+                    src="https://cdn.brandfetch.io/pentauc.cl/fallback/lettermark/theme/dark/h/256/w/256/icon?c=1bfwsmEH20zzEfSNTed"
                     alt="Penta UC"
-                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                    className="h-8 w-8 object-contain"
                   />
                 </div>
-                
-                <p className="text-sm text-slate-600 font-serif leading-relaxed mb-6">
-                  La Academia de Talentos UC destacó nuestra iniciativa por visibilizar investigaciones escolares y universitarias.
+              </div>
+              
+              <div className="p-6">
+                <span className="text-[#e86125] font-bold text-[10px] tracking-[0.2em] uppercase mb-2 block font-sans">
+                  Aparición en Prensa
+                </span>
+                <h4 className="text-lg font-serif font-semibold text-black mb-3 tracking-tight">
+                  Reconocimiento Penta UC
+                </h4>
+                <p className="text-[13px] text-[#666666] leading-relaxed mb-5 font-sans">
+                  La Academia de Talentos de la Pontificia Universidad Católica de Chile destacó nuestra iniciativa por visibilizar investigaciones escolares a nivel nacional.
                 </p>
-                
-                <a href="https://academiadetalentos.uc.cl/2026/06/25/estudiantes-del-programa-penta-uc-crean-revista-de-ciencias-para-visibilizar-investigaciones-escolares-y-universitarias/" target="_blank" rel="noopener noreferrer" className="group block text-center bg-[#002147] text-white text-xs font-bold uppercase tracking-widest py-3 px-4 hover:bg-[#e86125] transition-colors rounded-sm">
-                  <span className="inline-flex items-center gap-2">
-                    Leer Comunicado
-                    <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </span>
+                <a 
+                  href="https://academiadetalentos.uc.cl/2026/06/25/estudiantes-del-programa-penta-uc-crean-revista-de-ciencias-para-visibilizar-investigaciones-escolares-y-universitarias/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-bold uppercase tracking-widest text-[#002147] border-b border-[#002147] pb-1 hover:text-[#e86125] hover:border-[#e86125] transition-colors font-sans"
+                >
+                  Leer Documento Original
                 </a>
               </div>
             </div>
           </motion.div>
         </div>
 
-        {/* INDEXACIÓN - Logos esenciales */}
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="border-t border-slate-200 pt-16">
-          <h3 className="text-2xl font-serif font-bold text-[#002147] mb-10">
-            Indexación
-          </h3>
+        {/* Sección de Indexación */}
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeUp}
+          className="border-t-2 border-[#e6e8ea] pt-10"
+        >
+          <div className="text-center mb-8">
+            <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0]">
+              Indexación y Bases de Datos
+            </h3>
+          </div>
           
-          <div className="flex flex-wrap justify-center md:justify-start items-center gap-10 md:gap-16 opacity-70">
-            {indexingPlatforms.map((platform) => (
+          <div className="flex flex-wrap justify-center items-center gap-10 md:gap-16 opacity-70">
+            {[
+              { url: 'https://www.issn.org', img: 'https://www.issn.org/wp-content/themes/themeissn/img/logo.jpg', alt: 'ISSN' },
+              { url: 'https://zenodo.org', img: 'https://about.zenodo.org/static/img/logos/zenodo-black-2500.png', alt: 'Zenodo' },
+              { url: 'https://www.openaire.eu', img: 'https://tse4.mm.bing.net/th/id/OIP.Ok4TXwQO3PnlhTOywrfwggHaDx?r=0&pid=Api&h=220&P=0', alt: 'OpenAIRE' },
+              { url: 'https://scholar.google.com', img: 'https://images.seeklogo.com/logo-png/48/1/google-scholar-logo-png_seeklogo-484488.png', alt: 'Google Scholar' },
+              { url: 'https://www.latindex.org', img: 'https://tse1.mm.bing.net/th/id/OIP.Kdslv0V6b9hey7IyvJyMdwHaEu?r=0&pid=Api&h=220&P=0', alt: 'Latindex' }
+            ].map((logo) => (
               <a 
-                key={platform.name}
-                href={platform.url} 
+                key={logo.alt}
+                href={logo.url} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="grayscale hover:grayscale-0 transition-all duration-300"
-                title={platform.name}
+                className="grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300"
               >
-                <img 
-                  src={platform.logo} 
-                  alt={platform.name} 
-                  className="h-8 object-contain"
-                />
+                <img src={logo.img} alt={logo.alt} className="h-8 md:h-10 object-contain mix-blend-multiply" />
               </a>
             ))}
           </div>
         </motion.div>
-
+        
       </div>
     </section>
   );

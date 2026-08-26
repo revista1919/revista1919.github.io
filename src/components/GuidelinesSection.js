@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRightIcon, DocumentTextIcon, CheckCircleIcon, BookOpenIcon, AcademicCapIcon, ScaleIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, ArrowTopRightOnSquareIcon, DocumentTextIcon, PlayCircleIcon } from '@heroicons/react/24/outline';
 
 function GuidelinesSection() {
   const resources = [
@@ -11,185 +11,229 @@ function GuidelinesSection() {
 
   const keySpecs = [
     { label: 'Extensión', val: '1.000–10.000 palabras (incluyendo referencias)' },
-    { label: 'Formato', val: 'Microsoft Word (.docx) o LaTeX. Documento anonimizado (Double-blind).' },
-    { label: 'Citación', val: 'Chicago 17.ª ed. (Autor-Fecha)', link: 'https://www.chicagomanualofstyle.org/' },
-    { label: 'Idiomas', val: 'Español e Inglés (Metadatos en ambos idiomas obligatorios)' },
-    { label: 'Keywords', val: '2–6 libres + Códigos controlados (JEL, MeSH, ACM)', link: '/policies.html' },
-    { label: 'Originalidad', val: 'Índice de similitud máximo: 15% (iThenticate/Turnitin)' }
+    { label: 'Formato', val: 'Microsoft Word (.docx). Documento anonimizado para revisión doble ciego.' },
+    { label: 'Citación', val: 'Chicago 17.ª ed. (Autor-Fecha)', link: 'https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html' },
+    { label: 'Idiomas', val: 'Español e Inglés (título, resumen y palabras clave en ambos)' },
+    { label: 'Palabras clave', val: '2–6 libres + códigos de vocabulario controlado (JEL, MeSH, ACM, UNESCO)', link: 'https://www.revistacienciasestudiantes.com/policies.html#tabla-vocabularios' },
+    { label: 'Originalidad', val: 'Similitud máxima permitida: 15%' },
+    { label: 'Ética', val: 'Aprobación de comité cuando corresponda; declaración en el manuscrito.' }
   ];
 
   const fadeUp = {
     hidden: { opacity: 0, y: 15 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
   };
 
   return (
-    <section className="py-20 md:py-32 bg-[#fafafa] text-[#002147] font-sans border-t border-slate-200">
-      <div className="max-w-6xl mx-auto px-6 md:px-12">
+    <section className="py-20 bg-[#f4f5f7]">
+      <div className="max-w-5xl mx-auto px-6">
         
-        {/* HEADER DE SECCIÓN */}
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="mb-20">
-          <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-[#e86125] mb-4 block">
-            Directrices // Preparación
-          </span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tight mb-6 text-[#002147]">
+        {/* ENCABEZADO EDITORIAL */}
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeUp}
+          className="mb-12 text-center"
+        >
+          <h2 className="text-3xl sm:text-4xl font-serif text-black mb-3 tracking-tight">
             Guía para Autores
           </h2>
-          <p className="text-slate-600 max-w-2xl text-lg font-serif leading-relaxed">
-            Instrucciones formales para la preparación, estructuración y envío de manuscritos. El cumplimiento de estas directrices es requisito para superar el <em>Desk Review</em>.
+          <p className="text-[15px] text-[#666666] max-w-2xl mx-auto font-sans">
+            Instrucciones formales para la preparación, estructuración y envío de manuscritos. La adherencia a estas normativas es indispensable para superar la revisión técnica preliminar.
           </p>
+          <div className="h-[2px] w-16 bg-[#e86125] mx-auto mt-6"></div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
           
-          {/* COLUMNA IZQUIERDA (Specs & Enlaces) */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="lg:col-span-5 space-y-12">
+          {/* COLUMNA IZQUIERDA */}
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="lg:col-span-5 space-y-8"
+          >
             
-            {/* CTA Guía Rápida (Estilo Bloque Editorial) */}
-            <div className="bg-[#002147] text-white p-8 rounded-sm border-l-4 border-[#e86125]">
-              <h3 className="text-xl font-serif font-bold mb-3">Guía Rápida Interactiva</h3>
-              <p className="text-sm text-slate-300 leading-relaxed mb-6 font-light">
-                Herramienta de pre-evaluación. Un checklist visual de 5 minutos para garantizar que su documento cumple con los estándares técnicos antes del envío.
+            {/* Guía Rápida - Banner Editorial */}
+            <div className="bg-white border border-[#e6e8ea] border-l-4 border-l-[#002147] p-6 shadow-sm rounded-sm">
+              <h3 className="text-[15px] font-bold font-sans text-black mb-2">
+                Guía Rápida Interactiva
+              </h3>
+              <p className="text-[13px] text-[#666666] font-sans leading-relaxed mb-4">
+                Para autores primerizos, disponemos de una <strong>Guía Rápida Interactiva</strong>. Un checklist visual que consolida los requisitos esenciales en menos de 5 minutos.
               </p>
-              <a href="/quick.html" className="inline-flex items-center gap-3 bg-[#e86125] text-white px-6 py-3 text-xs font-bold uppercase tracking-widest hover:bg-white hover:text-[#002147] transition-colors rounded-sm">
-                Iniciar Checklist
+              <a 
+                href="/quick.html" 
+                className="inline-flex items-center gap-2 bg-[#002147] hover:bg-[#e86125] text-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors font-sans rounded-sm"
+              >
+                Abrir Guía Rápida
                 <ArrowRightIcon className="w-4 h-4" />
               </a>
             </div>
 
             {/* Documentos Normativos */}
-            <div>
-              <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-slate-400 mb-4 border-b border-slate-200 pb-2">Documentos Normativos</h4>
-              <ul className="space-y-0">
+            <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">
+              <h3 className="text-[13px] font-bold font-sans uppercase tracking-wider text-black px-6 pt-5 pb-3 border-b border-[#e6e8ea]">
+                Documentos Normativos
+              </h3>
+              <div className="divide-y divide-[#e6e8ea]">
                 {[
-                  { href: '/author.html', title: 'Manual Completo para Autores', desc: 'Instrucciones detalladas de formato y estilo.', icon: BookOpenIcon },
-                  { href: '/practices.html', title: 'Declaración de Ética (COPE)', desc: 'Estándares contra plagio, autoría fantasma y conflictos.', icon: ScaleIcon },
-                  { href: '/open-access.html', title: 'Licenciamiento Open Access', desc: 'Términos CC-BY 4.0 y retención de derechos.', icon: CheckCircleIcon }
-                ].map((item, idx) => (
-                  <li key={idx}>
-                    <a href={item.href} className="group flex items-start gap-4 py-4 border-b border-slate-200 hover:bg-slate-50 transition-colors px-2 -mx-2">
-                      <item.icon className="w-5 h-5 text-[#e86125] mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <h5 className="text-sm font-bold text-[#002147] group-hover:text-[#e86125] transition-colors mb-1">
-                          {item.title}
-                        </h5>
-                        <p className="text-xs text-slate-500 font-serif italic">{item.desc}</p>
-                      </div>
-                      <ArrowRightIcon className="w-4 h-4 text-slate-300 group-hover:text-[#e86125] group-hover:translate-x-1 transition-all mt-1" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Especificaciones Técnicas (Estilo Tabla) */}
-            <div>
-              <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-slate-400 mb-4 border-b border-slate-200 pb-2">Especificaciones Técnicas</h4>
-              <dl className="divide-y divide-slate-200 text-sm">
-                {keySpecs.map((item, i) => (
-                  <div key={i} className="py-3 flex flex-col sm:flex-row sm:justify-between sm:gap-4">
-                    <dt className="font-bold text-[#002147] min-w-[120px] uppercase text-[11px] tracking-wider mt-0.5">{item.label}</dt>
-                    <dd className="text-slate-600 flex-1 font-serif">
-                      {item.link ? (
-                        <a href={item.link} target="_blank" rel="noopener noreferrer" className="hover:text-[#e86125] underline decoration-slate-300 underline-offset-4">
-                          {item.val}
-                        </a>
-                      ) : item.val}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          </motion.div>
-
-          {/* COLUMNA DERECHA (Citas & Multimedia) */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="lg:col-span-7 space-y-16">
-            
-            {/* Estilo de Citación (Estilo Manual de Estilo) */}
-            <div>
-              <h3 className="text-2xl font-serif font-bold text-[#002147] mb-6 flex items-center gap-3">
-                <span className="text-[#e86125]">/</span> Sistema de Referencias
-              </h3>
-              <p className="text-sm text-slate-600 mb-8 font-serif leading-relaxed">
-                Requerimos el uso estricto del sistema <strong className="text-[#002147]">Autor-Fecha</strong> del <em>Chicago Manual of Style (17.ª ed.)</em>. Las citas se integran en el texto entre paréntesis y las referencias completas se listan alfabéticamente al final del manuscrito.
-              </p>
-              
-              <div className="bg-white border border-slate-300 p-6 md:p-8 rounded-sm">
-                <h4 className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#002147] border-b border-slate-200 pb-3 mb-6">Ejemplos Tipificados (CMOS 17)</h4>
-                <div className="space-y-8">
-                  {[
-                    { title: 'Libro de un autor', ref: 'Graeber, David. 2018. Bullshit Jobs: A Theory. Simon & Schuster.', text: '(Graeber 2018, 45-46)' },
-                    { title: 'Artículo de Revista Académica', ref: 'Dittmar, Emily, y Douglas Schemske. 2023. «Temporal Variation in Selection». American Naturalist 202 (4): 471–85. https://doi.org/10.1086/725865.', text: '(Dittmar y Schemske 2023, 480)' },
-                    { title: 'Página Web Institucional', ref: 'Yale University. n.d. «About Yale: Discover». Accedido 15 de marzo de 2023. https://www.yale.edu/about-yale.', text: '(Yale University n.d.)' }
-                  ].map((ex) => (
-                    <div key={ex.title} className="relative pl-4 border-l-2 border-[#e86125]">
-                      <span className="absolute -left-2 top-0 bg-[#fafafa] text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1">{ex.title}</span>
-                      <p className="text-sm text-slate-800 font-serif leading-relaxed mt-3 mb-2">{ex.ref}</p>
-                      <p className="text-xs text-slate-500 font-mono">Cita en texto: {ex.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Talleres Audiovisuales (Diseño Estricto) */}
-            <div>
-              <h3 className="text-2xl font-serif font-bold text-[#002147] mb-6 flex items-center gap-3">
-                <span className="text-[#e86125]">/</span> Talleres Metodológicos
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="group border border-slate-200 bg-white p-2 rounded-sm">
-                  <div className="aspect-video bg-slate-900 relative overflow-hidden flex items-center justify-center">
-                    <iframe className="absolute inset-0 w-full h-full opacity-90 group-hover:opacity-100 transition-opacity" src="https://www.youtube.com/embed/wyPhAGW6-94" frameBorder="0" allowFullScreen title="Taller 1"></iframe>
-                  </div>
-                  <p className="text-xs font-bold text-center py-3 text-[#002147] uppercase tracking-widest">Taller de Escritura</p>
-                </div>
-                <div className="group border border-slate-200 bg-white p-2 rounded-sm">
-                  <div className="aspect-video bg-slate-900 relative overflow-hidden flex items-center justify-center">
-                    <iframe className="absolute inset-0 w-full h-full opacity-90 group-hover:opacity-100 transition-opacity" src="https://www.youtube.com/embed/videoseries?list=PL8yQlmhs7KsBerg9X63QnZnlNAopwzDmw" frameBorder="0" allowFullScreen title="Playlist"></iframe>
-                  </div>
-                  <p className="text-xs font-bold text-center py-3 text-[#002147] uppercase tracking-widest">Metodología (Serie)</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Academic Tools Block */}
-            <div className="bg-[#002147] text-white flex flex-col sm:flex-row items-center border-l-4 border-[#e86125] p-6 rounded-sm">
-              <div className="p-4 bg-white/5 mr-0 sm:mr-6 mb-4 sm:mb-0 rounded-sm">
-                <DocumentTextIcon className="w-12 h-12 text-[#e86125]" />
-              </div>
-              <div className="flex-1 text-center sm:text-left">
-                <h4 className="text-lg font-serif font-bold mb-2">Suite de Herramientas (Academic Tools)</h4>
-                <p className="text-sm text-slate-300 font-light mb-4">Gestione sus PDFs, formatee bibliografía en Chicago 17.ª ed. y analice métricas de texto con nuestra plataforma gratuita.</p>
-                <a href="https://www.revistacienciasestudiantes.com/academic-tools" className="text-[#e86125] text-xs uppercase font-bold tracking-widest hover:text-white transition-colors">Acceder a la Suite →</a>
-              </div>
-            </div>
-
-            {/* Recursos Recomendados (Grid minimalista) */}
-            <div>
-              <h3 className="text-2xl font-serif font-bold text-[#002147] mb-6 flex items-center gap-3">
-                <span className="text-[#e86125]">/</span> Recursos Externos
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {resources.map((resource) => (
-                  <a
-                    key={resource.name}
-                    href={resource.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group block p-5 bg-white border border-slate-200 rounded-sm hover:border-[#002147] transition-all duration-300"
+                  { href: '/author.html', title: 'Guía Completa para Autores' },
+                  { href: '/practices.html', title: 'Guía de Buenas Prácticas y Ética' },
+                  { href: '/open-access.html', title: 'Políticas de Open Access' }
+                ].map((item) => (
+                  <a 
+                    key={item.href}
+                    href={item.href} 
+                    className="group flex items-center justify-between px-6 py-4 hover:bg-[#f8f9fa] transition-colors"
                   >
-                    <h4 className="text-sm font-bold text-[#002147] group-hover:text-[#e86125] transition-colors mb-2">
-                      {resource.name}
-                    </h4>
-                    <p className="text-xs text-slate-500 font-serif leading-relaxed">
-                      {resource.desc}
-                    </p>
+                    <span className="text-[14px] font-sans font-semibold text-[#2b2b2b] group-hover:text-[#e86125] transition-colors">
+                      {item.title}
+                    </span>
+                    <ArrowRightIcon className="w-4 h-4 text-[#a0a0a0] group-hover:text-[#e86125]" />
                   </a>
                 ))}
               </div>
             </div>
+
+            {/* Especificaciones Técnicas */}
+            <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">
+              <h3 className="text-[13px] font-bold font-sans uppercase tracking-wider text-black px-6 pt-5 pb-3 border-b border-[#e6e8ea]">
+                Especificaciones del Manuscrito
+              </h3>
+              <div className="px-6 py-4">
+                <dl className="space-y-5">
+                  {keySpecs.map((item, i) => (
+                    <div key={i} className="flex flex-col">
+                      <dt className="text-[10px] uppercase font-bold tracking-wider text-[#a0a0a0] mb-1 font-sans">
+                        {item.label}
+                      </dt>
+                      <dd className="text-[13px] text-[#2b2b2b] leading-relaxed font-sans">
+                        {item.link ? (
+                          <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-[#002147] hover:text-[#e86125] underline underline-offset-4 decoration-[#cbd0d5] transition-colors">
+                            {item.val}
+                          </a>
+                        ) : (
+                          item.val
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </div>
+
+          </motion.div>
+
+          {/* COLUMNA DERECHA */}
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="lg:col-span-7 space-y-8"
+          >
             
+            {/* Manual de Citación */}
+            <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">
+              <div className="px-6 pt-5 pb-3 border-b border-[#e6e8ea]">
+                <span className="text-[#e86125] text-[10px] font-bold uppercase tracking-widest block mb-1 font-sans">Manual de Estilo</span>
+                <h3 className="text-lg font-serif font-semibold text-black tracking-tight">Chicago 17.ª ed. (Autor-Fecha)</h3>
+                <p className="text-[13px] text-[#666666] mt-2 leading-relaxed font-sans">
+                  Las citas se integran en el texto entre paréntesis y las referencias completas se listan al final. Consulte la{' '}
+                  <a href="https://www.chicagomanualofstyle.org/tools_citationguide/citation-guide-2.html" target="_blank" rel="noopener noreferrer" className="text-[#e86125] hover:underline">
+                    guía oficial
+                  </a>
+                  {' '}para casos complejos.
+                </p>
+              </div>
+
+              <div className="px-6 py-5 space-y-6">
+                {[
+                  { title: 'Libro', ref: 'Binder, Amy J., y Jeffrey L. Kidder. 2022. The Channels of Student Activism: How the Left and Right Are Winning (and Losing) in Campus Politics Today. University of Chicago Press.', text: '(Binder y Kidder 2022, 117–18)' },
+                  { title: 'Capítulo de Libro', ref: 'Doyle, Kathleen. 2023. «The Queen Mary Psalter». En The Book by Design: The Remarkable Story of the Greatest Invention, editado por P. J. M. Marks y Stephen Parkin. University of Chicago Press.', text: '(Doyle 2023, 64)' },
+                  { title: 'Artículo de Revista', ref: 'Dittmar, Emily L., y Douglas W. Schemske. 2023. «Temporal Variation in Selection Influences Microgeographic Local Adaptation». American Naturalist 202 (4): 471–85. https://doi.org/10.1086/725865.', text: '(Dittmar y Schemske 2023, 480)' },
+                  { title: 'Página Web', ref: 'Google. 2023. «Privacy Policy». Privacy & Terms. Effective November 15. https://policies.google.com/privacy.', text: '(Google 2023)', note: 'Sin fecha: (Yale University n.d.) + fecha de acceso.' }
+                ].map((ex) => (
+                  <div key={ex.title} className="pl-4 border-l-2 border-[#cbd0d5]">
+                    <h4 className="text-[11px] font-bold tracking-wider uppercase text-black mb-2 font-sans">{ex.title}</h4>
+                    <p className="text-xs text-[#2b2b2b] mb-2 leading-relaxed font-sans">{ex.ref}</p>
+                    <p className="text-xs text-[#666666] font-mono bg-[#f8f9fa] p-1.5 inline-block rounded-sm">{ex.text}</p>
+                    {ex.note && <span className="text-[10px] text-[#a0a0a0] ml-3 font-sans">{ex.note}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Academic Tools y Recursos */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white border border-[#e6e8ea] p-6 rounded-sm shadow-sm">
+                <DocumentTextIcon className="w-8 h-8 text-[#002147] mb-4" />
+                <h4 className="font-serif text-lg font-semibold text-black mb-2 tracking-tight">Suite Academic Tools</h4>
+                <p className="text-[13px] text-[#666666] mb-4 leading-relaxed font-sans">
+                  Plataforma integral propietaria para gestión de PDFs, citación automática y análisis de texto estructurado.
+                </p>
+                <a 
+                  href="https://www.revistacienciasestudiantes.com/academic-tools" 
+                  className="text-[11px] uppercase font-bold tracking-widest text-[#002147] hover:text-[#e86125] inline-flex items-center gap-1 font-sans"
+                >
+                  Acceder a la herramienta <ArrowTopRightOnSquareIcon className="w-3 h-3" />
+                </a>
+              </div>
+
+              <div className="bg-white border border-[#e6e8ea] p-6 rounded-sm shadow-sm">
+                <h4 className="text-[11px] font-bold tracking-wider uppercase text-black mb-4 font-sans">Bases recomendadas</h4>
+                <ul className="space-y-4">
+                  {resources.map((res) => (
+                    <li key={res.name}>
+                      <a href={res.url} target="_blank" rel="noopener noreferrer" className="block group">
+                        <span className="text-[14px] font-semibold text-[#2b2b2b] group-hover:text-[#e86125] block mb-1 font-sans">{res.name}</span>
+                        <span className="text-[12px] text-[#a0a0a0] font-sans">{res.desc}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Archivo Audiovisual */}
+            <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">
+              <h3 className="text-[13px] font-bold font-sans uppercase tracking-wider text-black px-6 pt-5 pb-3 border-b border-[#e6e8ea] flex items-center justify-between">
+                Archivo Audiovisual
+                <PlayCircleIcon className="w-5 h-5 text-[#a0a0a0]" />
+              </h3>
+              <div className="p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="aspect-video bg-[#f4f5f7] border border-[#e6e8ea] relative group rounded-sm">
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      src="https://www.youtube.com/embed/wyPhAGW6-94" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                      allowFullScreen 
+                      title="Taller 1" 
+                      className="absolute inset-0 z-10" 
+                    />
+                  </div>
+                  <div className="aspect-video bg-[#f4f5f7] border border-[#e6e8ea] relative group rounded-sm">
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      src="https://www.youtube.com/embed/videoseries?list=PL8yQlmhs7KsBerg9X63QnZnlNAopwzDmw" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                      allowFullScreen 
+                      title="Playlist de talleres" 
+                      className="absolute inset-0 z-10" 
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </motion.div>
         </div>
       </div>
