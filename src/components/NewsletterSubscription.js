@@ -211,7 +211,7 @@ export default function NewsletterSubscription({
     alreadySubscribed: isSpanish ? 'Este correo ya está suscrito a nuestro boletín' : 'This email is already subscribed to our newsletter',
     invalidName: isSpanish ? 'Por favor ingresa tu nombre' : 'Please enter your name',
     invalidEmail: isSpanish ? 'Por favor ingresa un correo válido' : 'Please enter a valid email',
-    generalError: isSpanish ? 'Error al procesar la suscripción' : 'Error processing subscription'
+    generalError: isSpanish ? 'Error al procesar la suscripción. Posiblemente usted ya está suscrito con este correo' : 'Error processing subscription. You are likely already subscribed with this email'
   };
 
   const checkExistingSubscription = async (email) => {
