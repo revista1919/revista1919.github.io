@@ -4,19 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  getDocs,
+  setDoc,
   serverTimestamp,
-  doc,
-  updateDoc,
-  onSnapshot
+  doc
 } from 'firebase/firestore';
 import { useLanguage } from '../hooks/useLanguage';
 
-// ==================== CONFIGURACIÓN FIREBASE ====================
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyArr3LE_hQLZG0L5m9JND2OWVL8elnSyWk",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "usuarios-rnce.firebaseapp.com",
@@ -27,7 +20,6 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-K90MKB7BDP"
 };
 
-// Inicializar Firebase (singleton)
 let app;
 let db;
 
@@ -38,7 +30,8 @@ try {
   console.error('Error initializing Firebase:', error);
 }
 
-// ==================== ICONOS SVG PROFESIONALES ====================
+const CHECK_SUBSCRIPTION_URL = 'https://us-central1-usuarios-rnce.cloudfunctions.net/checkSubscription';
+
 const Icons = {
   email: (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -147,7 +140,6 @@ const Icons = {
   )
 };
 
-// ==================== CONSTANTES BILINGÜES ====================
 const AREAS = [
   { id: 'biologia', labelEs: 'Biología', labelEn: 'Biology', icon: Icons.biology },
   { id: 'quimica', labelEs: 'Química', labelEn: 'Chemistry', icon: Icons.chemistry },
@@ -182,9 +174,8 @@ const DEFAULT_PREFERENCES = {
   }
 };
 
-// ==================== COMPONENTE PRINCIPAL ====================
 export default function NewsletterSubscription({ 
-  variant = 'default', // 'default' | 'footer' | 'compact' | 'minimal'
+  variant = 'default',
   className = '',
   showTitle = true,
   onSuccess = null,
@@ -200,10 +191,8 @@ export default function NewsletterSubscription({
   const [error, setError] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
-  const [existingSubscription, setExistingSubscription] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Textos bilingües
   const texts = {
     title: isSpanish ? 'Boletín Informativo' : 'Newsletter',
     subtitle: isSpanish ? 'Reciba las últimas noticias científicas' : 'Receive the latest scientific news',
@@ -215,44 +204,40 @@ export default function NewsletterSubscription({
     hideAdvanced: isSpanish ? 'Ocultar preferencias' : 'Hide preferences',
     frequency: isSpanish ? 'Frecuencia de envío' : 'Sending frequency',
     areas: isSpanish ? 'Áreas de interés' : 'Areas of interest',
-    updatePreferences: isSpanish ? 'Actualizar Preferencias' : 'Update Preferences',
     confirm: isSpanish ? 'Confirmar Suscripción' : 'Confirm Subscription',
     cancel: isSpanish ? 'Cancelar' : 'Cancel',
     successTitle: isSpanish ? '¡Gracias por suscribirte!' : 'Thank you for subscribing!',
     successMessage: isSpanish ? 'Recibirás noticias según tus preferencias' : 'You will receive news according to your preferences',
-    alreadySubscribed: isSpanish ? 'Este correo ya está suscrito' : 'This email is already subscribed',
+    alreadySubscribed: isSpanish ? 'Este correo ya está suscrito a nuestro boletín' : 'This email is already subscribed to our newsletter',
     invalidName: isSpanish ? 'Por favor ingresa tu nombre' : 'Please enter your name',
     invalidEmail: isSpanish ? 'Por favor ingresa un correo válido' : 'Please enter a valid email',
-    generalError: isSpanish ? 'Error al procesar la suscripción' : 'Error processing subscription',
-    updatedSuccess: isSpanish ? 'Preferencias actualizadas' : 'Preferences updated'
+    generalError: isSpanish ? 'Error al procesar la suscripción' : 'Error processing subscription'
   };
 
-  // Verificar suscripción existente
   const checkExistingSubscription = async (email) => {
     try {
-      const q = query(
-        collection(db, 'newsletter'),
-        where('email', '==', email.toLowerCase()),
-        where('active', '==', true)
-      );
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const doc = querySnapshot.docs[0];
-        return { id: doc.id, ...doc.data() };
+      const response = await fetch(`${CHECK_SUBSCRIPTION_URL}?email=${encodeURIComponent(email.toLowerCase())}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error(`HTTP ${response.status}`);
       }
-      return null;
+      
+      const data = await response.json();
+      return data.subscription || null;
+      
     } catch (error) {
       console.error('Error checking subscription:', error);
       return null;
     }
   };
 
-  // Manejar envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (subscribing) return;
 
-    // Validaciones
     if (!nombre.trim()) {
       setError(texts.invalidName);
       return;
@@ -266,20 +251,20 @@ export default function NewsletterSubscription({
     setError('');
 
     try {
-      // Verificar si ya existe
       const existing = await checkExistingSubscription(correo);
       
-      if (existing) {
+      if (existing && existing.active) {
         setError(texts.alreadySubscribed);
-        setExistingSubscription(existing);
-        setShowAdvanced(true);
         setSubscribing(false);
         return;
       }
 
-      // Crear nueva suscripción
+      const emailNormalizado = correo.toLowerCase().trim();
+      const emailId = emailNormalizado.replace(/[^a-z0-9]/g, '_');
+      const docRef = doc(db, 'newsletter', emailId);
+      
       const subscriptionData = {
-        email: correo.toLowerCase(),
+        email: emailNormalizado,
         nombre: nombre.trim(),
         idioma: isSpanish ? 'es' : 'en',
         active: true,
@@ -288,17 +273,14 @@ export default function NewsletterSubscription({
           idioma: isSpanish ? 'es' : 'en'
         },
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         lastSentAt: null,
         lastSentNews: [],
-        metadata: {
-          source: 'web_newsletter_form',
-          userAgent: navigator.userAgent,
-          language: navigator.language,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        }
+        welcomeEmailSentAt: null,
+        welcomeEmailStatus: 'pending'
       };
 
-      await addDoc(collection(db, 'newsletter'), subscriptionData);
+      await setDoc(docRef, subscriptionData);
 
       setEnviado(true);
       setNombre('');
@@ -309,7 +291,6 @@ export default function NewsletterSubscription({
 
       if (onSuccess) onSuccess(subscriptionData);
 
-      // Reset después de 5 segundos
       setTimeout(() => {
         setEnviado(false);
         setSuccessMessage('');
@@ -317,43 +298,19 @@ export default function NewsletterSubscription({
 
     } catch (error) {
       console.error('Error subscribing:', error);
-      setError(texts.generalError);
+      
+      if (error.code === 'permission-denied') {
+        setError(texts.alreadySubscribed);
+      } else {
+        setError(texts.generalError);
+      }
+      
       if (onError) onError(error);
     } finally {
       setSubscribing(false);
     }
   };
 
-  // Actualizar preferencias existentes
-  const handleUpdatePreferences = async () => {
-    if (!existingSubscription?.id) return;
-
-    try {
-      await updateDoc(doc(db, 'newsletter', existingSubscription.id), {
-        preferences: {
-          ...preferences,
-          idioma: isSpanish ? 'es' : 'en'
-        },
-        updatedAt: serverTimestamp()
-      });
-
-      setEnviado(true);
-      setSuccessMessage(texts.updatedSuccess);
-      setExistingSubscription(null);
-      setShowAdvanced(false);
-
-      setTimeout(() => {
-        setEnviado(false);
-        setSuccessMessage('');
-      }, 5000);
-
-    } catch (error) {
-      console.error('Error updating preferences:', error);
-      setError(texts.generalError);
-    }
-  };
-
-  // Toggle área
   const toggleArea = (areaId) => {
     setPreferences(prev => ({
       ...prev,
@@ -363,7 +320,6 @@ export default function NewsletterSubscription({
     }));
   };
 
-  // Variantes de estilo
   const variants = {
     default: {
       container: 'bg-white text-gray-900',
@@ -480,7 +436,6 @@ export default function NewsletterSubscription({
         )}
       </div>
 
-      {/* Panel de preferencias avanzadas */}
       <AnimatePresence>
         {showAdvanced && (
           <motion.div
@@ -492,10 +447,9 @@ export default function NewsletterSubscription({
           >
             <div className={`${style.box} border-t-0 mt-0`}>
               <h3 className="font-serif text-lg font-bold mb-4">
-                {existingSubscription ? texts.updatePreferences : texts.advanced}
+                {texts.advanced}
               </h3>
 
-              {/* Frecuencia */}
               <div className="mb-6">
                 <label className="text-xs font-bold uppercase tracking-wider text-gray-600 block mb-3">
                   {texts.frequency}
@@ -513,7 +467,6 @@ export default function NewsletterSubscription({
                 </select>
               </div>
 
-              {/* Áreas de interés */}
               <div className="mb-6">
                 <label className="text-xs font-bold uppercase tracking-wider text-gray-600 block mb-3">
                   {texts.areas}
@@ -543,23 +496,13 @@ export default function NewsletterSubscription({
                 </div>
               </div>
 
-              {/* Botones */}
               <div className="flex gap-3">
-                {existingSubscription ? (
-                  <button
-                    onClick={handleUpdatePreferences}
-                    className="flex-1 bg-[#004b87] text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider hover:bg-[#003666] transition-colors"
-                  >
-                    {texts.updatePreferences}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleSubmit}
-                    className="flex-1 bg-[#004b87] text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider hover:bg-[#003666] transition-colors"
-                  >
-                    {texts.confirm}
-                  </button>
-                )}
+                <button
+                  onClick={handleSubmit}
+                  className="flex-1 bg-[#004b87] text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider hover:bg-[#003666] transition-colors"
+                >
+                  {texts.confirm}
+                </button>
                 <button
                   onClick={() => setShowAdvanced(false)}
                   className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"

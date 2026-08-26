@@ -15,7 +15,7 @@ setGlobalOptions({
 const { Readable } = require('stream'); 
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
-
+const logger = require("firebase-functions/logger");
 // Inicializar Firebase Admin lo antes posible
 if (!admin.apps.length) {
   try {
@@ -17319,6 +17319,8 @@ exports.saveReviewerProfile = onCall(async (request) => {
 
 // ==================== FUNCIONES AUXILIARES ====================
 
+// ==================== FUNCIONES AUXILIARES ====================
+
 function decodeContent(encoded) {
   if (!encoded) return '';
   try {
@@ -17485,6 +17487,7 @@ function generateElegantHTML(nombre, noticias, email, lang, unsubscribeToken, pr
   const mainSite = isEn ? 'https://www.revistacienciasestudiantes.com/en/' : 'https://www.revistacienciasestudiantes.com';
   const followText = isEn ? 'Follow us on social media' : 'Síguenos en nuestras redes';
   const preferencesText = isEn ? 'Manage preferences' : 'Gestionar preferencias';
+  const unsubscribeText = isEn ? 'Unsubscribe instantly' : 'Cancelar suscripción instantáneamente';
 
   // URLs con token para que funcionen correctamente
   const unsubscribeUrl = `https://unsubscribenewsletter-ggqsq2kkua-uc.a.run.app?email=${encodeURIComponent(email)}&token=${unsubscribeToken}`;
@@ -17645,12 +17648,12 @@ function generateElegantHTML(nombre, noticias, email, lang, unsubscribeToken, pr
           <td style="padding: 30px 40px; background-color: #1a1a1a; text-align: center;">
             <p style="font-family: sans-serif; font-size: 10px; color: #888; margin: 0; line-height: 1.8;">
               © 2026 ${revistaName}<br>
-              Este correo fue enviado a ${email}.<br>
+              ${isEn ? 'This email was sent to' : 'Este correo fue enviado a'} ${email}.<br>
               <a href="${preferencesUrl}" style="color: #007398; text-decoration: underline; margin-right: 15px;">
                 ${preferencesText}
               </a>
               <a href="${unsubscribeUrl}" style="color: #007398; text-decoration: underline;">
-                ${isEn ? 'Unsubscribe instantly' : 'Cancelar suscripción instantáneamente'}
+                ${unsubscribeText}
               </a>
             </p>
           </td>
@@ -18205,6 +18208,8 @@ exports.unsubscribeNewsletter = onRequest(
             h1 { color: #1a1a1a; }
             p { color: #666; line-height: 1.6; }
             .icon { font-size: 48px; margin-bottom: 20px; }
+            a { color: #007398; text-decoration: none; }
+            a:hover { text-decoration: underline; }
           </style>
         </head>
         <body>
@@ -18212,7 +18217,7 @@ exports.unsubscribeNewsletter = onRequest(
             <div class="icon">❌</div>
             <h1>Error</h1>
             <p>Parámetros inválidos. Por favor, usa el enlace proporcionado en el correo.</p>
-            <a href="https://www.revistacienciasestudiantes.com" style="color: #007398;">Volver al sitio</a>
+            <a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a>
           </div>
         </body>
         </html>
@@ -18230,6 +18235,8 @@ exports.unsubscribeNewsletter = onRequest(
             h1 { color: #1a1a1a; }
             p { color: #666; line-height: 1.6; }
             .icon { font-size: 48px; margin-bottom: 20px; }
+            a { color: #007398; text-decoration: none; }
+            a:hover { text-decoration: underline; }
           </style>
         </head>
         <body>
@@ -18237,7 +18244,7 @@ exports.unsubscribeNewsletter = onRequest(
             <div class="icon">❌</div>
             <h1>Error</h1>
             <p>Token inválido. Por favor, usa el enlace proporcionado en el correo.</p>
-            <a href="https://www.revistacienciasestudiantes.com" style="color: #007398;">Volver al sitio</a>
+            <a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a>
           </div>
         </body>
         </html>
@@ -18257,6 +18264,8 @@ exports.unsubscribeNewsletter = onRequest(
             h1 { color: #1a1a1a; }
             p { color: #666; line-height: 1.6; }
             .icon { font-size: 48px; margin-bottom: 20px; }
+            a { color: #007398; text-decoration: none; }
+            a:hover { text-decoration: underline; }
           </style>
         </head>
         <body>
@@ -18265,7 +18274,7 @@ exports.unsubscribeNewsletter = onRequest(
             <h1>Desuscripción Exitosa</h1>
             <p>Tu correo <strong>${email}</strong> ha sido removido de nuestra lista.</p>
             <p>Lamentamos verte partir. Si cambias de opinión, siempre puedes volver a suscribirte.</p>
-            <a href="https://www.revistacienciasestudiantes.com" style="color: #007398;">Volver al sitio</a>
+            <a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a>
           </div>
         </body>
         </html>
@@ -18280,6 +18289,8 @@ exports.unsubscribeNewsletter = onRequest(
             h1 { color: #1a1a1a; }
             p { color: #666; line-height: 1.6; }
             .icon { font-size: 48px; margin-bottom: 20px; }
+            a { color: #007398; text-decoration: none; }
+            a:hover { text-decoration: underline; }
           </style>
         </head>
         <body>
@@ -18287,7 +18298,7 @@ exports.unsubscribeNewsletter = onRequest(
             <div class="icon">❌</div>
             <h1>Error</h1>
             <p>Email no encontrado en nuestra base de datos.</p>
-            <a href="https://www.revistacienciasestudiantes.com" style="color: #007398;">Volver al sitio</a>
+            <a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a>
           </div>
         </body>
         </html>
@@ -18621,6 +18632,72 @@ exports.sendWelcomeEmailManual = onRequest(
       res.status(200).json({ success: true, email });
     } catch (error) {
       logger.error('Error in sendWelcomeEmailManual', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+// ==================== CHECK SUBSCRIPTION ====================
+exports.checkSubscription = onRequest(
+  {
+    region: 'us-central1',
+    memory: '256MiB',
+    timeoutSeconds: 60
+  },
+  async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
+    
+    if (req.method !== 'GET') {
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+    
+    const email = req.query.email;
+    
+    if (!email) {
+      res.status(400).json({ error: 'Email required' });
+      return;
+    }
+    
+    try {
+      const emailNormalizado = email.toLowerCase().trim();
+      const db = admin.firestore();
+      
+      const snapshot = await db.collection(NEWSLETTER_COLLECTION)
+        .where('email', '==', emailNormalizado)
+        .limit(1)
+        .get();
+      
+      if (snapshot.empty) {
+        res.status(404).json({ 
+          exists: false,
+          message: 'No subscription found'
+        });
+        return;
+      }
+      
+      const doc = snapshot.docs[0];
+      const data = doc.data();
+      
+      res.status(200).json({
+        exists: true,
+        subscription: {
+          id: doc.id,
+          email: data.email,
+          nombre: data.nombre,
+          active: data.active || false,
+          preferences: data.preferences || {}
+        }
+      });
+      
+    } catch (error) {
+      logger.error('Error checking subscription:', error);
       res.status(500).json({ error: error.message });
     }
   }
