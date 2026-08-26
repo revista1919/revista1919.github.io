@@ -1653,9 +1653,8 @@ const AuthorSubmissionsPanel = ({ user }) => {
           {isSpanish ? 'Teléfono de Contacto' : 'Contact Phone'}
         </p>
         <p className="font-mono text-slate-700 mt-1 text-base">
-          {activePortal.correspondingAuthorPhoneCountryCode || activePortal.correspondingAuthor?.phoneCountryCode || ''}{' '}
-          {activePortal.correspondingAuthorPhone || activePortal.correspondingAuthor?.phone || '—'}
-        </p>
+  {activePortal.correspondingAuthorPhone || activePortal.correspondingAuthor?.phone || '—'}
+</p>
       </div>
     )}
   </div>
@@ -1806,9 +1805,8 @@ const AuthorSubmissionsPanel = ({ user }) => {
       {isSpanish ? 'Teléfono:' : 'Phone:'}
     </span>
     <span className="text-slate-600 font-mono">
-      {author.phoneCountryCode || activePortal.correspondingAuthorPhoneCountryCode || ''}{' '}
-      {author.phone || activePortal.correspondingAuthorPhone || '—'}
-    </span>
+  {author.phone || activePortal.correspondingAuthorPhone || '—'}
+</span>
   </div>
 )}
                               </div>

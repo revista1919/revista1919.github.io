@@ -8,6 +8,7 @@ import 'react-quill/dist/quill.snow.css';
 import { UserIcon } from '@heroicons/react/24/outline';
 import PhoneInput from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input'
 // ============ COMPONENTE: HELP CAPSULE (PIN DE AYUDA) ============
 
 const AREAS_TEMATICAS = {
@@ -1568,8 +1569,7 @@ export default function SubmissionForm({ user, onSuccess }) {
   consentMethod: 'none',
   consentFile: null,
   isCorresponding: true,
-  phone: '',
-  phoneCountryCode: '+56'
+  phone: ''
 }],
     funding: {
       hasFunding: false,
@@ -1744,8 +1744,7 @@ updatedAuthors[authorIndex] = {
   consentMethod: author.consentMethod,
   consentFile: author.consentFile,
   isCorresponding: author.isCorresponding,
-  phone: author.phone,
-  phoneCountryCode: author.phoneCountryCode || '+56'
+  phone: author.phone
 };
     setFormData(prev => ({ ...prev, authors: updatedAuthors }));
   };
@@ -1767,7 +1766,6 @@ const addAuthor = () => {
       consentFile: null,
       isCorresponding: false,
       phone: '',
-      phoneCountryCode: '+56'
     }]
   }));
 };
@@ -1962,11 +1960,11 @@ const addAuthor = () => {
             errors[`author_${index}_institution`] = isSpanish ? 'Institución requerida' : 'Institution required';
           }
             // ✅ AGREGAR AQUÍ: Validación de teléfono para autor de correspondencia
-    if (author.isCorresponding && !author.phone.trim()) {
-      errors[`author_${index}_phone`] = isSpanish 
-        ? 'Teléfono requerido para el autor de correspondencia' 
-        : 'Phone required for corresponding author';
-    }
+if (author.isCorresponding && !author.phone) {
+  errors[`author_${index}_phone`] = isSpanish 
+    ? 'Teléfono requerido para el autor de correspondencia' 
+    : 'Phone required for corresponding author';
+}
           // NUEVO: Validación de contribución CRediT (solo si hay más de un autor)
           if (formData.authors.length > 1 && !author.contribution.trim()) {
             errors[`author_${index}_contribution`] = isSpanish 
@@ -2108,7 +2106,6 @@ const addAuthor = () => {
   guardianName: a.guardianName,
   isCorresponding: a.isCorresponding,
   phone: a.phone || '',
-  phoneCountryCode: a.phoneCountryCode || '+56'
 })),
         funding: formData.funding,
         conflictOfInterest: formData.conflictOfInterest,
@@ -2147,7 +2144,6 @@ const addAuthor = () => {
     orcid: correspondingAuthor.orcid || null,
     isCorresponding: true,
     correspondingAuthorPhone: correspondingAuthor.phone || '',
-correspondingAuthorPhoneCountryCode: correspondingAuthor.phoneCountryCode || '',
   }
 
       };
@@ -2775,7 +2771,6 @@ correspondingAuthorPhoneCountryCode: correspondingAuthor.phoneCountryCode || '',
 {author.isCorresponding && (
   <div className="md:col-span-2">
     
-    {/* Label limpio */}
     <div className="mb-2">
       <label className="flex items-center text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
         {isSpanish ? 'Teléfono de contacto' : 'Contact phone'} 
@@ -2783,53 +2778,31 @@ correspondingAuthorPhoneCountryCode: correspondingAuthor.phoneCountryCode || '',
         <HelpCapsule
           title={isSpanish ? '¿Qué número debo poner?' : 'What number should I enter?'}
           text={isSpanish
-            ? 'Selecciona tu país con la bandera y escribe tu número local. Ejemplo Chile: selecciona 🇨🇱 y escribe 9 1234 5678.'
-            : 'Select your country with the flag and enter your local number. Example: select 🇺🇸 and write 555 123 4567.'}
+            ? 'Selecciona tu país y escribe tu número. Ejemplo Chile: selecciona 🇨🇱 y escribe 9 6165 3836.'
+            : 'Select your country and enter your number. Example: select 🇺🇸 and write 555 123 4567.'}
         />
       </label>
       
       <p className="text-[13px] text-slate-500 leading-relaxed">
         {isSpanish 
-          ? 'Selecciona tu país e ingresa tu número local (sin el código de país).' 
-          : 'Select your country and enter your local number (without country code).'}
+          ? 'Selecciona tu país e ingresa tu número (con o sin espacios).' 
+          : 'Select your country and enter your number.'}
       </p>
     </div>
     
     <PhoneInput
       international
       defaultCountry="CL"
-      // Reconstruimos el valor completo que espera la librería
-      value={
-        author.phoneCountryCode && author.phone
-          ? `${author.phoneCountryCode}${author.phone}`
-          : author.phoneCountryCode || undefined
-      }
+      value={author.phone || undefined}
       onChange={(value) => {
-        if (!value) {
-          // Cuando se borra todo
-          handleAuthorChange(index, 'phoneCountryCode', '+56'); // o el default que quieras
-          handleAuthorChange(index, 'phone', '');
-          return;
-        }
-
-        // Extraemos país y número de forma segura
-        // value siempre viene en formato E.164: +56912345678
-        const match = value.match(/^(\+\d{1,4})(.*)$/);
-        
-        if (match) {
-          const countryCode = match[1];           // +56
-          const nationalNumber = match[2] || '';  // 912345678
-
-          handleAuthorChange(index, 'phoneCountryCode', countryCode);
-          handleAuthorChange(index, 'phone', nationalNumber);
-        }
+        handleAuthorChange(index, 'phone', value || '')
       }}
-      placeholder={isSpanish ? "Ej: 9 1234 5678" : "Ex: 555 123 4567"}
+      placeholder={isSpanish ? "Ej: 9 6165 3836" : "Ex: 555 123 4567"}
       className={`PhoneInput ${validationErrors[`author_${index}_phone`] ? 'PhoneInput--error' : ''}`}
     />
     
-    {/* Previsualización */}
-    {author.phone && !validationErrors[`author_${index}_phone`] && (
+    {/* Previsualización limpia */}
+    {author.phone && isValidPhoneNumber(author.phone) && (
       <div className="mt-2 flex items-center gap-1.5 px-1">
         <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -2837,7 +2810,7 @@ correspondingAuthorPhoneCountryCode: correspondingAuthor.phoneCountryCode || '',
         <p className="text-[13px] text-slate-600">
           {isSpanish ? 'Se registrará como:' : 'Will be registered as:'}{' '}
           <strong className="font-medium text-slate-800">
-            {author.phoneCountryCode} {author.phone}
+            {author.phone}
           </strong>
         </p>
       </div>
