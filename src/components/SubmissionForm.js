@@ -2772,7 +2772,6 @@ correspondingAuthorPhoneCountryCode: correspondingAuthor.phoneCountryCode || '',
                               <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_email`]}</p>
                             )}
                           </div>
-{/* 📱 Teléfono - SOLO si es autor de correspondencia */}
 {author.isCorresponding && (
   <div className="md:col-span-2">
     
@@ -2784,41 +2783,52 @@ correspondingAuthorPhoneCountryCode: correspondingAuthor.phoneCountryCode || '',
         <HelpCapsule
           title={isSpanish ? '¿Qué número debo poner?' : 'What number should I enter?'}
           text={isSpanish
-            ? 'Selecciona tu país con la bandera y escribe solo tu número local, sin el código de país ni el 0 inicial. Ejemplo: +56 9 1234 5678 → selecciona 🇨🇱 y escribe 9 1234 5678.'
-            : 'Select your country with the flag and write only your local number, without the country code or leading 0. Example: +1 555 123 4567 → select 🇺🇸 and write 555 123 4567.'}
+            ? 'Selecciona tu país con la bandera y escribe tu número local. Ejemplo Chile: selecciona 🇨🇱 y escribe 9 1234 5678.'
+            : 'Select your country with the flag and enter your local number. Example: select 🇺🇸 and write 555 123 4567.'}
         />
       </label>
       
-      {/* Instrucción natural y sutil */}
       <p className="text-[13px] text-slate-500 leading-relaxed">
         {isSpanish 
-          ? 'Selecciona tu país e ingresa solo tu número local (sin código de país ni el 0 inicial).' 
-          : 'Select your country and enter your local number only (without country code or leading 0).'}
+          ? 'Selecciona tu país e ingresa tu número local (sin el código de país).' 
+          : 'Select your country and enter your local number (without country code).'}
       </p>
     </div>
     
-    {/* Input limpio */}
     <PhoneInput
       international
       defaultCountry="CL"
-      value={author.phoneCountryCode + author.phone}
+      // Reconstruimos el valor completo que espera la librería
+      value={
+        author.phoneCountryCode && author.phone
+          ? `${author.phoneCountryCode}${author.phone}`
+          : author.phoneCountryCode || undefined
+      }
       onChange={(value) => {
-        if (value) {
-          const match = value.match(/^(\+\d{1,3})(\d+)$/);
-          if (match) {
-            handleAuthorChange(index, 'phoneCountryCode', match[1]);
-            handleAuthorChange(index, 'phone', match[2]);
-          }
-        } else {
-          handleAuthorChange(index, 'phoneCountryCode', '+56');
+        if (!value) {
+          // Cuando se borra todo
+          handleAuthorChange(index, 'phoneCountryCode', '+56'); // o el default que quieras
           handleAuthorChange(index, 'phone', '');
+          return;
+        }
+
+        // Extraemos país y número de forma segura
+        // value siempre viene en formato E.164: +56912345678
+        const match = value.match(/^(\+\d{1,4})(.*)$/);
+        
+        if (match) {
+          const countryCode = match[1];           // +56
+          const nationalNumber = match[2] || '';  // 912345678
+
+          handleAuthorChange(index, 'phoneCountryCode', countryCode);
+          handleAuthorChange(index, 'phone', nationalNumber);
         }
       }}
       placeholder={isSpanish ? "Ej: 9 1234 5678" : "Ex: 555 123 4567"}
       className={`PhoneInput ${validationErrors[`author_${index}_phone`] ? 'PhoneInput--error' : ''}`}
     />
     
-    {/* Previsualización minimalista */}
+    {/* Previsualización */}
     {author.phone && !validationErrors[`author_${index}_phone`] && (
       <div className="mt-2 flex items-center gap-1.5 px-1">
         <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2833,7 +2843,6 @@ correspondingAuthorPhoneCountryCode: correspondingAuthor.phoneCountryCode || '',
       </div>
     )}
     
-    {/* Error limpio */}
     {validationErrors[`author_${index}_phone`] && (
       <motion.p 
         initial={{ opacity: 0, y: -5 }} 
