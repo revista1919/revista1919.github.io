@@ -4240,6 +4240,9 @@ exports.submitArticle = onRequest(
       const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
       const db = admin.firestore();
       
+      // Regex para validar emails (declarado temprano)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      
       const recentSubmissions = await db.collection('submissions')
         .where('ipAddress', '==', clientIp)
         .where('createdAt', '>', new Date(Date.now() - 60 * 60 * 1000))
@@ -4275,23 +4278,27 @@ exports.submitArticle = onRequest(
       }
 
       // --- EXTRACCIÓN COMPLETA DE TODOS LOS CAMPOS ---
-            const {
-    // Campos básicos del artículo
-    title, titleEn, abstract, abstractEn, 
-    keywordsEs, keywordsEn, area, paperLanguage = 'es',
-    
-    // NUEVO: Códigos especializados (universales, sin idioma)
-    specializedCodes = [],
-    specializedCodesSerialized,
-    
-    // NUEVO: Metadatos del vocabulario controlado
-    keywordsVocabulario,        // "JEL" | "MeSH" | "ACM" | "UNESCO"
-    
+      const {
+        // Campos básicos del artículo
+        title, titleEn, abstract, abstractEn, 
+        keywordsEs, keywordsEn, area, paperLanguage = 'es',
+        
+        // Códigos especializados (universales, sin idioma)
+        specializedCodes = [],
+        specializedCodesSerialized,
+        
+        // Metadatos del vocabulario controlado
+        keywordsVocabulario,
+        
         // Autores
         authors, 
         
-        // NUEVO: Autor de correspondencia (se detecta del array, pero también lo recibimos)
+        // Autor de correspondencia (se detecta del array, pero también lo recibimos)
         correspondingAuthor,
+        
+        // NUEVO: Teléfono del autor de correspondencia
+        correspondingAuthorPhone,
+        correspondingAuthorPhoneCountryCode,
         
         // Financiamiento y conflictos
         funding, conflictOfInterest,
@@ -4305,26 +4312,26 @@ exports.submitArticle = onRequest(
         // Archivo manuscrito
         manuscriptBase64, manuscriptName,
         
-        // Datos del autor que envía
-        // Datos del usuario que sube (se guardan como submitter)
-submitterName,
+        // Datos del usuario que sube
+        submitterName,
         
         // Tipo de artículo y agradecimientos
         articleType, acknowledgments,
         
-        // NUEVO: Disponibilidad de datos y código
+        // Disponibilidad de datos y código
         dataAvailability, dataAvailabilityEn,
         codeAvailability, codeAvailabilityEn,
         
-        // NUEVO: Campos de ética
+        // Campos de ética
         requiresEthicsApproval = false,
         ethicsCommitteeName,
         
-        // NUEVO: Campos de IA
+        // Campos de IA
         aiUsed = false,
         aiTools = [],
         editorComment,
-        // NUEVO: Declaraciones aceptadas (para auditoría)
+        
+        // Declaraciones aceptadas (para auditoría)
         declarations,
         wantsToBeReviewer = false,
         reviewerAreas = []
@@ -4332,7 +4339,7 @@ submitterName,
 
       // --- VALIDACIONES ---
 
-      // NUEVO: Validar disponibilidad de datos (obligatorio según política 8.1)
+      // Validar disponibilidad de datos (obligatorio según política 8.1)
       if (!dataAvailability) {
         return res.status(400).json({ 
           error: 'Debes declarar la disponibilidad de los datos (Política 8.1)',
@@ -4340,7 +4347,7 @@ submitterName,
         });
       }
 
-      // NUEVO: Validar que si requiere aprobación ética, venga el nombre del comité
+      // Validar que si requiere aprobación ética, venga el nombre del comité
       if (requiresEthicsApproval && !ethicsCommitteeName?.trim()) {
         return res.status(400).json({
           error: 'Debes especificar el nombre del comité de ética y el código de aprobación',
@@ -4348,7 +4355,7 @@ submitterName,
         });
       }
 
-      // NUEVO: Validar que si usó IA, haya especificado las herramientas
+      // Validar que si usó IA, haya especificado las herramientas
       if (aiUsed && (!Array.isArray(aiTools) || aiTools.length === 0 || !aiTools.some(t => t.name?.trim() && t.purpose?.trim()))) {
         return res.status(400).json({
           error: 'Debes especificar al menos una herramienta de IA con su nombre y propósito (Política 7.3)',
@@ -4356,44 +4363,44 @@ submitterName,
         });
       }
 
-// Validación de palabras clave en español (mínimo 2, máximo 6)
-const totalKeywordsEs = Array.isArray(keywordsEs) ? keywordsEs.length : 0;
-if (totalKeywordsEs < 2) {
-    return res.status(400).json({
-        error: 'Debes incluir al menos 2 palabras clave en español',
-        missingFields: ['keywordsEs']
-    });
-}
-if (totalKeywordsEs > 6) {
-    return res.status(400).json({
-        error: 'Máximo 6 palabras clave en español permitidas',
-        missingFields: ['keywordsEs']
-    });
-}
+      // Validación de palabras clave en español (mínimo 2, máximo 6)
+      const totalKeywordsEs = Array.isArray(keywordsEs) ? keywordsEs.length : 0;
+      if (totalKeywordsEs < 2) {
+        return res.status(400).json({
+          error: 'Debes incluir al menos 2 palabras clave en español',
+          missingFields: ['keywordsEs']
+        });
+      }
+      if (totalKeywordsEs > 6) {
+        return res.status(400).json({
+          error: 'Máximo 6 palabras clave en español permitidas',
+          missingFields: ['keywordsEs']
+        });
+      }
 
-// Validación de palabras clave en inglés (mínimo 2, máximo 6)
-const totalKeywordsEn = Array.isArray(keywordsEn) ? keywordsEn.length : 0;
-if (totalKeywordsEn < 2) {
-    return res.status(400).json({
-        error: 'Debes incluir al menos 2 keywords en inglés',
-        missingFields: ['keywordsEn']
-    });
-}
-if (totalKeywordsEn > 6) {
-    return res.status(400).json({
-        error: 'Máximo 6 keywords en inglés permitidas',
-        missingFields: ['keywordsEn']
-    });
-}
+      // Validación de palabras clave en inglés (mínimo 2, máximo 6)
+      const totalKeywordsEn = Array.isArray(keywordsEn) ? keywordsEn.length : 0;
+      if (totalKeywordsEn < 2) {
+        return res.status(400).json({
+          error: 'Debes incluir al menos 2 keywords en inglés',
+          missingFields: ['keywordsEn']
+        });
+      }
+      if (totalKeywordsEn > 6) {
+        return res.status(400).json({
+          error: 'Máximo 6 keywords en inglés permitidas',
+          missingFields: ['keywordsEn']
+        });
+      }
 
-// Validación de códigos especializados (2 a 4 códigos)
-const totalCodes = Array.isArray(specializedCodes) ? specializedCodes.length : 0;
-if (totalCodes < 2 || totalCodes > 4) {
-    return res.status(400).json({
-        error: 'Debes incluir entre 2 y 4 códigos especializados',
-        missingFields: ['specializedCodes']
-    });
-}
+      // Validación de códigos especializados (2 a 4 códigos)
+      const totalCodes = Array.isArray(specializedCodes) ? specializedCodes.length : 0;
+      if (totalCodes < 2 || totalCodes > 4) {
+        return res.status(400).json({
+          error: 'Debes incluir entre 2 y 4 códigos especializados',
+          missingFields: ['specializedCodes']
+        });
+      }
       
       if (!Array.isArray(authors) || authors.length === 0) {
         return res.status(400).json({ error: 'Debe incluir al menos un autor' });
@@ -4403,16 +4410,10 @@ if (totalCodes < 2 || totalCodes > 4) {
       const hasCorrespondingAuthor = authors.some(a => a.isCorresponding);
       if (!hasCorrespondingAuthor) {
         console.warn(`[${requestId}] ⚠️ No se especificó autor de correspondencia. Se usará el primer autor.`);
-        // No es un error crítico, lo marcamos automáticamente
         authors[0].isCorresponding = true;
       }
 
-      let submitterEmail = decodedToken.email;  // Email del que sube (autenticado)
-const authorEmailToUse = correspondingAuthorData.email;  // Email del autor de correspondencia
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(authorEmailToUse)) {
-        return res.status(400).json({ error: 'Email de autor inválido' });
-      }
+      let submitterEmail = decodedToken.email;
 
       const fileSizeInBytes = Buffer.from(manuscriptBase64, 'base64').length;
       const maxSize = 10 * 1024 * 1024;
@@ -4463,12 +4464,12 @@ const authorEmailToUse = correspondingAuthorData.email;  // Email del autor de c
       }
 
       let drive, docs, oauth2Client;
-try {
-  const clients = await getDriveClient(requestId);
-  drive = clients.drive;
-  docs = clients.docs;
-  oauth2Client = clients.oauth2Client;
-} catch (driveError) {
+      try {
+        const clients = await getDriveClient(requestId);
+        drive = clients.drive;
+        docs = clients.docs;
+        oauth2Client = clients.oauth2Client;
+      } catch (driveError) {
         console.error(`[${requestId}] ❌ Error obteniendo cliente Drive:`, driveError);
         return res.status(500).json({ 
           error: 'Error en servicio de almacenamiento',
@@ -4507,7 +4508,6 @@ try {
 
       let file;
       try {
-        // Subir a la carpeta del autor
         file = await uploadToDrive(drive, manuscriptBase64, fileName, authorFolder.id);
         console.log(`✅ Archivo subido a carpeta de autor`);
       } catch (uploadError) {
@@ -4606,7 +4606,6 @@ try {
         console.error(`❌ Error permiso para autor:`, permErr.message);
       }
 
- 
       // Hash de integridad del archivo
       const crypto = require('crypto');
       const fileBuffer = Buffer.from(manuscriptBase64, 'base64');
@@ -4626,7 +4625,10 @@ try {
           contribution: sanitizeText(author.contribution || ''),
           isMinor: Boolean(author.isMinor),
           guardianName: author.isMinor ? sanitizeText(author.guardianName) : null,
-          isCorresponding: Boolean(author.isCorresponding)  // NUEVO: Se guarda explícitamente
+          isCorresponding: Boolean(author.isCorresponding),
+          // NUEVO: Teléfono del autor (si es el de correspondencia)
+          phone: author.isCorresponding ? sanitizeText(author.phone || correspondingAuthorPhone || '') : sanitizeText(author.phone || ''),
+          phoneCountryCode: author.isCorresponding ? sanitizeText(author.phoneCountryCode || correspondingAuthorPhoneCountryCode || '') : sanitizeText(author.phoneCountryCode || '')
         };
 
         if (!emailRegex.test(author.email)) {
@@ -4638,20 +4640,20 @@ try {
         processedAuthors.push(authorData);
       }
 
-      // NUEVO: Identificar autor de correspondencia
+      // Identificar autor de correspondencia
       const correspondingAuthorData = processedAuthors.find(a => a.isCorresponding) || processedAuthors[0];
       console.log(`📧 Autor de correspondencia: ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName} (${correspondingAuthorData.email})`);
+      if (correspondingAuthorData.phone) {
+        console.log(`📱 Teléfono de correspondencia: ${correspondingAuthorData.phoneCountryCode} ${correspondingAuthorData.phone}`);
+      }
 
       // Procesar consentimientos de autores menores
-           // Procesar consentimientos de autores menores
       if (Array.isArray(minorAuthors)) {
         for (const minor of minorAuthors) {
           if (minor.consentMethod === 'upload' && minor.consentFile?.data) {
             try {
-              // Obtener nombre original del archivo
               const originalFileName = minor.consentFile.name || minor.consentFile.fileName || '';
               
-              // Validar el archivo de consentimiento (PDF, DOC, DOCX)
               const base64Header = minor.consentFile.data.substring(0, 100);
               if (!isValidConsentFile(base64Header, originalFileName)) {
                 console.error(`❌ Archivo de consentimiento inválido para ${minor.name}`);
@@ -4660,19 +4662,16 @@ try {
                   method: 'upload',
                   error: 'Formato de archivo no soportado. Use PDF, DOC o DOCX'
                 });
-                continue; // Saltar al siguiente autor menor
+                continue;
               }
               
-              // Obtener la extensión correcta
               const fileExt = getConsentFileExtension(originalFileName, base64Header);
               
-              // Crear nombre seguro para el archivo
               const safeMinorName = minor.name.replace(/[^a-zA-Z0-9]/g, '_');
               const consentFileName = `CONSENT_${safeMinorName}_${Date.now()}${fileExt}`;
               
-              // Verificar tamaño del archivo de consentimiento (máximo 5MB)
               const consentFileSize = Buffer.from(minor.consentFile.data, 'base64').length;
-              const maxConsentSize = 5 * 1024 * 1024; // 5MB
+              const maxConsentSize = 5 * 1024 * 1024;
               
               if (consentFileSize > maxConsentSize) {
                 console.error(`❌ Archivo de consentimiento muy grande para ${minor.name}`);
@@ -4684,7 +4683,6 @@ try {
                 continue;
               }
               
-              // Subir a Drive
               const consentFile = await uploadToDrive(
                 drive, 
                 minor.consentFile.data, 
@@ -4692,14 +4690,13 @@ try {
                 authorFolder.id
               );
 
-              // Registrar información completa del archivo
               consentFiles.push({
                 author: minor.name,
                 fileId: consentFile.id,
                 fileUrl: consentFile.webViewLink,
                 fileName: consentFileName,
                 originalFileName: originalFileName || consentFileName,
-                fileType: fileExt.replace('.', ''), // 'pdf', 'docx', 'doc'
+                fileType: fileExt.replace('.', ''),
                 fileSize: consentFileSize,
                 method: 'upload',
                 uploadedAt: new Date().toISOString()
@@ -4731,7 +4728,7 @@ try {
         consentMethod: m.consentMethod
       }));
 
-      // NUEVO: Procesar herramientas de IA
+      // Procesar herramientas de IA
       const processedAITools = Array.isArray(aiTools) 
         ? aiTools.filter(t => t.name?.trim() && t.purpose?.trim()).map(t => ({
             name: sanitizeText(t.name),
@@ -4742,32 +4739,38 @@ try {
 
       // --- CONSTRUCCIÓN DEL DOCUMENTO PRINCIPAL DE FIRESTORE ---
       const submissionData = {
-  submissionId,
-  uid,
-  authorUID: uid,
-  
-  // NUEVO: Datos del usuario que sube (solo para registro/auditoría)
-  submitterEmail: decodedToken.email,  // Email del usuario autenticado
-  submitterName: authorName || `${processedAuthors[0].firstName} ${processedAuthors[0].lastName}`.trim(),
-  
-  // NUEVO: Datos del autor de correspondencia (SE USAN PARA ENVIAR CORREOS)
-  authorEmail: correspondingAuthorData.email,  // ← CAMBIO: Ahora es el email del autor de correspondencia
-  authorName: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`.trim(), 
+        submissionId,
+        uid,
+        authorUID: uid,
+        
+        // Datos del usuario que sube (solo para registro/auditoría)
+        submitterEmail: decodedToken.email,
+        submitterName: sanitizeText(submitterName || `${processedAuthors[0].firstName} ${processedAuthors[0].lastName}`.trim()),
+        
+        // Datos del autor de correspondencia (SE USAN PARA ENVIAR CORREOS)
+        authorEmail: correspondingAuthorData.email,
+        authorName: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`.trim(),
+        
+        // NUEVO: Teléfono del autor de correspondencia
+        correspondingAuthorPhone: correspondingAuthorData.phone || null,
+        correspondingAuthorPhoneCountryCode: correspondingAuthorData.phoneCountryCode || null,
+        
         // Datos del artículo
         title: sanitizeText(title),
         titleEn: titleEn ? sanitizeText(titleEn) : null,
         abstract: sanitizeText(abstract),
         abstractEn: abstractEn ? sanitizeText(abstractEn) : null,
-// Palabras clave (arrays simples de strings)
-keywordsEs: Array.isArray(keywordsEs) ? keywordsEs : [],
-keywordsEn: Array.isArray(keywordsEn) ? keywordsEn : [],
-
-// Códigos especializados (universales, sin idioma)
-specializedCodes: Array.isArray(specializedCodes) ? specializedCodes : [],
-specializedCodesSerialized: specializedCodesSerialized || (Array.isArray(specializedCodes) ? specializedCodes.join('; ') : ''),
-
-// Vocabulario controlado utilizado
-keywordsVocabulario: keywordsVocabulario || 'unknown',
+        
+        // Palabras clave (arrays simples de strings)
+        keywordsEs: Array.isArray(keywordsEs) ? keywordsEs : [],
+        keywordsEn: Array.isArray(keywordsEn) ? keywordsEn : [],
+        
+        // Códigos especializados (universales, sin idioma)
+        specializedCodes: Array.isArray(specializedCodes) ? specializedCodes : [],
+        specializedCodesSerialized: specializedCodesSerialized || (Array.isArray(specializedCodes) ? specializedCodes.join('; ') : ''),
+        
+        // Vocabulario controlado utilizado
+        keywordsVocabulario: keywordsVocabulario || 'unknown',
         area: sanitizeText(area),
         paperLanguage: paperLanguage === 'en' ? 'en' : 'es',
         
@@ -4775,17 +4778,17 @@ keywordsVocabulario: keywordsVocabulario || 'unknown',
         articleType: articleType ? sanitizeText(articleType) : null,
         acknowledgments: acknowledgments ? sanitizeText(acknowledgments) : '',
         
-        // NUEVO: Disponibilidad de datos y código
+        // Disponibilidad de datos y código
         dataAvailability: sanitizeText(dataAvailability),
         dataAvailabilityEn: dataAvailabilityEn ? sanitizeText(dataAvailabilityEn) : null,
         codeAvailability: codeAvailability ? sanitizeText(codeAvailability) : null,
         codeAvailabilityEn: codeAvailabilityEn ? sanitizeText(codeAvailabilityEn) : null,
         
-        // NUEVO: Ética
+        // Ética
         requiresEthicsApproval: Boolean(requiresEthicsApproval),
         ethicsCommitteeName: ethicsCommitteeName ? sanitizeText(ethicsCommitteeName) : null,
         
-        // NUEVO: IA
+        // IA
         aiUsed: Boolean(aiUsed),
         aiTools: processedAITools,
         
@@ -4796,7 +4799,9 @@ keywordsVocabulario: keywordsVocabulario || 'unknown',
           lastName: correspondingAuthorData.lastName,
           email: correspondingAuthorData.email,
           institution: correspondingAuthorData.institution,
-          orcid: correspondingAuthorData.orcid
+          orcid: correspondingAuthorData.orcid,
+          phone: correspondingAuthorData.phone || null,
+          phoneCountryCode: correspondingAuthorData.phoneCountryCode || null
         },
         
         // Financiamiento y conflictos
@@ -4813,9 +4818,10 @@ keywordsVocabulario: keywordsVocabulario || 'unknown',
           ? excludedReviewers.split(';').map(r => sanitizeText(r.trim())).filter(Boolean)
           : [],
         
-        // NUEVO: Declaraciones aceptadas (para registro de auditoría)
+        // Declaraciones aceptadas (para registro de auditoría)
         declarations: declarations || {},
         editorComment: editorComment || null,
+        
         // Archivo original
         originalFileId: file.id,
         originalFileUrl: file.webViewLink,
@@ -4828,10 +4834,11 @@ keywordsVocabulario: keywordsVocabulario || 'unknown',
         driveFolderUrl: authorFolder.webViewLink,
         editorialFolderId: editorialFolder ? editorialFolder.id : null,
         editorialFolderUrl: editorialFolder ? editorialFolder.webViewLink : null,
+        
         wantsToBeReviewer: Boolean(wantsToBeReviewer),
-  reviewerAreas: wantsToBeReviewer ? reviewerAreas : [],
-  reviewerStatus: wantsToBeReviewer ? 'pending_review' : null,
-  reviewerAppliedAt: wantsToBeReviewer ? admin.firestore.FieldValue.serverTimestamp() : null,
+        reviewerAreas: wantsToBeReviewer ? reviewerAreas : [],
+        reviewerStatus: wantsToBeReviewer ? 'pending_review' : null,
+        reviewerAppliedAt: wantsToBeReviewer ? admin.firestore.FieldValue.serverTimestamp() : null,
         
         // Estado y metadata
         status: 'submitted',
@@ -4844,221 +4851,221 @@ keywordsVocabulario: keywordsVocabulario || 'unknown',
         ipAddress: clientIp,
         requestId
       };
-// ============================================================
-// NUEVO FLUJO: GENERAR DOCX PREMIUM FUSIONADO Y SUBIR A DRIVE
-// ============================================================
-// ============================================================
-// NUEVO FLUJO: GENERAR DOCX PREMIUM FUSIONADO Y SUBIR A DRIVE
-// ============================================================
-let formattedDocsFile = null;
-let formattedPdfFile = null;
 
-try {
-  console.log(`[${requestId}] 🎨 Generando documento premium...`);
-  
-  // 1. Verificar dependencias
-  if (!docxLib) {
-    console.log(`[${requestId}] ⏳ Cargando librería docx...`);
-    await loadDependencies();
-  }
-  
-  if (!docxLib) {
-    throw new Error('docx lib no disponible');
-  }
-  
-  // Verificar JSZip
-  if (!jszipLib) {
-    console.log(`[${requestId}] ⏳ Cargando jszip...`);
-    await loadDependencies();
-  }
-  
-  if (!jszipLib) {
-    throw new Error('jszip no disponible');
-  }
-  // 2. Generar portada premium
-  const coverDocxBuffer = await generateCoverDocx(submissionData, requestId);
-  console.log(`[${requestId}] ✅ Portada premium generada`);
-  
-  // 3. Usar el base64 del manuscrito original que ya tenemos en memoria
-  console.log(`[${requestId}] 📖 Leyendo documento original desde base64...`);
-  
-  // Limpiar el base64 si tiene prefijo
-  let cleanManuscriptBase64 = manuscriptBase64;
-  if (cleanManuscriptBase64.includes('base64,')) {
-    cleanManuscriptBase64 = cleanManuscriptBase64.split('base64,')[1];
-  }
-  
-  const originalBuffer = Buffer.from(cleanManuscriptBase64, 'base64');
-  const originalZip = await jszipLib.loadAsync(originalBuffer);
-  
-  console.log(`[${requestId}] ✅ Documento original leído: ${(originalBuffer.length / 1024).toFixed(2)} KB`);
-  
-  // 4. Fusionar portada con original
-  const mergedZip = await mergeDocxWithOriginal(coverDocxBuffer, originalBuffer, originalZip);
-  
-  // 5. Generar DOCX final
-  const finalDocxBuffer = await mergedZip.generateAsync({ 
-    type: 'nodebuffer',
-    compression: 'DEFLATE',
-    compressionOptions: { level: 6 }
-  });
-  
-  console.log(`[${requestId}] ✅ DOCX premium fusionado: ${(finalDocxBuffer.length / 1024).toFixed(2)} KB`);
-  
-  // 6. Subir DOCX a carpeta editorial
-  if (editorialFolder) {
-    try {
-      const docStream = Readable.from(finalDocxBuffer);
-      
-      const docxUpload = await drive.files.create({
-        requestBody: {
-          name: `FORMATTED_${submissionId}.docx`,
-          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          parents: [editorialFolder.id]
-        },
-        media: {
-          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          body: docStream
-        },
-        fields: 'id, webViewLink'
-      });
-      
-      formattedDocsFile = {
-        id: docxUpload.data.id,
-        url: docxUpload.data.webViewLink
-      };
-      
-      console.log(`[${requestId}] ✅ DOCX premium subido a carpeta editorial`);
-      
-      // 7. Convertir a PDF para el autor
+      // ============================================================
+      // GENERAR DOCX PREMIUM FUSIONADO Y SUBIR A DRIVE
+      // ============================================================
+      let formattedDocsFile = null;
+      let formattedPdfFile = null;
+
       try {
-        const tempDocsFile = await drive.files.copy({
-          fileId: docxUpload.data.id,
-          requestBody: {
-            name: `TEMP_${submissionId}`,
-            mimeType: 'application/vnd.google-apps.document'
-          },
-          fields: 'id'
+        console.log(`[${requestId}] 🎨 Generando documento premium...`);
+        
+        // Verificar dependencias
+        if (!docxLib) {
+          console.log(`[${requestId}] ⏳ Cargando librería docx...`);
+          await loadDependencies();
+        }
+        
+        if (!docxLib) {
+          throw new Error('docx lib no disponible');
+        }
+        
+        // Verificar JSZip
+        if (!jszipLib) {
+          console.log(`[${requestId}] ⏳ Cargando jszip...`);
+          await loadDependencies();
+        }
+        
+        if (!jszipLib) {
+          throw new Error('jszip no disponible');
+        }
+        
+        // Generar portada premium
+        const coverDocxBuffer = await generateCoverDocx(submissionData, requestId);
+        console.log(`[${requestId}] ✅ Portada premium generada`);
+        
+        // Usar el base64 del manuscrito original que ya tenemos en memoria
+        console.log(`[${requestId}] 📖 Leyendo documento original desde base64...`);
+        
+        // Limpiar el base64 si tiene prefijo
+        let cleanManuscriptBase64 = manuscriptBase64;
+        if (cleanManuscriptBase64.includes('base64,')) {
+          cleanManuscriptBase64 = cleanManuscriptBase64.split('base64,')[1];
+        }
+        
+        const originalBuffer = Buffer.from(cleanManuscriptBase64, 'base64');
+        const originalZip = await jszipLib.loadAsync(originalBuffer);
+        
+        console.log(`[${requestId}] ✅ Documento original leído: ${(originalBuffer.length / 1024).toFixed(2)} KB`);
+        
+        // Fusionar portada con original
+        const mergedZip = await mergeDocxWithOriginal(coverDocxBuffer, originalBuffer, originalZip);
+        
+        // Generar DOCX final
+        const finalDocxBuffer = await mergedZip.generateAsync({ 
+          type: 'nodebuffer',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 }
         });
         
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log(`[${requestId}] ✅ DOCX premium fusionado: ${(finalDocxBuffer.length / 1024).toFixed(2)} KB`);
         
-        const pdfExport = await drive.files.export({
-          fileId: tempDocsFile.data.id,
-          mimeType: 'application/pdf'
-        }, { responseType: 'arraybuffer' });
-        
-        const pdfBuffer = Buffer.from(pdfExport.data);
-        const pdfStream = Readable.from(pdfBuffer);
-        
-        const pdfUpload = await drive.files.create({
-          requestBody: {
-            name: `FORMATTED_${submissionId}.pdf`,
-            mimeType: 'application/pdf',
-            parents: [authorFolder.id]
-          },
-          media: {
-            mimeType: 'application/pdf',
-            body: pdfStream
-          },
-          fields: 'id, webViewLink'
-        });
-        
-        formattedPdfFile = {
-          id: pdfUpload.data.id,
-          url: pdfUpload.data.webViewLink
-        };
-        
-        // Acceso directo al PDF en carpeta editorial
+        // Subir DOCX a carpeta editorial
         if (editorialFolder) {
-          await drive.files.create({
-            resource: {
-              name: `[PDF] FORMATTED_${submissionId}.pdf`,
-              mimeType: 'application/vnd.google-apps.shortcut',
-              parents: [editorialFolder.id],
-              shortcutDetails: {
-                targetId: pdfUpload.data.id
-              }
-            },
-            fields: 'id'
-          });
-        }
-        
-        // Permisos del PDF
-        try {
-          await drive.permissions.create({
-            fileId: pdfUpload.data.id,
-            requestBody: {
-              role: 'reader',
-              type: 'user',
-              emailAddress: decodedToken.email
-            },
-            sendNotificationEmail: false
-          });
-        } catch (permErr) {
-          console.error(`⚠️ Error permiso PDF para autor:`, permErr.message);
-        }
-        
-        for (const email of editorEmailsForPermissions) {
           try {
-            await drive.permissions.create({
-              fileId: pdfUpload.data.id,
+            const docStream = Readable.from(finalDocxBuffer);
+            
+            const docxUpload = await drive.files.create({
               requestBody: {
-                role: 'reader',
-                type: 'user',
-                emailAddress: email
+                name: `FORMATTED_${submissionId}.docx`,
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                parents: [editorialFolder.id]
               },
-              sendNotificationEmail: false
+              media: {
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                body: docStream
+              },
+              fields: 'id, webViewLink'
             });
-          } catch (permErr) {
-            console.error(`⚠️ Error permiso PDF para ${email}:`, permErr.message);
+            
+            formattedDocsFile = {
+              id: docxUpload.data.id,
+              url: docxUpload.data.webViewLink
+            };
+            
+            console.log(`[${requestId}] ✅ DOCX premium subido a carpeta editorial`);
+            
+            // Convertir a PDF para el autor
+            try {
+              const tempDocsFile = await drive.files.copy({
+                fileId: docxUpload.data.id,
+                requestBody: {
+                  name: `TEMP_${submissionId}`,
+                  mimeType: 'application/vnd.google-apps.document'
+                },
+                fields: 'id'
+              });
+              
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              const pdfExport = await drive.files.export({
+                fileId: tempDocsFile.data.id,
+                mimeType: 'application/pdf'
+              }, { responseType: 'arraybuffer' });
+              
+              const pdfBuffer = Buffer.from(pdfExport.data);
+              const pdfStream = Readable.from(pdfBuffer);
+              
+              const pdfUpload = await drive.files.create({
+                requestBody: {
+                  name: `FORMATTED_${submissionId}.pdf`,
+                  mimeType: 'application/pdf',
+                  parents: [authorFolder.id]
+                },
+                media: {
+                  mimeType: 'application/pdf',
+                  body: pdfStream
+                },
+                fields: 'id, webViewLink'
+              });
+              
+              formattedPdfFile = {
+                id: pdfUpload.data.id,
+                url: pdfUpload.data.webViewLink
+              };
+              
+              // Acceso directo al PDF en carpeta editorial
+              if (editorialFolder) {
+                await drive.files.create({
+                  resource: {
+                    name: `[PDF] FORMATTED_${submissionId}.pdf`,
+                    mimeType: 'application/vnd.google-apps.shortcut',
+                    parents: [editorialFolder.id],
+                    shortcutDetails: {
+                      targetId: pdfUpload.data.id
+                    }
+                  },
+                  fields: 'id'
+                });
+              }
+              
+              // Permisos del PDF
+              try {
+                await drive.permissions.create({
+                  fileId: pdfUpload.data.id,
+                  requestBody: {
+                    role: 'reader',
+                    type: 'user',
+                    emailAddress: decodedToken.email
+                  },
+                  sendNotificationEmail: false
+                });
+              } catch (permErr) {
+                console.error(`⚠️ Error permiso PDF para autor:`, permErr.message);
+              }
+              
+              for (const email of editorEmailsForPermissions) {
+                try {
+                  await drive.permissions.create({
+                    fileId: pdfUpload.data.id,
+                    requestBody: {
+                      role: 'reader',
+                      type: 'user',
+                      emailAddress: email
+                    },
+                    sendNotificationEmail: false
+                  });
+                } catch (permErr) {
+                  console.error(`⚠️ Error permiso PDF para ${email}:`, permErr.message);
+                }
+              }
+              
+              try {
+                await drive.files.delete({
+                  fileId: tempDocsFile.data.id
+                });
+              } catch (deleteErr) {
+                console.warn(`⚠️ No se pudo eliminar temporal:`, deleteErr.message);
+              }
+              
+              console.log(`[${requestId}] ✅ PDF generado y subido`);
+              
+            } catch (pdfError) {
+              console.warn(`[${requestId}] ⚠️ Error generando PDF:`, pdfError.message);
+            }
+            
+            // Permisos del DOCX para editores
+            for (const email of editorEmailsForPermissions) {
+              try {
+                await drive.permissions.create({
+                  fileId: docxUpload.data.id,
+                  requestBody: {
+                    role: 'writer',
+                    type: 'user',
+                    emailAddress: email
+                  },
+                  sendNotificationEmail: false
+                });
+              } catch (permErr) {
+                console.error(`⚠️ Error permiso DOCX para ${email}:`, permErr.message);
+              }
+            }
+            
+          } catch (uploadError) {
+            console.error(`[${requestId}] ⚠️ Error subiendo documento premium:`, uploadError.message);
           }
         }
         
-        try {
-          await drive.files.delete({
-            fileId: tempDocsFile.data.id
-          });
-        } catch (deleteErr) {
-          console.warn(`⚠️ No se pudo eliminar temporal:`, deleteErr.message);
-        }
-        
-        console.log(`[${requestId}] ✅ PDF generado y subido`);
-        
-      } catch (pdfError) {
-        console.warn(`[${requestId}] ⚠️ Error generando PDF:`, pdfError.message);
+      } catch (formatError) {
+        console.error(`[${requestId}] ⚠️ Error generando documento premium (no crítico):`, formatError.message);
       }
-      
-      // Permisos del DOCX para editores
-      for (const email of editorEmailsForPermissions) {
-        try {
-          await drive.permissions.create({
-            fileId: docxUpload.data.id,
-            requestBody: {
-              role: 'writer',
-              type: 'user',
-              emailAddress: email
-            },
-            sendNotificationEmail: false
-          });
-        } catch (permErr) {
-          console.error(`⚠️ Error permiso DOCX para ${email}:`, permErr.message);
-        }
-      }
-      
-    } catch (uploadError) {
-      console.error(`[${requestId}] ⚠️ Error subiendo documento premium:`, uploadError.message);
-    }
-  }
-  
-} catch (formatError) {
-  console.error(`[${requestId}] ⚠️ Error generando documento premium (no crítico):`, formatError.message);
-}
 
-// Agregar al submissionData los archivos formateados
-submissionData.formattedDocsFile = formattedDocsFile;
-submissionData.formattedPdfFile = formattedPdfFile;
-submissionData.documentStatus = formattedDocsFile ? 'processed' : 'submitted';
+      // Agregar al submissionData los archivos formateados
+      submissionData.formattedDocsFile = formattedDocsFile;
+      submissionData.formattedPdfFile = formattedPdfFile;
+      submissionData.documentStatus = formattedDocsFile ? 'processed' : 'submitted';
+
       // --- TRANSACCIÓN EN FIRESTORE ---
       await db.runTransaction(async (transaction) => {
         // Documento principal del envío
@@ -5080,15 +5087,17 @@ submissionData.documentStatus = formattedDocsFile ? 'processed' : 'submitted';
         
         // Log de auditoría
         transaction.set(db.collection('submissions').doc(submissionId).collection('auditLogs').doc(), {
-  action: 'submission_created',
-  by: uid,
-  byEmail: decodedToken.email,  // Usuario autenticado
-  timestamp: admin.firestore.FieldValue.serverTimestamp(),
-  details: {
-    submitterEmail: decodedToken.email,
-    submitterName: submitterName,
-    correspondingAuthorEmail: correspondingAuthorData.email,
-    correspondingAuthorName: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`,
+          action: 'submission_created',
+          by: uid,
+          byEmail: decodedToken.email,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          details: {
+            submitterEmail: decodedToken.email,
+            submitterName: submitterName,
+            correspondingAuthorEmail: correspondingAuthorData.email,
+            correspondingAuthorName: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`,
+            correspondingAuthorPhone: correspondingAuthorData.phone || null,
+            correspondingAuthorPhoneCountryCode: correspondingAuthorData.phoneCountryCode || null,
             articleType,
             area,
             paperLanguage,
@@ -5099,25 +5108,24 @@ submissionData.documentStatus = formattedDocsFile ? 'processed' : 'submitted';
             dataAvailability,
             codeAvailability: codeAvailability || null,
             keywordsVocabulario: keywordsVocabulario || 'unknown',
-keywordsEsCount: Array.isArray(keywordsEs) ? keywordsEs.length : 0,
-keywordsEnCount: Array.isArray(keywordsEn) ? keywordsEn.length : 0,
-specializedCodesCount: Array.isArray(specializedCodes) ? specializedCodes.length : 0,
-hasEditorComment: !!editorComment,
-editorCommentPreview: editorComment 
-  ? editorComment.replace(/<[^>]*>/g, '').substring(0, 100) + (editorComment.length > 100 ? '...' : '') 
-  : null,
-  wantsToBeReviewer: Boolean(wantsToBeReviewer),
-    reviewerAreasCount: wantsToBeReviewer ? reviewerAreas.length : 0,
+            keywordsEsCount: Array.isArray(keywordsEs) ? keywordsEs.length : 0,
+            keywordsEnCount: Array.isArray(keywordsEn) ? keywordsEn.length : 0,
+            specializedCodesCount: Array.isArray(specializedCodes) ? specializedCodes.length : 0,
+            hasEditorComment: !!editorComment,
+            editorCommentPreview: editorComment 
+              ? editorComment.replace(/<[^>]*>/g, '').substring(0, 100) + (editorComment.length > 100 ? '...' : '') 
+              : null,
+            wantsToBeReviewer: Boolean(wantsToBeReviewer),
+            reviewerAreasCount: wantsToBeReviewer ? reviewerAreas.length : 0,
           }
         });
         
-        // Actualizar contador del usuario
         // Actualizar contador del usuario que sube (uid autenticado)
-transaction.update(db.collection('users').doc(uid), {
-  totalSubmissions: admin.firestore.FieldValue.increment(1),
-  lastSubmissionAt: admin.firestore.FieldValue.serverTimestamp(),
-  updatedAt: admin.firestore.FieldValue.serverTimestamp()
-});
+        transaction.update(db.collection('users').doc(uid), {
+          totalSubmissions: admin.firestore.FieldValue.increment(1),
+          lastSubmissionAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
       });
       
       console.log(`✅ Datos guardados en Firestore`);
@@ -5149,7 +5157,7 @@ transaction.update(db.collection('users').doc(uid), {
       // Correo a editores
       for (const editor of editorEmails) {
         const authorsList = processedAuthors.map(a => 
-          `• ${a.firstName} ${a.lastName} (${a.email})${a.isCorresponding ? ' 📧 [CORRESPONDENCIA]' : ''}${a.isMinor ? ' 👶 [MENOR]' : ''}`
+          `• ${a.firstName} ${a.lastName} (${a.email})${a.isCorresponding ? ' 📧 [CORRESPONDENCIA]' : ''}${a.isMinor ? ' 👶 [MENOR]' : ''}${a.phone ? ` 📱 ${a.phoneCountryCode} ${a.phone}` : ''}`
         ).join('<br>');
 
         const minorInfo = processedAuthors.some(a => a.isMinor) 
@@ -5160,53 +5168,55 @@ transaction.update(db.collection('users').doc(uid), {
           ? `<p><strong>Financiación:</strong> ${funding.sources || 'Sí'}${funding.grantNumbers ? ` (Subvención: ${funding.grantNumbers})` : ''}</p>`
           : '';
 
-        // NUEVO: Información de ética
         const ethicsInfo = requiresEthicsApproval
           ? `<p style="color: #0A1929;"><strong>✅ Aprobación ética:</strong> ${ethicsCommitteeName || 'Declarada'}</p>`
           : '';
-// Información de palabras clave para correos
-const keywordsEsList = Array.isArray(keywordsEs) ? keywordsEs.join('; ') : '';
-const keywordsEnList = Array.isArray(keywordsEn) ? keywordsEn.join('; ') : '';
-const codesList = Array.isArray(specializedCodes) ? specializedCodes.join('; ') : '';
 
-const keywordsInfo = `
-    <p><strong>🏷️ Palabras clave (ES):</strong> ${keywordsEsList}</p>
-    <p><strong>🏷️ Keywords (EN):</strong> ${keywordsEnList}</p>
-    <p><strong>🔢 Códigos especializados (${keywordsVocabulario || 'Vocabulario'}):</strong> ${codesList}</p>
-`;
-        // NUEVO: Información de IA
+        const keywordsEsList = Array.isArray(keywordsEs) ? keywordsEs.join('; ') : '';
+        const keywordsEnList = Array.isArray(keywordsEn) ? keywordsEn.join('; ') : '';
+        const codesList = Array.isArray(specializedCodes) ? specializedCodes.join('; ') : '';
+
+        const keywordsInfo = `
+          <p><strong>🏷️ Palabras clave (ES):</strong> ${keywordsEsList}</p>
+          <p><strong>🏷️ Keywords (EN):</strong> ${keywordsEnList}</p>
+          <p><strong>🔢 Códigos especializados (${keywordsVocabulario || 'Vocabulario'}):</strong> ${codesList}</p>
+        `;
+
         const aiInfo = aiUsed && processedAITools.length > 0
           ? `<p style="color: #0A1929;"><strong>🤖 IA utilizada:</strong> ${processedAITools.map(t => `${t.name} (${t.purpose})`).join(', ')}</p>`
           : '';
 
-        // NUEVO: Disponibilidad de datos
         const availabilityInfo = `
           <p><strong>📊 Disponibilidad de datos:</strong> ${dataAvailability}</p>
           ${codeAvailability ? `<p><strong>💻 Disponibilidad de código:</strong> ${codeAvailability}</p>` : ''}
         `;
 
-        // En el correo a editores, distinguir claramente:
-const articleInfo = `
-  <div class="highlight-box">
-    <p class="article-title">"${sanitizeText(title)}"</p>
-    ${minorInfo}
-    <p><strong>ID:</strong> ${submissionId}</p>
-    
-    <p><strong>👤 Subido por:</strong> ${sanitizeText(submitterName || 'No especificado')}</p>
-    <p><strong>📧 Email del que sube:</strong> ${submitterEmail}</p>
-    
-    <p><strong>📧 Autor de correspondencia:</strong> ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName} (${correspondingAuthorData.email})</p>
-    
-    <p><strong>Área:</strong> ${sanitizeText(area)}</p>
-    <p><strong>Tipo de artículo:</strong> ${articleType ? articleType.toUpperCase() : 'No especificado'}</p>
-    <p><strong>Idioma:</strong> ${paperLanguage === 'es' ? 'Español' : 'Inglés'}</p>
-    ${fundingInfo}
-    ${ethicsInfo}
-    ${aiInfo}
-    ${availabilityInfo}
-    ${keywordsInfo}
-    <p><strong>Autores (${processedAuthors.length}):</strong><br>${authorsList}</p>
-  </div>
+        const phoneInfo = correspondingAuthorData.phone
+          ? `<p><strong>📱 Teléfono de correspondencia:</strong> ${correspondingAuthorData.phoneCountryCode} ${correspondingAuthorData.phone}</p>`
+          : '';
+
+        const articleInfo = `
+          <div class="highlight-box">
+            <p class="article-title">"${sanitizeText(title)}"</p>
+            ${minorInfo}
+            <p><strong>ID:</strong> ${submissionId}</p>
+            
+            <p><strong>👤 Subido por:</strong> ${sanitizeText(submitterName || 'No especificado')}</p>
+            <p><strong>📧 Email del que sube:</strong> ${submitterEmail}</p>
+            
+            <p><strong>📧 Autor de correspondencia:</strong> ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName} (${correspondingAuthorData.email})</p>
+            ${phoneInfo}
+            
+            <p><strong>Área:</strong> ${sanitizeText(area)}</p>
+            <p><strong>Tipo de artículo:</strong> ${articleType ? articleType.toUpperCase() : 'No especificado'}</p>
+            <p><strong>Idioma:</strong> ${paperLanguage === 'es' ? 'Español' : 'Inglés'}</p>
+            ${fundingInfo}
+            ${ethicsInfo}
+            ${aiInfo}
+            ${availabilityInfo}
+            ${keywordsInfo}
+            <p><strong>Autores (${processedAuthors.length}):</strong><br>${authorsList}</p>
+          </div>
           <div class="button-container">
             <a href="https://www.revistacienciasestudiantes.com/es/login" class="btn">VER EN PORTAL</a>
             <a href="${authorFolder.webViewLink}" class="btn btn-secondary">CARPETA AUTOR</a>
@@ -5228,31 +5238,31 @@ const articleInfo = `
           'es'
         );
 
-        // El correo de confirmación va al autor de correspondencia
-emailPromises.push(
-  sendEmailViaExtension(
-    authorEmailToUse,  // ← Este es el email del autor de correspondencia
-    paperLanguage === 'es' ? 'Confirmación de envío' : 'Submission confirmation',
-    authorHtmlBody
-  ).catch(err => console.log(`⚠️ Error email to corresponding author:`, err.message))
-);
+        emailPromises.push(
+          sendEmailViaExtension(
+            editor.email,
+            `📬 Nuevo Artículo Recibido - ${submissionId}`,
+            htmlBody
+          ).catch(err => console.log(`⚠️ Error email to editor:`, err.message))
+        );
       }
 
-      // Correo al autor
+      // Correo al autor de correspondencia
       const authorEmailTitle = paperLanguage === 'es' 
         ? '✅ Confirmación de envío'
         : '✅ Submission confirmation';
 
       const authorGreeting = paperLanguage === 'es'
-  ? `Estimado/a ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}:`
-  : `Dear ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}:`;
+        ? `Estimado/a ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}:`
+        : `Dear ${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}:`;
 
-// En el cuerpo del correo, aclarar si es diferente al que sube
-if (submitterEmail !== correspondingAuthorData.email) {
-  authorBody += paperLanguage === 'es'
-    ? `<p><em>Nota: Este artículo fue subido por ${submitterName} (${submitterEmail}).</em></p>`
-    : `<p><em>Note: This article was submitted by ${submitterName} (${submitterEmail}).</em></p>`;
-}
+      // Nota si el que sube es diferente al autor de correspondencia
+      const submitterNote = submitterEmail !== correspondingAuthorData.email
+        ? (paperLanguage === 'es'
+            ? `<p><em>Nota: Este artículo fue subido por ${sanitizeText(submitterName || '')} (${submitterEmail}).</em></p>`
+            : `<p><em>Note: This article was submitted by ${sanitizeText(submitterName || '')} (${submitterEmail}).</em></p>`)
+        : '';
+
       let minorMessage = '';
       if (processedAuthors.some(a => a.isMinor)) {
         minorMessage = paperLanguage === 'es'
@@ -5266,7 +5276,6 @@ if (submitterEmail !== correspondingAuthorData.email) {
              </p>`;
       }
 
-      // NUEVO: Información de disponibilidad para el autor
       const availabilityMessage = paperLanguage === 'es'
         ? `
           <div class="highlight-box" style="background-color: #f0f7ff; border-left-color: #0A1929;">
@@ -5281,7 +5290,6 @@ if (submitterEmail !== correspondingAuthorData.email) {
           </div>
         `;
 
-      // NUEVO: Información de IA para el autor
       const aiAuthorMessage = aiUsed && processedAITools.length > 0
         ? (paperLanguage === 'es'
             ? `<p><strong>🤖 Uso de IA declarado:</strong> ${processedAITools.map(t => t.name).join(', ')}</p>`
@@ -5290,6 +5298,7 @@ if (submitterEmail !== correspondingAuthorData.email) {
 
       const authorBody = paperLanguage === 'es'
         ? `
+          ${submitterNote}
           ${minorMessage}
           ${availabilityMessage}
           
@@ -5324,6 +5333,7 @@ if (submitterEmail !== correspondingAuthorData.email) {
           </div>
         `
         : `
+          ${submitterNote}
           ${minorMessage}
           ${availabilityMessage}
           ${keywordsInfo}
@@ -5369,7 +5379,7 @@ if (submitterEmail !== correspondingAuthorData.email) {
 
       emailPromises.push(
         sendEmailViaExtension(
-          authorEmailToUse,
+          correspondingAuthorData.email,
           paperLanguage === 'es' ? 'Confirmación de envío' : 'Submission confirmation',
           authorHtmlBody
         ).catch(err => console.log(`⚠️ Error email to author:`, err.message))
@@ -5385,28 +5395,30 @@ if (submitterEmail !== correspondingAuthorData.email) {
       const processingTime = Date.now() - startTime;
       console.log(`✅ Envío exitoso: ${submissionId} (${processingTime}ms)`);
 
-      // NUEVO: Respuesta más completa
+      // Respuesta completa
       return res.status(201).json({
-  success: true,
-  submissionId,
-  driveFolderId: authorFolder.id,
-  driveFolderUrl: authorFolder.webViewLink,
-  editorialFolderUrl: editorialFolder ? editorialFolder.webViewLink : null,
-  
-  // Información clara de quién subió y quién es correspondencia
-  submitter: {
-    name: submitterName,
-    email: submitterEmail
-  },
-  correspondingAuthor: {
-    name: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`,
-    email: correspondingAuthorData.email
-  },
-  message: paperLanguage === 'es' 
-    ? 'Artículo enviado correctamente. Se enviará confirmación al autor de correspondencia.'
-    : 'Article submitted successfully. Confirmation will be sent to the corresponding author.',
-  requestId
-});
+        success: true,
+        submissionId,
+        driveFolderId: authorFolder.id,
+        driveFolderUrl: authorFolder.webViewLink,
+        editorialFolderUrl: editorialFolder ? editorialFolder.webViewLink : null,
+        
+        // Información clara de quién subió y quién es correspondencia
+        submitter: {
+          name: submitterName,
+          email: submitterEmail
+        },
+        correspondingAuthor: {
+          name: `${correspondingAuthorData.firstName} ${correspondingAuthorData.lastName}`,
+          email: correspondingAuthorData.email,
+          phone: correspondingAuthorData.phone || null,
+          phoneCountryCode: correspondingAuthorData.phoneCountryCode || null
+        },
+        message: paperLanguage === 'es' 
+          ? 'Artículo enviado correctamente. Se enviará confirmación al autor de correspondencia.'
+          : 'Article submitted successfully. Confirmation will be sent to the corresponding author.',
+        requestId
+      });
 
     } catch (error) {
       console.error(`[${requestId}] ❌ Error:`, error.message);

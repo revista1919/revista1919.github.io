@@ -6,7 +6,8 @@ import { useLanguage } from '../hooks/useLanguage';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { UserIcon } from '@heroicons/react/24/outline';
-
+import PhoneInput from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 // ============ COMPONENTE: HELP CAPSULE (PIN DE AYUDA) ============
 
 const AREAS_TEMATICAS = {
@@ -1556,18 +1557,20 @@ export default function SubmissionForm({ user, onSuccess }) {
     articleType: '',
     acknowledgments: '',
     authors: [{
-      firstName: '',
-      lastName: '',
-      email: '',
-      institution: '',
-      orcid: '',
-      contribution: '',
-      isMinor: false,
-      guardianName: '',
-      consentMethod: 'none',
-      consentFile: null,
-      isCorresponding: true
-    }],
+  firstName: '',
+  lastName: '',
+  email: '',
+  institution: '',
+  orcid: '',
+  contribution: '',
+  isMinor: false,
+  guardianName: '',
+  consentMethod: 'none',
+  consentFile: null,
+  isCorresponding: true,
+  phone: '',
+  phoneCountryCode: '+56'
+}],
     funding: {
       hasFunding: false,
       sources: '',
@@ -1729,42 +1732,45 @@ const steps = [
     const updatedAuthors = [...formData.authors];
     const author = updatedAuthors[authorIndex];
 
-    updatedAuthors[authorIndex] = {
-      firstName: user.firstName || author.firstName,
-      lastName: user.lastName || author.lastName,
-      email: user.email || author.email,
-      institution: user.institution || author.institution || '',
-      orcid: user.orcid || author.orcid || '',
-      contribution: author.contribution,
-      isMinor: author.isMinor,
-      guardianName: author.guardianName,
-      consentMethod: author.consentMethod,
-      consentFile: author.consentFile,
-      isCorresponding: author.isCorresponding,
-    };
+updatedAuthors[authorIndex] = {
+  firstName: user.firstName || author.firstName,
+  lastName: user.lastName || author.lastName,
+  email: user.email || author.email,
+  institution: user.institution || author.institution || '',
+  orcid: user.orcid || author.orcid || '',
+  contribution: author.contribution,
+  isMinor: author.isMinor,
+  guardianName: author.guardianName,
+  consentMethod: author.consentMethod,
+  consentFile: author.consentFile,
+  isCorresponding: author.isCorresponding,
+  phone: author.phone,
+  phoneCountryCode: author.phoneCountryCode || '+56'
+};
     setFormData(prev => ({ ...prev, authors: updatedAuthors }));
   };
 
   // Agregar autor
-  const addAuthor = () => {
-    setFormData(prev => ({
-      ...prev,
-      authors: [...prev.authors, {
-        firstName: '',
-        lastName: '',
-        email: '',
-        institution: '',
-        orcid: '',
-        contribution: '',
-        isMinor: false,
-        guardianName: '',
-        consentMethod: 'none',
-        consentFile: null,
-        isCorresponding: false
-      }]
-    }));
-  };
-
+const addAuthor = () => {
+  setFormData(prev => ({
+    ...prev,
+    authors: [...prev.authors, {
+      firstName: '',
+      lastName: '',
+      email: '',
+      institution: '',
+      orcid: '',
+      contribution: '',
+      isMinor: false,
+      guardianName: '',
+      consentMethod: 'none',
+      consentFile: null,
+      isCorresponding: false,
+      phone: '',
+      phoneCountryCode: '+56'
+    }]
+  }));
+};
   // Eliminar autor
   const removeAuthor = (index) => {
     if (formData.authors.length > 1) {
@@ -1955,7 +1961,12 @@ const steps = [
           if (!author.institution.trim()) {
             errors[`author_${index}_institution`] = isSpanish ? 'Institución requerida' : 'Institution required';
           }
-          
+            // ✅ AGREGAR AQUÍ: Validación de teléfono para autor de correspondencia
+    if (author.isCorresponding && !author.phone.trim()) {
+      errors[`author_${index}_phone`] = isSpanish 
+        ? 'Teléfono requerido para el autor de correspondencia' 
+        : 'Phone required for corresponding author';
+    }
           // NUEVO: Validación de contribución CRediT (solo si hay más de un autor)
           if (formData.authors.length > 1 && !author.contribution.trim()) {
             errors[`author_${index}_contribution`] = isSpanish 
@@ -2087,16 +2098,18 @@ const steps = [
         codeAvailability: formData.codeAvailability,
         codeAvailabilityEn: formData.codeAvailabilityEn,
         authors: formData.authors.map(a => ({
-          firstName: a.firstName,
-          lastName: a.lastName,
-          email: a.email,
-          institution: a.institution,
-          orcid: a.orcid || null,
-          contribution: a.contribution,
-          isMinor: a.isMinor,
-          guardianName: a.guardianName,
-          isCorresponding: a.isCorresponding
-        })),
+  firstName: a.firstName,
+  lastName: a.lastName,
+  email: a.email,
+  institution: a.institution,
+  orcid: a.orcid || null,
+  contribution: a.contribution,
+  isMinor: a.isMinor,
+  guardianName: a.guardianName,
+  isCorresponding: a.isCorresponding,
+  phone: a.phone || '',
+  phoneCountryCode: a.phoneCountryCode || '+56'
+})),
         funding: formData.funding,
         conflictOfInterest: formData.conflictOfInterest,
         excludedReviewers: formData.excludedReviewers,
@@ -2132,7 +2145,9 @@ const steps = [
     email: correspondingAuthor.email,
     institution: correspondingAuthor.institution,
     orcid: correspondingAuthor.orcid || null,
-    isCorresponding: true
+    isCorresponding: true,
+    correspondingAuthorPhone: correspondingAuthor.phone || '',
+correspondingAuthorPhoneCountryCode: correspondingAuthor.phoneCountryCode || '',
   }
 
       };
@@ -2260,6 +2275,7 @@ const steps = [
 
   // Renderizado principal del formulario
   return (
+    
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans selection:bg-[#003b5c] selection:text-white pb-24">
       {/* HEADER SUPERIOR */}
       <header className="bg-white sticky top-0 z-40 border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
@@ -2756,6 +2772,61 @@ const steps = [
                               <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_email`]}</p>
                             )}
                           </div>
+{/* 📱 Teléfono - SOLO si es autor de correspondencia */}
+{author.isCorresponding && (
+  <div className="md:col-span-2">
+    <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+      {isSpanish ? 'Teléfono de contacto' : 'Contact phone'} *
+      <HelpCapsule
+        title={isSpanish ? '¿Por qué necesitamos tu teléfono?' : 'Why do we need your phone?'}
+        text={isSpanish
+          ? 'El teléfono del autor de correspondencia es necesario para comunicaciones urgentes durante el proceso editorial. No se publicará en el artículo.'
+          : 'The corresponding author phone is needed for urgent communications during the editorial process. It will not be published in the article.'}
+      />
+    </label>
+    
+    <div className="relative">
+      <PhoneInput
+        international
+        defaultCountry="CL"
+        value={author.phoneCountryCode + author.phone}
+        onChange={(value) => {
+          if (value) {
+            const match = value.match(/^(\+\d{1,3})(\d+)$/);
+            if (match) {
+              handleAuthorChange(index, 'phoneCountryCode', match[1]);
+              handleAuthorChange(index, 'phone', match[2]);
+            }
+          } else {
+            handleAuthorChange(index, 'phoneCountryCode', '+56');
+            handleAuthorChange(index, 'phone', '');
+          }
+        }}
+        className={`PhoneInput ${validationErrors[`author_${index}_phone`] ? 'PhoneInput--error' : ''}`}
+      />
+      
+      {/* Icono de teléfono (opcional) */}
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+        </svg>
+      </div>
+    </div>
+    
+    {validationErrors[`author_${index}_phone`] && (
+      <motion.p 
+        initial={{ opacity: 0, y: -5 }} 
+        animate={{ opacity: 1, y: 0 }}
+        className="text-red-500 text-xs mt-1.5 flex items-center gap-1"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        {validationErrors[`author_${index}_phone`]}
+      </motion.p>
+    )}
+  </div>
+)}
                           <div>
                             <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                               ORCID

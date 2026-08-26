@@ -33,6 +33,7 @@ const Icons = {
   Money: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
   User: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
   Email: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
+  Phone: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>,
   Building: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
   Key: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>,
   File: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
@@ -1623,27 +1624,42 @@ const AuthorSubmissionsPanel = ({ user }) => {
                     </section>
 
                     {/* 2. DATOS DEL AUTOR */}
-                    <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
-                          <Icons.User />
-                        </div>
-                        <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
-                          {isSpanish ? 'Autor Principal' : 'Main Author'}
-                        </h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        {[
-                          { label: isSpanish ? 'Nombre' : 'Name', value: activePortal.authorName },
-                          { label: 'Email', value: activePortal.authorEmail }
-                        ].map((item, idx) => (
-                          <div key={idx} className="bg-slate-50 p-3 border border-slate-100">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</p>
-                            <p className="font-serif text-slate-700 break-all">{item.value || '—'}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
+<section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
+  <div className="flex items-center gap-3 mb-6">
+    <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
+      <Icons.User />
+    </div>
+    <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
+      {isSpanish ? 'Autor Principal' : 'Main Author'}
+    </h3>
+  </div>
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+    <div className="bg-slate-50 p-3 border border-slate-100">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        {isSpanish ? 'Nombre' : 'Name'}
+      </p>
+      <p className="font-serif text-slate-700 break-all">{activePortal.authorName || '—'}</p>
+    </div>
+    <div className="bg-slate-50 p-3 border border-slate-100">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email</p>
+      <p className="font-serif text-slate-700 break-all">{activePortal.authorEmail || '—'}</p>
+    </div>
+    
+    {/* ✅ NUEVO: Teléfono de contacto */}
+    {(activePortal.correspondingAuthorPhone || activePortal.correspondingAuthor?.phone) && (
+      <div className="bg-slate-50 p-3 border border-slate-100 sm:col-span-2">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+          <Icons.Phone />
+          {isSpanish ? 'Teléfono de Contacto' : 'Contact Phone'}
+        </p>
+        <p className="font-mono text-slate-700 mt-1 text-base">
+          {activePortal.correspondingAuthorPhoneCountryCode || activePortal.correspondingAuthor?.phoneCountryCode || ''}{' '}
+          {activePortal.correspondingAuthorPhone || activePortal.correspondingAuthor?.phone || '—'}
+        </p>
+      </div>
+    )}
+  </div>
+</section>
 
                     {/* 3. DATOS DEL ARTÍCULO */}
                     <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
@@ -1782,6 +1798,19 @@ const AuthorSubmissionsPanel = ({ user }) => {
                                   <span className="text-slate-400">ORCID: </span>
                                   <span className="text-slate-600 font-mono">{author.orcid || '—'}</span>
                                 </div>
+                                {/* ✅ Teléfono - solo para autor de correspondencia */}
+{author.isCorresponding && (author.phone || activePortal.correspondingAuthorPhone) && (
+  <div>
+    <span className="text-slate-400 flex items-center gap-1">
+      <Icons.Phone />
+      {isSpanish ? 'Teléfono:' : 'Phone:'}
+    </span>
+    <span className="text-slate-600 font-mono">
+      {author.phoneCountryCode || activePortal.correspondingAuthorPhoneCountryCode || ''}{' '}
+      {author.phone || activePortal.correspondingAuthorPhone || '—'}
+    </span>
+  </div>
+)}
                               </div>
                               {author.contribution && (
                                 <p className="text-xs text-slate-500 mt-2 italic">

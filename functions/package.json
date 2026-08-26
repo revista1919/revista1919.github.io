@@ -29,7 +29,8 @@
     "node-fetch": "^2.7.0",
     "papaparse": "^5.4.1",
     "pdfkit": "^0.19.1",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "react-phone-number-input": "^3.4.18"
   },
   "devDependencies": {
     "eslint": "^4.1.1",
