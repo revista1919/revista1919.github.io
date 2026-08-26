@@ -1047,12 +1047,14 @@ function App() {
           </Routes>
         </AnimatePresence>
       </main>
-      {/* MODAL DE NEWSLETTER */}
       <NewsletterModal 
-        delay={30000}
-        scrollTrigger={0.5}
-        cookieExpirationDays={180}
-      />
+  delay={120000}
+  scrollTrigger={0.7}
+  cookieExpirationDays={365}
+  position="right"         // Lateral derecho
+  size="md"                // Tamaño mediano
+  slideIn={true}           // Animación de deslizamiento
+/>
       <AnimatePresence>
         {isMenuOpen && (
           <>
