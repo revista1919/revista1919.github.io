@@ -3,7 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import NewsletterSubscription from './NewsletterSubscription';
 
 const NEWS_JSON = "/news/news.json";
+const SCIENCE_NEWS_INDEX = "/science/index.json";
+const SCIENCE_NEWS_BASE = "/science";
 
+// ========== UTILIDADES ==========
 const base64DecodeUnicode = (str) => {
   try {
     const binary = atob(str);
@@ -28,6 +31,10 @@ function generateSlug(name) {
   name = name.replace(/-+/g, '-');
   name = name.replace(/^-+|-+$/g, '');
   return name;
+}
+
+function generateAuthorSlug(authorName) {
+  return generateSlug(authorName);
 }
 
 function parseDateIso(raw) {
@@ -65,8 +72,6 @@ function formatDate(raw) {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
       });
     } catch {
       return raw;
@@ -100,7 +105,11 @@ function truncateHTML(html, maxLength = 200) {
 function decodeBody(body, truncate = false) {
   if (!body) return <p className="text-gray-800">Sin contenido disponible.</p>;
   try {
-    let html = base64DecodeUnicode(body);
+    let html = body;
+    // Intentar decodificar si es base64
+    if (body.startsWith('data:') || /^[A-Za-z0-9+/=]+$/.test(body)) {
+      html = base64DecodeUnicode(body);
+    }
     if (truncate) {
       html = truncateHTML(html, 200);
     }
@@ -117,25 +126,43 @@ function decodeBody(body, truncate = false) {
   }
 }
 
+// ========== MAPEO DE ÁREAS ==========
+const AREAS_MAP = {
+  'biologia': { es: 'Biología', en: 'Biology', color: '#059669' },
+  'quimica': { es: 'Química', en: 'Chemistry', color: '#7c3aed' },
+  'fisica': { es: 'Física', en: 'Physics', color: '#2563eb' },
+  'matematica': { es: 'Matemática', en: 'Mathematics', color: '#dc2626' },
+  'computacion': { es: 'Computación', en: 'Computer Science', color: '#0891b2' },
+  'astronomia': { es: 'Astronomía', en: 'Astronomy', color: '#4f46e5' },
+  'geologia': { es: 'Geología', en: 'Geology', color: '#b45309' },
+  'medicina': { es: 'Medicina', en: 'Medicine', color: '#e11d48' },
+  'ingenieria': { es: 'Ingeniería', en: 'Engineering', color: '#475569' },
+  'ciencias_sociales': { es: 'Ciencias Sociales', en: 'Social Sciences', color: '#9333ea' },
+  'medio_ambiente': { es: 'Medio Ambiente', en: 'Environment', color: '#16a34a' },
+  'neurociencia': { es: 'Neurociencia', en: 'Neuroscience', color: '#db2777' },
+  'logros_estudiantiles': { es: 'Logros Estudiantiles', en: 'Student Achievements', color: '#ea580c' }
+};
+
+// ========== COMPONENTE PRINCIPAL ==========
 export default function NewsSection({ className }) {
   const [news, setNews] = useState([]);
+  const [scienceNews, setScienceNews] = useState([]);
   const [welcomeNote, setWelcomeNote] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
-  const [visibleNews, setVisibleNews] = useState(7);
+  const [visibleNews, setVisibleNews] = useState(6);
+  const [visibleScienceNews, setVisibleScienceNews] = useState(6);
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'internal', 'science'
 
   useEffect(() => {
     const fetchNews = async () => {
       try {
+        // Cargar noticias internas
         const response = await fetch(NEWS_JSON, { cache: "no-store" });
-        if (!response.ok) throw new Error("Error al cargar el archivo JSON");
+        if (!response.ok) throw new Error("Error al cargar noticias internas");
         const data = await response.json();
-        if (!data || data.length === 0) {
-          setError("JSON vacío o sin formato válido");
-          setLoading(false);
-          return;
-        }
+        
         const validNews = data
           .filter(
             (item) =>
@@ -150,11 +177,67 @@ export default function NewsSection({ className }) {
             photo: String(item["photo"] ?? ""),
             timestamp: item["timestamp"],
             slug: String(item["slug"] ?? ""),
+            type: 'internal'
           }))
           .sort((a, b) => b.timestamp - a.timestamp);
+        
         const foundWelcome = validNews.find(n => n.fechaIso === '2025-09-15');
         setWelcomeNote(foundWelcome);
         setNews(validNews);
+
+        // Cargar noticias científicas
+        try {
+          const scienceResponse = await fetch(SCIENCE_NEWS_INDEX, { cache: "no-store" });
+          if (scienceResponse.ok) {
+            const scienceIndex = await scienceResponse.json();
+            const years = Object.keys(scienceIndex.years || {}).sort().reverse();
+            
+            const allScienceNews = [];
+            
+            for (const year of years) {
+              const yearData = scienceIndex.years[year];
+              const yearJsonPath = `${SCIENCE_NEWS_BASE}/${year}/${yearData.json_file}`;
+              
+              try {
+                const yearResponse = await fetch(yearJsonPath, { cache: "no-store" });
+                if (yearResponse.ok) {
+                  const yearNews = await yearResponse.json();
+                  const newsArray = yearNews.news || yearNews;
+                  
+                  newsArray.forEach(item => {
+                    allScienceNews.push({
+                      id: item.id,
+                      title_es: item.title?.es || '',
+                      title_en: item.title?.en || '',
+                      content_es: item.content?.es || '',
+                      content_en: item.content?.en || '',
+                      author_name: item.author?.name || 'Redacción Editorial',
+                      author_slug: generateAuthorSlug(item.author?.name || ''),
+                      area_id: item.area_id || 'general',
+                      category: item.category || 'general',
+                      tags: item.tags || [],
+                      photo: item.photo || '',
+                      featured: item.featured || false,
+                      createdAt: item.metadata?.createdAt || new Date().toISOString(),
+                      timestamp: item.metadata?.createdTimestamp || new Date().getTime(),
+                      slug: item.slug || '',
+                      year: year,
+                      type: 'science'
+                    });
+                  });
+                }
+              } catch (yearError) {
+                console.warn(`Error cargando noticias del año ${year}:`, yearError);
+              }
+            }
+            
+            allScienceNews.sort((a, b) => b.timestamp - a.timestamp);
+            setScienceNews(allScienceNews);
+          }
+        } catch (scienceError) {
+          console.warn('No se pudieron cargar noticias científicas:', scienceError);
+        }
+
         setLoading(false);
       } catch (err) {
         console.error("Error al cargar noticias:", err);
@@ -165,15 +248,39 @@ export default function NewsSection({ className }) {
     fetchNews();
   }, []);
 
-  const filteredNews = news.filter((n) =>
+  // Filtrar noticias
+  const filteredInternalNews = news.filter((n) =>
     n.titulo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const filteredScienceNews = scienceNews.filter((n) =>
+    n.title_es?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    n.title_en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (n.author_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (n.tags || []).some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   const loadMoreNews = () => setVisibleNews((prev) => prev + 6);
+  const loadMoreScienceNews = () => setVisibleScienceNews((prev) => prev + 6);
+  
   const openNews = (item) => {
     window.location.href = `/news/${item.slug}.html`;
   };
-  const featured = filteredNews[0];
-  const listNews = filteredNews.slice(1, visibleNews);
+  
+  const openScienceNews = (item) => {
+    window.location.href = `/science/${item.year}/${item.slug}.html`;
+  };
+  
+  const openAuthorProfile = (authorSlug) => {
+    window.location.href = `/team/${authorSlug}.html`;
+  };
+
+  // Obtener noticias destacadas
+  const featuredInternal = filteredInternalNews[0];
+  const featuredScience = filteredScienceNews.find(n => n.featured) || filteredScienceNews[0];
+  
+  const listInternalNews = filteredInternalNews.slice(1, visibleNews);
+  const listScienceNews = filteredScienceNews.filter(n => n !== featuredScience).slice(0, visibleScienceNews);
 
   if (loading) return <div className="py-20 text-center font-serif italic text-gray-400">Actualizando archivo de noticias...</div>;
   if (error) return <p className="text-center text-red-600">{error}</p>;
@@ -191,140 +298,346 @@ export default function NewsSection({ className }) {
         </div>
       </header>
 
-      {/* --- BARRA DE BÚSQUEDA --- */}
-      <div className="mb-12 relative">
-        <input
-          type="text"
-          placeholder="Buscar en el archivo..."
-          className="w-full border-b border-gray-200 py-2 text-lg font-serif italic focus:outline-none focus:border-blue-600 transition-colors"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      {/* --- BARRA DE BÚSQUEDA Y TABS --- */}
+      <div className="mb-12 space-y-6">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Buscar en el archivo..."
+            className="w-full border-b border-gray-200 py-2 text-lg font-serif italic focus:outline-none focus:border-blue-600 transition-colors"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        {/* Tabs de filtro */}
+        <div className="flex gap-2 border-b border-gray-100">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-6 py-3 text-xs font-bold uppercase tracking-widest transition-all border-b-2 ${
+              activeTab === 'all' 
+                ? 'border-blue-600 text-blue-600' 
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            Todas
+          </button>
+          <button
+            onClick={() => setActiveTab('internal')}
+            className={`px-6 py-3 text-xs font-bold uppercase tracking-widest transition-all border-b-2 ${
+              activeTab === 'internal' 
+                ? 'border-blue-600 text-blue-600' 
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            Boletín Interno
+          </button>
+          <button
+            onClick={() => setActiveTab('science')}
+            className={`px-6 py-3 text-xs font-bold uppercase tracking-widest transition-all border-b-2 ${
+              activeTab === 'science' 
+                ? 'border-blue-600 text-blue-600' 
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            Divulgación Científica
+          </button>
+        </div>
       </div>
 
-      {/* --- GRID EDITORIAL SIMÉTRICO --- */}
-      <div className="flex flex-col gap-12">
-        {/* 1. ARTÍCULO DESTACADO (Más Reciente) */}
-        {featured && (
-          <motion.article
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-gray-100 group cursor-pointer"
-            onClick={() => openNews(featured)}
-          >
-            {/* Lado Izquierdo: Imagen */}
-            <div className="lg:col-span-7 flex flex-col gap-6">
-              <div className="overflow-hidden rounded-sm bg-gray-100 aspect-video md:aspect-auto md:h-[400px]">
+      {/* --- SECCIÓN: NOTICIAS DE DIVULGACIÓN CIENTÍFICA --- */}
+      {(activeTab === 'all' || activeTab === 'science') && scienceNews.length > 0 && (
+        <section className="mb-20">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-600 mb-2 block">
+                Divulgación Científica
+              </span>
+              <h3 className="text-3xl font-serif font-black tracking-tighter">
+                Ciencia en Primera Persona
+              </h3>
+            </div>
+            <span className="text-xs font-mono text-gray-400">
+              {scienceNews.length} artículos
+            </span>
+          </div>
+
+          {/* Artículo científico destacado */}
+          {featuredScience && (
+            <motion.article
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-gray-100 group cursor-pointer mb-12"
+              onClick={() => openScienceNews(featuredScience)}
+            >
+              <div className="lg:col-span-7 overflow-hidden rounded-sm bg-gray-100 aspect-video md:aspect-auto md:h-[400px]">
                 <img
-                  src={featured.photo ? featured.photo : "https://www.revistacienciasestudiantes.com/team.jpg"}
+                  src={featuredScience.photo || "https://www.revistacienciasestudiantes.com/team.jpg"}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  alt="Featured"
+                  alt={featuredScience.title_es}
                 />
               </div>
               
-              {/* NOTA EDITORIAL: Desktop */}
-              {welcomeNote && welcomeNote.fechaIso !== featured.fechaIso && (
+              <div className="lg:col-span-5 flex flex-col justify-center">
+                {featuredScience.area_id && AREAS_MAP[featuredScience.area_id] && (
+                  <span 
+                    className="text-[10px] font-bold uppercase tracking-[0.3em] mb-4 inline-block"
+                    style={{ color: AREAS_MAP[featuredScience.area_id].color }}
+                  >
+                    {AREAS_MAP[featuredScience.area_id].es}
+                    {featuredScience.featured && ' • ⭐ Destacado'}
+                  </span>
+                )}
+                <h4 className="text-3xl md:text-4xl font-serif font-bold leading-tight mb-4 group-hover:text-emerald-600 transition-colors">
+                  {featuredScience.title_es}
+                </h4>
+                
+                {/* Autor clickeable */}
                 <div 
-                  className="hidden lg:block group/welcome border-t pt-6" 
+                  className="flex items-center gap-2 mb-4 cursor-pointer group/author"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openAuthorProfile(featuredScience.author_slug);
+                  }}
+                >
+                  <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold text-emerald-700">
+                      {featuredScience.author_name.charAt(0)}
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 group-hover/author:text-emerald-600 transition-colors">
+                    {featuredScience.author_name}
+                  </span>
+                </div>
+                
+                <div className="text-gray-600 font-serif text-lg mb-6 line-clamp-4 md:line-clamp-6 italic">
+                  {decodeBody(featuredScience.content_es, true)}
+                </div>
+                <time className="text-xs font-mono text-gray-400">
+                  {formatDate(featuredScience.createdAt)}
+                </time>
+              </div>
+            </motion.article>
+          )}
+
+          {/* Grid de noticias científicas */}
+          {listScienceNews.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-12 md:gap-y-16">
+              <AnimatePresence>
+                {listScienceNews.map((item, idx) => (
+                  <motion.article
+                    key={`science-${idx}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="flex flex-col border-t border-emerald-100 pt-6 group cursor-pointer"
+                    onClick={() => openScienceNews(item)}
+                  >
+                    <div className="flex flex-row md:flex-col gap-4">
+                      <div className="w-1/3 md:w-full h-24 md:h-48 bg-emerald-50 rounded-sm overflow-hidden flex-shrink-0">
+                        <img
+                          src={item.photo || "https://via.placeholder.com/400x225?text=Science"}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          alt={item.title_es}
+                        />
+                      </div>
+                      <div className="flex flex-col flex-1">
+                        {item.area_id && AREAS_MAP[item.area_id] && (
+                          <span 
+                            className="text-[9px] font-bold uppercase tracking-widest mb-1 md:mb-3 block"
+                            style={{ color: AREAS_MAP[item.area_id].color }}
+                          >
+                            {AREAS_MAP[item.area_id].es}
+                          </span>
+                        )}
+                        <h5 className="text-lg md:text-xl font-serif font-bold leading-snug mb-2 group-hover:underline decoration-emerald-200">
+                          {item.title_es}
+                        </h5>
+                        
+                        {/* Autor */}
+                        <div 
+                          className="flex items-center gap-2 mb-2 cursor-pointer group/author"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAuthorProfile(item.author_slug);
+                          }}
+                        >
+                          <span className="text-xs font-medium text-gray-500 group-hover/author:text-emerald-600 transition-colors">
+                            {item.author_name}
+                          </span>
+                        </div>
+                        
+                        <div className="hidden md:block text-sm text-gray-500 line-clamp-3 leading-relaxed mb-4 italic">
+                          {decodeBody(item.content_es, true)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-auto pt-4 hidden md:flex justify-between items-center border-t border-emerald-50">
+                      <time className="text-[9px] font-mono text-gray-400">
+                        {formatDate(item.createdAt).split(',')[0]}
+                      </time>
+                      <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-emerald-600 transition-colors">
+                        Leer Artículo →
+                      </span>
+                    </div>
+                  </motion.article>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Botón cargar más noticias científicas */}
+          {filteredScienceNews.length > visibleScienceNews + 1 && (
+            <div className="mt-12 flex justify-center">
+              <button
+                onClick={loadMoreScienceNews}
+                className="px-8 py-3 border-2 border-emerald-200 text-emerald-700 text-[10px] font-black uppercase tracking-[0.3em] hover:bg-emerald-50 transition-all"
+              >
+                Más Divulgación Científica
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* --- SECCIÓN: NOTICIAS INTERNAS --- */}
+      {(activeTab === 'all' || activeTab === 'internal') && news.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-2 block">
+                Boletín Interno
+              </span>
+              <h3 className="text-3xl font-serif font-black tracking-tighter">
+                Novedades de la Revista
+              </h3>
+            </div>
+            <span className="text-xs font-mono text-gray-400">
+              {news.length} noticias
+            </span>
+          </div>
+
+          {/* Noticia interna destacada */}
+          {featuredInternal && (
+            <motion.article
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12 border-b border-gray-100 group cursor-pointer mb-12"
+              onClick={() => openNews(featuredInternal)}
+            >
+              <div className="lg:col-span-7 flex flex-col gap-6">
+                <div className="overflow-hidden rounded-sm bg-gray-100 aspect-video md:aspect-auto md:h-[400px]">
+                  <img
+                    src={featuredInternal.photo ? featuredInternal.photo : "https://www.revistacienciasestudiantes.com/team.jpg"}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    alt="Featured"
+                  />
+                </div>
+                
+                {welcomeNote && welcomeNote.fechaIso !== featuredInternal.fechaIso && (
+                  <div 
+                    className="hidden lg:block group/welcome border-t pt-6" 
+                    onClick={(e) => { e.stopPropagation(); openNews(welcomeNote); }}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-2 block">Nota Editorial</span>
+                    <h3 className="text-3xl font-serif font-bold leading-tight group-hover/welcome:text-blue-600 transition-colors">
+                      {welcomeNote.titulo}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-2 font-serif italic">Seguir leyendo →</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="lg:col-span-5 flex flex-col justify-center">
+                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-4 block">Última Actualización</span>
+                <h3 className="text-3xl md:text-4xl font-serif font-bold leading-tight mb-4 group-hover:text-blue-600 transition-colors">
+                  {featuredInternal.titulo}
+                </h3>
+                <div className="text-gray-600 font-serif text-lg mb-6 line-clamp-4 md:line-clamp-6 italic">
+                  {decodeBody(featuredInternal.cuerpo, true)}
+                </div>
+                <time className="text-xs font-mono text-gray-400">{featuredInternal.fecha}</time>
+              </div>
+
+              {welcomeNote && welcomeNote.fechaIso !== featuredInternal.fechaIso && (
+                <div 
+                  className="lg:hidden bg-blue-50 p-6 -mx-4 border-y border-blue-100" 
                   onClick={(e) => { e.stopPropagation(); openNews(welcomeNote); }}
                 >
                   <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-2 block">Nota Editorial</span>
-                  <h3 className="text-3xl font-serif font-bold leading-tight group-hover/welcome:text-blue-600 transition-colors">
+                  <h3 className="text-2xl font-serif font-bold leading-tight">
                     {welcomeNote.titulo}
                   </h3>
-                  <p className="text-sm text-gray-500 mt-2 font-serif italic">Seguir leyendo →</p>
+                  <p className="text-blue-700 text-xs font-bold uppercase tracking-widest mt-4">Leer mensaje del editor →</p>
                 </div>
               )}
-            </div>
+            </motion.article>
+          )}
 
-            {/* Lado Derecho: Texto de la noticia destacada */}
-            <div className="lg:col-span-5 flex flex-col justify-center">
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-4 block">Última Actualización</span>
-              <h3 className="text-3xl md:text-4xl font-serif font-bold leading-tight mb-4 group-hover:text-blue-600 transition-colors">
-                {featured.titulo}
-              </h3>
-              <div className="text-gray-600 font-serif text-lg mb-6 line-clamp-4 md:line-clamp-6 italic">
-                {decodeBody(featured.cuerpo, true)}
-              </div>
-              <time className="text-xs font-mono text-gray-400">{featured.fecha}</time>
-            </div>
-
-            {/* NOTA EDITORIAL PARA MÓVIL */}
-            {welcomeNote && welcomeNote.fechaIso !== featured.fechaIso && (
-              <div 
-                className="lg:hidden bg-blue-50 p-6 -mx-4 border-y border-blue-100" 
-                onClick={(e) => { e.stopPropagation(); openNews(welcomeNote); }}
-              >
-                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-2 block">Nota Editorial</span>
-                <h3 className="text-2xl font-serif font-bold leading-tight">
-                  {welcomeNote.titulo}
-                </h3>
-                <p className="text-blue-700 text-xs font-bold uppercase tracking-widest mt-4">Leer mensaje del editor →</p>
-              </div>
-            )}
-          </motion.article>
-        )}
-
-        {/* 2. GRID DE NOTICIAS RESTANTES */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-12 md:gap-y-16">
-          <AnimatePresence>
-            {listNews.map((item, idx) => (
-              <motion.article
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                className="flex flex-col border-t border-gray-100 pt-6 group cursor-pointer"
-                onClick={() => openNews(item)}
-              >
-                <div className="flex flex-row md:flex-col gap-4">
-                  <div className="w-1/3 md:w-full h-24 md:h-48 bg-gray-100 rounded-sm overflow-hidden flex-shrink-0">
-                    <img
-                      src={item.photo ? item.photo : "https://via.placeholder.com/400x225?text=RNCE"}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                      alt={item.titulo}
-                    />
-                  </div>
-                  <div className="flex flex-col flex-1">
-                    <time className="text-[9px] font-bold text-blue-600 uppercase tracking-widest mb-1 md:mb-3 block">
-                      {item.fecha.split(',')[0]}
-                    </time>
-                    <h4 className="text-lg md:text-xl font-serif font-bold leading-snug mb-2 group-hover:underline decoration-blue-200">
-                      {item.titulo}
-                    </h4>
-                    <div className="hidden md:block text-sm text-gray-500 line-clamp-3 leading-relaxed mb-4 italic">
-                      {decodeBody(item.cuerpo, true)}
+          {/* Grid de noticias internas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-12 md:gap-y-16">
+            <AnimatePresence>
+              {listInternalNews.map((item, idx) => (
+                <motion.article
+                  key={idx}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="flex flex-col border-t border-gray-100 pt-6 group cursor-pointer"
+                  onClick={() => openNews(item)}
+                >
+                  <div className="flex flex-row md:flex-col gap-4">
+                    <div className="w-1/3 md:w-full h-24 md:h-48 bg-gray-100 rounded-sm overflow-hidden flex-shrink-0">
+                      <img
+                        src={item.photo ? item.photo : "https://via.placeholder.com/400x225?text=RNCE"}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        alt={item.titulo}
+                      />
+                    </div>
+                    <div className="flex flex-col flex-1">
+                      <time className="text-[9px] font-bold text-blue-600 uppercase tracking-widest mb-1 md:mb-3 block">
+                        {item.fecha.split(',')[0]}
+                      </time>
+                      <h4 className="text-lg md:text-xl font-serif font-bold leading-snug mb-2 group-hover:underline decoration-blue-200">
+                        {item.titulo}
+                      </h4>
+                      <div className="hidden md:block text-sm text-gray-500 line-clamp-3 leading-relaxed mb-4 italic">
+                        {decodeBody(item.cuerpo, true)}
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="mt-auto pt-4 hidden md:flex justify-end border-t border-gray-50">
-                  <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-blue-600 transition-colors">
-                    Leer Nota →
-                  </span>
-                </div>
-              </motion.article>
-            ))}
-          </AnimatePresence>
-        </div>
-      </div>
+                  
+                  <div className="mt-auto pt-4 hidden md:flex justify-end border-t border-gray-50">
+                    <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-blue-600 transition-colors">
+                      Leer Nota →
+                    </span>
+                  </div>
+                </motion.article>
+              ))}
+            </AnimatePresence>
+          </div>
 
-      {filteredNews.length === 0 && (
+          {filteredInternalNews.length > visibleNews && (
+            <div className="mt-12 flex justify-center">
+              <button
+                onClick={loadMoreNews}
+                className="px-8 py-3 border-2 border-blue-200 text-blue-700 text-[10px] font-black uppercase tracking-[0.3em] hover:bg-blue-50 transition-all"
+              >
+                Explorar Archivo Interno
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* --- MENSAJE SI NO HAY RESULTADOS --- */}
+      {filteredInternalNews.length === 0 && filteredScienceNews.length === 0 && (
         <p className="text-center text-gray-600 col-span-full mt-8">
           No se encontraron noticias.
         </p>
-      )}
-
-      {!loading && filteredNews.length > visibleNews && (
-        <div className="mt-20 flex justify-center border-t-2 border-black pt-10">
-          <button
-            onClick={loadMoreNews}
-            className="px-12 py-4 bg-gray-900 text-white text-[10px] font-black uppercase tracking-[0.4em] hover:bg-blue-600 transition-all shadow-xl"
-          >
-            Explorar Archivo Completo
-          </button>
-        </div>
       )}
     </div>
   );
