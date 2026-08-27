@@ -19,7 +19,8 @@ import {
   InformationCircleIcon,
   ArrowPathIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  BookOpenIcon
 } from '@heroicons/react/24/outline';
 
 // ===================================================
@@ -123,7 +124,7 @@ export default function ScientificNewsUploadSection({ userData }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showWarning, setShowWarning] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [autoTranslate, setAutoTranslate] = useState(true);
+  const [autoTranslate, setAutoTranslate] = useState(false); // Cambiado a false por defecto
   
   // Refs
   const quillEsRef = useRef(null);
@@ -185,16 +186,13 @@ export default function ScientificNewsUploadSection({ userData }) {
   const modules = useMemo(() => ({
     toolbar: {
       container: [
-        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'color': [] }, { 'background': [] }],
+        [{ 'header': [2, 3, 4, false] }],
+        ['bold', 'italic', 'underline'],
         [{ 'script': 'sub'}, { 'script': 'super' }],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'list': 'check' }],
-        [{ 'indent': '-1' }, { 'indent': '+1' }],
-        [{ 'align': ['', 'center', 'right', 'justify'] }],
-        ['table'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'align': ['', 'center', 'justify'] }],
         ['blockquote', 'code-block'],
-        ['link', 'image', 'video', 'formula'],
+        ['link', 'image', 'formula'],
         ['clean']
       ],
       handlers: {
@@ -206,32 +204,10 @@ export default function ScientificNewsUploadSection({ userData }) {
           setShowImageModal(true);
         },
         formula: function() {
-          const mathText = prompt('Ingresa fórmula LaTeX (ej: E = mc^2):');
+          const mathText = prompt(isSpanish ? 'Ingresa fórmula LaTeX:' : 'Enter LaTeX formula:');
           if (mathText) {
             const range = this.quill.getSelection();
             this.quill.insertEmbed(range.index, 'formula', mathText);
-          }
-        },
-        table: function() {
-          const range = this.quill.getSelection();
-          if (range) {
-            const tableHTML = `
-              <table style="width:100%; border-collapse: collapse; margin: 1rem 0;">
-                <tbody>
-                  <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
-                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
-                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
-                  </tr>
-                  <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
-                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
-                    <td style="border: 1px solid #ddd; padding: 8px;"><br></td>
-                  </tr>
-                </tbody>
-              </table>
-            `;
-            this.quill.clipboard.dangerouslyPasteHTML(range.index, tableHTML);
           }
         }
       }
@@ -239,56 +215,12 @@ export default function ScientificNewsUploadSection({ userData }) {
     imageResize: {
       parchment: Quill.import('parchment'),
       modules: ['Resize', 'DisplaySize', 'Toolbar'],
-    },
-    keyboard: {
-      bindings: {
-        deleteImage: {
-          key: ['Delete', 'Backspace'],
-          handler: function(range) {
-            if (!range) return true;
-            const editor = this.quill;
-            const imageResize = editor.getModule('imageResize');
-            let isImage = false;
-            let deleteIndex = range.index;
-            let deleteLength = range.length || 1;
-
-            if (range.length === 0) {
-              if (this.key === 'Backspace') {
-                const [prevLeaf] = editor.getLeaf(range.index - 1);
-                if (prevLeaf?.domNode?.tagName === 'IMG') { 
-                  isImage = true; 
-                  deleteIndex = range.index - 1; 
-                }
-              } else if (this.key === 'Delete') {
-                const [nextLeaf] = editor.getLeaf(range.index);
-                if (nextLeaf?.domNode?.tagName === 'IMG') isImage = true;
-              }
-            } else {
-              const [leaf] = editor.getLeaf(range.index);
-              if (leaf?.domNode?.tagName === 'IMG') isImage = true;
-            }
-
-            if (isImage) {
-              if (imageResize) imageResize.hide();
-              editor.deleteText(deleteIndex, deleteLength, Quill.sources.USER);
-              return false;
-            }
-            return true;
-          },
-        },
-      },
-    },
-  }), [activeLanguage]);
+    }
+  }), [activeLanguage, isSpanish]);
 
   const formats = [
-    'header',
-    'bold', 'italic', 'underline', 'strike',
-    'color', 'background',
-    'script',
-    'list', 'bullet', 'indent',
-    'align',
-    'table',
-    'blockquote', 'code-block',
+    'header', 'bold', 'italic', 'underline', 'script',
+    'list', 'bullet', 'align', 'blockquote', 'code-block',
     'link', 'image', 'video', 'formula'
   ];
 
@@ -313,47 +245,18 @@ export default function ScientificNewsUploadSection({ userData }) {
           align = editorRef.current.getFormat(imgIndex, 1).align || 'left';
         }
       
-        let style = 'max-width:100%; height:auto; border-radius:10px; margin:2rem 0; display:block;';
+        let style = 'max-width:100%; height:auto; margin:2rem 0; display:block;';
         if (align === 'center') style += 'margin-left:auto; margin-right:auto;';
-        else if (align === 'right') style += 'float:right; margin-left:1.5rem; margin-bottom:1rem;';
+        else if (align === 'right') style += 'float:right; margin-left:2rem; margin-bottom:1.5rem;';
         else if (align === 'justify') style += 'width:100%;';
-        else style += 'float:left; margin-right:1.5rem; margin-bottom:1rem;';
+        else style += 'float:left; margin-right:2rem; margin-bottom:1.5rem;';
       
         if (img.style.width) style += `width:${img.style.width};`;
         if (img.style.height) style += `height:${img.style.height};`;
       
         img.setAttribute('style', style);
         img.setAttribute('loading', 'lazy');
-        img.setAttribute('alt', 'Imagen de la noticia');
-      });
-
-      // Procesamiento de tablas
-      const tables = tempDiv.querySelectorAll('table');
-      tables.forEach((table) => {
-        table.style.width = '100%';
-        table.style.borderCollapse = 'collapse';
-        table.style.margin = '2rem 0';
-        
-        const cells = table.querySelectorAll('td, th');
-        cells.forEach(cell => {
-          cell.style.border = '1px solid #ddd';
-          cell.style.padding = '12px';
-        });
-        
-        const headers = table.querySelectorAll('th');
-        headers.forEach(header => {
-          header.style.backgroundColor = '#f5f5f5';
-          header.style.fontWeight = 'bold';
-        });
-      });
-
-      // Procesamiento de videos
-      const videos = tempDiv.querySelectorAll('video');
-      videos.forEach(video => {
-        video.setAttribute('controls', true);
-        video.style.maxWidth = '100%';
-        video.style.borderRadius = '8px';
-        video.style.margin = '2rem 0';
+        img.setAttribute('alt', 'Imagen del artículo');
       });
 
       // Procesamiento de fórmulas matemáticas
@@ -484,7 +387,7 @@ export default function ScientificNewsUploadSection({ userData }) {
     }
 
     setIsLoading(true);
-    setStatus({ type: 'info', msg: isSpanish ? 'Publicando noticia científica...' : 'Publishing scientific news...' });
+    setStatus({ type: 'info', msg: isSpanish ? 'Procesando manuscrito...' : 'Processing manuscript...' });
 
     try {
       const token = await user.getIdToken();
@@ -522,8 +425,8 @@ export default function ScientificNewsUploadSection({ userData }) {
       setStatus({ 
         type: 'success', 
         msg: isSpanish 
-          ? `¡Noticia publicada con éxito! Año: ${result.year}` 
-          : `News published successfully! Year: ${result.year}` 
+          ? `¡Manuscrito publicado con éxito! Año: ${result.year}` 
+          : `Manuscript published successfully! Year: ${result.year}` 
       });
       
       // Limpiar formulario
@@ -560,293 +463,284 @@ export default function ScientificNewsUploadSection({ userData }) {
   // RENDER
   // ===================================================
   return (
-    <div className="max-w-7xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 mt-10">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#1a3a5c] to-[#004b87] p-10 text-white">
-        <h2 className="text-3xl font-black tracking-tight mb-2 uppercase">
-          {isSpanish ? 'Panel de Noticias Científicas' : 'Scientific News Panel'}
-        </h2>
-        <p className="text-sm opacity-80 font-medium">
-          {isSpanish 
-            ? 'Sistema profesional de publicación bilingüe con metadatos completos' 
-            : 'Professional bilingual publishing system with complete metadata'}
-        </p>
+    <div className="max-w-5xl mx-auto bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-slate-200 mt-12 font-sans rounded-sm">
+      {/* Header Editorial */}
+      <div className="border-b-[6px] border-[#EA580C]">
+        <div className="bg-[#0F172A] px-12 py-14 text-white text-center">
+          <span className="text-[#EA580C] text-xs font-bold tracking-[0.3em] uppercase mb-4 block">
+            {isSpanish ? 'Sistema de Envío Editorial' : 'Editorial Submission System'}
+          </span>
+          <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tight mb-4">
+            {isSpanish ? 'Gestor de Artículos' : 'Article Manager'}
+          </h2>
+          <p className="text-sm text-slate-400 opacity-80 font-medium mt-4">
+            {isSpanish 
+              ? 'Sistema profesional de publicación bilingüe con metadatos completos' 
+              : 'Professional bilingual publishing system with complete metadata'}
+          </p>
+          <div className="w-16 h-[1px] bg-slate-500 mx-auto mt-6"></div>
+        </div>
       </div>
 
-      {/* Warning de preparación */}
-      <AnimatePresence>
-        {showWarning && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="bg-amber-50 border-b border-amber-200"
-          >
-            <div className="p-6 flex items-start gap-4">
-              <ExclamationTriangleIcon className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1" />
+      <div className="p-10 md:p-14 space-y-12">
+        {/* Alerta de preparación */}
+        <AnimatePresence>
+          {showWarning && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-slate-50 border border-slate-200 p-6 flex items-start gap-4"
+            >
+              <BookOpenIcon className="w-6 h-6 text-[#0F172A] flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h3 className="font-bold text-amber-800 mb-2">
-                  {isSpanish ? '⚠️ Recomendación importante' : '⚠️ Important recommendation'}
+                <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider mb-1">
+                  {isSpanish ? 'Normas de Redacción' : 'Writing Guidelines'}
                 </h3>
-                <p className="text-sm text-amber-700 leading-relaxed">
+                <p className="text-sm text-slate-600 leading-relaxed font-serif">
                   {isSpanish 
-                    ? 'Prepare su noticia con anticipación en un documento Word o Google Docs. Esto evitará pérdida de información en caso de errores de conexión o cierre accidental del navegador.'
-                    : 'Prepare your news in advance in a Word document or Google Docs. This will prevent information loss in case of connection errors or accidental browser closure.'}
+                    ? 'Se recomienda redactar el cuerpo del texto en un procesador externo (Word, LaTeX o Docs) para garantizar el respaldo de la información antes de su vaciado en este sistema.'
+                    : 'It is recommended to draft the body text in an external processor to guarantee data backup before submission.'}
                 </p>
-                <button
-                  onClick={() => setShowWarning(false)}
-                  className="mt-3 text-xs font-bold text-amber-600 hover:text-amber-800 underline"
+                <button 
+                  onClick={() => setShowWarning(false)} 
+                  className="mt-4 text-xs font-bold text-[#EA580C] uppercase tracking-widest hover:text-[#c24100] transition-colors"
                 >
-                  {isSpanish ? 'Entendido' : 'Understood'}
+                  {isSpanish ? 'Ocultar aviso' : 'Dismiss notice'}
                 </button>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <div className="p-10 space-y-10">
         {/* Estado del mensaje */}
         {status.msg && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`p-4 rounded-lg flex items-center gap-3 ${
-              status.type === 'error' 
-                ? 'bg-red-50 text-red-700 border border-red-200' 
-                : status.type === 'success'
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-blue-50 text-blue-700 border border-blue-200'
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
+            className={`p-5 flex items-center gap-4 border-l-4 ${
+              status.type === 'error' ? 'bg-red-50 border-red-500 text-red-900' :
+              status.type === 'success' ? 'bg-green-50 border-green-500 text-green-900' :
+              'bg-slate-50 border-[#0F172A] text-[#0F172A]'
             }`}
           >
-            {status.type === 'error' && <XCircleIcon className="w-5 h-5" />}
-            {status.type === 'success' && <CheckCircleIcon className="w-5 h-5" />}
-            {status.type === 'info' && <InformationCircleIcon className="w-5 h-5" />}
-            <span className="text-sm font-medium">{status.msg}</span>
+            {status.type === 'error' && <XCircleIcon className="w-5 h-5 flex-shrink-0" />}
+            {status.type === 'success' && <CheckCircleIcon className="w-5 h-5 flex-shrink-0" />}
+            {status.type === 'info' && <InformationCircleIcon className="w-5 h-5 flex-shrink-0" />}
+            <span className="text-sm font-medium tracking-wide">{status.msg}</span>
           </motion.div>
         )}
 
         {/* Selector de idioma activo */}
-        <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
-          <LanguageIcon className="w-5 h-5 text-gray-500" />
+        <div className="flex items-center gap-4 border border-slate-200 p-1 max-w-md">
           <button
             onClick={() => setActiveLanguage('es')}
-            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${
+            className={`px-6 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex-1 ${
               activeLanguage === 'es' 
-                ? 'bg-[#004b87] text-white shadow-md' 
-                : 'bg-white text-gray-600 hover:bg-gray-100'
+                ? 'bg-[#0F172A] text-white' 
+                : 'text-slate-500 hover:bg-slate-50'
             }`}
           >
-            ESPAÑOL
+            {isSpanish ? 'Español' : 'Spanish'}
           </button>
           <button
             onClick={() => setActiveLanguage('en')}
-            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${
+            className={`px-6 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex-1 ${
               activeLanguage === 'en' 
-                ? 'bg-[#004b87] text-white shadow-md' 
-                : 'bg-white text-gray-600 hover:bg-gray-100'
+                ? 'bg-[#0F172A] text-white' 
+                : 'text-slate-500 hover:bg-slate-50'
             }`}
           >
-            ENGLISH
+            {isSpanish ? 'Inglés' : 'English'}
           </button>
+        </div>
+
+        {/* Form Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
           
-          <div className="ml-auto flex items-center gap-2">
-            <label className="text-xs font-medium text-gray-600">
-              {isSpanish ? 'Auto-traducir campos faltantes' : 'Auto-translate missing fields'}
-            </label>
-            <button
-              onClick={() => setAutoTranslate(!autoTranslate)}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
-                autoTranslate ? 'bg-green-500' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`absolute w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                  autoTranslate ? 'translate-x-6' : 'translate-x-1'
-                }`}
-                style={{ top: '2px' }}
-              />
-            </button>
-          </div>
-        </div>
-
-        {/* Información del autor */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-xs font-black text-[#004b87] uppercase tracking-widest ml-1 flex items-center gap-2">
-              <UserIcon className="w-4 h-4" />
-              {isSpanish ? 'Autor de la noticia' : 'News author'}
-            </label>
-            <input
-              type="text"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#004b87] bg-gray-50/50 outline-none transition-all"
-              placeholder={isSpanish ? 'Nombre del periodista o autor' : 'Journalist or author name'}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-black text-[#004b87] uppercase tracking-widest ml-1">
-              {isSpanish ? 'Área de la noticia' : 'News area'}
-            </label>
-            <select
-              value={areaId}
-              onChange={(e) => setAreaId(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#004b87] bg-gray-50/50 outline-none transition-all"
-            >
-              <option value="">{isSpanish ? 'Seleccionar área...' : 'Select area...'}</option>
-              {AREAS.map(area => (
-                <option key={area.id} value={area.id}>
-                  {isSpanish ? area.labelEs : area.labelEn}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Títulos */}
-        <div className="space-y-4">
-          <h3 className="font-bold text-lg text-[#004b87] border-b border-gray-200 pb-2">
-            {isSpanish ? 'Títulos' : 'Titles'}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
-                {isSpanish ? 'Título en Español' : 'Spanish Title'}
-              </label>
-              <input
-                type="text"
-                value={titleEs}
-                onChange={(e) => setTitleEs(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#004b87] bg-gray-50/50 outline-none transition-all"
-                placeholder={isSpanish ? 'Título en español...' : 'Spanish title...'}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
-                {isSpanish ? 'Título en Inglés' : 'English Title'}
-              </label>
-              <input
-                type="text"
-                value={titleEn}
-                onChange={(e) => setTitleEn(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#004b87] bg-gray-50/50 outline-none transition-all"
-                placeholder={isSpanish ? 'Título en inglés...' : 'English title...'}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Editor Quill activo */}
-        <div className="space-y-4">
-          <h3 className="font-bold text-lg text-[#004b87] border-b border-gray-200 pb-2">
-            {activeLanguage === 'es' 
-              ? (isSpanish ? 'Cuerpo en Español' : 'Spanish Body')
-              : (isSpanish ? 'Cuerpo en Inglés' : 'English Body')}
-          </h3>
-          
-          <div className="rounded-2xl border-2 border-gray-200 focus-within:border-[#004b87] overflow-hidden transition-all bg-gray-50/30">
-            {activeLanguage === 'es' ? (
-              <ReactQuill
-                ref={quillEsRef}
-                value={bodyEs}
-                onChange={setBodyEs}
-                modules={modules}
-                formats={formats}
-                className="editorial-quill"
-                placeholder={isSpanish ? 'Escribe el contenido en español...' : 'Write content in Spanish...'}
-              />
-            ) : (
-              <ReactQuill
-                ref={quillEnRef}
-                value={bodyEn}
-                onChange={setBodyEn}
-                modules={modules}
-                formats={formats}
-                className="editorial-quill"
-                placeholder={isSpanish ? 'Escribe el contenido en inglés...' : 'Write content in English...'}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Foto de portada */}
-        <div className="space-y-4">
-          <h3 className="font-bold text-lg text-[#004b87] border-b border-gray-200 pb-2 flex items-center gap-2">
-            <PhotoIcon className="w-5 h-5" />
-            {isSpanish ? 'Foto de Portada' : 'Cover Photo'}
-          </h3>
-          <div className="space-y-4">
-            {photo && (
-              <div className="relative inline-block">
-                <img 
-                  src={photo} 
-                  alt="Cover preview" 
-                  className="max-h-48 rounded-lg border border-gray-200"
+          {/* Metadata Column */}
+          <div className="space-y-8 col-span-1 md:col-span-2 border-b border-slate-200 pb-10">
+            <h3 className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase mb-6 flex items-center gap-3">
+              <span className="w-4 h-[1px] bg-slate-300"></span>
+              {isSpanish ? 'Metadatos del Documento' : 'Document Metadata'}
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-[#0F172A] uppercase tracking-widest flex items-center gap-2">
+                  <UserIcon className="w-4 h-4" />
+                  {isSpanish ? 'Autoría' : 'Authorship'}
+                </label>
+                <input 
+                  type="text" 
+                  value={author} 
+                  onChange={(e) => setAuthor(e.target.value)}
+                  className="w-full bg-transparent border-b-2 border-slate-200 px-0 py-2 focus:border-[#EA580C] outline-none transition-colors text-lg font-serif text-slate-800 placeholder-slate-300"
+                  placeholder={isSpanish ? 'Nombre del investigador o periodista' : 'Researcher or journalist name'}
                 />
-                <button
-                  onClick={() => setPhoto('')}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                >
-                  <XCircleIcon className="w-5 h-5" />
-                </button>
               </div>
-            )}
-            <div className="flex items-center gap-4">
-              <label className="px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition-colors flex items-center gap-2">
-                <PhotoIcon className="w-5 h-5" />
-                <span className="text-sm font-medium">
-                  {isSpanish ? 'Subir imagen' : 'Upload image'}
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </label>
-              <span className="text-xs text-gray-500">
-                {isSpanish ? 'O pega una URL:' : 'Or paste a URL:'}
-              </span>
-              <input
-                type="text"
-                value={photo.startsWith('data:') ? '' : photo}
-                onChange={(e) => setPhoto(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:border-[#004b87] outline-none"
-                placeholder="https://..."
-              />
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-[#0F172A] uppercase tracking-widest">
+                  {isSpanish ? 'Disciplina' : 'Discipline'}
+                </label>
+                <select 
+                  value={areaId} 
+                  onChange={(e) => setAreaId(e.target.value)}
+                  className="w-full bg-transparent border-b-2 border-slate-200 px-0 py-2 focus:border-[#EA580C] outline-none transition-colors text-lg font-serif text-slate-800 appearance-none cursor-pointer"
+                >
+                  <option value="" className="font-sans text-sm">{isSpanish ? 'Seleccionar disciplina...' : 'Select discipline...'}</option>
+                  {AREAS.map(area => (
+                    <option key={area.id} value={area.id} className="font-sans text-sm">
+                      {isSpanish ? area.labelEs : area.labelEn}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Opciones avanzadas */}
-        <div className="space-y-4">
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-2 text-sm font-bold text-[#004b87] hover:text-[#003666] transition-colors"
-          >
-            {showAdvanced ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
-            {isSpanish ? 'Opciones avanzadas' : 'Advanced options'}
-          </button>
+          {/* Titles Section */}
+          <div className="space-y-8 col-span-1 md:col-span-2 border-b border-slate-200 pb-10">
+            <h3 className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase mb-6 flex items-center gap-3">
+              <span className="w-4 h-[1px] bg-slate-300"></span>
+              {isSpanish ? 'Encabezados' : 'Headings'}
+            </h3>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">
+                  {isSpanish ? 'Título Principal (ES)' : 'Main Title (ES)'}
+                </label>
+                <textarea 
+                  rows="2" 
+                  value={titleEs} 
+                  onChange={(e) => setTitleEs(e.target.value)}
+                  className="w-full bg-transparent border-none px-0 py-2 outline-none resize-none text-3xl md:text-4xl font-serif font-bold text-[#0F172A] placeholder-slate-200 leading-tight"
+                  placeholder={isSpanish ? 'Ingrese el título del manuscrito...' : 'Enter manuscript title...'}
+                />
+              </div>
+              <div className="pl-4 border-l-2 border-slate-100">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">
+                  {isSpanish ? 'Título Secundario (EN)' : 'Secondary Title (EN)'}
+                </label>
+                <textarea 
+                  rows="2" 
+                  value={titleEn} 
+                  onChange={(e) => setTitleEn(e.target.value)}
+                  className="w-full bg-transparent border-none px-0 py-1 outline-none resize-none text-xl font-serif text-slate-600 placeholder-slate-200 leading-tight"
+                  placeholder={isSpanish ? 'Traducción al inglés (opcional)...' : 'English translation (optional)...'}
+                />
+              </div>
+            </div>
+          </div>
 
-          <AnimatePresence>
-            {showAdvanced && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-6 overflow-hidden"
-              >
-                {/* Categoría */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
-                    {isSpanish ? 'Categoría' : 'Category'}
+          {/* Text Editor */}
+          <div className="col-span-1 md:col-span-2 space-y-6 pt-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h3 className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase flex items-center gap-3">
+                <span className="w-4 h-[1px] bg-slate-300"></span>
+                {activeLanguage === 'es' 
+                  ? (isSpanish ? 'Cuerpo en Español' : 'Spanish Body')
+                  : (isSpanish ? 'Cuerpo en Inglés' : 'English Body')}
+              </h3>
+            </div>
+
+            <div className="editorial-editor-wrapper bg-[#fafafa] border border-slate-200">
+              {activeLanguage === 'es' ? (
+                <ReactQuill 
+                  ref={(ref) => {
+                    quillEsRef.current = ref;
+                    editorEsRef.current = ref?.getEditor();
+                  }}
+                  value={bodyEs} 
+                  onChange={setBodyEs} 
+                  modules={modules} 
+                  formats={formats}
+                  placeholder={isSpanish ? 'Comience a redactar aquí...' : 'Start drafting here...'}
+                />
+              ) : (
+                <ReactQuill 
+                  ref={(ref) => {
+                    quillEnRef.current = ref;
+                    editorEnRef.current = ref?.getEditor();
+                  }}
+                  value={bodyEn} 
+                  onChange={setBodyEn} 
+                  modules={modules} 
+                  formats={formats}
+                  placeholder={isSpanish ? 'Cuerpo en inglés...' : 'English body...'}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Media & Advanced Settings */}
+          <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-12 pt-8 border-t border-slate-200">
+            
+            {/* Cover Image */}
+            <div className="space-y-6">
+              <h3 className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase flex items-center gap-3">
+                <span className="w-4 h-[1px] bg-slate-300"></span>
+                {isSpanish ? 'Material Gráfico' : 'Graphic Material'}
+              </h3>
+              
+              <div className="space-y-4">
+                {photo ? (
+                  <div className="relative group">
+                    <img 
+                      src={photo} 
+                      alt="Cover preview" 
+                      className="w-full h-48 object-cover border border-slate-200 grayscale-[20%] group-hover:grayscale-0 transition-all duration-500" 
+                    />
+                    <button 
+                      onClick={() => setPhoto('')} 
+                      className="absolute top-3 right-3 bg-white/90 backdrop-blur text-[#0F172A] p-2 hover:text-red-600 transition-colors border border-slate-200"
+                    >
+                      <XCircleIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-full h-48 border border-dashed border-slate-300 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer text-slate-500">
+                    <PhotoIcon className="w-8 h-8 mb-3 opacity-50" />
+                    <span className="text-xs font-bold uppercase tracking-widest">
+                      {isSpanish ? 'Seleccionar Archivo' : 'Select File'}
+                    </span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handlePhotoUpload} 
+                      className="hidden" 
+                    />
                   </label>
-                  <select
-                    value={category}
+                )}
+                
+                <input 
+                  type="text" 
+                  value={photo.startsWith('data:') ? '' : photo} 
+                  onChange={(e) => setPhoto(e.target.value)}
+                  className="w-full bg-transparent border-b-2 border-slate-200 px-0 py-2 focus:border-[#EA580C] outline-none transition-colors text-sm font-sans text-slate-600 placeholder-slate-300"
+                  placeholder={isSpanish ? 'O ingrese URL de la imagen externa' : 'Or enter external image URL'}
+                />
+              </div>
+            </div>
+
+            {/* Taxonomy */}
+            <div className="space-y-6">
+              <h3 className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase flex items-center gap-3">
+                <span className="w-4 h-[1px] bg-slate-300"></span>
+                {isSpanish ? 'Taxonomía' : 'Taxonomy'}
+              </h3>
+              
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    {isSpanish ? 'Tipo de Artículo' : 'Article Type'}
+                  </label>
+                  <select 
+                    value={category} 
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#004b87] bg-gray-50/50 outline-none transition-all"
+                    className="w-full bg-transparent border-b-2 border-slate-200 px-0 py-2 focus:border-[#EA580C] outline-none transition-colors text-sm font-serif text-slate-800 appearance-none cursor-pointer"
                   >
                     {CATEGORIES.map(cat => (
                       <option key={cat.id} value={cat.id}>
@@ -856,90 +750,86 @@ export default function ScientificNewsUploadSection({ userData }) {
                   </select>
                 </div>
 
-                {/* Tags */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1 flex items-center gap-2">
-                    <TagIcon className="w-4 h-4" />
-                    {isSpanish ? 'Etiquetas' : 'Tags'}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <TagIcon className="w-3 h-3" />
+                    {isSpanish ? 'Palabras Clave (Keywords)' : 'Keywords'}
                   </label>
-                  <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="flex flex-wrap gap-2 mb-2">
                     {tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center gap-2 bg-[#004b87]/10 text-[#004b87] text-xs font-bold px-3 py-1.5 rounded-lg"
+                      <span 
+                        key={index} 
+                        className="inline-flex items-center gap-2 bg-slate-100 border border-slate-200 text-slate-600 text-xs px-3 py-1 font-serif"
                       >
                         {tag}
-                        <button
-                          onClick={() => removeTag(index)}
-                          className="text-[#004b87] hover:text-red-500 transition-colors"
+                        <button 
+                          onClick={() => removeTag(index)} 
+                          className="hover:text-red-500"
                         >
-                          <XCircleIcon className="w-4 h-4" />
+                          <XCircleIcon className="w-3 h-3" />
                         </button>
                       </span>
                     ))}
                   </div>
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={handleTagKeyDown}
-                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:border-[#004b87] outline-none"
-                      placeholder={isSpanish ? 'Añadir etiqueta...' : 'Add tag...'}
-                    />
-                    <button
-                      onClick={addTag}
-                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold transition-colors"
-                    >
-                      {isSpanish ? 'AÑADIR' : 'ADD'}
-                    </button>
-                  </div>
+                  <input 
+                    type="text" 
+                    value={tagInput} 
+                    onChange={(e) => setTagInput(e.target.value)} 
+                    onKeyDown={handleTagKeyDown}
+                    className="w-full bg-transparent border-b-2 border-slate-200 px-0 py-2 focus:border-[#EA580C] outline-none transition-colors text-sm font-sans text-slate-600 placeholder-slate-300"
+                    placeholder={isSpanish ? 'Presione ENTER para añadir' : 'Press ENTER to add'}
+                  />
                 </div>
 
-                {/* Destacada */}
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={featured}
+                <div className="pt-4 flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    id="featured" 
+                    checked={featured} 
                     onChange={(e) => setFeatured(e.target.checked)}
-                    className="w-5 h-5"
+                    className="w-4 h-4 accent-[#EA580C]"
                   />
-                  <label className="text-sm font-medium text-gray-700">
-                    {isSpanish ? 'Marcar como noticia destacada' : 'Mark as featured news'}
+                  <label 
+                    htmlFor="featured" 
+                    className="text-sm font-serif text-slate-700 cursor-pointer"
+                  >
+                    {isSpanish ? 'Destacar manuscrito en portada' : 'Feature manuscript on front page'}
                   </label>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Botón de publicar */}
-        <button
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className={`w-full py-6 text-white font-black rounded-2xl transition-all shadow-xl text-lg tracking-widest ${
-            isLoading 
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-gradient-to-r from-[#004b87] to-[#1a3a5c] hover:from-[#003666] hover:to-[#0f2440] active:scale-[0.99]'
-          }`}
-        >
-          {isLoading ? (
-            <span className="flex items-center justify-center gap-3">
-              <ArrowPathIcon className="w-5 h-5 animate-spin" />
-              {isSpanish ? 'PUBLICANDO...' : 'PUBLISHING...'}
-            </span>
-          ) : (
-            isSpanish ? 'PUBLICAR NOTICIA CIENTÍFICA' : 'PUBLISH SCIENTIFIC NEWS'
-          )}
-        </button>
+        {/* Submit Action */}
+        <div className="pt-10 border-t border-slate-200 flex justify-end">
+          <button 
+            onClick={handleSubmit} 
+            disabled={isLoading}
+            className={`px-10 py-4 text-white font-bold uppercase tracking-[0.2em] text-sm transition-all ${
+              isLoading 
+                ? 'bg-slate-400 cursor-not-allowed' 
+                : 'bg-[#EA580C] hover:bg-[#c24100] active:scale-[0.98]'
+            }`}
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-3">
+                <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                {isSpanish ? 'Procesando...' : 'Processing...'}
+              </span>
+            ) : (
+              isSpanish ? 'Someter Artículo' : 'Submit Article'
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Modal de Imagen */}
       {showImageModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[999] p-6">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
-            <div className="p-8 border-b border-gray-100 bg-gray-50/50">
-              <h3 className="font-black text-[#004b87]">
+          <div className="bg-white shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
+            <div className="p-8 border-b border-slate-200 bg-slate-50">
+              <h3 className="font-bold text-[#0F172A] uppercase tracking-widest text-sm">
                 {isSpanish ? 'GESTIÓN DE IMAGEN' : 'IMAGE MANAGEMENT'}
               </h3>
             </div>
@@ -948,7 +838,7 @@ export default function ScientificNewsUploadSection({ userData }) {
                 type="text" 
                 value={imageData.url} 
                 onChange={(e)=>setImageData({...imageData, url: e.target.value})} 
-                className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-xl focus:border-[#004b87] outline-none" 
+                className="w-full p-3 bg-transparent border-b-2 border-slate-200 focus:border-[#EA580C] outline-none transition-colors" 
                 placeholder={isSpanish ? 'URL de la imagen' : 'Image URL'} 
                 disabled={isEditingImage} 
               />
@@ -958,20 +848,20 @@ export default function ScientificNewsUploadSection({ userData }) {
                   placeholder={isSpanish ? 'Ancho (ej: 300px)' : 'Width (e.g., 300px)'} 
                   value={imageData.width} 
                   onChange={(e)=>setImageData({...imageData, width: e.target.value})} 
-                  className="p-4 bg-gray-50 border rounded-xl outline-none" 
+                  className="p-3 bg-transparent border-b-2 border-slate-200 focus:border-[#EA580C] outline-none transition-colors" 
                 />
                 <input 
                   type="text" 
                   placeholder={isSpanish ? 'Alto (ej: auto)' : 'Height (e.g., auto)'} 
                   value={imageData.height} 
                   onChange={(e)=>setImageData({...imageData, height: e.target.value})} 
-                  className="p-4 bg-gray-50 border rounded-xl outline-none" 
+                  className="p-3 bg-transparent border-b-2 border-slate-200 focus:border-[#EA580C] outline-none transition-colors" 
                 />
               </div>
               <select 
                 value={imageData.align} 
                 onChange={(e)=>setImageData({...imageData, align: e.target.value})} 
-                className="w-full p-4 bg-gray-50 border rounded-xl font-bold"
+                className="w-full p-3 bg-transparent border-b-2 border-slate-200 focus:border-[#EA580C] outline-none transition-colors font-medium cursor-pointer"
               >
                 <option value="left">{isSpanish ? 'Izquierda' : 'Left'}</option>
                 <option value="center">{isSpanish ? 'Centro' : 'Center'}</option>
@@ -979,127 +869,128 @@ export default function ScientificNewsUploadSection({ userData }) {
                 <option value="justify">{isSpanish ? 'Ancho completo' : 'Full width'}</option>
               </select>
             </div>
-            <div className="p-8 bg-gray-50 flex justify-end gap-4">
+            <div className="p-6 bg-slate-50 flex justify-end gap-4 border-t border-slate-200">
               <button 
                 onClick={() => setShowImageModal(false)} 
-                className="font-bold text-gray-400 hover:text-gray-600 transition-colors"
+                className="font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-wider text-sm"
               >
-                {isSpanish ? 'CANCELAR' : 'CANCEL'}
+                {isSpanish ? 'Cancelar' : 'Cancel'}
               </button>
               <button 
                 onClick={handleImageModalSubmit} 
-                className="px-8 py-3 bg-[#004b87] text-white rounded-xl font-black hover:bg-[#003666] transition-all"
+                className="px-8 py-3 bg-[#EA580C] text-white font-bold hover:bg-[#c24100] transition-all uppercase tracking-wider text-sm"
               >
-                {isSpanish ? 'CONFIRMAR' : 'CONFIRM'}
+                {isSpanish ? 'Confirmar' : 'Confirm'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Estilos globales */}
+      {/* Global CSS overrides for Quill to mimic a high-end editorial CMS */}
       <style jsx global>{`
-        .editorial-quill .ql-toolbar.ql-snow {
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        /* Editor Wrapper Styling */
+        .editorial-editor-wrapper .ql-toolbar.ql-snow {
           border: none;
-          padding: 25px;
-          background: white;
-          border-bottom: 2px solid #f8f9fa;
+          border-bottom: 1px solid #e2e8f0;
+          padding: 12px 20px;
+          background: #ffffff;
+          font-family: 'Inter', sans-serif;
           flex-wrap: wrap;
         }
 
-        .editorial-quill .ql-container.ql-snow {
+        .editorial-editor-wrapper .ql-container.ql-snow {
           border: none;
+          background: #ffffff;
           min-height: 500px;
+          font-family: 'Playfair Display', serif;
         }
 
-        .editorial-quill .ql-editor {
-          padding: 40px;
-          font-size: 16px;
+        .editorial-editor-wrapper .ql-editor {
+          padding: 60px 80px;
+          font-size: 19px;
           line-height: 1.8;
+          color: #1e293b;
+          max-width: 800px;
+          margin: 0 auto;
         }
 
-        .editorial-quill .ql-editor table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 2rem 0;
+        .editorial-editor-wrapper .ql-editor p {
+          margin-bottom: 1.5rem;
         }
 
-        .editorial-quill .ql-editor td,
-        .editorial-quill .ql-editor th {
-          border: 1px solid #ddd;
-          padding: 12px;
+        .editorial-editor-wrapper .ql-editor h2, 
+        .editorial-editor-wrapper .ql-editor h3 {
+          font-family: 'Inter', sans-serif;
+          font-weight: 700;
+          color: #0F172A;
+          margin-top: 2.5rem;
+          margin-bottom: 1rem;
         }
 
-        .editorial-quill .ql-editor th {
-          background-color: #f5f5f5;
-          font-weight: bold;
+        .editorial-editor-wrapper .ql-editor blockquote {
+          border-left: 2px solid #EA580C;
+          padding-left: 24px;
+          margin: 2.5rem 0;
+          font-style: italic;
+          color: #475569;
+          font-size: 1.25rem;
+          line-height: 1.6;
         }
 
-        .editorial-quill .ql-editor video {
+        .editorial-editor-wrapper .ql-editor img {
           max-width: 100%;
-          border-radius: 8px;
+          margin: 3rem 0;
+        }
+
+        .editorial-editor-wrapper .ql-editor video {
+          max-width: 100%;
           margin: 2rem 0;
         }
 
-        .editorial-quill .ql-editor .ql-formula {
+        .editorial-editor-wrapper .ql-editor .ql-formula {
           display: inline-block;
           margin: 0 4px;
         }
 
-        .editorial-quill .ql-editor blockquote {
-          border-left: 4px solid #004b87;
-          background: #f8f9fa;
-          padding: 20px 30px;
-          margin: 2rem 0;
-          font-style: italic;
-          color: #4a5568;
-        }
-
-        .editorial-quill .ql-editor pre {
-          background: #2d3748;
-          color: #e2e8f0;
-          padding: 20px;
-          border-radius: 12px;
-          overflow-x: auto;
-          font-family: 'Courier New', monospace;
-          margin: 2rem 0;
-        }
-
+        /* SVG Icon styling inside Quill Toolbar */
         .ql-snow .ql-stroke {
-          stroke: #004b87 !important;
-          stroke-width: 2px;
+          stroke: #64748b !important;
+          stroke-width: 1.5px;
         }
-
         .ql-snow .ql-fill {
-          fill: #004b87 !important;
+          fill: #64748b !important;
         }
-
         .ql-snow .ql-picker {
-          color: #004b87 !important;
-          font-weight: bold;
+          color: #64748b !important;
         }
-
-        .ql-snow .ql-picker-options {
-          border-color: #004b87 !important;
+        
+        /* Active States */
+        .ql-snow .ql-active .ql-stroke,
+        .ql-snow .ql-picker-label:hover .ql-stroke,
+        .ql-snow button:hover .ql-stroke {
+          stroke: #0F172A !important;
         }
-
-        .ql-snow .ql-picker:hover .ql-picker-label,
-        .ql-snow .ql-picker:hover .ql-picker-label svg {
-          color: #003666 !important;
-          stroke: #003666 !important;
+        .ql-snow .ql-active .ql-fill,
+        .ql-snow .ql-picker-label:hover .ql-fill,
+        .ql-snow button:hover .ql-fill {
+          fill: #0F172A !important;
         }
-
-        .ql-snow .ql-active .ql-stroke {
-          stroke: #003666 !important;
+        .ql-snow .ql-active,
+        .ql-snow .ql-picker-label:hover {
+          color: #0F172A !important;
         }
 
         @media (max-width: 768px) {
-          .editorial-quill .ql-editor {
-            padding: 20px;
+          .editorial-editor-wrapper .ql-editor {
+            padding: 30px 20px;
+            font-size: 17px;
           }
           
-          .editorial-quill .ql-toolbar.ql-snow {
-            padding: 15px;
+          .editorial-editor-wrapper .ql-toolbar.ql-snow {
+            padding: 8px 12px;
           }
         }
       `}</style>

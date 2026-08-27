@@ -1211,6 +1211,7 @@ exports.uploadNews = onRequest(
   }
 );
 /* ===================== UPLOAD SCIENTIFIC NEWS (NUEVO SISTEMA) ===================== */
+/* ===================== UPLOAD SCIENTIFIC NEWS (CORREGIDA) ===================== */
 exports.uploadScientificNews = onRequest(
   { 
     secrets: [GEMINI_API_KEY, DEEPSEEK_API_KEY, GH_TOKEN, IMGBB_API_KEY],
@@ -1256,7 +1257,7 @@ exports.uploadScientificNews = onRequest(
         return res.status(401).json({ error: "Token inválido" });
       }
 
-      // Validar rol (periodistas o editores pueden subir noticias)
+      // Validar rol
       try {
         const userRecord = await admin.auth().getUser(user.uid);
         const roles = userRecord.customClaims?.roles || [];
@@ -1308,26 +1309,22 @@ exports.uploadScientificNews = onRequest(
       let finalBodyEs = body_es;
       let finalBodyEn = body_en;
 
-      // Traducir si falta el título en español
       if (!finalTitleEs && finalTitleEn) {
         console.log(`[${requestId}] 🔄 Traduciendo título EN → ES`);
         finalTitleEs = await translateText(sanitizeInput(finalTitleEn), "en", "es");
       }
 
-      // Traducir si falta el título en inglés
       if (!finalTitleEn && finalTitleEs) {
         console.log(`[${requestId}] 🔄 Traduciendo título ES → EN`);
         finalTitleEn = await translateText(sanitizeInput(finalTitleEs), "es", "en");
       }
 
-      // Traducir si falta el cuerpo en español
       if (!finalBodyEs && finalBodyEn) {
         console.log(`[${requestId}] 🔄 Traduciendo cuerpo EN → ES`);
         const bodyDecoded = base64DecodeUnicode(finalBodyEn) || sanitizeInput(finalBodyEn);
         finalBodyEs = await translateHtmlFragment(bodyDecoded, "en", "es");
       }
 
-      // Traducir si falta el cuerpo en inglés
       if (!finalBodyEn && finalBodyEs) {
         console.log(`[${requestId}] 🔄 Traduciendo cuerpo ES → EN`);
         const bodyDecoded = base64DecodeUnicode(finalBodyEs) || sanitizeInput(finalBodyEs);
@@ -1338,18 +1335,14 @@ exports.uploadScientificNews = onRequest(
       const bodyEsNormalized = base64DecodeUnicode(finalBodyEs) || sanitizeInput(finalBodyEs);
       const bodyEnNormalized = base64DecodeUnicode(finalBodyEn) || sanitizeInput(finalBodyEn);
 
-      // Generar metadatos profesionales
+      // Generar metadatos
       const now = new Date();
       const year = now.getFullYear().toString();
       const fechaIso = now.toISOString();
-      const fechaCorta = fechaIso.split('T')[0]; // YYYY-MM-DD
       const timestamp = now.getTime();
       
-      // Generar slug único
       const slugBase = generateSlug(finalTitleEs || finalTitleEn);
       const slug = `${slugBase}-${timestamp}`;
-      
-      // Generar ID único
       const newsId = `news-${timestamp}-${Math.random().toString(36).substr(2, 9)}`;
 
       // Procesar foto si viene en base64
@@ -1357,7 +1350,6 @@ exports.uploadScientificNews = onRequest(
       if (photo && photo.startsWith('data:image')) {
         console.log(`[${requestId}] 📸 Procesando imagen de portada`);
         try {
-          // Subir a ImgBB
           const cleanBase64 = photo.replace(/^data:image\/\w+;base64,/, "");
           const form = new FormData();
           form.append("image", cleanBase64);
@@ -1379,15 +1371,13 @@ exports.uploadScientificNews = onRequest(
           if (imgbbData.success) {
             photoUrl = imgbbData.data.url;
             console.log(`[${requestId}] ✅ Imagen subida: ${photoUrl}`);
-          } else {
-            console.error(`[${requestId}] ⚠️ Error subiendo imagen a ImgBB`);
           }
         } catch (imgError) {
           console.error(`[${requestId}] ⚠️ Error procesando imagen:`, imgError.message);
         }
       }
 
-      // Crear objeto de noticia con metadatos profesionales
+      // Crear objeto de noticia
       const newsItem = {
         id: newsId,
         slug: slug,
@@ -1433,20 +1423,24 @@ exports.uploadScientificNews = onRequest(
 
       console.log(`[${requestId}] 📰 Noticia preparada: ${newsItem.title.es}`);
 
-      // Obtener Octokit
+      // ========== CONFIGURACIÓN DEL REPOSITORIO ==========
       const octokit = getOctokit();
       const REPO_OWNER = "revista1919";
-      const REPO_NAME = "science"; // Nombre del repositorio
+      const REPO_NAME = "science"; // El nombre del repositorio ES "science"
       const BRANCH = "main";
-      const BASE_PATH = "science"; // Carpeta base
+      
+      // NO hay BASE_PATH - todo va en la raíz del repo "science"
+      // Estructura esperada:
+      // index.json          ← en la raíz
+      // 2026/news-2026.json ← carpeta por año
 
-      // Funciones auxiliares para GitHub
-      async function getFileContent(path) {
+      // Función para leer archivo de GitHub
+      async function getFileContent(filePath) {
         try {
           const { data } = await octokit.repos.getContent({
             owner: REPO_OWNER,
             repo: REPO_NAME,
-            path: path,
+            path: filePath,
             ref: BRANCH
           });
           
@@ -1462,31 +1456,29 @@ exports.uploadScientificNews = onRequest(
         }
       }
 
-      async function saveFileContent(path, content, commitMessage) {
+      // Función para guardar archivo en GitHub
+      async function saveFileContent(filePath, content, commitMessage) {
         const base64Content = Buffer.from(
           typeof content === 'string' ? content : JSON.stringify(content, null, 2)
         ).toString('base64');
         
-        // Verificar si el archivo existe
-        const existing = await getFileContent(path);
+        const existing = await getFileContent(filePath);
         
         if (existing) {
-          // Actualizar archivo existente
           await octokit.repos.createOrUpdateFileContents({
             owner: REPO_OWNER,
             repo: REPO_NAME,
-            path: path,
+            path: filePath,
             message: commitMessage,
             content: base64Content,
             sha: existing.sha,
             branch: BRANCH
           });
         } else {
-          // Crear nuevo archivo
           await octokit.repos.createOrUpdateFileContents({
             owner: REPO_OWNER,
             repo: REPO_NAME,
-            path: path,
+            path: filePath,
             message: commitMessage,
             content: base64Content,
             branch: BRANCH
@@ -1494,11 +1486,9 @@ exports.uploadScientificNews = onRequest(
         }
       }
 
-      // 1. Actualizar el JSON del año actual
-      const yearPath = `${BASE_PATH}/${year}`;
-      const yearJsonPath = `${yearPath}/news-${year}.json`;
-      
-      console.log(`[${requestId}] 📂 Actualizando noticias del año ${year}`);
+      // ========== 1. ACTUALIZAR news-YYYY.json ==========
+      const yearJsonPath = `${year}/news-${year}.json`;
+      console.log(`[${requestId}] 📂 Actualizando: ${yearJsonPath}`);
       
       let yearNews = [];
       const existingYearNews = await getFileContent(yearJsonPath);
@@ -1509,7 +1499,6 @@ exports.uploadScientificNews = onRequest(
       // Agregar nueva noticia al inicio
       yearNews.unshift(newsItem);
       
-      // Guardar JSON del año
       const yearData = {
         year: parseInt(year),
         total_news: yearNews.length,
@@ -1517,18 +1506,10 @@ exports.uploadScientificNews = onRequest(
         news: yearNews
       };
 
-      await saveFileContent(
-        yearJsonPath,
-        yearData,
-        `[ADD] Nueva noticia ${year}: ${newsItem.title.es} por ${author}`
-      );
-
-      console.log(`[${requestId}] ✅ Noticia guardada en ${yearJsonPath}`);
-
-      // 2. Actualizar el índice general
-      console.log(`[${requestId}] 📊 Actualizando índice general`);
+      // ========== 2. ACTUALIZAR index.json ==========
+      const indexPath = `index.json`; // En la RAÍZ
+      console.log(`[${requestId}] 📊 Actualizando: ${indexPath}`);
       
-      const indexPath = `${BASE_PATH}/index.json`;
       let indexData = {
         repository: "science",
         description: "Sistema de noticias de divulgación científica",
@@ -1543,10 +1524,9 @@ exports.uploadScientificNews = onRequest(
         indexData.years = indexData.years || {};
       }
 
-      // Actualizar información del año
       indexData.years[year] = {
         year: parseInt(year),
-        path: `${BASE_PATH}/${year}`,
+        path: year, // Solo el año, sin "science/"
         json_file: `news-${year}.json`,
         total_news: yearNews.length,
         last_updated: fechaIso,
@@ -1554,25 +1534,24 @@ exports.uploadScientificNews = onRequest(
         last_news_date: yearNews[0]?.metadata?.createdAt || fechaIso
       };
 
+      // ========== 3. GUARDAR TODO EN UN SOLO COMMIT ==========
+      // Primero guardamos el JSON del año
+      await saveFileContent(
+        yearJsonPath,
+        yearData,
+        `[ADD] Nueva noticia científica ${year}: ${newsItem.title.es} por ${author}`
+      );
+
+      // Luego guardamos el índice
       await saveFileContent(
         indexPath,
         indexData,
         `[UPDATE] Índice actualizado con noticia de ${year}`
       );
 
-      console.log(`[${requestId}] ✅ Índice actualizado`);
+      console.log(`[${requestId}] ✅ Noticia e índice guardados exitosamente`);
 
-      // 3. Crear/actualizar archivo de noticia individual
-      const individualNewsPath = `${yearPath}/${slug}.json`;
-      await saveFileContent(
-        individualNewsPath,
-        newsItem,
-        `[ADD] Noticia individual: ${newsItem.title.es}`
-      );
-
-      console.log(`[${requestId}] ✅ Noticia individual guardada`);
-
-      // 4. Trigger rebuild del sitio principal
+      // ========== 4. Trigger rebuild ==========
       try {
         await octokit.request("POST /repos/{owner}/{repo}/dispatches", {
           owner: "revista1919",
@@ -1592,13 +1571,13 @@ exports.uploadScientificNews = onRequest(
         console.error(`[${requestId}] ⚠️ Error en rebuild:`, rebuildError.message);
       }
 
-      // 5. Devolver respuesta exitosa
+      // ========== 5. Respuesta exitosa ==========
       return res.json({
         success: true,
         newsId: newsId,
         slug: slug,
         year: year,
-        url: `https://www.revistacienciasestudiantes.com/news/${year}/${slug}`,
+        url: `https://www.revistacienciasestudiantes.com/science/${year}/${slug}.html`,
         title: {
           es: newsItem.title.es,
           en: newsItem.title.en
@@ -1613,7 +1592,6 @@ exports.uploadScientificNews = onRequest(
     } catch (err) {
       console.error(`[${requestId}] ❌ Error en uploadScientificNews:`, err);
       
-      // Registrar error en Firestore
       try {
         await admin.firestore().collection('systemErrors').add({
           function: 'uploadScientificNews',
