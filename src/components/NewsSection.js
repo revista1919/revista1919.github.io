@@ -301,7 +301,7 @@ export default function NewsSection({ className }) {
                 Ciencia<span className="text-[#EA580C]">.</span>
               </h1>
               <p className="font-system font-bold uppercase tracking-[0.25em] text-xs text-slate-500 mt-4 ml-1">
-                Revista Estudiantil de Investigación y Avances
+                Noticias de la Revista Nacional de las Ciencias para Estudiantes
               </p>
             </div>
             
