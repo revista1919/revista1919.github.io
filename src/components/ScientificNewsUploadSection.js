@@ -53,19 +53,19 @@ const NEWS_SCRIPT_URL = 'https://us-central1-usuarios-rnce.cloudfunctions.net/up
 
 // Áreas disponibles (deben coincidir con el backend)
 const AREAS = [
-  { id: 'biologia', labelEs: 'Biología', labelEn: 'Biology' },
-  { id: 'quimica', labelEs: 'Química', labelEn: 'Chemistry' },
-  { id: 'fisica', labelEs: 'Física', labelEn: 'Physics' },
-  { id: 'matematica', labelEs: 'Matemática', labelEn: 'Mathematics' },
-  { id: 'computacion', labelEs: 'Computación', labelEn: 'Computer Science' },
-  { id: 'astronomia', labelEs: 'Astronomía', labelEn: 'Astronomy' },
-  { id: 'geologia', labelEs: 'Geología', labelEn: 'Geology' },
-  { id: 'medicina', labelEs: 'Medicina', labelEn: 'Medicine' },
-  { id: 'ingenieria', labelEs: 'Ingeniería', labelEn: 'Engineering' },
-  { id: 'ciencias_sociales', labelEs: 'Ciencias Sociales', labelEn: 'Social Sciences' },
-  { id: 'medio_ambiente', labelEs: 'Medio Ambiente', labelEn: 'Environment' },
-  { id: 'neurociencia', labelEs: 'Neurociencia', labelEn: 'Neuroscience' },
-  { id: 'logros_estudiantiles', labelEs: 'Logros Estudiantiles', labelEn: 'Student Achievements' }
+  { id: 'biologia', labelEs: 'Biología', labelEn: 'Biology', color: '#059669' },
+  { id: 'quimica', labelEs: 'Química', labelEn: 'Chemistry', color: '#7c3aed' },
+  { id: 'fisica', labelEs: 'Física', labelEn: 'Physics', color: '#2563eb' },
+  { id: 'matematica', labelEs: 'Matemática', labelEn: 'Mathematics', color: '#dc2626' },
+  { id: 'computacion', labelEs: 'Computación', labelEn: 'Computer Science', color: '#0891b2' },
+  { id: 'astronomia', labelEs: 'Astronomía', labelEn: 'Astronomy', color: '#4f46e5' },
+  { id: 'geologia', labelEs: 'Geología', labelEn: 'Geology', color: '#b45309' },
+  { id: 'medicina', labelEs: 'Medicina', labelEn: 'Medicine', color: '#e11d48' },
+  { id: 'ingenieria', labelEs: 'Ingeniería', labelEn: 'Engineering', color: '#475569' },
+  { id: 'ciencias_sociales', labelEs: 'Ciencias Sociales', labelEn: 'Social Sciences', color: '#9333ea' },
+  { id: 'medio_ambiente', labelEs: 'Medio Ambiente', labelEn: 'Environment', color: '#16a34a' },
+  { id: 'neurociencia', labelEs: 'Neurociencia', labelEn: 'Neuroscience', color: '#db2777' },
+  { id: 'logros_estudiantiles', labelEs: 'Logros Estudiantiles', labelEn: 'Student Achievements', color: '#ea580c' }
 ];
 
 // Categorías de noticias
@@ -124,7 +124,6 @@ export default function ScientificNewsUploadSection({ userData }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showWarning, setShowWarning] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [autoTranslate, setAutoTranslate] = useState(false); // Cambiado a false por defecto
   
   // Refs
   const quillEsRef = useRef(null);
@@ -463,26 +462,120 @@ export default function ScientificNewsUploadSection({ userData }) {
   // RENDER
   // ===================================================
   return (
-    <div className="max-w-5xl mx-auto bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-slate-200 mt-12 font-sans rounded-sm">
-      {/* Header Editorial */}
-      <div className="border-b-[6px] border-[#EA580C]">
-        <div className="bg-[#0F172A] px-12 py-14 text-white text-center">
-          <span className="text-[#EA580C] text-xs font-bold tracking-[0.3em] uppercase mb-4 block">
-            {isSpanish ? 'Sistema de Envío Editorial' : 'Editorial Submission System'}
-          </span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tight mb-4">
-            {isSpanish ? 'Gestor de Artículos' : 'Article Manager'}
-          </h2>
-          <p className="text-sm text-slate-400 opacity-80 font-medium mt-4">
-            {isSpanish 
-              ? 'Sistema profesional de publicación bilingüe con metadatos completos' 
-              : 'Professional bilingual publishing system with complete metadata'}
-          </p>
-          <div className="w-16 h-[1px] bg-slate-500 mx-auto mt-6"></div>
-        </div>
-      </div>
+    <div className="w-full bg-white text-[#222] min-h-screen pb-24">
+      
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Roboto:wght@300;400;500;700&display=swap');
+        
+        .font-serif-nature { font-family: 'PT Serif', Georgia, serif; }
+        .font-sans-nature { font-family: 'Roboto', Arial, sans-serif; }
+        
+        .editorial-editor-wrapper .ql-toolbar.ql-snow {
+          border: none;
+          border-bottom: 1px solid #d8d8d8;
+          padding: 12px 20px;
+          background: #ffffff;
+          font-family: 'Roboto', Arial, sans-serif;
+          flex-wrap: wrap;
+        }
 
-      <div className="p-10 md:p-14 space-y-12">
+        .editorial-editor-wrapper .ql-container.ql-snow {
+          border: none;
+          background: #ffffff;
+          min-height: 400px;
+          font-family: 'PT Serif', Georgia, serif;
+        }
+
+        .editorial-editor-wrapper .ql-editor {
+          padding: 40px 50px;
+          font-size: 16px;
+          line-height: 1.7;
+          color: #333;
+          min-height: 400px;
+        }
+
+        .editorial-editor-wrapper .ql-editor p {
+          margin-bottom: 1rem;
+          line-height: 1.5;
+          color: #444;
+          font-size: 0.95rem;
+          font-weight: 300;
+        }
+
+        .editorial-editor-wrapper .ql-editor h2, 
+        .editorial-editor-wrapper .ql-editor h3 {
+          font-family: 'Roboto', Arial, sans-serif;
+          font-weight: 700;
+          color: #222;
+          margin-top: 2rem;
+          margin-bottom: 1rem;
+        }
+
+        .editorial-editor-wrapper .ql-editor blockquote {
+          border-left: 2px solid #EA580C;
+          padding-left: 20px;
+          margin: 2rem 0;
+          font-style: italic;
+          color: #555;
+        }
+
+        .editorial-editor-wrapper .ql-editor img {
+          max-width: 100%;
+          margin: 2rem 0;
+        }
+
+        .ql-snow .ql-stroke {
+          stroke: #666 !important;
+          stroke-width: 1.5px;
+        }
+        .ql-snow .ql-fill {
+          fill: #666 !important;
+        }
+        .ql-snow .ql-picker {
+          color: #666 !important;
+        }
+        
+        .ql-snow .ql-active .ql-stroke,
+        .ql-snow .ql-picker-label:hover .ql-stroke,
+        .ql-snow button:hover .ql-stroke {
+          stroke: #222 !important;
+        }
+        .ql-snow .ql-active .ql-fill,
+        .ql-snow .ql-picker-label:hover .ql-fill,
+        .ql-snow button:hover .ql-fill {
+          fill: #222 !important;
+        }
+        .ql-snow .ql-active,
+        .ql-snow .ql-picker-label:hover {
+          color: #222 !important;
+        }
+
+        @media (max-width: 768px) {
+          .editorial-editor-wrapper .ql-editor {
+            padding: 25px 20px;
+            font-size: 15px;
+          }
+          
+          .editorial-editor-wrapper .ql-toolbar.ql-snow {
+            padding: 8px 12px;
+          }
+        }
+      `}} />
+
+      <div className="max-w-[1280px] mx-auto px-4 md:px-8 pt-8">
+        
+        {/* --- HEADER EDITORIAL --- */}
+        <div className="border-b-2 border-gray-800 pb-4 mb-8">
+          <h1 className="text-4xl md:text-5xl font-serif-nature font-bold text-black mb-2">
+            {isSpanish ? 'Envío de Artículos' : 'Article Submission'}
+          </h1>
+          <p className="text-sm font-sans-nature text-gray-600">
+            {isSpanish 
+              ? 'Sistema editorial para publicación bilingüe de investigación y noticias científicas' 
+              : 'Editorial system for bilingual publication of research and scientific news'}
+          </p>
+        </div>
+
         {/* Alerta de preparación */}
         <AnimatePresence>
           {showWarning && (
@@ -490,21 +583,21 @@ export default function ScientificNewsUploadSection({ userData }) {
               initial={{ opacity: 0, y: -10 }} 
               animate={{ opacity: 1, y: 0 }} 
               exit={{ opacity: 0, height: 0 }}
-              className="bg-slate-50 border border-slate-200 p-6 flex items-start gap-4"
+              className="bg-gray-50 border border-gray-300 p-5 mb-8 flex items-start gap-4"
             >
-              <BookOpenIcon className="w-6 h-6 text-[#0F172A] flex-shrink-0 mt-0.5" />
+              <BookOpenIcon className="w-6 h-6 text-gray-800 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider mb-1">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1 font-sans-nature">
                   {isSpanish ? 'Normas de Redacción' : 'Writing Guidelines'}
                 </h3>
-                <p className="text-sm text-slate-600 leading-relaxed font-serif">
+                <p className="text-sm text-gray-700 leading-relaxed font-serif-nature">
                   {isSpanish 
                     ? 'Se recomienda redactar el cuerpo del texto en un procesador externo (Word, LaTeX o Docs) para garantizar el respaldo de la información antes de su vaciado en este sistema.'
                     : 'It is recommended to draft the body text in an external processor to guarantee data backup before submission.'}
                 </p>
                 <button 
                   onClick={() => setShowWarning(false)} 
-                  className="mt-4 text-xs font-bold text-[#EA580C] uppercase tracking-widest hover:text-[#c24100] transition-colors"
+                  className="mt-3 text-xs font-bold text-gray-900 uppercase tracking-widest hover:text-gray-600 transition-colors font-sans-nature"
                 >
                   {isSpanish ? 'Ocultar aviso' : 'Dismiss notice'}
                 </button>
@@ -518,136 +611,130 @@ export default function ScientificNewsUploadSection({ userData }) {
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }}
-            className={`p-5 flex items-center gap-4 border-l-4 ${
+            className={`p-4 flex items-center gap-3 border-l-4 mb-8 font-sans-nature ${
               status.type === 'error' ? 'bg-red-50 border-red-500 text-red-900' :
               status.type === 'success' ? 'bg-green-50 border-green-500 text-green-900' :
-              'bg-slate-50 border-[#0F172A] text-[#0F172A]'
+              'bg-blue-50 border-blue-500 text-blue-900'
             }`}
           >
             {status.type === 'error' && <XCircleIcon className="w-5 h-5 flex-shrink-0" />}
             {status.type === 'success' && <CheckCircleIcon className="w-5 h-5 flex-shrink-0" />}
             {status.type === 'info' && <InformationCircleIcon className="w-5 h-5 flex-shrink-0" />}
-            <span className="text-sm font-medium tracking-wide">{status.msg}</span>
+            <span className="text-sm font-medium">{status.msg}</span>
           </motion.div>
         )}
 
-        {/* Selector de idioma activo */}
-        <div className="flex items-center gap-4 border border-slate-200 p-1 max-w-md">
-          <button
-            onClick={() => setActiveLanguage('es')}
-            className={`px-6 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex-1 ${
-              activeLanguage === 'es' 
-                ? 'bg-[#0F172A] text-white' 
-                : 'text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            {isSpanish ? 'Español' : 'Spanish'}
-          </button>
-          <button
-            onClick={() => setActiveLanguage('en')}
-            className={`px-6 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex-1 ${
-              activeLanguage === 'en' 
-                ? 'bg-[#0F172A] text-white' 
-                : 'text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            {isSpanish ? 'Inglés' : 'English'}
-          </button>
+        {/* --- CONTROLES EDITORIALES --- */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-300 pb-3 gap-4">
+          <div className="flex gap-6 w-full md:w-auto font-sans-nature">
+            <button
+              onClick={() => setActiveLanguage('es')}
+              className={`text-[13px] font-bold uppercase tracking-wide transition-all ${
+                activeLanguage === 'es' ? 'text-black border-b-2 border-black pb-1' : 'text-gray-500 hover:text-black pb-1'
+              }`}
+            >
+              {isSpanish ? 'Español' : 'Spanish'}
+            </button>
+            <button
+              onClick={() => setActiveLanguage('en')}
+              className={`text-[13px] font-bold uppercase tracking-wide transition-all ${
+                activeLanguage === 'en' ? 'text-black border-b-2 border-black pb-1' : 'text-gray-500 hover:text-black pb-1'
+              }`}
+            >
+              {isSpanish ? 'Inglés' : 'English'}
+            </button>
+          </div>
         </div>
 
-        {/* Form Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+        {/* --- FORMULARIO PRINCIPAL --- */}
+        <div className="grid grid-cols-1 gap-8">
           
-          {/* Metadata Column */}
-          <div className="space-y-8 col-span-1 md:col-span-2 border-b border-slate-200 pb-10">
-            <h3 className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase mb-6 flex items-center gap-3">
-              <span className="w-4 h-[1px] bg-slate-300"></span>
+          {/* Metadatos */}
+          <section className="border-b border-gray-300 pb-8">
+            <h2 className="text-xl font-serif-nature font-bold text-black mb-6">
               {isSpanish ? 'Metadatos del Documento' : 'Document Metadata'}
-            </h3>
+            </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-[#0F172A] uppercase tracking-widest flex items-center gap-2">
-                  <UserIcon className="w-4 h-4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
                   {isSpanish ? 'Autoría' : 'Authorship'}
                 </label>
                 <input 
                   type="text" 
                   value={author} 
                   onChange={(e) => setAuthor(e.target.value)}
-                  className="w-full bg-transparent border-b-2 border-slate-200 px-0 py-2 focus:border-[#EA580C] outline-none transition-colors text-lg font-serif text-slate-800 placeholder-slate-300"
+                  className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none transition-colors text-base font-serif-nature bg-white"
                   placeholder={isSpanish ? 'Nombre del investigador o periodista' : 'Researcher or journalist name'}
                 />
               </div>
 
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-[#0F172A] uppercase tracking-widest">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
                   {isSpanish ? 'Disciplina' : 'Discipline'}
                 </label>
                 <select 
                   value={areaId} 
                   onChange={(e) => setAreaId(e.target.value)}
-                  className="w-full bg-transparent border-b-2 border-slate-200 px-0 py-2 focus:border-[#EA580C] outline-none transition-colors text-lg font-serif text-slate-800 appearance-none cursor-pointer"
+                  className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none transition-colors text-base font-serif-nature bg-white cursor-pointer"
                 >
-                  <option value="" className="font-sans text-sm">{isSpanish ? 'Seleccionar disciplina...' : 'Select discipline...'}</option>
+                  <option value="">{isSpanish ? 'Seleccionar disciplina...' : 'Select discipline...'}</option>
                   {AREAS.map(area => (
-                    <option key={area.id} value={area.id} className="font-sans text-sm">
+                    <option key={area.id} value={area.id}>
                       {isSpanish ? area.labelEs : area.labelEn}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Titles Section */}
-          <div className="space-y-8 col-span-1 md:col-span-2 border-b border-slate-200 pb-10">
-            <h3 className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase mb-6 flex items-center gap-3">
-              <span className="w-4 h-[1px] bg-slate-300"></span>
+          {/* Títulos */}
+          <section className="border-b border-gray-300 pb-8">
+            <h2 className="text-xl font-serif-nature font-bold text-black mb-6">
               {isSpanish ? 'Encabezados' : 'Headings'}
-            </h3>
+            </h2>
             
             <div className="space-y-6">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
                   {isSpanish ? 'Título Principal (ES)' : 'Main Title (ES)'}
                 </label>
                 <textarea 
                   rows="2" 
                   value={titleEs} 
                   onChange={(e) => setTitleEs(e.target.value)}
-                  className="w-full bg-transparent border-none px-0 py-2 outline-none resize-none text-3xl md:text-4xl font-serif font-bold text-[#0F172A] placeholder-slate-200 leading-tight"
+                  className="w-full px-4 py-3 border border-gray-300 focus:border-black outline-none resize-none text-2xl font-serif-nature font-bold bg-white"
                   placeholder={isSpanish ? 'Ingrese el título del manuscrito...' : 'Enter manuscript title...'}
                 />
               </div>
-              <div className="pl-4 border-l-2 border-slate-100">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
                   {isSpanish ? 'Título Secundario (EN)' : 'Secondary Title (EN)'}
                 </label>
                 <textarea 
                   rows="2" 
                   value={titleEn} 
                   onChange={(e) => setTitleEn(e.target.value)}
-                  className="w-full bg-transparent border-none px-0 py-1 outline-none resize-none text-xl font-serif text-slate-600 placeholder-slate-200 leading-tight"
+                  className="w-full px-4 py-3 border border-gray-300 focus:border-black outline-none resize-none text-xl font-serif-nature bg-white"
                   placeholder={isSpanish ? 'Traducción al inglés (opcional)...' : 'English translation (optional)...'}
                 />
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Text Editor */}
-          <div className="col-span-1 md:col-span-2 space-y-6 pt-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <h3 className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase flex items-center gap-3">
-                <span className="w-4 h-[1px] bg-slate-300"></span>
-                {activeLanguage === 'es' 
-                  ? (isSpanish ? 'Cuerpo en Español' : 'Spanish Body')
-                  : (isSpanish ? 'Cuerpo en Inglés' : 'English Body')}
-              </h3>
-            </div>
-
-            <div className="editorial-editor-wrapper bg-[#fafafa] border border-slate-200">
-              {activeLanguage === 'es' ? (
+          {/* Cuerpo del Documento */}
+          <section className="border-b border-gray-300 pb-8">
+            <h2 className="text-xl font-serif-nature font-bold text-black mb-6">
+              {isSpanish ? 'Cuerpo del Documento' : 'Document Body'}
+            </h2>
+            
+            {/* Editor Español */}
+            <div className="mb-6">
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
+                {isSpanish ? 'Contenido en Español' : 'Spanish Content'}
+              </label>
+              <div className="editorial-editor-wrapper border border-gray-300 bg-white">
                 <ReactQuill 
                   ref={(ref) => {
                     quillEsRef.current = ref;
@@ -657,9 +744,17 @@ export default function ScientificNewsUploadSection({ userData }) {
                   onChange={setBodyEs} 
                   modules={modules} 
                   formats={formats}
-                  placeholder={isSpanish ? 'Comience a redactar aquí...' : 'Start drafting here...'}
+                  placeholder={isSpanish ? 'Escriba el contenido en español aquí...' : 'Write Spanish content here...'}
                 />
-              ) : (
+              </div>
+            </div>
+            
+            {/* Editor Inglés */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
+                {isSpanish ? 'Contenido en Inglés' : 'English Content'}
+              </label>
+              <div className="editorial-editor-wrapper border border-gray-300 bg-white">
                 <ReactQuill 
                   ref={(ref) => {
                     quillEnRef.current = ref;
@@ -669,42 +764,42 @@ export default function ScientificNewsUploadSection({ userData }) {
                   onChange={setBodyEn} 
                   modules={modules} 
                   formats={formats}
-                  placeholder={isSpanish ? 'Cuerpo en inglés...' : 'English body...'}
+                  placeholder={isSpanish ? 'Escriba el contenido en inglés aquí...' : 'Write English content here...'}
                 />
-              )}
+              </div>
             </div>
-          </div>
+          </section>
 
-          {/* Media & Advanced Settings */}
-          <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-12 pt-8 border-t border-slate-200">
+          {/* Material Gráfico y Taxonomía */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-gray-300 pb-8">
             
-            {/* Cover Image */}
-            <div className="space-y-6">
-              <h3 className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase flex items-center gap-3">
-                <span className="w-4 h-[1px] bg-slate-300"></span>
-                {isSpanish ? 'Material Gráfico' : 'Graphic Material'}
-              </h3>
+            {/* Foto de Portada */}
+            <div>
+              <h2 className="text-xl font-serif-nature font-bold text-black mb-6 flex items-center gap-2">
+                <PhotoIcon className="w-5 h-5" />
+                {isSpanish ? 'Imagen de Portada' : 'Cover Image'}
+              </h2>
               
               <div className="space-y-4">
                 {photo ? (
-                  <div className="relative group">
+                  <div className="relative">
                     <img 
                       src={photo} 
                       alt="Cover preview" 
-                      className="w-full h-48 object-cover border border-slate-200 grayscale-[20%] group-hover:grayscale-0 transition-all duration-500" 
+                      className="w-full h-64 object-cover border border-gray-300" 
                     />
                     <button 
                       onClick={() => setPhoto('')} 
-                      className="absolute top-3 right-3 bg-white/90 backdrop-blur text-[#0F172A] p-2 hover:text-red-600 transition-colors border border-slate-200"
+                      className="absolute top-3 right-3 bg-white/90 p-2 hover:bg-red-50 transition-colors border border-gray-300"
                     >
-                      <XCircleIcon className="w-5 h-5" />
+                      <XCircleIcon className="w-5 h-5 text-gray-700 hover:text-red-600" />
                     </button>
                   </div>
                 ) : (
-                  <label className="w-full h-48 border border-dashed border-slate-300 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer text-slate-500">
-                    <PhotoIcon className="w-8 h-8 mb-3 opacity-50" />
-                    <span className="text-xs font-bold uppercase tracking-widest">
-                      {isSpanish ? 'Seleccionar Archivo' : 'Select File'}
+                  <label className="w-full h-64 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                    <PhotoIcon className="w-10 h-10 mb-3 text-gray-400" />
+                    <span className="text-sm font-bold uppercase tracking-widest text-gray-600 font-sans-nature">
+                      {isSpanish ? 'Subir Imagen' : 'Upload Image'}
                     </span>
                     <input 
                       type="file" 
@@ -715,32 +810,36 @@ export default function ScientificNewsUploadSection({ userData }) {
                   </label>
                 )}
                 
-                <input 
-                  type="text" 
-                  value={photo.startsWith('data:') ? '' : photo} 
-                  onChange={(e) => setPhoto(e.target.value)}
-                  className="w-full bg-transparent border-b-2 border-slate-200 px-0 py-2 focus:border-[#EA580C] outline-none transition-colors text-sm font-sans text-slate-600 placeholder-slate-300"
-                  placeholder={isSpanish ? 'O ingrese URL de la imagen externa' : 'Or enter external image URL'}
-                />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 font-sans-nature">
+                    {isSpanish ? 'O pegar URL:' : 'Or paste URL:'}
+                  </span>
+                  <input 
+                    type="text" 
+                    value={photo.startsWith('data:') ? '' : photo} 
+                    onChange={(e) => setPhoto(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 focus:border-black outline-none text-sm"
+                    placeholder="https://..."
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Taxonomy */}
-            <div className="space-y-6">
-              <h3 className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase flex items-center gap-3">
-                <span className="w-4 h-[1px] bg-slate-300"></span>
+            {/* Taxonomía */}
+            <div>
+              <h2 className="text-xl font-serif-nature font-bold text-black mb-6">
                 {isSpanish ? 'Taxonomía' : 'Taxonomy'}
-              </h3>
+              </h2>
               
               <div className="space-y-6">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
                     {isSpanish ? 'Tipo de Artículo' : 'Article Type'}
                   </label>
                   <select 
                     value={category} 
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-transparent border-b-2 border-slate-200 px-0 py-2 focus:border-[#EA580C] outline-none transition-colors text-sm font-serif text-slate-800 appearance-none cursor-pointer"
+                    className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base font-serif-nature bg-white cursor-pointer"
                   >
                     {CATEGORIES.map(cat => (
                       <option key={cat.id} value={cat.id}>
@@ -750,23 +849,23 @@ export default function ScientificNewsUploadSection({ userData }) {
                   </select>
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    <TagIcon className="w-3 h-3" />
-                    {isSpanish ? 'Palabras Clave (Keywords)' : 'Keywords'}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature flex items-center gap-2">
+                    <TagIcon className="w-4 h-4" />
+                    {isSpanish ? 'Palabras Clave' : 'Keywords'}
                   </label>
-                  <div className="flex flex-wrap gap-2 mb-2">
+                  <div className="flex flex-wrap gap-2 mb-3">
                     {tags.map((tag, index) => (
                       <span 
                         key={index} 
-                        className="inline-flex items-center gap-2 bg-slate-100 border border-slate-200 text-slate-600 text-xs px-3 py-1 font-serif"
+                        className="inline-flex items-center gap-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm px-3 py-1.5 font-serif-nature"
                       >
                         {tag}
                         <button 
                           onClick={() => removeTag(index)} 
-                          className="hover:text-red-500"
+                          className="hover:text-red-600 transition-colors"
                         >
-                          <XCircleIcon className="w-3 h-3" />
+                          <XCircleIcon className="w-4 h-4" />
                         </button>
                       </span>
                     ))}
@@ -776,109 +875,129 @@ export default function ScientificNewsUploadSection({ userData }) {
                     value={tagInput} 
                     onChange={(e) => setTagInput(e.target.value)} 
                     onKeyDown={handleTagKeyDown}
-                    className="w-full bg-transparent border-b-2 border-slate-200 px-0 py-2 focus:border-[#EA580C] outline-none transition-colors text-sm font-sans text-slate-600 placeholder-slate-300"
+                    className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base font-serif-nature bg-white"
                     placeholder={isSpanish ? 'Presione ENTER para añadir' : 'Press ENTER to add'}
                   />
                 </div>
 
-                <div className="pt-4 flex items-center gap-3">
+                <div className="flex items-center gap-3 pt-2">
                   <input 
                     type="checkbox" 
                     id="featured" 
                     checked={featured} 
                     onChange={(e) => setFeatured(e.target.checked)}
-                    className="w-4 h-4 accent-[#EA580C]"
+                    className="w-4 h-4 accent-black"
                   />
                   <label 
                     htmlFor="featured" 
-                    className="text-sm font-serif text-slate-700 cursor-pointer"
+                    className="text-sm text-gray-800 cursor-pointer font-serif-nature"
                   >
                     {isSpanish ? 'Destacar manuscrito en portada' : 'Feature manuscript on front page'}
                   </label>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* Submit Action */}
-        <div className="pt-10 border-t border-slate-200 flex justify-end">
+        {/* --- BOTÓN DE ENVÍO --- */}
+        <div className="pt-8 flex justify-end">
           <button 
             onClick={handleSubmit} 
             disabled={isLoading}
-            className={`px-10 py-4 text-white font-bold uppercase tracking-[0.2em] text-sm transition-all ${
+            className={`px-10 py-3.5 text-white font-sans-nature font-bold uppercase tracking-wider text-sm transition-all ${
               isLoading 
-                ? 'bg-slate-400 cursor-not-allowed' 
-                : 'bg-[#EA580C] hover:bg-[#c24100] active:scale-[0.98]'
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-black hover:bg-gray-800 active:scale-[0.98]'
             }`}
           >
             {isLoading ? (
-              <span className="flex items-center gap-3">
+              <span className="flex items-center gap-2">
                 <ArrowPathIcon className="w-4 h-4 animate-spin" />
                 {isSpanish ? 'Procesando...' : 'Processing...'}
               </span>
             ) : (
-              isSpanish ? 'Someter Artículo' : 'Submit Article'
+              isSpanish ? 'Enviar Artículo' : 'Submit Article'
             )}
           </button>
         </div>
       </div>
 
-      {/* Modal de Imagen */}
+      {/* Modal de Imagen para el Editor */}
       {showImageModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[999] p-6">
-          <div className="bg-white shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
-            <div className="p-8 border-b border-slate-200 bg-slate-50">
-              <h3 className="font-bold text-[#0F172A] uppercase tracking-widest text-sm">
-                {isSpanish ? 'GESTIÓN DE IMAGEN' : 'IMAGE MANAGEMENT'}
+          <div className="bg-white shadow-2xl max-w-md w-full overflow-hidden border border-gray-300">
+            <div className="p-6 border-b border-gray-200 bg-gray-50">
+              <h3 className="font-sans-nature font-bold text-gray-900 uppercase tracking-widest text-sm">
+                {isSpanish ? 'Insertar Imagen' : 'Insert Image'}
               </h3>
             </div>
-            <div className="p-8 space-y-6">
-              <input 
-                type="text" 
-                value={imageData.url} 
-                onChange={(e)=>setImageData({...imageData, url: e.target.value})} 
-                className="w-full p-3 bg-transparent border-b-2 border-slate-200 focus:border-[#EA580C] outline-none transition-colors" 
-                placeholder={isSpanish ? 'URL de la imagen' : 'Image URL'} 
-                disabled={isEditingImage} 
-              />
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
+                  {isSpanish ? 'URL de la imagen' : 'Image URL'}
+                </label>
                 <input 
                   type="text" 
-                  placeholder={isSpanish ? 'Ancho (ej: 300px)' : 'Width (e.g., 300px)'} 
-                  value={imageData.width} 
-                  onChange={(e)=>setImageData({...imageData, width: e.target.value})} 
-                  className="p-3 bg-transparent border-b-2 border-slate-200 focus:border-[#EA580C] outline-none transition-colors" 
-                />
-                <input 
-                  type="text" 
-                  placeholder={isSpanish ? 'Alto (ej: auto)' : 'Height (e.g., auto)'} 
-                  value={imageData.height} 
-                  onChange={(e)=>setImageData({...imageData, height: e.target.value})} 
-                  className="p-3 bg-transparent border-b-2 border-slate-200 focus:border-[#EA580C] outline-none transition-colors" 
+                  value={imageData.url} 
+                  onChange={(e)=>setImageData({...imageData, url: e.target.value})} 
+                  className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base"
+                  placeholder={isSpanish ? 'https://ejemplo.com/imagen.jpg' : 'https://example.com/image.jpg'}
+                  disabled={isEditingImage} 
                 />
               </div>
-              <select 
-                value={imageData.align} 
-                onChange={(e)=>setImageData({...imageData, align: e.target.value})} 
-                className="w-full p-3 bg-transparent border-b-2 border-slate-200 focus:border-[#EA580C] outline-none transition-colors font-medium cursor-pointer"
-              >
-                <option value="left">{isSpanish ? 'Izquierda' : 'Left'}</option>
-                <option value="center">{isSpanish ? 'Centro' : 'Center'}</option>
-                <option value="right">{isSpanish ? 'Derecha' : 'Right'}</option>
-                <option value="justify">{isSpanish ? 'Ancho completo' : 'Full width'}</option>
-              </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
+                    {isSpanish ? 'Ancho' : 'Width'}
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder={isSpanish ? '300px' : '300px'} 
+                    value={imageData.width} 
+                    onChange={(e)=>setImageData({...imageData, width: e.target.value})} 
+                    className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
+                    {isSpanish ? 'Alto' : 'Height'}
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder={isSpanish ? 'auto' : 'auto'} 
+                    value={imageData.height} 
+                    onChange={(e)=>setImageData({...imageData, height: e.target.value})} 
+                    className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
+                  {isSpanish ? 'Alineación' : 'Alignment'}
+                </label>
+                <select 
+                  value={imageData.align} 
+                  onChange={(e)=>setImageData({...imageData, align: e.target.value})} 
+                  className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base cursor-pointer"
+                >
+                  <option value="left">{isSpanish ? 'Izquierda' : 'Left'}</option>
+                  <option value="center">{isSpanish ? 'Centro' : 'Center'}</option>
+                  <option value="right">{isSpanish ? 'Derecha' : 'Right'}</option>
+                  <option value="justify">{isSpanish ? 'Ancho completo' : 'Full width'}</option>
+                </select>
+              </div>
             </div>
-            <div className="p-6 bg-slate-50 flex justify-end gap-4 border-t border-slate-200">
+            <div className="p-6 bg-gray-50 flex justify-end gap-4 border-t border-gray-200">
               <button 
                 onClick={() => setShowImageModal(false)} 
-                className="font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-wider text-sm"
+                className="font-sans-nature font-bold text-gray-600 hover:text-gray-900 transition-colors uppercase tracking-wider text-sm"
               >
                 {isSpanish ? 'Cancelar' : 'Cancel'}
               </button>
               <button 
                 onClick={handleImageModalSubmit} 
-                className="px-8 py-3 bg-[#EA580C] text-white font-bold hover:bg-[#c24100] transition-all uppercase tracking-wider text-sm"
+                className="px-8 py-2.5 bg-black text-white font-sans-nature font-bold hover:bg-gray-800 transition-all uppercase tracking-wider text-sm"
               >
                 {isSpanish ? 'Confirmar' : 'Confirm'}
               </button>
@@ -886,114 +1005,6 @@ export default function ScientificNewsUploadSection({ userData }) {
           </div>
         </div>
       )}
-
-      {/* Global CSS overrides for Quill to mimic a high-end editorial CMS */}
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap');
-
-        /* Editor Wrapper Styling */
-        .editorial-editor-wrapper .ql-toolbar.ql-snow {
-          border: none;
-          border-bottom: 1px solid #e2e8f0;
-          padding: 12px 20px;
-          background: #ffffff;
-          font-family: 'Inter', sans-serif;
-          flex-wrap: wrap;
-        }
-
-        .editorial-editor-wrapper .ql-container.ql-snow {
-          border: none;
-          background: #ffffff;
-          min-height: 500px;
-          font-family: 'Playfair Display', serif;
-        }
-
-        .editorial-editor-wrapper .ql-editor {
-          padding: 60px 80px;
-          font-size: 19px;
-          line-height: 1.8;
-          color: #1e293b;
-          max-width: 800px;
-          margin: 0 auto;
-        }
-
-        .editorial-editor-wrapper .ql-editor p {
-          margin-bottom: 1.5rem;
-        }
-
-        .editorial-editor-wrapper .ql-editor h2, 
-        .editorial-editor-wrapper .ql-editor h3 {
-          font-family: 'Inter', sans-serif;
-          font-weight: 700;
-          color: #0F172A;
-          margin-top: 2.5rem;
-          margin-bottom: 1rem;
-        }
-
-        .editorial-editor-wrapper .ql-editor blockquote {
-          border-left: 2px solid #EA580C;
-          padding-left: 24px;
-          margin: 2.5rem 0;
-          font-style: italic;
-          color: #475569;
-          font-size: 1.25rem;
-          line-height: 1.6;
-        }
-
-        .editorial-editor-wrapper .ql-editor img {
-          max-width: 100%;
-          margin: 3rem 0;
-        }
-
-        .editorial-editor-wrapper .ql-editor video {
-          max-width: 100%;
-          margin: 2rem 0;
-        }
-
-        .editorial-editor-wrapper .ql-editor .ql-formula {
-          display: inline-block;
-          margin: 0 4px;
-        }
-
-        /* SVG Icon styling inside Quill Toolbar */
-        .ql-snow .ql-stroke {
-          stroke: #64748b !important;
-          stroke-width: 1.5px;
-        }
-        .ql-snow .ql-fill {
-          fill: #64748b !important;
-        }
-        .ql-snow .ql-picker {
-          color: #64748b !important;
-        }
-        
-        /* Active States */
-        .ql-snow .ql-active .ql-stroke,
-        .ql-snow .ql-picker-label:hover .ql-stroke,
-        .ql-snow button:hover .ql-stroke {
-          stroke: #0F172A !important;
-        }
-        .ql-snow .ql-active .ql-fill,
-        .ql-snow .ql-picker-label:hover .ql-fill,
-        .ql-snow button:hover .ql-fill {
-          fill: #0F172A !important;
-        }
-        .ql-snow .ql-active,
-        .ql-snow .ql-picker-label:hover {
-          color: #0F172A !important;
-        }
-
-        @media (max-width: 768px) {
-          .editorial-editor-wrapper .ql-editor {
-            padding: 30px 20px;
-            font-size: 17px;
-          }
-          
-          .editorial-editor-wrapper .ql-toolbar.ql-snow {
-            padding: 8px 12px;
-          }
-        }
-      `}</style>
     </div>
   );
 }
