@@ -12,6 +12,7 @@ import Admissions from './Admissions';
 import ReviewerApplicationsPanel from './ReviewerApplicationsPanel';
 import ReviewerProfilePanel from './ReviewerProfilePanel';
 import DeskReviewPanel from './DeskReviewPanel';
+import ScientificNewsUploadSection from './ScientificNewsUploadSection';
 import ReviewerInvitationsPanel from './ReviewerInvitationsPanel';
 import AuthorSubmissionsPanel from './AuthorSubmissionsPanel';
 import { 
@@ -65,7 +66,8 @@ const ES_TO_EN = {
   'Autor': 'Author',
   'Asesor Académico': 'Academic Advisor',
   'Institución Colaboradora': 'Partner Institution',
-  'Equipo Editorial': 'Editorial Team'
+  'Equipo Editorial': 'Editorial Team',
+  'Periodista': 'Journalist'
 };
 
 const EN_TO_ES = {
@@ -91,7 +93,8 @@ const EN_TO_ES = {
   'Partner Institution': 'Institución Colaboradora',
   'Academic Advisor': 'Asesor Académico',
   'Community Manager': 'Community Manager',
-  'Editorial Team': 'Equipo Editorial'
+  'Editorial Team': 'Equipo Editorial',
+  'Journalist':'Periodista'
 };
 
 const ALL_ROLES = Object.keys(ES_TO_EN);
@@ -998,6 +1001,7 @@ const tabs = [
   { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'], path: 'admissions' },
   { id: 'users', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'], path: 'users' },
   { id: 'reviewer-profile', label: isSpanish ? 'MI PERFIL REVISOR' : 'MY REVIEWER PROFILE', roles: ['Revisor'], path: 'reviewer-profile' },
+  { id: 'SciNews', label: isSpanish ? 'NOTICIAS CIENTÍFICAS' : 'SCIENTIFIC NEWS', roles: ['Director General', 'Editor en Jefe', 'Editor de Sección', 'Periodista'], path: 'news' },
 ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
 
 // Actualiza el mapeo de rutas para incluir la nueva ruta:
@@ -1585,7 +1589,11 @@ const handleTabChange = (tabId, event) => {
               />
             </motion.section>
           )}
-
+{activeTab === 'SciNews' && (
+  <motion.section key="SciNews">
+    <ScientificNewsUploadSection userData={userData} />
+  </motion.section>
+)}
           {/* ENVIAR MANUSCRITO */}
           {/* ENVIAR MANUSCRITO - OCUPA TODA LA PANTALLA */}
 {activeTab === 'submit' && (

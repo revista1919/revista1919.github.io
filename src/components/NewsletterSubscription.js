@@ -137,6 +137,13 @@ const Icons = {
       <path d="M12 2a3 3 0 0 1 3 3c0 2-1 4-3 5-2-1-3-3-3-5a3 3 0 0 1 3-3z" strokeLinejoin="round"/>
       <path d="M9 12c0-2-1-4-3-5M15 12c0 2 1 4 3 5M12 10v4M9 14H6M15 14h3" strokeLinecap="round"/>
     </svg>
+  ),
+  achievements: (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M12 12l-3 8 3-2 3 2-3-8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M8 4V2M16 4V2M6 6L4 4M18 6l2-2" strokeLinecap="round"/>
+    </svg>
   )
 };
 
@@ -152,7 +159,8 @@ const AREAS = [
   { id: 'ingenieria', labelEs: 'Ingeniería', labelEn: 'Engineering', icon: Icons.engineering },
   { id: 'ciencias_sociales', labelEs: 'Ciencias Sociales', labelEn: 'Social Sciences', icon: Icons.social },
   { id: 'medio_ambiente', labelEs: 'Medio Ambiente', labelEn: 'Environment', icon: Icons.environment },
-  { id: 'neurociencia', labelEs: 'Neurociencia', labelEn: 'Neuroscience', icon: Icons.neuroscience }
+  { id: 'neurociencia', labelEs: 'Neurociencia', labelEn: 'Neuroscience', icon: Icons.neuroscience },
+  { id: 'logros_estudiantiles', labelEs: 'Logros de la Comunidad Científica Estudiantil', labelEn: 'Student Scientific Community Achievements', icon: Icons.achievements }
 ];
 
 const FREQUENCIES = [
@@ -170,7 +178,8 @@ const DEFAULT_PREFERENCES = {
     nuevas_publicaciones: true,
     convocatorias: true,
     eventos: true,
-    oportunidades: false
+    oportunidades: false,
+    logros_estudiantiles: true
   }
 };
 

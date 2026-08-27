@@ -926,6 +926,21 @@ function AppEN() {
                 )}
               </motion.div>
             } />
+            <Route path="/login/SciNews" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/en/login" replace />
+                )}
+              </motion.div>
+            } />
             <Route path="/login/admissions" element={
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
