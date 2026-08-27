@@ -17,7 +17,7 @@ import SearchAndFilters from './components/SearchAndFilters';
 import ReviewerResponsePage from './components/ReviewerResponsePage';
 import ArticleCard from './components/ArticleCard';
 import VolumeCard from './components/VolumeCard';
-import ScientificNewsUploadSection from './ScientificNewsUploadSection';
+import ScientificNewsUploadSection from './components/ScientificNewsUploadSection';
 import Tabs from './components/Tabs';
 import NewsletterModal from './components/NewsletterModal';
 import SubmitSection from './components/SubmitSection';

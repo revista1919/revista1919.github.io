@@ -27,7 +27,7 @@ import Footer from './components/FooterEN';
 import LoginSection from './components/LoginSectionEN';
 import PortalSection from './components/PortalSectionEN';
 import NewsSection from './components/NewsSectionEN';
-import ScientificNewsUploadSection from './ScientificNewsUploadSection';
+import ScientificNewsUploadSection from './components/ScientificNewsUploadSection';
 import { Routes, Route, useLocation, NavLink, useSearchParams, Navigate } from 'react-router-dom';
 import HomeSectionEN from './components/HomeSectionEN';
 import './index.css';
