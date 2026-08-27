@@ -842,13 +842,36 @@ export default function PortalSection({ user, onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Obtener la pestaña activa desde la ruta
-  const getActiveTabFromPath = () => {
-    const path = location.pathname;
-    // Extraer el segmento después de /login/ o /es/login/
-    const match = path.match(/\/(?:es\/)?login\/([^/]+)/);
-    return match ? match[1] : 'profile';
+const getActiveTabFromPath = () => {
+  const path = location.pathname;
+  // Extraer el segmento después de /login/ o /es/login/
+  const match = path.match(/\/(?:es\/)?login\/([^/]+)/);
+  if (!match) return 'profile';
+  
+  const routePath = match[1];
+  
+  // Mapear rutas a IDs de tabs
+  const routeToTab = {
+    '': 'profile',
+    'submissions': 'submissions',
+    'reviewer-tasks': 'reviewer-tasks',
+    'deskreview': 'deskreview',
+    'reviewer-applications': 'reviewer-applications',
+    'reviewer-profile': 'reviewer-profile',
+    'assignment': 'assignment',
+    'calendar': 'calendar',
+    'submit': 'submit',
+    'director': 'director',
+    'chief': 'chief',
+    'tasks': 'tasks',
+    'news': 'news',
+    'sci-news': 'SciNews', // ← AÑADIDO
+    'admissions': 'admissions',
+    'users': 'users'
   };
+  
+  return routeToTab[routePath] || 'profile';
+};
 
   const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false);
@@ -985,6 +1008,7 @@ const isDirectorGeneral = userRoles.includes('Director General');
 const canManageReviewers = isSectionEditor || isChiefEditor || isDirectorGeneral;
 
 // Actualiza el array de tabs para incluir la nueva pestaña:
+// Actualiza el array de tabs para incluir la nueva pestaña:
 const tabs = [
   { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE', roles: ['any'], path: '' },
   { id: 'submissions', label: isSpanish ? 'MIS ENVÍOS' : 'MY SUBMISSIONS', roles: ['Autor'], path: 'submissions' },
@@ -998,12 +1022,12 @@ const tabs = [
   { id: 'chief', label: isSpanish ? 'PANEL EDITOR JEFE' : 'CHIEF EDITOR PANEL', roles: ['Editor en Jefe'], path: 'chief' },
   { id: 'tasks', label: isSpanish ? 'TAREAS' : 'TASKS', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'], path: 'tasks' },
   { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'], path: 'news' },
+  { id: 'SciNews', label: isSpanish ? 'NOTICIAS CIENTÍFICAS' : 'SCIENTIFIC NEWS', roles: ['Director General', 'Editor en Jefe', 'Editor de Sección', 'Periodista'], path: 'sci-news' }, // ← CAMBIADO: path diferente
   { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'], path: 'admissions' },
   { id: 'users', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'], path: 'users' },
   { id: 'reviewer-profile', label: isSpanish ? 'MI PERFIL REVISOR' : 'MY REVIEWER PROFILE', roles: ['Revisor'], path: 'reviewer-profile' },
-  { id: 'SciNews', label: isSpanish ? 'NOTICIAS CIENTÍFICAS' : 'SCIENTIFIC NEWS', roles: ['Director General', 'Editor en Jefe', 'Editor de Sección', 'Periodista'], path: 'news' },
 ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
-
+// Actualiza el mapeo de rutas para incluir la nueva ruta:
 // Actualiza el mapeo de rutas para incluir la nueva ruta:
 const tabRoutes = {
   profile: '',
@@ -1019,6 +1043,7 @@ const tabRoutes = {
   chief: 'chief',
   tasks: 'tasks',
   news: 'news',
+  'SciNews': 'sci-news', // ← AÑADIDO: mapeo correcto
   admissions: 'admissions',
   users: 'users'
 };
@@ -1031,25 +1056,19 @@ const tabRoutes = {
     }
   }, [location.pathname]);
 
-// Función para cambiar de pestaña y navegar (CORREGIDA)
 const handleTabChange = (tabId, event) => {
-  // IMPORTANTE: Prevenir el comportamiento por defecto del navegador
   if (event) {
     event.preventDefault();
   }
   
-  // Actualizar el estado local
   setActiveTab(tabId);
   const route = tabRoutes[tabId] || '';
   
-  // Preservar el prefijo de idioma
   const currentPath = location.pathname;
   const langPrefix = currentPath.match(/^\/(es|en)\//) ? currentPath.match(/^\/(es|en)\//)[0] : '/';
   
-  // Construir la nueva ruta
   const newPath = route ? `${langPrefix}login/${route}` : `${langPrefix}login`;
   
-  // Usar navigate de React Router (NO window.location)
   navigate(newPath, { replace: true });
 };
   // Snapshot de usuario

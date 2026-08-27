@@ -17,6 +17,7 @@ import SearchAndFilters from './components/SearchAndFilters';
 import ReviewerResponsePage from './components/ReviewerResponsePage';
 import ArticleCard from './components/ArticleCard';
 import VolumeCard from './components/VolumeCard';
+import ScientificNewsUploadSection from './ScientificNewsUploadSection';
 import Tabs from './components/Tabs';
 import NewsletterModal from './components/NewsletterModal';
 import SubmitSection from './components/SubmitSection';
@@ -987,21 +988,22 @@ function App() {
                 )}
               </motion.div>
             } />
-            <Route path="/login/SciNews" element={
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="container max-w-full px-0 flex-grow"
-              >
-                {user ? (
-                  <PortalSection user={user} onLogout={handleLogout} />
-                ) : (
-                  <Navigate to="/login" replace />
-                )}
-              </motion.div>
-            } />
+            // Añade esta ruta junto con las otras rutas del portal
+<Route path="/login/sci-news" element={
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
+    className="container max-w-full px-0 flex-grow"
+  >
+    {user ? (
+      <PortalSection user={user} onLogout={handleLogout} />
+    ) : (
+      <Navigate to="/login" replace />
+    )}
+  </motion.div>
+} />
             <Route path="/login/admissions" element={
               <motion.div
                 initial={{ opacity: 0, y: 10 }}

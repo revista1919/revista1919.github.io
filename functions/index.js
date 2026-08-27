@@ -1436,7 +1436,7 @@ exports.uploadScientificNews = onRequest(
       // Obtener Octokit
       const octokit = getOctokit();
       const REPO_OWNER = "revista1919";
-      const REPO_NAME = "science-news"; // Nombre del repositorio
+      const REPO_NAME = "science"; // Nombre del repositorio
       const BRANCH = "main";
       const BASE_PATH = "science"; // Carpeta base
 
@@ -1530,7 +1530,7 @@ exports.uploadScientificNews = onRequest(
       
       const indexPath = `${BASE_PATH}/index.json`;
       let indexData = {
-        repository: "science-news",
+        repository: "science",
         description: "Sistema de noticias de divulgación científica",
         last_updated: fechaIso,
         years: {}
