@@ -257,7 +257,6 @@ export default function NewsSectionEN({ className }) {
         .font-journal { font-family: 'Merriweather', serif; }
         .font-system { font-family: 'Inter', sans-serif; }
         
-        /* Clean HTML from CMS */
         .editorial-abstract p {
           margin-bottom: 0.5rem;
           line-height: 1.5;
@@ -279,7 +278,6 @@ export default function NewsSectionEN({ className }) {
         .truncate-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .truncate-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
         
-        /* Newspaper columns simulation for institutional */
         .newspaper-columns {
           column-count: 1;
           column-gap: 2rem;
@@ -303,11 +301,10 @@ export default function NewsSectionEN({ className }) {
                 Science<span className="text-[#EA580C]">.</span>
               </h1>
               <p className="font-system font-bold uppercase tracking-[0.25em] text-xs text-slate-500 mt-4 ml-1">
-                News, from The National Review of Sciences for Students
+                Student Journal of Research and Advances
               </p>
             </div>
             
-            {/* Minimalist search */}
             <div className="w-full md:w-64">
               <div className="relative border-b border-slate-300 pb-1">
                 <input
@@ -322,7 +319,6 @@ export default function NewsSectionEN({ className }) {
             </div>
           </div>
 
-          {/* Editorial navigation */}
           <nav className="flex gap-8 border-b border-slate-200 pb-4 overflow-x-auto hide-scrollbar">
             {[
               { id: 'all', label: 'Full Edition' },
@@ -344,14 +340,14 @@ export default function NewsSectionEN({ className }) {
           </nav>
         </header>
 
-        {/* --- SECTION: SCIENTIFIC OUTREACH (DENSE NATURE STYLE) --- */}
+        {/* --- SECTION: SCIENTIFIC OUTREACH --- */}
         {(activeTab === 'all' || activeTab === 'science') && scienceNews.length > 0 && (
           <section className="mb-20">
             
-            {/* UPPER BLOCK: Hero (Left) + Latest News (Right) */}
+            {/* UPPER BLOCK: Hero + Sidebar */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 border-b-2 border-slate-900 pb-12 mb-10">
               
-              {/* Main Article (8 columns) - WITH LARGE IMAGE */}
+              {/* Main Article */}
               {featuredScience && (
                 <article 
                   className="lg:col-span-8 group cursor-pointer lg:border-r border-slate-300 lg:pr-12"
@@ -394,50 +390,64 @@ export default function NewsSectionEN({ className }) {
                 </article>
               )}
 
-              {/* Dense Sidebar (4 columns) - WITH SMALL IMAGES */}
-              <aside className="lg:col-span-4 flex flex-col">
-                <div className="flex items-center justify-between border-b border-black pb-2 mb-6">
-                  <h3 className="font-system font-black uppercase tracking-[0.2em] text-sm text-[#0F172A]">Trending Now</h3>
-                  <span className="w-2 h-2 bg-[#EA580C] rounded-full animate-pulse"></span>
+              {/* Sidebar with Newsletter */}
+              <aside className="lg:col-span-4 flex flex-col gap-8">
+                {/* Newsletter destacado */}
+                <div className="bg-[#0F172A] text-white p-6 rounded-sm shadow-xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#EA580C] rounded-full opacity-10 translate-x-1/3 -translate-y-1/3"></div>
+                  <h3 className="font-journal text-2xl font-bold mb-3 relative z-10">Subscribe to the Bulletin</h3>
+                  <p className="font-system text-sm text-slate-300 mb-4 relative z-10">
+                    Receive all research and news directly in your email.
+                  </p>
+                  <div className="relative z-10">
+                    <NewsletterSubscription variant="compact" showTitle={false} />
+                  </div>
                 </div>
-                
-                <div className="flex flex-col gap-0">
-                  {sidebarScienceNews.map((item, idx) => (
-                    <article 
-                      key={item.id} 
-                      className="group cursor-pointer py-4 border-b border-slate-200 last:border-b-0 hover:bg-slate-50 transition-colors -mx-2 px-2 rounded-sm flex gap-4"
-                      onClick={() => openScienceNews(item)}
-                    >
-                      {/* Small image for sidebar */}
-                      <div className="w-20 h-20 flex-shrink-0 bg-slate-100 overflow-hidden">
-                        <img
-                          src={item.photo || "https://www.revistacienciasestudiantes.com/team.jpg"}
-                          className="w-full h-full object-cover"
-                          alt={item.title_en}
-                          onError={(e) => {
-                            e.target.src = "https://www.revistacienciasestudiantes.com/team.jpg";
-                          }}
-                        />
-                      </div>
-                      
-                      <div className="flex-1">
-                        <span className="font-system text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: AREAS_MAP[item.area_id]?.color || '#0F172A' }}>
-                          {AREAS_MAP[item.area_id]?.en || 'General'}
-                        </span>
-                        <h4 className="text-sm font-journal font-bold leading-snug mb-1 text-[#0F172A] group-hover:text-[#EA580C]">
-                          {item.title_en}
-                        </h4>
-                        <time className="font-system text-[9px] text-slate-400 font-medium uppercase tracking-wider block">
-                          {formatDate(item.createdAt, true)}
-                        </time>
-                      </div>
-                    </article>
-                  ))}
+
+                {/* Trending Now */}
+                <div>
+                  <div className="flex items-center justify-between border-b border-black pb-2 mb-4">
+                    <h3 className="font-system font-black uppercase tracking-[0.2em] text-sm text-[#0F172A]">Trending Now</h3>
+                    <span className="w-2 h-2 bg-[#EA580C] rounded-full animate-pulse"></span>
+                  </div>
+                  
+                  <div className="flex flex-col gap-0">
+                    {sidebarScienceNews.map((item, idx) => (
+                      <article 
+                        key={item.id} 
+                        className="group cursor-pointer py-4 border-b border-slate-200 last:border-b-0 hover:bg-slate-50 transition-colors -mx-2 px-2 rounded-sm flex gap-4"
+                        onClick={() => openScienceNews(item)}
+                      >
+                        <div className="w-20 h-20 flex-shrink-0 bg-slate-100 overflow-hidden">
+                          <img
+                            src={item.photo || "https://www.revistacienciasestudiantes.com/team.jpg"}
+                            className="w-full h-full object-cover"
+                            alt={item.title_en}
+                            onError={(e) => {
+                              e.target.src = "https://www.revistacienciasestudiantes.com/team.jpg";
+                            }}
+                          />
+                        </div>
+                        
+                        <div className="flex-1">
+                          <span className="font-system text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: AREAS_MAP[item.area_id]?.color || '#0F172A' }}>
+                            {AREAS_MAP[item.area_id]?.en || 'General'}
+                          </span>
+                          <h4 className="text-sm font-journal font-bold leading-snug mb-1 text-[#0F172A] group-hover:text-[#EA580C]">
+                            {item.title_en}
+                          </h4>
+                          <time className="font-system text-[9px] text-slate-400 font-medium uppercase tracking-wider block">
+                            {formatDate(item.createdAt, true)}
+                          </time>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
                 </div>
               </aside>
             </div>
 
-            {/* MIDDLE BLOCK: Visual Row (4 equal columns) - WITH IMAGES */}
+            {/* MIDDLE BLOCK: Visual Row */}
             {visualRowNews.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 border-b border-slate-300 pb-12 mb-12">
                 {visualRowNews.map((item) => (
@@ -468,7 +478,7 @@ export default function NewsSectionEN({ className }) {
               </div>
             )}
 
-            {/* LOWER BLOCK: More list-style news - WITH SMALL IMAGES */}
+            {/* LOWER BLOCK: More news */}
             {remainingScienceNews.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {remainingScienceNews.map((item) => (
@@ -516,7 +526,7 @@ export default function NewsSectionEN({ className }) {
         )}
 
 
-        {/* --- SECTION: INSTITUTIONAL AND NEWSLETTER (DENSE BULLETIN) --- */}
+        {/* --- SECTION: INSTITUTIONAL --- */}
         {(activeTab === 'all' || activeTab === 'internal') && news.length > 0 && (
           <section className="bg-slate-100/50 border-t-4 border-[#0F172A] py-12 px-6 md:px-12 -mx-4 md:-mx-8 rounded-sm">
             
@@ -534,7 +544,7 @@ export default function NewsSectionEN({ className }) {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
               
-              {/* Dense List of Internal News - WITH IMAGES */}
+              {/* List of Internal News */}
               <div className="lg:col-span-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {filteredInternalNews.map((item, idx) => (
@@ -543,7 +553,6 @@ export default function NewsSectionEN({ className }) {
                       className="group cursor-pointer bg-white border border-slate-200 overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all rounded-sm relative flex flex-col"
                       onClick={() => openNews(item)}
                     >
-                      {/* Internal news image */}
                       {item.photo && (
                         <div className="aspect-[16/9] bg-slate-100 overflow-hidden">
                           <img
@@ -557,7 +566,6 @@ export default function NewsSectionEN({ className }) {
                         </div>
                       )}
                       
-                      {/* Decorative telegram-style quote */}
                       <div className="absolute top-0 left-0 w-1 h-full bg-[#EA580C] opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       
                       <div className="p-5 flex-1 flex flex-col">
@@ -583,13 +591,10 @@ export default function NewsSectionEN({ className }) {
                 </div>
               </div>
 
-              {/* Right Sidebar: Newsletter (4 columns) */}
+              {/* Right Sidebar: Quick links */}
               <div className="lg:col-span-4 flex flex-col gap-8">
                 <div className="sticky top-8">
-                  <NewsletterSubscription variant="compact" showTitle={false} />
-                  
-                  {/* Updated quick links */}
-                  <div className="mt-8 border-t border-slate-300 pt-6">
+                  <div className="border-t border-slate-300 pt-6">
                     <h5 className="font-system font-bold uppercase tracking-widest text-xs text-slate-400 mb-4">Quick Links</h5>
                     <ul className="flex flex-col gap-3 font-journal text-sm text-[#0F172A]">
                       <li>
