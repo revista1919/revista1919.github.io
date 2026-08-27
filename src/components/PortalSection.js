@@ -15,7 +15,7 @@ import DeskReviewPanel from './DeskReviewPanel';
 import ScientificNewsUploadSection from './ScientificNewsUploadSection';
 import ReviewerInvitationsPanel from './ReviewerInvitationsPanel';
 import AuthorSubmissionsPanel from './AuthorSubmissionsPanel';
-import ScientificNewsUploadSection from './components/ScientificNewsUploadSection';
+
 import { 
   UserIcon, 
   CameraIcon, 
