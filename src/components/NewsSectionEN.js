@@ -303,7 +303,7 @@ export default function NewsSectionEN({ className }) {
                 Science<span className="text-[#EA580C]">.</span>
               </h1>
               <p className="font-system font-bold uppercase tracking-[0.25em] text-xs text-slate-500 mt-4 ml-1">
-                Student Journal of Research and Advances
+                News, from The National Review of Sciences for Students
               </p>
             </div>
             
@@ -351,17 +351,20 @@ export default function NewsSectionEN({ className }) {
             {/* UPPER BLOCK: Hero (Left) + Latest News (Right) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 border-b-2 border-slate-900 pb-12 mb-10">
               
-              {/* Main Article (8 columns) */}
+              {/* Main Article (8 columns) - WITH LARGE IMAGE */}
               {featuredScience && (
                 <article 
                   className="lg:col-span-8 group cursor-pointer lg:border-r border-slate-300 lg:pr-12"
                   onClick={() => openScienceNews(featuredScience)}
                 >
-                  <div className="relative mb-6 overflow-hidden">
+                  <div className="relative mb-6 overflow-hidden bg-slate-100">
                     <img
-                      src={featuredScience.photo || "https://placehold.co/1200x675/e2e8f0/475569?text=Science"}
+                      src={featuredScience.photo || "https://www.revistacienciasestudiantes.com/team.jpg"}
                       className="w-full aspect-video object-cover transition-transform duration-700 group-hover:scale-[1.02]"
                       alt={featuredScience.title_en}
+                      onError={(e) => {
+                        e.target.src = "https://www.revistacienciasestudiantes.com/team.jpg";
+                      }}
                     />
                     <div className="absolute bottom-0 left-0 p-3 bg-white/90 backdrop-blur-sm border-t border-r border-slate-200">
                        <span className="font-system text-[10px] font-black uppercase tracking-widest" style={{ color: AREAS_MAP[featuredScience.area_id]?.color || '#0F172A' }}>
@@ -391,7 +394,7 @@ export default function NewsSectionEN({ className }) {
                 </article>
               )}
 
-              {/* Dense Sidebar (4 columns) */}
+              {/* Dense Sidebar (4 columns) - WITH SMALL IMAGES */}
               <aside className="lg:col-span-4 flex flex-col">
                 <div className="flex items-center justify-between border-b border-black pb-2 mb-6">
                   <h3 className="font-system font-black uppercase tracking-[0.2em] text-sm text-[#0F172A]">Trending Now</h3>
@@ -402,28 +405,39 @@ export default function NewsSectionEN({ className }) {
                   {sidebarScienceNews.map((item, idx) => (
                     <article 
                       key={item.id} 
-                      className="group cursor-pointer py-5 border-b border-slate-200 last:border-b-0 hover:bg-slate-50 transition-colors -mx-4 px-4 rounded-sm"
+                      className="group cursor-pointer py-4 border-b border-slate-200 last:border-b-0 hover:bg-slate-50 transition-colors -mx-2 px-2 rounded-sm flex gap-4"
                       onClick={() => openScienceNews(item)}
                     >
-                      <span className="font-system text-[9px] font-bold uppercase tracking-widest mb-2 block" style={{ color: AREAS_MAP[item.area_id]?.color || '#0F172A' }}>
-                        {AREAS_MAP[item.area_id]?.en || 'General'}
-                      </span>
-                      <h4 className="text-xl font-journal font-bold leading-snug mb-2 text-[#0F172A] group-hover:text-[#EA580C]">
-                        {item.title_en}
-                      </h4>
-                      <div className="editorial-abstract text-small truncate-2 mb-3">
-                        {decodeBody(item.content_en, true, 120)}
+                      {/* Small image for sidebar */}
+                      <div className="w-20 h-20 flex-shrink-0 bg-slate-100 overflow-hidden">
+                        <img
+                          src={item.photo || "https://www.revistacienciasestudiantes.com/team.jpg"}
+                          className="w-full h-full object-cover"
+                          alt={item.title_en}
+                          onError={(e) => {
+                            e.target.src = "https://www.revistacienciasestudiantes.com/team.jpg";
+                          }}
+                        />
                       </div>
-                      <time className="font-system text-[10px] text-slate-400 font-medium uppercase tracking-wider block">
-                        {formatDate(item.createdAt, true)}
-                      </time>
+                      
+                      <div className="flex-1">
+                        <span className="font-system text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: AREAS_MAP[item.area_id]?.color || '#0F172A' }}>
+                          {AREAS_MAP[item.area_id]?.en || 'General'}
+                        </span>
+                        <h4 className="text-sm font-journal font-bold leading-snug mb-1 text-[#0F172A] group-hover:text-[#EA580C]">
+                          {item.title_en}
+                        </h4>
+                        <time className="font-system text-[9px] text-slate-400 font-medium uppercase tracking-wider block">
+                          {formatDate(item.createdAt, true)}
+                        </time>
+                      </div>
                     </article>
                   ))}
                 </div>
               </aside>
             </div>
 
-            {/* MIDDLE BLOCK: Visual Row (4 equal columns) to give weight to images */}
+            {/* MIDDLE BLOCK: Visual Row (4 equal columns) - WITH IMAGES */}
             {visualRowNews.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 border-b border-slate-300 pb-12 mb-12">
                 {visualRowNews.map((item) => (
@@ -434,9 +448,12 @@ export default function NewsSectionEN({ className }) {
                   >
                     <div className="overflow-hidden mb-4 relative aspect-[16/10] bg-slate-100">
                       <img
-                        src={item.photo || "https://placehold.co/600x400/f1f5f9/94a3b8?text=Image"}
+                        src={item.photo || "https://www.revistacienciasestudiantes.com/team.jpg"}
                         className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500"
                         alt={item.title_en}
+                        onError={(e) => {
+                          e.target.src = "https://www.revistacienciasestudiantes.com/team.jpg";
+                        }}
                       />
                       <div className="absolute top-0 w-full h-1" style={{ backgroundColor: AREAS_MAP[item.area_id]?.color || '#0F172A' }}></div>
                     </div>
@@ -451,23 +468,30 @@ export default function NewsSectionEN({ className }) {
               </div>
             )}
 
-            {/* LOWER BLOCK: More list-style news if they exist */}
+            {/* LOWER BLOCK: More list-style news - WITH SMALL IMAGES */}
             {remainingScienceNews.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {remainingScienceNews.map((item) => (
                    <article 
                     key={item.id} 
-                    className="group cursor-pointer flex flex-col md:flex-row gap-4 border-b border-slate-200 pb-6 mb-6 last:border-0"
+                    className="group cursor-pointer flex gap-4 border-b border-slate-200 pb-6"
                     onClick={() => openScienceNews(item)}
                   >
-                    <div className="md:w-1/3 shrink-0 aspect-[4/3] bg-slate-100 overflow-hidden">
-                       <img src={item.photo || "https://placehold.co/300x225/f8fafc/cbd5e1"} className="w-full h-full object-cover" alt="" />
+                    <div className="w-24 h-24 flex-shrink-0 bg-slate-100 overflow-hidden">
+                      <img 
+                        src={item.photo || "https://www.revistacienciasestudiantes.com/team.jpg"} 
+                        className="w-full h-full object-cover"
+                        alt={item.title_en}
+                        onError={(e) => {
+                          e.target.src = "https://www.revistacienciasestudiantes.com/team.jpg";
+                        }}
+                      />
                     </div>
-                    <div className="md:w-2/3 flex flex-col">
+                    <div className="flex-1 flex flex-col">
                       <span className="font-system text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: AREAS_MAP[item.area_id]?.color || '#0F172A' }}>
                         {AREAS_MAP[item.area_id]?.en || 'General'}
                       </span>
-                      <h4 className="text-lg font-journal font-bold leading-snug mb-2 group-hover:text-[#EA580C]">
+                      <h4 className="text-base font-journal font-bold leading-snug mb-2 group-hover:text-[#EA580C]">
                         {item.title_en}
                       </h4>
                       <time className="font-system text-[10px] text-slate-400 mt-auto">{formatDate(item.createdAt, true)}</time>
@@ -510,33 +534,49 @@ export default function NewsSectionEN({ className }) {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
               
-              {/* Dense List of Internal News (8 columns) using Masonry/Columns CSS */}
+              {/* Dense List of Internal News - WITH IMAGES */}
               <div className="lg:col-span-8">
-                <div className="newspaper-columns">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {filteredInternalNews.map((item, idx) => (
                     <article 
                       key={item.id || idx}
-                      className="newspaper-item group cursor-pointer bg-white border border-slate-200 p-5 mb-6 shadow-sm hover:shadow-md hover:border-slate-300 transition-all rounded-sm relative"
+                      className="group cursor-pointer bg-white border border-slate-200 overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all rounded-sm relative flex flex-col"
                       onClick={() => openNews(item)}
                     >
+                      {/* Internal news image */}
+                      {item.photo && (
+                        <div className="aspect-[16/9] bg-slate-100 overflow-hidden">
+                          <img
+                            src={item.photo}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            alt={item.titulo}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                      
                       {/* Decorative telegram-style quote */}
                       <div className="absolute top-0 left-0 w-1 h-full bg-[#EA580C] opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       
-                      <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
-                        <span className="font-system text-[9px] font-black uppercase tracking-[0.25em] text-[#EA580C]">
-                          Official Notice
-                        </span>
-                        <time className="font-system text-[10px] text-slate-400 font-medium uppercase">
-                          {formatDate(item.fechaIso || item.fecha, true)}
-                        </time>
-                      </div>
-                      
-                      <h4 className="text-xl font-journal font-bold leading-tight mb-3 text-[#0F172A] group-hover:text-[#EA580C] transition-colors">
-                        {item.titulo}
-                      </h4>
-                      
-                      <div className="editorial-abstract text-small truncate-3 opacity-80">
-                        {decodeBody(item.cuerpo, true, 180)}
+                      <div className="p-5 flex-1 flex flex-col">
+                        <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                          <span className="font-system text-[9px] font-black uppercase tracking-[0.25em] text-[#EA580C]">
+                            Official Notice
+                          </span>
+                          <time className="font-system text-[10px] text-slate-400 font-medium uppercase">
+                            {formatDate(item.fechaIso || item.fecha, true)}
+                          </time>
+                        </div>
+                        
+                        <h4 className="text-xl font-journal font-bold leading-tight mb-3 text-[#0F172A] group-hover:text-[#EA580C] transition-colors">
+                          {item.titulo}
+                        </h4>
+                        
+                        <div className="editorial-abstract text-small truncate-3 opacity-80">
+                          {decodeBody(item.cuerpo, true, 180)}
+                        </div>
                       </div>
                     </article>
                   ))}
@@ -548,13 +588,34 @@ export default function NewsSectionEN({ className }) {
                 <div className="sticky top-8">
                   <NewsletterSubscription variant="compact" showTitle={false} />
                   
-                  {/* Space for quick links or extra info if needed */}
+                  {/* Updated quick links */}
                   <div className="mt-8 border-t border-slate-300 pt-6">
                     <h5 className="font-system font-bold uppercase tracking-widest text-xs text-slate-400 mb-4">Quick Links</h5>
                     <ul className="flex flex-col gap-3 font-journal text-sm text-[#0F172A]">
-                      <li><a href="#" className="hover:text-[#EA580C] underline decoration-slate-300 underline-offset-4">Publication Guidelines</a></li>
-                      <li><a href="#" className="hover:text-[#EA580C] underline decoration-slate-300 underline-offset-4">Author Directory</a></li>
-                      <li><a href="#" className="hover:text-[#EA580C] underline decoration-slate-300 underline-offset-4">Historical Archives</a></li>
+                      <li>
+                        <a 
+                          href="https://www.revistacienciasestudiantes.com/quickEN.html" 
+                          className="hover:text-[#EA580C] underline decoration-slate-300 underline-offset-4"
+                        >
+                          Author Policies
+                        </a>
+                      </li>
+                      <li>
+                        <a 
+                          href="https://www.revistacienciasestudiantes.com/policiesEN.html" 
+                          className="hover:text-[#EA580C] underline decoration-slate-300 underline-offset-4"
+                        >
+                          Regulations
+                        </a>
+                      </li>
+                      <li>
+                        <a 
+                          href="https://www.revistacienciasestudiantes.com/en/article" 
+                          className="hover:text-[#EA580C] underline decoration-slate-300 underline-offset-4"
+                        >
+                          Historical Archive
+                        </a>
+                      </li>
                     </ul>
                   </div>
                 </div>
