@@ -6,7 +6,6 @@ import { useLanguage } from '../hooks/useLanguage';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { UserIcon } from '@heroicons/react/24/outline';
-import PhoneInput from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input'
 // ============ COMPONENTE: HELP CAPSULE (PIN DE AYUDA) ============
@@ -2770,23 +2769,63 @@ if (author.isCorresponding && !author.phone) {
                           </div>
 {author.isCorresponding && (
   <div className="md:col-span-2">
-    <label className="flex items-center text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-      {isSpanish ? 'Teléfono de contacto' : 'Contact phone'}
-      <span className="text-red-500 ml-1">*</span>
-    </label>
-
+    
+    <div className="mb-2">
+      <label className="flex items-center text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+        {isSpanish ? 'Teléfono de contacto' : 'Contact phone'} 
+        <span className="text-red-500 ml-1">*</span>
+        <HelpCapsule
+          title={isSpanish ? '¿Qué número debo poner?' : 'What number should I enter?'}
+          text={isSpanish
+            ? 'Selecciona tu país y escribe tu número. Ejemplo Chile: selecciona 🇨🇱 y escribe 9 6165 3836.'
+            : 'Select your country and enter your number. Example: select 🇺🇸 and write 555 123 4567.'}
+        />
+      </label>
+      
+      <p className="text-[13px] text-slate-500 leading-relaxed">
+        {isSpanish 
+          ? 'Selecciona tu país e ingresa tu número (con o sin espacios).' 
+          : 'Select your country and enter your number.'}
+      </p>
+    </div>
+    
     <PhoneInput
       international
       defaultCountry="CL"
       value={author.phone || undefined}
-      onChange={(value) => handleAuthorChange(index, 'phone', value || '')}
+      onChange={(value) => {
+        handleAuthorChange(index, 'phone', value || '')
+      }}
+      placeholder={isSpanish ? "Ej: 9 6165 3836" : "Ex: 555 123 4567"}
       className={`PhoneInput ${validationErrors[`author_${index}_phone`] ? 'PhoneInput--error' : ''}`}
     />
-
+    
+    {/* Previsualización limpia */}
+    {author.phone && isValidPhoneNumber(author.phone) && (
+      <div className="mt-2 flex items-center gap-1.5 px-1">
+        <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+        <p className="text-[13px] text-slate-600">
+          {isSpanish ? 'Se registrará como:' : 'Will be registered as:'}{' '}
+          <strong className="font-medium text-slate-800">
+            {author.phone}
+          </strong>
+        </p>
+      </div>
+    )}
+    
     {validationErrors[`author_${index}_phone`] && (
-      <p className="text-red-500 text-xs mt-1.5">
+      <motion.p 
+        initial={{ opacity: 0, y: -5 }} 
+        animate={{ opacity: 1, y: 0 }}
+        className="text-red-500 text-xs mt-1.5 flex items-center gap-1 px-1"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
         {validationErrors[`author_${index}_phone`]}
-      </p>
+      </motion.p>
     )}
   </div>
 )}
