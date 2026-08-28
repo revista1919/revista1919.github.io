@@ -718,7 +718,7 @@ export default function NewsSectionEN({ className }) {
 
                     <article 
                       className="group cursor-pointer"
-                      onClick={() => window.location.href = "https://www.revistacienciasestudiantes.com/en/news/welcome-to-the-national-review-of-sciences-for-students-2025-09-15.html"}
+                      onClick={() => window.location.href = "https://www.revistacienciasestudiantes.com/news/bienvenido-a-la-revista-nacional-de-las-ciencias-para-estudiantes-2025-09-15.EN.html"}
                     >
                       <div className="overflow-hidden mb-5 aspect-[3/2] bg-slate-100">
                         <img 
