@@ -2,8 +2,8 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import 'quill-better-table/dist/quill-better-table.css'; // CSS para tablas
-import QuillBetterTable from 'quill-better-table';
+import TableHandler, { rewirteFormats } from 'quill1.3.7-table-module';
+import 'quill1.3.7-table-module/dist/index.css';
 import ImageResize from 'quill-image-resize-module-react';
 import { auth } from '../firebase';
 import { debounce } from 'lodash';
@@ -31,10 +31,9 @@ import {
 // Registrar ImageResize silenciosamente
 Quill.register('modules/imageResize', ImageResize, true);
 
-// Registrar BetterTable silenciosamente
-Quill.register({
-  'modules/better-table': QuillBetterTable
-}, true);
+// Registrar módulo de tablas compatible con Quill 1.3.7
+Quill.register({ [`modules/${TableHandler.moduleName}`]: TableHandler }, true);
+rewirteFormats(); // Importante para que listas etc. funcionen dentro de celdas
 
 // Para matemáticas
 import katex from 'katex';
@@ -190,9 +189,6 @@ export default function ScientificNewsUploadSection({ userData }) {
   // CONFIGURACIÓN DE TOOLBAR (para ambos editores)
   // ===================================================
   const modules = useMemo(() => ({
-    // ⚠️ Obligatorio: desactivar el módulo nativo de tablas
-    table: false,
-
     toolbar: {
       container: [
         [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
@@ -206,7 +202,7 @@ export default function ScientificNewsUploadSection({ userData }) {
         [{ 'align': [] }],
         ['blockquote', 'code-block'],
         ['link', 'image', 'video', 'formula'],
-        ['table'], // Botón custom para insertar tabla
+        [TableHandler.toolName], // Botón de tabla del módulo
         ['clean']
       ],
       handlers: {
@@ -223,47 +219,18 @@ export default function ScientificNewsUploadSection({ userData }) {
             const range = this.quill.getSelection();
             this.quill.insertEmbed(range.index, 'formula', mathText);
           }
-        },
-        // Handler para insertar tabla
-        table: function() {
-          const quill = this.quill;
-          const tableModule = quill.getModule('better-table');
-          if (tableModule) {
-            const rows = prompt(isSpanish ? 'Número de filas:' : 'Number of rows:', '3');
-            const cols = prompt(isSpanish ? 'Número de columnas:' : 'Number of columns:', '3');
-            if (rows && cols) {
-              tableModule.insertTable(parseInt(rows, 10), parseInt(cols, 10));
-            }
-          }
         }
       }
+    },
+
+    // Módulo de tablas (nombre dinámico del paquete)
+    [TableHandler.moduleName]: {
+      fullWidth: true
     },
 
     imageResize: {
       parchment: Quill.import('parchment'),
       modules: ['Resize', 'DisplaySize', 'Toolbar'],
-    },
-
-    // Configuración de better-table
-    'better-table': {
-      operationMenu: {
-        items: {
-          insertColumnRight: { text: isSpanish ? 'Insertar columna derecha' : 'Insert column right' },
-          insertColumnLeft: { text: isSpanish ? 'Insertar columna izquierda' : 'Insert column left' },
-          insertRowUp: { text: isSpanish ? 'Insertar fila arriba' : 'Insert row up' },
-          insertRowDown: { text: isSpanish ? 'Insertar fila abajo' : 'Insert row down' },
-          mergeCells: { text: isSpanish ? 'Combinar celdas' : 'Merge cells' },
-          unmergeCells: { text: isSpanish ? 'Separar celdas' : 'Unmerge cells' },
-          deleteColumn: { text: isSpanish ? 'Eliminar columna' : 'Delete column' },
-          deleteRow: { text: isSpanish ? 'Eliminar fila' : 'Delete row' },
-          deleteTable: { text: isSpanish ? 'Eliminar tabla' : 'Delete table' }
-        }
-      }
-    },
-
-    // ⚠️ Obligatorio para evitar el error .pop()
-    keyboard: {
-      bindings: QuillBetterTable.keyboardBindings
     },
 
     clipboard: {
@@ -276,9 +243,8 @@ export default function ScientificNewsUploadSection({ userData }) {
     'list', 'bullet', 'indent', 'align',
     'blockquote', 'code-block', 'link', 'image', 'video', 'formula',
     'color', 'background', 'font', 'size',
-    // Formatos de better-table
-    'table', 'table-cell', 'table-row', 'table-header-cell',
-    'table-container', 'table-body', 'table-col', 'table-col-group'
+    // Formatos de tabla del módulo
+    'table', 'table-cell', 'table-row', 'table-body', 'table-container'
   ];
 
   // ===================================================
