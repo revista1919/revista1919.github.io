@@ -1,9 +1,7 @@
 // src/components/ScientificNewsUploadSection.jsx
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import TableHandler, { rewirteFormats } from 'quill1.3.7-table-module';
-import 'quill1.3.7-table-module/dist/index.css';
 import ImageResize from 'quill-image-resize-module-react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -23,41 +21,35 @@ import {
 } from '@heroicons/react/24/outline';
 
 // ===================================================
-// REGISTRO GLOBAL (solo una vez)
+// REGISTRO GLOBAL
 // ===================================================
 window.katex = katex;
-
 Quill.register('modules/imageResize', ImageResize, true);
-Quill.register({ [`modules/${TableHandler.moduleName}`]: TableHandler }, true);
-rewirteFormats();
 
-// Video nativo de Quill → iframe (YouTube / Vimeo / MP4)
+// Video → iframe (YouTube / Vimeo)
 const BlockEmbed = Quill.import('blots/block/embed');
 class VideoBlot extends BlockEmbed {
   static create(value) {
     const node = super.create(value);
     let src = value;
-    // Convertir URLs de YouTube a embed
     if (typeof value === 'string') {
-      const yt =
-        value.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/) ||
-        value.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/);
-      if (yt) {
-        src = `https://www.youtube.com/embed/${yt[1]}?rel=0`;
-      }
+      const yt = value.match(
+        /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+      );
+      if (yt) src = `https://www.youtube.com/embed/${yt[1]}?rel=0`;
       const vimeo = value.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-      if (vimeo) {
-        src = `https://player.vimeo.com/video/${vimeo[1]}`;
-      }
+      if (vimeo) src = `https://player.vimeo.com/video/${vimeo[1]}`;
     }
     node.setAttribute('src', src);
     node.setAttribute('frameborder', '0');
     node.setAttribute('allowfullscreen', 'true');
-    node.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+    node.setAttribute(
+      'allow',
+      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+    );
     node.setAttribute('class', 'ql-video');
     return node;
   }
-
   static value(node) {
     return node.getAttribute('src');
   }
@@ -70,7 +62,8 @@ Quill.register(VideoBlot, true);
 // ===================================================
 // CONSTANTES
 // ===================================================
-const NEWS_SCRIPT_URL = 'https://us-central1-usuarios-rnce.cloudfunctions.net/uploadScientificNews';
+const NEWS_SCRIPT_URL =
+  'https://us-central1-usuarios-rnce.cloudfunctions.net/uploadScientificNews';
 
 const AREAS = [
   { id: 'biologia', labelEs: 'Biología', labelEn: 'Biology' },
@@ -120,15 +113,72 @@ const sanitizeInput = (input) => {
 
 const toYoutubeEmbed = (url) => {
   if (!url) return null;
-  const m =
-    url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/) ||
-    url.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/);
+  const m = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+  );
   if (m) return `https://www.youtube.com/embed/${m[1]}?rel=0`;
   const v = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   if (v) return `https://player.vimeo.com/video/${v[1]}`;
   if (url.includes('youtube.com/embed') || url.includes('player.vimeo.com')) return url;
-  return url; // mp4 u otras URLs directas
+  return url;
 };
+
+/** Genera HTML de tabla editorial (bordes limpios, tipo paper) */
+function buildEditorialTable(rows, cols) {
+  const cellStyle =
+    'border:1px solid #cbd5e1;padding:10px 14px;vertical-align:top;min-width:64px;word-break:break-word;';
+  const headerStyle =
+    'border:1px solid #cbd5e1;padding:10px 14px;vertical-align:top;min-width:64px;background:#f8fafc;font-weight:600;';
+
+  let html =
+    '<table class="editorial-table" style="border-collapse:collapse;width:100%;margin:1.75rem 0;table-layout:fixed;border:1px solid #cbd5e1;">';
+  html += '<tbody>';
+  for (let r = 0; r < rows; r++) {
+    html += '<tr>';
+    for (let c = 0; c < cols; c++) {
+      const style = r === 0 ? headerStyle : cellStyle;
+      const tag = r === 0 ? 'th' : 'td';
+      html += `<${tag} style="${style}"><p><br></p></${tag}>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table><p><br></p>';
+  return html;
+}
+
+/** Limpia tabla pegada (Word / HTML) y aplica estilo editorial */
+function cleanPastedTable(tableNode) {
+  const rows = tableNode.querySelectorAll('tr');
+  if (!rows.length) return null;
+
+  let html =
+    '<table class="editorial-table" style="border-collapse:collapse;width:100%;margin:1.75rem 0;table-layout:fixed;border:1px solid #cbd5e1;"><tbody>';
+
+  rows.forEach((tr, ri) => {
+    html += '<tr>';
+    const cells = tr.querySelectorAll('td, th');
+    cells.forEach((cell) => {
+      const isHeader = cell.tagName === 'TH' || ri === 0;
+      const tag = isHeader ? 'th' : 'td';
+      const style = isHeader
+        ? 'border:1px solid #cbd5e1;padding:10px 14px;vertical-align:top;background:#f8fafc;font-weight:600;'
+        : 'border:1px solid #cbd5e1;padding:10px 14px;vertical-align:top;';
+      // Texto plano + saltos básicos (evita basura de Word)
+      let text = (cell.innerText || cell.textContent || '').replace(/\r\n/g, '\n').trim();
+      const paragraphs = text
+        ? text
+            .split(/\n+/)
+            .map((line) => `<p>${line.replace(/</g, '&lt;').replace(/>/g, '&gt;') || '<br>'}</p>`)
+            .join('')
+        : '<p><br></p>';
+      html += `<${tag} style="${style}">${paragraphs}</${tag}>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  return html;
+}
 
 // ===================================================
 // COMPONENTE
@@ -153,14 +203,15 @@ export default function ScientificNewsUploadSection({ userData }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showWarning, setShowWarning] = useState(true);
 
-  const quillEsRef = useRef(null);
-  const quillEnRef = useRef(null);
   const editorEsRef = useRef(null);
   const editorEnRef = useRef(null);
   const activeEditorRef = useRef('es');
 
   const [showImageModal, setShowImageModal] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showTableModal, setShowTableModal] = useState(false);
+  const [tableRows, setTableRows] = useState(3);
+  const [tableCols, setTableCols] = useState(3);
   const [imageData, setImageData] = useState({ url: '', width: '', height: '', align: 'center' });
   const [videoUrl, setVideoUrl] = useState('');
 
@@ -193,14 +244,42 @@ export default function ScientificNewsUploadSection({ userData }) {
   );
 
   useEffect(() => {
-    debouncedSave({ titleEs, titleEn, bodyEs, bodyEn, author, areaId, category, tags, photo, featured });
+    debouncedSave({
+      titleEs,
+      titleEn,
+      bodyEs,
+      bodyEn,
+      author,
+      areaId,
+      category,
+      tags,
+      photo,
+      featured,
+    });
   }, [titleEs, titleEn, bodyEs, bodyEn, author, areaId, category, tags, photo, featured, debouncedSave]);
 
   useEffect(() => () => debouncedSave.cancel(), [debouncedSave]);
 
   const clearDraft = () => localStorage.removeItem('scientificNewsDraft');
 
-  // ---------- Modules (estable) ----------
+  // Clipboard: limpiar tablas pegadas (Word, Docs, etc.)
+  const setupClipboardMatchers = (quill) => {
+    if (!quill || quill.__tableMatchersAdded) return;
+    quill.__tableMatchersAdded = true;
+
+    quill.clipboard.addMatcher('TABLE', (node, delta) => {
+      const cleaned = cleanPastedTable(node);
+      if (!cleaned) return delta;
+      const Delta = Quill.import('delta');
+      // Convertir HTML limpio a delta
+      const temp = document.createElement('div');
+      temp.innerHTML = cleaned;
+      const converted = quill.clipboard.convert(temp);
+      return converted;
+    });
+  };
+
+  // ---------- Modules ----------
   const modules = useMemo(
     () => ({
       toolbar: {
@@ -216,7 +295,7 @@ export default function ScientificNewsUploadSection({ userData }) {
           [{ align: [] }],
           ['blockquote', 'code-block'],
           ['link', 'image', 'video', 'formula'],
-          [TableHandler.toolName],
+          ['table'],
           ['clean'],
         ],
         handlers: {
@@ -237,29 +316,46 @@ export default function ScientificNewsUploadSection({ userData }) {
               this.quill.insertEmbed(range.index, 'formula', text, 'user');
             }
           },
+          table() {
+            activeEditorRef.current = this.quill === editorEsRef.current ? 'es' : 'en';
+            setTableRows(3);
+            setTableCols(3);
+            setShowTableModal(true);
+          },
         },
-      },
-      [TableHandler.moduleName]: {
-        fullWidth: true,
-        dragResize: true,
       },
       imageResize: {
         parchment: Quill.import('parchment'),
         modules: ['Resize', 'DisplaySize', 'Toolbar'],
       },
-      clipboard: { matchVisual: false },
+      clipboard: {
+        matchVisual: false,
+      },
     }),
     [isSpanish]
   );
 
   const formats = [
-    'header', 'bold', 'italic', 'underline', 'strike', 'script',
-    'list', 'bullet', 'indent', 'align',
-    'blockquote', 'code-block', 'link', 'image', 'video', 'formula',
-    'color', 'background', 'font', 'size',
-    // formatos del módulo de tablas
-    'table', 'table-cell', 'table-row', 'table-body', 'table-container',
-    'table-col', 'table-col-group', 'td', 'tr', 'th',
+    'header',
+    'bold',
+    'italic',
+    'underline',
+    'strike',
+    'script',
+    'list',
+    'bullet',
+    'indent',
+    'align',
+    'blockquote',
+    'code-block',
+    'link',
+    'image',
+    'video',
+    'formula',
+    'color',
+    'background',
+    'font',
+    'size',
   ];
 
   // ---------- Encode body ----------
@@ -280,24 +376,24 @@ export default function ScientificNewsUploadSection({ userData }) {
       });
 
       temp.querySelectorAll('iframe.ql-video, .ql-video').forEach((iframe) => {
-        iframe.style.width = '100%';
-        iframe.style.aspectRatio = '16/9';
-        iframe.style.maxWidth = '100%';
-        iframe.style.margin = '1.5rem 0';
-        iframe.style.border = 'none';
-        iframe.style.borderRadius = '8px';
+        iframe.style.cssText =
+          'width:100%;max-width:100%;aspect-ratio:16/9;min-height:280px;margin:1.5rem 0;border:none;border-radius:8px;display:block;';
       });
 
+      // Tablas: asegurar bordes en publicación
       temp.querySelectorAll('table').forEach((table) => {
-        table.style.borderCollapse = 'collapse';
-        table.style.width = '100%';
-        table.style.margin = '1.5rem 0';
-        table.style.tableLayout = 'fixed';
-        table.querySelectorAll('td, th').forEach((cell) => {
-          cell.style.border = '1px solid #d1d5db';
-          cell.style.padding = '10px 12px';
-          cell.style.verticalAlign = 'top';
-          cell.style.wordBreak = 'break-word';
+        table.setAttribute(
+          'style',
+          'border-collapse:collapse;width:100%;margin:1.75rem 0;table-layout:fixed;border:1px solid #cbd5e1;'
+        );
+        table.querySelectorAll('td, th').forEach((cell, i, arr) => {
+          const isTh = cell.tagName === 'TH';
+          cell.setAttribute(
+            'style',
+            `border:1px solid #cbd5e1;padding:10px 14px;vertical-align:top;word-break:break-word;${
+              isTh ? 'background:#f8fafc;font-weight:600;' : ''
+            }`
+          );
         });
       });
 
@@ -313,7 +409,7 @@ export default function ScientificNewsUploadSection({ userData }) {
     }
   };
 
-  // ---------- Tags ----------
+  // ---------- Tags / photo ----------
   const addTag = () => {
     const t = tagInput.trim();
     if (t && !tags.includes(t)) {
@@ -321,10 +417,8 @@ export default function ScientificNewsUploadSection({ userData }) {
       setTagInput('');
     }
   };
-
   const removeTag = (i) => setTags(tags.filter((_, idx) => idx !== i));
 
-  // ---------- Portada ----------
   const handlePhotoUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -337,14 +431,16 @@ export default function ScientificNewsUploadSection({ userData }) {
     reader.readAsDataURL(file);
   };
 
-  // ---------- Insertar imagen ----------
+  // ---------- Insert helpers ----------
+  const getActiveEditor = () =>
+    activeEditorRef.current === 'es' ? editorEsRef.current : editorEnRef.current;
+
   const handleImageSubmit = () => {
-    const editor = activeEditorRef.current === 'es' ? editorEsRef.current : editorEnRef.current;
+    const editor = getActiveEditor();
     if (!editor || !imageData.url) return;
     let { url, width, height, align } = imageData;
     if (width && !/%|px$/.test(width)) width += 'px';
     if (height && !/%|px$/.test(height)) height += 'px';
-
     const range = editor.getSelection(true) || { index: editor.getLength() };
     editor.insertEmbed(range.index, 'image', url, 'user');
     const [leaf] = editor.getLeaf(range.index);
@@ -358,9 +454,8 @@ export default function ScientificNewsUploadSection({ userData }) {
     setShowImageModal(false);
   };
 
-  // ---------- Insertar video ----------
   const handleVideoSubmit = () => {
-    const editor = activeEditorRef.current === 'es' ? editorEsRef.current : editorEnRef.current;
+    const editor = getActiveEditor();
     if (!editor || !videoUrl.trim()) return;
     const embed = toYoutubeEmbed(videoUrl.trim());
     const range = editor.getSelection(true) || { index: editor.getLength() };
@@ -368,6 +463,18 @@ export default function ScientificNewsUploadSection({ userData }) {
     editor.setSelection(range.index + 1);
     setShowVideoModal(false);
     setVideoUrl('');
+  };
+
+  const handleTableSubmit = () => {
+    const editor = getActiveEditor();
+    if (!editor) return;
+    const r = Math.min(20, Math.max(1, parseInt(tableRows, 10) || 3));
+    const c = Math.min(10, Math.max(1, parseInt(tableCols, 10) || 3));
+    const html = buildEditorialTable(r, c);
+    const range = editor.getSelection(true) || { index: editor.getLength() };
+    editor.clipboard.dangerouslyPasteHTML(range.index, html, 'user');
+    editor.setSelection(range.index + 1);
+    setShowTableModal(false);
   };
 
   // ---------- Submit ----------
@@ -378,11 +485,17 @@ export default function ScientificNewsUploadSection({ userData }) {
       return;
     }
     if (!titleEs.trim() && !titleEn.trim()) {
-      setStatus({ type: 'error', msg: isSpanish ? 'Se requiere al menos un título' : 'At least one title required' });
+      setStatus({
+        type: 'error',
+        msg: isSpanish ? 'Se requiere al menos un título' : 'At least one title required',
+      });
       return;
     }
     if (!bodyEs.trim() && !bodyEn.trim()) {
-      setStatus({ type: 'error', msg: isSpanish ? 'Se requiere al menos un cuerpo' : 'At least one body required' });
+      setStatus({
+        type: 'error',
+        msg: isSpanish ? 'Se requiere al menos un cuerpo' : 'At least one body required',
+      });
       return;
     }
     if (!author.trim()) {
@@ -446,7 +559,10 @@ export default function ScientificNewsUploadSection({ userData }) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
       console.error(e);
-      setStatus({ type: 'error', msg: e.message || (isSpanish ? 'Error al publicar' : 'Publish error') });
+      setStatus({
+        type: 'error',
+        msg: e.message || (isSpanish ? 'Error al publicar' : 'Publish error'),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -463,7 +579,6 @@ export default function ScientificNewsUploadSection({ userData }) {
         .font-serif-nature { font-family: 'PT Serif', Georgia, serif; }
         .font-sans-nature { font-family: 'Roboto', Arial, sans-serif; }
 
-        /* Toolbar */
         .editorial-editor-wrapper .ql-toolbar.ql-snow {
           border: none;
           border-bottom: 1px solid #e5e7eb;
@@ -488,7 +603,7 @@ export default function ScientificNewsUploadSection({ userData }) {
           overflow-x: auto;
         }
         .editorial-editor-wrapper .ql-editor p {
-          margin-bottom: 0.9rem;
+          margin-bottom: 0.85rem;
           line-height: 1.65;
           color: #444;
         }
@@ -518,55 +633,44 @@ export default function ScientificNewsUploadSection({ userData }) {
           border-radius: 4px;
         }
 
-        /* ===== TABLAS (clave para que se vean bien) ===== */
+        /* ===== TABLAS EDITORIALES ===== */
         .editorial-editor-wrapper .ql-editor table,
-        .editorial-editor-wrapper .ql-editor .ql-table,
-        .editorial-editor-wrapper .ql-editor .ql-table-wrapper table {
+        .editorial-editor-wrapper .ql-editor table.editorial-table {
           border-collapse: collapse !important;
           width: 100% !important;
           max-width: 100% !important;
-          margin: 1.5rem 0 !important;
+          margin: 1.75rem 0 !important;
           table-layout: fixed !important;
           display: table !important;
-        }
-        .editorial-editor-wrapper .ql-editor .ql-table-wrapper {
-          overflow-x: auto !important;
-          max-width: 100% !important;
-          margin: 1.5rem 0 !important;
-          display: block !important;
+          border: 1px solid #cbd5e1 !important;
         }
         .editorial-editor-wrapper .ql-editor td,
         .editorial-editor-wrapper .ql-editor th {
-          border: 1px solid #d1d5db !important;
-          padding: 10px 12px !important;
+          border: 1px solid #cbd5e1 !important;
+          padding: 10px 14px !important;
           vertical-align: top !important;
           word-break: break-word !important;
           min-width: 48px !important;
           background: #fff !important;
-          position: relative !important;
         }
         .editorial-editor-wrapper .ql-editor th {
-          background: #f3f4f6 !important;
+          background: #f8fafc !important;
           font-weight: 600 !important;
+          font-family: 'Roboto', sans-serif !important;
+          font-size: 0.9em !important;
+          color: #1e293b !important;
         }
-        /* Contener herramientas flotantes del módulo de tablas */
-        .editorial-editor-wrapper .ql-editor .ql-table-selection,
-        .editorial-editor-wrapper .ql-editor .ql-table-operate-line,
-        .editorial-editor-wrapper .ql-table-tool {
-          max-width: 100% !important;
-        }
-        .editorial-editor-wrapper {
-          position: relative;
-          overflow: hidden;
+        .editorial-editor-wrapper .ql-editor td p,
+        .editorial-editor-wrapper .ql-editor th p {
+          margin: 0 !important;
         }
 
-        /* Videos embebidos */
+        /* Videos */
         .editorial-editor-wrapper .ql-editor iframe.ql-video,
         .editorial-editor-wrapper .ql-editor .ql-video {
           width: 100% !important;
           max-width: 100% !important;
           aspect-ratio: 16 / 9;
-          height: auto !important;
           min-height: 280px;
           margin: 1.5rem 0 !important;
           border: none !important;
@@ -578,11 +682,22 @@ export default function ScientificNewsUploadSection({ userData }) {
           display: inline-block;
           margin: 0 3px;
         }
-
         .editorial-editor-wrapper .ql-editor ol,
         .editorial-editor-wrapper .ql-editor ul {
           margin: 0.75rem 0;
           padding-left: 1.75rem;
+        }
+
+        /* Icono botón tabla */
+        .ql-snow .ql-toolbar button.ql-table::before,
+        .ql-toolbar.ql-snow button.ql-table::before {
+          content: "⊞";
+          font-size: 15px;
+          line-height: 1;
+          color: #555;
+        }
+        .ql-snow .ql-toolbar button.ql-table:hover::before {
+          color: #111;
         }
 
         .ql-snow .ql-stroke { stroke: #555 !important; stroke-width: 1.4px; }
@@ -607,7 +722,6 @@ export default function ScientificNewsUploadSection({ userData }) {
       />
 
       <div className="max-w-[1280px] mx-auto px-4 md:px-8 pt-8">
-        {/* Header */}
         <div className="border-b-2 border-gray-800 pb-4 mb-8">
           <h1 className="text-4xl md:text-5xl font-serif-nature font-bold text-black mb-2">
             {isSpanish ? 'Envío de Artículos' : 'Article Submission'}
@@ -619,7 +733,6 @@ export default function ScientificNewsUploadSection({ userData }) {
           </p>
         </div>
 
-        {/* Aviso */}
         <AnimatePresence>
           {showWarning && (
             <motion.div
@@ -635,10 +748,11 @@ export default function ScientificNewsUploadSection({ userData }) {
                 </h3>
                 <p className="text-sm text-gray-700 leading-relaxed font-serif-nature">
                   {isSpanish
-                    ? 'Se recomienda redactar el cuerpo en un procesador externo (Word, LaTeX o Docs) antes de pegarlo aquí, para asegurar respaldo.'
-                    : 'Draft the body in an external processor before pasting here to ensure backup.'}
+                    ? 'Puedes redactar aquí o pegar desde Word/Docs. Las tablas se limpian automáticamente al pegar. Usa el botón ⊞ del toolbar para insertar tablas nuevas.'
+                    : 'Write here or paste from Word/Docs. Tables are cleaned on paste. Use the ⊞ toolbar button to insert new tables.'}
                 </p>
                 <button
+                  type="button"
                   onClick={() => setShowWarning(false)}
                   className="mt-3 text-xs font-bold text-gray-900 uppercase tracking-widest hover:text-gray-600 font-sans-nature"
                 >
@@ -649,7 +763,6 @@ export default function ScientificNewsUploadSection({ userData }) {
           )}
         </AnimatePresence>
 
-        {/* Status */}
         {status.msg && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -670,7 +783,6 @@ export default function ScientificNewsUploadSection({ userData }) {
         )}
 
         <div className="grid grid-cols-1 gap-8">
-          {/* Metadatos */}
           <section className="border-b border-gray-300 pb-8">
             <h2 className="text-xl font-serif-nature font-bold text-black mb-6">
               {isSpanish ? 'Metadatos del Documento' : 'Document Metadata'}
@@ -708,7 +820,6 @@ export default function ScientificNewsUploadSection({ userData }) {
             </div>
           </section>
 
-          {/* Títulos */}
           <section className="border-b border-gray-300 pb-8">
             <h2 className="text-xl font-serif-nature font-bold text-black mb-6">
               {isSpanish ? 'Encabezados' : 'Headings'}
@@ -741,7 +852,6 @@ export default function ScientificNewsUploadSection({ userData }) {
             </div>
           </section>
 
-          {/* Cuerpo */}
           <section className="border-b border-gray-300 pb-8">
             <h2 className="text-xl font-serif-nature font-bold text-black mb-6">
               {isSpanish ? 'Cuerpo del Documento' : 'Document Body'}
@@ -754,15 +864,15 @@ export default function ScientificNewsUploadSection({ userData }) {
               <div className="editorial-editor-wrapper border border-gray-300 bg-white rounded-sm shadow-sm">
                 <ReactQuill
                   ref={(ref) => {
-                    quillEsRef.current = ref;
                     editorEsRef.current = ref?.getEditor() || null;
+                    if (editorEsRef.current) setupClipboardMatchers(editorEsRef.current);
                   }}
                   theme="snow"
                   value={bodyEs}
                   onChange={setBodyEs}
                   modules={modules}
                   formats={formats}
-                  placeholder={isSpanish ? 'Escriba el contenido en español...' : 'Write Spanish content...'}
+                  placeholder={isSpanish ? 'Escriba o pegue el contenido en español...' : 'Write or paste Spanish content...'}
                 />
               </div>
             </div>
@@ -774,21 +884,20 @@ export default function ScientificNewsUploadSection({ userData }) {
               <div className="editorial-editor-wrapper border border-gray-300 bg-white rounded-sm shadow-sm">
                 <ReactQuill
                   ref={(ref) => {
-                    quillEnRef.current = ref;
                     editorEnRef.current = ref?.getEditor() || null;
+                    if (editorEnRef.current) setupClipboardMatchers(editorEnRef.current);
                   }}
                   theme="snow"
                   value={bodyEn}
                   onChange={setBodyEn}
                   modules={modules}
                   formats={formats}
-                  placeholder={isSpanish ? 'Escriba el contenido en inglés...' : 'Write English content...'}
+                  placeholder={isSpanish ? 'Escriba o pegue el contenido en inglés...' : 'Write or paste English content...'}
                 />
               </div>
             </div>
           </section>
 
-          {/* Portada + Taxonomía */}
           <section className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-gray-300 pb-8">
             <div>
               <h2 className="text-xl font-serif-nature font-bold text-black mb-6 flex items-center gap-2">
@@ -1009,7 +1118,7 @@ export default function ScientificNewsUploadSection({ userData }) {
         </div>
       )}
 
-      {/* Modal Video (YouTube / Vimeo / MP4) */}
+      {/* Modal Video */}
       {showVideoModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[999] p-6">
           <div className="bg-white shadow-2xl max-w-md w-full border border-gray-300">
@@ -1022,8 +1131,8 @@ export default function ScientificNewsUploadSection({ userData }) {
             <div className="p-5 space-y-3">
               <p className="text-sm text-gray-600 font-serif-nature">
                 {isSpanish
-                  ? 'Pega una URL de YouTube, Vimeo o un enlace directo a un MP4.'
-                  : 'Paste a YouTube, Vimeo or direct MP4 URL.'}
+                  ? 'YouTube, Vimeo o enlace directo a MP4.'
+                  : 'YouTube, Vimeo or direct MP4 URL.'}
               </p>
               <input
                 type="text"
@@ -1046,6 +1155,90 @@ export default function ScientificNewsUploadSection({ userData }) {
               <button
                 type="button"
                 onClick={handleVideoSubmit}
+                className="px-8 py-2.5 bg-black text-white font-sans-nature font-bold hover:bg-gray-800 uppercase tracking-wider text-sm"
+              >
+                {isSpanish ? 'Insertar' : 'Insert'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tabla */}
+      {showTableModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[999] p-6">
+          <div className="bg-white shadow-2xl max-w-sm w-full border border-gray-300">
+            <div className="p-5 border-b border-gray-200 bg-gray-50">
+              <h3 className="font-sans-nature font-bold text-gray-900 uppercase tracking-widest text-sm">
+                {isSpanish ? 'Insertar Tabla' : 'Insert Table'}
+              </h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-600 font-serif-nature">
+                {isSpanish
+                  ? 'Primera fila como encabezado. Estilo editorial con bordes limpios.'
+                  : 'First row as header. Editorial style with clean borders.'}
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
+                    {isSpanish ? 'Filas' : 'Rows'}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={tableRows}
+                    onChange={(e) => setTableRows(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
+                    {isSpanish ? 'Columnas' : 'Columns'}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={tableCols}
+                    onChange={(e) => setTableCols(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base"
+                  />
+                </div>
+              </div>
+              {/* Preview mini */}
+              <div className="border border-gray-200 p-3 bg-gray-50">
+                <div
+                  className="grid gap-px bg-slate-300"
+                  style={{
+                    gridTemplateColumns: `repeat(${Math.min(10, Math.max(1, parseInt(tableCols, 10) || 3))}, 1fr)`,
+                  }}
+                >
+                  {Array.from({
+                    length:
+                      Math.min(20, Math.max(1, parseInt(tableRows, 10) || 3)) *
+                      Math.min(10, Math.max(1, parseInt(tableCols, 10) || 3)),
+                  }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-4 ${i < (parseInt(tableCols, 10) || 3) ? 'bg-slate-100' : 'bg-white'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="p-5 bg-gray-50 flex justify-end gap-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setShowTableModal(false)}
+                className="font-sans-nature font-bold text-gray-600 hover:text-gray-900 uppercase tracking-wider text-sm"
+              >
+                {isSpanish ? 'Cancelar' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleTableSubmit}
                 className="px-8 py-2.5 bg-black text-white font-sans-nature font-bold hover:bg-gray-800 uppercase tracking-wider text-sm"
               >
                 {isSpanish ? 'Insertar' : 'Insert'}
