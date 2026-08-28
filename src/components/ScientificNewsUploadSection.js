@@ -123,22 +123,29 @@ const toYoutubeEmbed = (url) => {
   return url;
 };
 
-/** Genera HTML de tabla editorial (bordes limpios, tipo paper) */
-function buildEditorialTable(rows, cols) {
-  const cellStyle =
-    'border:1px solid #cbd5e1;padding:10px 14px;vertical-align:top;min-width:64px;word-break:break-word;';
-  const headerStyle =
-    'border:1px solid #cbd5e1;padding:10px 14px;vertical-align:top;min-width:64px;background:#f8fafc;font-weight:600;';
+/** Genera HTML de tabla editorial con caption opcional */
+function buildEditorialTable(rows, cols, caption = '') {
+  const cell =
+    'border:1px solid #cbd5e1;padding:8px 12px;vertical-align:top;min-width:48px;word-break:break-word;font-size:14px;';
+  const header =
+    cell + 'background:#f8fafc;font-weight:600;font-family:Roboto,Arial,sans-serif;';
 
   let html =
-    '<table class="editorial-table" style="border-collapse:collapse;width:100%;margin:1.75rem 0;table-layout:fixed;border:1px solid #cbd5e1;">';
+    '<table class="editorial-table" style="border-collapse:collapse;width:100%;max-width:100%;margin:1.25rem 0;table-layout:fixed;border:1px solid #cbd5e1;">';
+
+  if (caption && caption.trim()) {
+    html += `<caption style="caption-side:top;text-align:left;font-family:Roboto,Arial,sans-serif;font-size:13px;font-weight:600;color:#334155;margin-bottom:0.5rem;padding:0 2px;">${caption
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')}</caption>`;
+  }
+
   html += '<tbody>';
   for (let r = 0; r < rows; r++) {
     html += '<tr>';
     for (let c = 0; c < cols; c++) {
-      const style = r === 0 ? headerStyle : cellStyle;
       const tag = r === 0 ? 'th' : 'td';
-      html += `<${tag} style="${style}"><p><br></p></${tag}>`;
+      const st = r === 0 ? header : cell;
+      html += `<${tag} style="${st}"><p><br></p></${tag}>`;
     }
     html += '</tr>';
   }
@@ -152,7 +159,7 @@ function cleanPastedTable(tableNode) {
   if (!rows.length) return null;
 
   let html =
-    '<table class="editorial-table" style="border-collapse:collapse;width:100%;margin:1.75rem 0;table-layout:fixed;border:1px solid #cbd5e1;"><tbody>';
+    '<table class="editorial-table" style="border-collapse:collapse;width:100%;max-width:100%;margin:1.25rem 0;table-layout:fixed;border:1px solid #cbd5e1;"><tbody>';
 
   rows.forEach((tr, ri) => {
     html += '<tr>';
@@ -161,8 +168,8 @@ function cleanPastedTable(tableNode) {
       const isHeader = cell.tagName === 'TH' || ri === 0;
       const tag = isHeader ? 'th' : 'td';
       const style = isHeader
-        ? 'border:1px solid #cbd5e1;padding:10px 14px;vertical-align:top;background:#f8fafc;font-weight:600;'
-        : 'border:1px solid #cbd5e1;padding:10px 14px;vertical-align:top;';
+        ? 'border:1px solid #cbd5e1;padding:8px 12px;vertical-align:top;background:#f8fafc;font-weight:600;font-family:Roboto,Arial,sans-serif;font-size:14px;'
+        : 'border:1px solid #cbd5e1;padding:8px 12px;vertical-align:top;font-size:14px;';
       // Texto plano + saltos básicos (evita basura de Word)
       let text = (cell.innerText || cell.textContent || '').replace(/\r\n/g, '\n').trim();
       const paragraphs = text
@@ -212,6 +219,7 @@ export default function ScientificNewsUploadSection({ userData }) {
   const [showTableModal, setShowTableModal] = useState(false);
   const [tableRows, setTableRows] = useState(3);
   const [tableCols, setTableCols] = useState(3);
+  const [tableCaption, setTableCaption] = useState('');
   const [imageData, setImageData] = useState({ url: '', width: '', height: '', align: 'center' });
   const [videoUrl, setVideoUrl] = useState('');
 
@@ -262,21 +270,37 @@ export default function ScientificNewsUploadSection({ userData }) {
 
   const clearDraft = () => localStorage.removeItem('scientificNewsDraft');
 
-  // Clipboard: limpiar tablas pegadas (Word, Docs, etc.)
-  const setupClipboardMatchers = (quill) => {
-    if (!quill || quill.__tableMatchersAdded) return;
-    quill.__tableMatchersAdded = true;
+  // Función para manejar el pegado de tablas sin recursión
+  const attachPasteHandler = (quill) => {
+    if (!quill || quill.__pasteTableOk) return;
+    quill.__pasteTableOk = true;
 
-    quill.clipboard.addMatcher('TABLE', (node, delta) => {
-      const cleaned = cleanPastedTable(node);
-      if (!cleaned) return delta;
-      const Delta = Quill.import('delta');
-      // Convertir HTML limpio a delta
-      const temp = document.createElement('div');
-      temp.innerHTML = cleaned;
-      const converted = quill.clipboard.convert(temp);
-      return converted;
-    });
+    quill.root.addEventListener(
+      'paste',
+      (e) => {
+        const html = e.clipboardData?.getData('text/html') || '';
+        if (!/<table[\s>]/i.test(html)) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        try {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const table = doc.querySelector('table');
+          if (!table) return;
+
+          const cleaned = cleanPastedTable(table);
+          if (!cleaned) return;
+
+          const range = quill.getSelection(true) || { index: quill.getLength() };
+          // Insertar HTML ya limpio (NO pasar por convert del matcher)
+          quill.clipboard.dangerouslyPasteHTML(range.index, cleaned + '<p><br></p>', 'user');
+        } catch (err) {
+          console.warn('Paste table failed', err);
+        }
+      },
+      true
+    );
   };
 
   // ---------- Modules ----------
@@ -288,7 +312,6 @@ export default function ScientificNewsUploadSection({ userData }) {
           ['bold', 'italic', 'underline', 'strike'],
           [{ script: 'sub' }, { script: 'super' }],
           [{ color: [] }, { background: [] }],
-          [{ font: [] }],
           [{ size: ['small', false, 'large', 'huge'] }],
           [{ list: 'ordered' }, { list: 'bullet' }],
           [{ indent: '-1' }, { indent: '+1' }],
@@ -320,6 +343,7 @@ export default function ScientificNewsUploadSection({ userData }) {
             activeEditorRef.current = this.quill === editorEsRef.current ? 'es' : 'en';
             setTableRows(3);
             setTableCols(3);
+            setTableCaption('');
             setShowTableModal(true);
           },
         },
@@ -354,7 +378,6 @@ export default function ScientificNewsUploadSection({ userData }) {
     'formula',
     'color',
     'background',
-    'font',
     'size',
   ];
 
@@ -367,7 +390,7 @@ export default function ScientificNewsUploadSection({ userData }) {
       temp.innerHTML = cleaned;
 
       temp.querySelectorAll('img').forEach((img) => {
-        let style = 'max-width:100%;height:auto;margin:1.5rem 0;display:block;';
+        let style = 'max-width:100%;height:auto;margin:1.25rem 0;display:block;';
         if (img.style.width) style += `width:${img.style.width};`;
         if (img.style.height) style += `height:${img.style.height};`;
         img.setAttribute('style', style);
@@ -377,21 +400,21 @@ export default function ScientificNewsUploadSection({ userData }) {
 
       temp.querySelectorAll('iframe.ql-video, .ql-video').forEach((iframe) => {
         iframe.style.cssText =
-          'width:100%;max-width:100%;aspect-ratio:16/9;min-height:280px;margin:1.5rem 0;border:none;border-radius:8px;display:block;';
+          'width:100%;max-width:640px;aspect-ratio:16/9;margin:1.25rem auto;display:block;border:none;border-radius:8px;';
       });
 
       // Tablas: asegurar bordes en publicación
       temp.querySelectorAll('table').forEach((table) => {
         table.setAttribute(
           'style',
-          'border-collapse:collapse;width:100%;margin:1.75rem 0;table-layout:fixed;border:1px solid #cbd5e1;'
+          'border-collapse:collapse;width:100%;max-width:100%;margin:1.25rem 0;table-layout:fixed;border:1px solid #cbd5e1;'
         );
-        table.querySelectorAll('td, th').forEach((cell, i, arr) => {
+        table.querySelectorAll('td, th').forEach((cell) => {
           const isTh = cell.tagName === 'TH';
           cell.setAttribute(
             'style',
-            `border:1px solid #cbd5e1;padding:10px 14px;vertical-align:top;word-break:break-word;${
-              isTh ? 'background:#f8fafc;font-weight:600;' : ''
+            `border:1px solid #cbd5e1;padding:8px 12px;vertical-align:top;word-break:break-word;font-size:14px;${
+              isTh ? 'background:#f8fafc;font-weight:600;font-family:Roboto,Arial,sans-serif;' : ''
             }`
           );
         });
@@ -438,18 +461,24 @@ export default function ScientificNewsUploadSection({ userData }) {
   const handleImageSubmit = () => {
     const editor = getActiveEditor();
     if (!editor || !imageData.url) return;
+
     let { url, width, height, align } = imageData;
+    // Por defecto compacto en el editor
+    if (!width) width = '280px';
     if (width && !/%|px$/.test(width)) width += 'px';
     if (height && !/%|px$/.test(height)) height += 'px';
+
     const range = editor.getSelection(true) || { index: editor.getLength() };
     editor.insertEmbed(range.index, 'image', url, 'user');
     const [leaf] = editor.getLeaf(range.index);
     if (leaf?.domNode) {
-      if (width) leaf.domNode.style.width = width;
-      if (height) leaf.domNode.style.height = height;
+      leaf.domNode.style.width = width;
+      leaf.domNode.style.maxWidth = '100%';
+      leaf.domNode.style.height = height || 'auto';
+      leaf.domNode.style.display = 'inline-block';
     }
     editor.setSelection(range.index, 1);
-    if (align) editor.format('align', align);
+    if (align) editor.format('align', align || 'center');
     editor.setSelection(range.index + 1);
     setShowImageModal(false);
   };
@@ -470,11 +499,12 @@ export default function ScientificNewsUploadSection({ userData }) {
     if (!editor) return;
     const r = Math.min(20, Math.max(1, parseInt(tableRows, 10) || 3));
     const c = Math.min(10, Math.max(1, parseInt(tableCols, 10) || 3));
-    const html = buildEditorialTable(r, c);
+    const html = buildEditorialTable(r, c, tableCaption);
     const range = editor.getSelection(true) || { index: editor.getLength() };
     editor.clipboard.dangerouslyPasteHTML(range.index, html, 'user');
     editor.setSelection(range.index + 1);
     setShowTableModal(false);
+    setTableCaption('');
   };
 
   // ---------- Submit ----------
@@ -627,10 +657,13 @@ export default function ScientificNewsUploadSection({ userData }) {
           color: #555;
         }
         .editorial-editor-wrapper .ql-editor img {
-          max-width: 100%;
-          height: auto;
-          margin: 1.25rem 0;
+          max-width: 280px !important;
+          width: auto !important;
+          height: auto !important;
+          margin: 0.75rem 0 !important;
           border-radius: 4px;
+          display: inline-block;
+          vertical-align: middle;
         }
 
         /* ===== TABLAS EDITORIALES ===== */
@@ -639,7 +672,7 @@ export default function ScientificNewsUploadSection({ userData }) {
           border-collapse: collapse !important;
           width: 100% !important;
           max-width: 100% !important;
-          margin: 1.75rem 0 !important;
+          margin: 1.25rem 0 !important;
           table-layout: fixed !important;
           display: table !important;
           border: 1px solid #cbd5e1 !important;
@@ -647,18 +680,28 @@ export default function ScientificNewsUploadSection({ userData }) {
         .editorial-editor-wrapper .ql-editor td,
         .editorial-editor-wrapper .ql-editor th {
           border: 1px solid #cbd5e1 !important;
-          padding: 10px 14px !important;
+          padding: 8px 12px !important;
           vertical-align: top !important;
           word-break: break-word !important;
           min-width: 48px !important;
           background: #fff !important;
+          font-size: 14px !important;
         }
         .editorial-editor-wrapper .ql-editor th {
           background: #f8fafc !important;
           font-weight: 600 !important;
           font-family: 'Roboto', sans-serif !important;
-          font-size: 0.9em !important;
           color: #1e293b !important;
+        }
+        .editorial-editor-wrapper .ql-editor caption {
+          caption-side: top !important;
+          text-align: left !important;
+          font-family: 'Roboto', sans-serif !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          color: #334155 !important;
+          margin-bottom: 0.5rem !important;
+          padding: 0 2px !important;
         }
         .editorial-editor-wrapper .ql-editor td p,
         .editorial-editor-wrapper .ql-editor th p {
@@ -668,14 +711,16 @@ export default function ScientificNewsUploadSection({ userData }) {
         /* Videos */
         .editorial-editor-wrapper .ql-editor iframe.ql-video,
         .editorial-editor-wrapper .ql-editor .ql-video {
+          display: block !important;
           width: 100% !important;
-          max-width: 100% !important;
+          max-width: 420px !important;
+          height: auto !important;
           aspect-ratio: 16 / 9;
-          min-height: 280px;
-          margin: 1.5rem 0 !important;
+          min-height: 0 !important;
+          max-height: 236px !important;
+          margin: 1rem auto !important;
           border: none !important;
-          border-radius: 8px;
-          display: block;
+          border-radius: 6px;
         }
 
         .editorial-editor-wrapper .ql-editor .ql-formula {
@@ -865,7 +910,7 @@ export default function ScientificNewsUploadSection({ userData }) {
                 <ReactQuill
                   ref={(ref) => {
                     editorEsRef.current = ref?.getEditor() || null;
-                    if (editorEsRef.current) setupClipboardMatchers(editorEsRef.current);
+                    if (editorEsRef.current) attachPasteHandler(editorEsRef.current);
                   }}
                   theme="snow"
                   value={bodyEs}
@@ -885,7 +930,7 @@ export default function ScientificNewsUploadSection({ userData }) {
                 <ReactQuill
                   ref={(ref) => {
                     editorEnRef.current = ref?.getEditor() || null;
-                    if (editorEnRef.current) setupClipboardMatchers(editorEnRef.current);
+                    if (editorEnRef.current) attachPasteHandler(editorEnRef.current);
                   }}
                   theme="snow"
                   value={bodyEn}
@@ -1063,7 +1108,7 @@ export default function ScientificNewsUploadSection({ userData }) {
                   </label>
                   <input
                     type="text"
-                    placeholder="100% o 400px"
+                    placeholder="280px"
                     value={imageData.width}
                     onChange={(e) => setImageData({ ...imageData, width: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base"
@@ -1206,6 +1251,18 @@ export default function ScientificNewsUploadSection({ userData }) {
                     className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 font-sans-nature">
+                  {isSpanish ? 'Nombre / pie de tabla (opcional)' : 'Table name / caption (optional)'}
+                </label>
+                <input
+                  type="text"
+                  value={tableCaption}
+                  onChange={(e) => setTableCaption(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 focus:border-black outline-none text-base"
+                  placeholder={isSpanish ? 'Ej: Tabla 1. Resultados...' : 'e.g. Table 1. Results...'}
+                />
               </div>
               {/* Preview mini */}
               <div className="border border-gray-200 p-3 bg-gray-50">
