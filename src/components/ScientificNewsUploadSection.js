@@ -59,6 +59,31 @@ VideoBlot.tagName = 'iframe';
 VideoBlot.className = 'ql-video';
 Quill.register(VideoBlot, true);
 
+// Tabla → BlockEmbed (Quill 1.3 no soporta tablas nativas)
+class TableEmbedBlot extends BlockEmbed {
+  static create(value) {
+    const node = super.create();
+    node.setAttribute('contenteditable', 'false');
+    node.setAttribute('class', 'ql-table-embed');
+    const html = typeof value === 'string' ? value : value?.html || '';
+    node.innerHTML = html;
+    // Celdas editables por dentro
+    node.querySelectorAll('td, th').forEach((cell) => {
+      cell.setAttribute('contenteditable', 'true');
+    });
+    return node;
+  }
+
+  static value(node) {
+    const table = node.querySelector('table');
+    return table ? table.outerHTML : node.innerHTML;
+  }
+}
+TableEmbedBlot.blotName = 'tableEmbed';
+TableEmbedBlot.tagName = 'div';
+TableEmbedBlot.className = 'ql-table-embed';
+Quill.register(TableEmbedBlot, true);
+
 // ===================================================
 // CONSTANTES
 // ===================================================
@@ -126,30 +151,28 @@ const toYoutubeEmbed = (url) => {
 /** Genera HTML de tabla editorial con caption opcional */
 function buildEditorialTable(rows, cols, caption = '') {
   const cell =
-    'border:1px solid #cbd5e1;padding:8px 12px;vertical-align:top;min-width:48px;word-break:break-word;font-size:14px;';
-  const header =
-    cell + 'background:#f8fafc;font-weight:600;font-family:Roboto,Arial,sans-serif;';
+    'border:1px solid #94a3b8;padding:8px 12px;vertical-align:top;min-width:56px;word-break:break-word;font-size:14px;background:#fff;';
+  const head =
+    cell + 'background:#f1f5f9;font-weight:600;font-family:Roboto,Arial,sans-serif;';
 
   let html =
-    '<table class="editorial-table" style="border-collapse:collapse;width:100%;max-width:100%;margin:1.25rem 0;table-layout:fixed;border:1px solid #cbd5e1;">';
-
-  if (caption && caption.trim()) {
-    html += `<caption style="caption-side:top;text-align:left;font-family:Roboto,Arial,sans-serif;font-size:13px;font-weight:600;color:#334155;margin-bottom:0.5rem;padding:0 2px;">${caption
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')}</caption>`;
+    '<table style="border-collapse:collapse;width:100%;max-width:100%;table-layout:fixed;border:1px solid #94a3b8;margin:0;">';
+  
+  if (caption?.trim()) {
+    const safe = caption.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    html += `<caption style="caption-side:top;text-align:left;font:600 13px Roboto,Arial,sans-serif;color:#334155;padding:0 0 8px 0;">${safe}</caption>`;
   }
-
+  
   html += '<tbody>';
   for (let r = 0; r < rows; r++) {
     html += '<tr>';
     for (let c = 0; c < cols; c++) {
       const tag = r === 0 ? 'th' : 'td';
-      const st = r === 0 ? header : cell;
-      html += `<${tag} style="${st}"><p><br></p></${tag}>`;
+      html += `<${tag} style="${r === 0 ? head : cell}"><br></${tag}>`;
     }
     html += '</tr>';
   }
-  html += '</tbody></table><p><br></p>';
+  html += '</tbody></table>';
   return html;
 }
 
@@ -158,8 +181,13 @@ function cleanPastedTable(tableNode) {
   const rows = tableNode.querySelectorAll('tr');
   if (!rows.length) return null;
 
+  const cellStyle =
+    'border:1px solid #94a3b8;padding:8px 12px;vertical-align:top;min-width:56px;word-break:break-word;font-size:14px;background:#fff;';
+  const headStyle =
+    cellStyle + 'background:#f1f5f9;font-weight:600;font-family:Roboto,Arial,sans-serif;';
+
   let html =
-    '<table class="editorial-table" style="border-collapse:collapse;width:100%;max-width:100%;margin:1.25rem 0;table-layout:fixed;border:1px solid #cbd5e1;"><tbody>';
+    '<table style="border-collapse:collapse;width:100%;max-width:100%;table-layout:fixed;border:1px solid #94a3b8;margin:0;"><tbody>';
 
   rows.forEach((tr, ri) => {
     html += '<tr>';
@@ -167,18 +195,15 @@ function cleanPastedTable(tableNode) {
     cells.forEach((cell) => {
       const isHeader = cell.tagName === 'TH' || ri === 0;
       const tag = isHeader ? 'th' : 'td';
-      const style = isHeader
-        ? 'border:1px solid #cbd5e1;padding:8px 12px;vertical-align:top;background:#f8fafc;font-weight:600;font-family:Roboto,Arial,sans-serif;font-size:14px;'
-        : 'border:1px solid #cbd5e1;padding:8px 12px;vertical-align:top;font-size:14px;';
-      // Texto plano + saltos básicos (evita basura de Word)
+      const style = isHeader ? headStyle : cellStyle;
       let text = (cell.innerText || cell.textContent || '').replace(/\r\n/g, '\n').trim();
-      const paragraphs = text
+      const content = text
         ? text
             .split(/\n+/)
-            .map((line) => `<p>${line.replace(/</g, '&lt;').replace(/>/g, '&gt;') || '<br>'}</p>`)
-            .join('')
-        : '<p><br></p>';
-      html += `<${tag} style="${style}">${paragraphs}</${tag}>`;
+            .map((line) => line.replace(/</g, '&lt;').replace(/>/g, '&gt;') || '<br>')
+            .join('<br>')
+        : '<br>';
+      html += `<${tag} style="${style}">${content}</${tag}>`;
     });
     html += '</tr>';
   });
@@ -270,7 +295,7 @@ export default function ScientificNewsUploadSection({ userData }) {
 
   const clearDraft = () => localStorage.removeItem('scientificNewsDraft');
 
-  // Función para manejar el pegado de tablas sin recursión
+  // Función para manejar el pegado de tablas
   const attachPasteHandler = (quill) => {
     if (!quill || quill.__pasteTableOk) return;
     quill.__pasteTableOk = true;
@@ -293,8 +318,9 @@ export default function ScientificNewsUploadSection({ userData }) {
           if (!cleaned) return;
 
           const range = quill.getSelection(true) || { index: quill.getLength() };
-          // Insertar HTML ya limpio (NO pasar por convert del matcher)
-          quill.clipboard.dangerouslyPasteHTML(range.index, cleaned + '<p><br></p>', 'user');
+          quill.insertEmbed(range.index, 'tableEmbed', cleaned, 'user');
+          quill.insertText(range.index + 1, '\n', 'user');
+          quill.setSelection(range.index + 2);
         } catch (err) {
           console.warn('Paste table failed', err);
         }
@@ -379,6 +405,7 @@ export default function ScientificNewsUploadSection({ userData }) {
     'color',
     'background',
     'size',
+    'tableEmbed',
   ];
 
   // ---------- Encode body ----------
@@ -403,21 +430,20 @@ export default function ScientificNewsUploadSection({ userData }) {
           'width:100%;max-width:640px;aspect-ratio:16/9;margin:1.25rem auto;display:block;border:none;border-radius:8px;';
       });
 
-      // Tablas: asegurar bordes en publicación
-      temp.querySelectorAll('table').forEach((table) => {
-        table.setAttribute(
-          'style',
-          'border-collapse:collapse;width:100%;max-width:100%;margin:1.25rem 0;table-layout:fixed;border:1px solid #cbd5e1;'
-        );
-        table.querySelectorAll('td, th').forEach((cell) => {
-          const isTh = cell.tagName === 'TH';
-          cell.setAttribute(
-            'style',
-            `border:1px solid #cbd5e1;padding:8px 12px;vertical-align:top;word-break:break-word;font-size:14px;${
-              isTh ? 'background:#f8fafc;font-weight:600;font-family:Roboto,Arial,sans-serif;' : ''
-            }`
-          );
-        });
+      // Convertir embeds de tabla a HTML real
+      temp.querySelectorAll('.ql-table-embed').forEach((wrap) => {
+        const table = wrap.querySelector('table');
+        if (table) {
+          table.style.borderCollapse = 'collapse';
+          table.style.width = '100%';
+          table.style.margin = '1.5rem 0';
+          table.querySelectorAll('td, th').forEach((cell) => {
+            cell.style.border = '1px solid #94a3b8';
+            cell.style.padding = '8px 12px';
+            cell.removeAttribute('contenteditable');
+          });
+          wrap.replaceWith(table);
+        }
       });
 
       temp.querySelectorAll('.ql-formula').forEach((f) => {
@@ -463,7 +489,6 @@ export default function ScientificNewsUploadSection({ userData }) {
     if (!editor || !imageData.url) return;
 
     let { url, width, height, align } = imageData;
-    // Por defecto compacto en el editor
     if (!width) width = '280px';
     if (width && !/%|px$/.test(width)) width += 'px';
     if (height && !/%|px$/.test(height)) height += 'px';
@@ -499,10 +524,13 @@ export default function ScientificNewsUploadSection({ userData }) {
     if (!editor) return;
     const r = Math.min(20, Math.max(1, parseInt(tableRows, 10) || 3));
     const c = Math.min(10, Math.max(1, parseInt(tableCols, 10) || 3));
-    const html = buildEditorialTable(r, c, tableCaption);
+    const tableHtml = buildEditorialTable(r, c, tableCaption);
+
     const range = editor.getSelection(true) || { index: editor.getLength() };
-    editor.clipboard.dangerouslyPasteHTML(range.index, html, 'user');
-    editor.setSelection(range.index + 1);
+    // CLAVE: embed, no dangerouslyPasteHTML
+    editor.insertEmbed(range.index, 'tableEmbed', tableHtml, 'user');
+    editor.insertText(range.index + 1, '\n', 'user');
+    editor.setSelection(range.index + 2);
     setShowTableModal(false);
     setTableCaption('');
   };
@@ -666,46 +694,49 @@ export default function ScientificNewsUploadSection({ userData }) {
           vertical-align: middle;
         }
 
-        /* ===== TABLAS EDITORIALES ===== */
-        .editorial-editor-wrapper .ql-editor table,
-        .editorial-editor-wrapper .ql-editor table.editorial-table {
+        /* ===== TABLAS EDITORIALES (BlockEmbed) ===== */
+        .editorial-editor-wrapper .ql-editor .ql-table-embed {
+          display: block;
+          width: 100%;
+          max-width: 100%;
+          margin: 1.25rem 0;
+          overflow-x: auto;
+        }
+        .editorial-editor-wrapper .ql-editor .ql-table-embed table {
           border-collapse: collapse !important;
           width: 100% !important;
-          max-width: 100% !important;
-          margin: 1.25rem 0 !important;
           table-layout: fixed !important;
-          display: table !important;
-          border: 1px solid #cbd5e1 !important;
+          border: 1px solid #94a3b8 !important;
         }
-        .editorial-editor-wrapper .ql-editor td,
-        .editorial-editor-wrapper .ql-editor th {
-          border: 1px solid #cbd5e1 !important;
+        .editorial-editor-wrapper .ql-editor .ql-table-embed td,
+        .editorial-editor-wrapper .ql-editor .ql-table-embed th {
+          border: 1px solid #94a3b8 !important;
           padding: 8px 12px !important;
           vertical-align: top !important;
-          word-break: break-word !important;
-          min-width: 48px !important;
           background: #fff !important;
-          font-size: 14px !important;
         }
-        .editorial-editor-wrapper .ql-editor th {
-          background: #f8fafc !important;
+        .editorial-editor-wrapper .ql-editor .ql-table-embed th {
+          background: #f1f5f9 !important;
           font-weight: 600 !important;
-          font-family: 'Roboto', sans-serif !important;
-          color: #1e293b !important;
         }
-        .editorial-editor-wrapper .ql-editor caption {
+        .editorial-editor-wrapper .ql-editor .ql-table-embed caption {
           caption-side: top !important;
           text-align: left !important;
           font-family: 'Roboto', sans-serif !important;
           font-size: 13px !important;
           font-weight: 600 !important;
           color: #334155 !important;
-          margin-bottom: 0.5rem !important;
-          padding: 0 2px !important;
+          padding: 0 0 8px 0 !important;
         }
-        .editorial-editor-wrapper .ql-editor td p,
-        .editorial-editor-wrapper .ql-editor th p {
-          margin: 0 !important;
+        .editorial-editor-wrapper .ql-editor .ql-table-embed td[contenteditable="true"],
+        .editorial-editor-wrapper .ql-editor .ql-table-embed th[contenteditable="true"] {
+          outline: none;
+          min-height: 1.4em;
+        }
+        .editorial-editor-wrapper .ql-editor .ql-table-embed td[contenteditable="true"]:focus,
+        .editorial-editor-wrapper .ql-editor .ql-table-embed th[contenteditable="true"]:focus {
+          background: #f8fafc !important;
+          box-shadow: inset 0 0 0 2px #94a3b8;
         }
 
         /* Videos */
@@ -793,8 +824,8 @@ export default function ScientificNewsUploadSection({ userData }) {
                 </h3>
                 <p className="text-sm text-gray-700 leading-relaxed font-serif-nature">
                   {isSpanish
-                    ? 'Puedes redactar aquí o pegar desde Word/Docs. Las tablas se limpian automáticamente al pegar. Usa el botón ⊞ del toolbar para insertar tablas nuevas.'
-                    : 'Write here or paste from Word/Docs. Tables are cleaned on paste. Use the ⊞ toolbar button to insert new tables.'}
+                    ? 'Puedes redactar aquí o pegar desde Word/Docs. Las tablas se insertan como bloques editables. Usa el botón ⊞ del toolbar para insertar tablas nuevas.'
+                    : 'Write here or paste from Word/Docs. Tables are inserted as editable blocks. Use the ⊞ toolbar button to insert new tables.'}
                 </p>
                 <button
                   type="button"
