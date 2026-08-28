@@ -295,34 +295,81 @@ export default function ScientificNewsUploadSection({ userData }) {
 
   const clearDraft = () => localStorage.removeItem('scientificNewsDraft');
 
-  // Función para manejar el pegado de tablas
+  // Función para manejar el pegado de contenido completo (texto + tablas)
   const attachPasteHandler = (quill) => {
     if (!quill || quill.__pasteTableOk) return;
     quill.__pasteTableOk = true;
+
+    const Delta = Quill.import('delta');
 
     quill.root.addEventListener(
       'paste',
       (e) => {
         const html = e.clipboardData?.getData('text/html') || '';
-        if (!/<table[\s>]/i.test(html)) return;
+        // Solo interceptamos si hay tabla; si no, deja el pegado normal de Quill
+        if (!html || !/<table[\s>]/i.test(html)) return;
 
         e.preventDefault();
         e.stopPropagation();
 
         try {
           const doc = new DOMParser().parseFromString(html, 'text/html');
-          const table = doc.querySelector('table');
-          if (!table) return;
+          let index = (quill.getSelection(true) || { index: quill.getLength() }).index;
 
-          const cleaned = cleanPastedTable(table);
-          if (!cleaned) return;
+          const insertDeltaAt = (delta) => {
+            if (!delta || !delta.ops || !delta.ops.length) return;
+            // Quitar saltos finales duplicados raros de Word
+            quill.updateContents(new Delta().retain(index).concat(delta), 'user');
+            index += delta.length();
+          };
 
-          const range = quill.getSelection(true) || { index: quill.getLength() };
-          quill.insertEmbed(range.index, 'tableEmbed', cleaned, 'user');
-          quill.insertText(range.index + 1, '\n', 'user');
-          quill.setSelection(range.index + 2);
+          const processNode = (node) => {
+            if (!node) return;
+
+            // Texto suelto
+            if (node.nodeType === Node.TEXT_NODE) {
+              const t = node.textContent || '';
+              if (t.replace(/\u00a0/g, ' ').trim() === '' && !t.includes('\n')) return;
+              if (t) {
+                quill.insertText(index, t, 'user');
+                index += t.length;
+              }
+              return;
+            }
+
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+            const tag = node.tagName;
+
+            // Tabla → embed (con bordes)
+            if (tag === 'TABLE') {
+              const cleaned = cleanPastedTable(node);
+              if (cleaned) {
+                quill.insertEmbed(index, 'tableEmbed', cleaned, 'user');
+                index += 1;
+                quill.insertText(index, '\n', 'user');
+                index += 1;
+              }
+              return;
+            }
+
+            // Contiene tabla anidada → procesar hijos por separado
+            if (node.querySelector && node.querySelector('table')) {
+              Array.from(node.childNodes).forEach(processNode);
+              return;
+            }
+
+            // Bloque / inline rico sin tablas → convert de Quill (negrita, listas, etc.)
+            const wrap = document.createElement('div');
+            wrap.appendChild(node.cloneNode(true));
+            const delta = quill.clipboard.convert(wrap);
+            insertDeltaAt(delta);
+          };
+
+          Array.from(doc.body.childNodes).forEach(processNode);
+          quill.setSelection(index);
         } catch (err) {
-          console.warn('Paste table failed', err);
+          console.warn('Paste with table failed', err);
         }
       },
       true
