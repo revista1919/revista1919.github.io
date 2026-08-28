@@ -17738,11 +17738,17 @@ exports.saveReviewerProfile = onCall(async (request) => {
     throw new HttpsError('internal', error.message);
   }
 });
-// ==================== FUNCIONES AUXILIARES ====================
+// ==================== CONFIGURACIÓN ====================
 
-// ==================== FUNCIONES AUXILIARES ====================
 
-// ==================== FUNCIONES AUXILIARES ====================
+const NEWS_JSON_URL = `${DOMAIN}/news/news.json`;
+const SCIENCE_INDEX_URL = `${DOMAIN}/science/index.json`;
+const SCIENCE_BASE_URL = `${DOMAIN}/science`;
+
+// Fecha de corte (últimos 30-45 días recomendado)
+const CUTOFF_DATE = Date.now() - (45 * 24 * 60 * 60 * 1000);
+
+// ==================== UTILIDADES ====================
 
 function decodeContent(encoded) {
   if (!encoded) return '';
@@ -17754,639 +17760,593 @@ function decodeContent(encoded) {
 }
 
 function cleanString(str) {
-  return str || '';
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function generateSlug(text) {
   if (!text) return '';
-  text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
+
+// ==================== FETCH DE NOTICIAS (REVISTA + SCIENCE) ====================
 
 async function fetchNews() {
   try {
-    const response = await fetch(NEWS_URL);
-    if (!response.ok) throw new Error(`Error: ${response.status}`);
-    
-    const items = await response.json();
-    
-    return items.map(item => {
-      const fechaIso = item.fecha || '';
-      const fechaDate = new Date(fechaIso);
-      const timestamp = isNaN(fechaDate.getTime()) ? 0 : fechaDate.getTime();
-      const slug = item.slug || generateSlug(`${item.titulo || item.title || ''} ${fechaIso}`);
-      
-      return {
-        titulo: item.titulo || '',
-        cuerpo: decodeContent(item.cuerpo),
-        title: item.title || '',
-        content: decodeContent(item.content),
-        fechaIso: fechaIso,
-        photo: item.photo || '',
-        timestamp: timestamp,
-        slug: slug,
-        area: item.area || item.categoria || 'general',
-        categoria: item.categoria || item.category || 'general',
-        etiquetas: item.etiquetas || item.tags || []
-      };
-    }).filter(n => n.timestamp > CUTOFF_DATE)
+    const allNews = [];
+
+    // ---------- 1. Noticias internas de la revista ----------
+    try {
+      const res = await fetch(NEWS_JSON_URL);
+      if (res.ok) {
+        const items = await res.json();
+        const journalItems = (Array.isArray(items) ? items : []).map(item => {
+          const fechaIso = item.fechaIso || item.fecha || '';
+          const fechaDate = new Date(fechaIso);
+          const timestamp = isNaN(fechaDate.getTime()) ? 0 : fechaDate.getTime();
+          const slug = item.slug || generateSlug(`${item.titulo || item.title || ''} ${fechaIso}`);
+
+          return {
+            titulo: item.titulo || '',
+            title: item.title || item.titulo || '',
+            cuerpo: decodeContent(item.cuerpo || item.content || ''),
+            content: decodeContent(item.content || item.cuerpo || ''),
+            fechaIso,
+            photo: item.photo || '',
+            timestamp,
+            slug,
+            area: item.area || item.categoria || item.area_id || 'general',
+            categoria: item.categoria || item.category || 'general',
+            etiquetas: item.etiquetas || item.tags || [],
+            type: 'journal',
+            url: `${DOMAIN}/news/${slug}.html`,
+            urlEn: `${DOMAIN}/news/${slug}.EN.html`
+          };
+        });
+        allNews.push(...journalItems);
+      }
+    } catch (err) {
+      logger.error('Error fetching journal news:', err.message);
+    }
+
+    // ---------- 2. Noticias científicas (Science) ----------
+    try {
+      const indexRes = await fetch(SCIENCE_INDEX_URL);
+      if (indexRes.ok) {
+        const indexData = await indexRes.json();
+        const years = Object.keys(indexData.years || {}).sort().reverse();
+
+        for (const year of years) {
+          const yearData = indexData.years[year];
+          if (!yearData?.json_file) continue;
+
+          const yearUrl = `${SCIENCE_BASE_URL}/${year}/${yearData.json_file}`;
+          try {
+            const yearRes = await fetch(yearUrl);
+            if (!yearRes.ok) continue;
+
+            const yearJson = await yearRes.json();
+            const yearNews = yearJson.news || yearJson || [];
+
+            yearNews.forEach(item => {
+              const fechaIso = item.metadata?.createdAt || item.fecha || '';
+              const timestamp = item.metadata?.createdTimestamp || new Date(fechaIso).getTime() || 0;
+              const slug = item.slug || generateSlug(`${item.title?.es || item.titulo || ''} ${fechaIso}`);
+
+              allNews.push({
+                titulo: item.title?.es || item.titulo || '',
+                title: item.title?.en || item.title || item.titulo || '',
+                cuerpo: decodeContent(item.content?.es || item.cuerpo || ''),
+                content: decodeContent(item.content?.en || item.content || ''),
+                fechaIso,
+                photo: item.photo || '',
+                timestamp,
+                slug,
+                area: item.area_id || item.area || 'general',
+                categoria: item.category || item.categoria || 'general',
+                etiquetas: item.tags || item.etiquetas || [],
+                type: 'science',
+                featured: item.featured || false,
+                url: `${DOMAIN}/science/news/${slug}.html`,
+                urlEn: `${DOMAIN}/science/news/${slug}.EN.html`
+              });
+            });
+          } catch (yearErr) {
+            logger.error(`Error fetching science news for ${year}:`, yearErr.message);
+          }
+        }
+      }
+    } catch (err) {
+      logger.error('Error fetching science index:', err.message);
+    }
+
+    // Filtrar por fecha de corte + ordenar
+    return allNews
+      .filter(n => n.timestamp > CUTOFF_DATE)
       .sort((a, b) => b.timestamp - a.timestamp);
+
   } catch (e) {
-    logger.error('Error fetching news:', e);
+    logger.error('Error general en fetchNews:', e);
     return [];
   }
 }
+
+// ==================== FILTRADO POR PREFERENCIAS ====================
 
 function filterNewsByPreferences(allNews, preferences) {
   if (!preferences || Object.keys(preferences).length === 0) {
     return allNews;
   }
-  
+
   return allNews.filter(news => {
     let matches = true;
-    
+
     if (preferences.areas && preferences.areas.length > 0) {
-      matches = matches && preferences.areas.some(area => 
+      matches = matches && preferences.areas.some(area =>
         news.area?.toLowerCase() === area.toLowerCase() ||
         news.categoria?.toLowerCase() === area.toLowerCase() ||
         news.etiquetas?.some(tag => tag.toLowerCase() === area.toLowerCase())
       );
     }
-    
+
     if (preferences.categorias && preferences.categorias.length > 0) {
-      matches = matches && preferences.categorias.some(cat => 
+      matches = matches && preferences.categorias.some(cat =>
         news.categoria?.toLowerCase() === cat.toLowerCase()
       );
     }
-    
-    if (preferences.etiquetas && preferences.etiquetas.length > 0) {
-      matches = matches && preferences.etiquetas.some(tag => 
-        news.etiquetas?.some(newsTag => newsTag.toLowerCase() === tag.toLowerCase())
-      );
-    }
-    
+
     return matches;
   });
 }
 
-// ==================== FUNCIONES DE DESUSCRIPCIÓN Y TOKENS ====================
+// ==================== TOKENS Y DESUSCRIPCIÓN ====================
+
+function generateUnsubscribeToken(email) {
+  const crypto = require('crypto');
+  const secret = 'revista-nacional-ciencias-2026-secret-key'; // Mantén tu secret seguro
+  const hash = crypto.createHmac('sha256', secret).update(email.toLowerCase().trim()).digest('hex');
+  return hash.substring(0, 32);
+}
+
+function verifyUnsubscribeToken(email, token) {
+  return token === generateUnsubscribeToken(email);
+}
 
 async function unsubscribeUser(email, reason = 'user_request') {
   const db = admin.firestore();
-  
   try {
     const snapshot = await db.collection(NEWSLETTER_COLLECTION)
       .where('email', '==', email)
       .limit(1)
       .get();
-    
-    if (snapshot.empty) {
-      return { success: false, message: 'Email no encontrado' };
-    }
-    
+
+    if (snapshot.empty) return { success: false, message: 'Email no encontrado' };
+
     const doc = snapshot.docs[0];
-    
     await doc.ref.update({
       active: false,
       unsubscribedAt: admin.firestore.FieldValue.serverTimestamp(),
       unsubscribeReason: reason
     });
-    
+
     await db.collection(UNSUBSCRIBE_COLLECTION).add({
       email,
       unsubscribedAt: admin.firestore.FieldValue.serverTimestamp(),
       reason,
       previousDocId: doc.id
     });
-    
-    logger.info('Usuario desuscrito', { email, reason });
+
     return { success: true, message: 'Desuscripción exitosa' };
-    
   } catch (error) {
     logger.error('Error desuscribiendo:', error);
     return { success: false, message: error.message };
   }
 }
 
-function generateUnsubscribeToken(email) {
-  const crypto = require('crypto');
-  const secret = process.env.UNSUBSCRIBE_SECRET || 'revista-nacional-ciencias-2026-secret-key';
-  const hash = crypto.createHmac('sha256', secret).update(email.toLowerCase().trim()).digest('hex');
-  return hash.substring(0, 32);
-}
-
-function verifyUnsubscribeToken(email, token) {
-  const expectedToken = generateUnsubscribeToken(email);
-  return token === expectedToken;
-}
-
-// ==================== GENERACIÓN DE HTML ====================
+// ==================== SUBJECT LINE ====================
 
 function generateSubject(lang, noticias) {
-  if (noticias.length === 0) return '';
-  
+  if (!noticias || noticias.length === 0) return '';
+
   const principal = noticias[0];
-  const titulo = lang === 'en' ? principal.title : principal.titulo;
-  const revista = lang === 'en' ? 'National Review' : 'Revista Nacional';
-  const novedades = lang === 'en' ? 'NEWS' : 'NOVEDADES';
-  const ymas = lang === 'en' ? 'and more' : 'y más';
-  const boletin = lang === 'en' ? 'New Bulletin' : 'Nuevo Boletín';
-  
-  return `[${novedades}] ${revista}: ${cleanString(titulo)} ${ymas} - ${boletin}`;
+  const titulo = lang === 'en'
+    ? (principal.title || principal.titulo || '')
+    : (principal.titulo || principal.title || '');
+
+  // Estilo Nature / NYT: corto y atractivo
+  if (lang === 'en') {
+    return `Science Briefing: ${cleanString(titulo).substring(0, 58)}${titulo.length > 58 ? '…' : ''}`;
+  }
+  return `Boletín científico: ${cleanString(titulo).substring(0, 58)}${titulo.length > 58 ? '…' : ''}`;
 }
+
+// ==================== HTML PRINCIPAL (DISEÑO EDITORIAL) ====================
 
 function generateElegantHTML(nombre, noticias, email, lang, unsubscribeToken, preferences = null) {
   const isEn = lang === 'en';
-  const revistaName = isEn ? 'The National Review of Sciences for Students' : 'Revista Nacional de las Ciencias';
+  const revistaName = isEn
+    ? 'The National Review of Sciences for Students'
+    : 'Revista Nacional de las Ciencias para Estudiantes';
   const lema = isEn ? 'A journal by and for students' : 'Una revista por y para estudiantes';
-  const greeting = isEn ? 'Dear' : 'Estimado/a';
-  const intro = isEn ? 'It is a pleasure to greet you. Here are the latest updates:' : 'Es un placer saludarle. Aquí tiene las últimas actualizaciones:';
-  const editionTitle = isEn ? 'In this edition:' : 'En esta edición:';
-  const featuredLabel = isEn ? 'Featured Article' : 'Artículo Principal';
-  const readOnline = isEn ? 'Read online' : 'Leer online';
-  const viewArchive = isEn ? 'View Archive' : 'Ver Archivo';
-  const homepageText = isEn ? 'Homepage' : 'Página principal';
-  const archiveUrl = isEn ? 'https://www.revistacienciasestudiantes.com/en/new/' : 'https://www.revistacienciasestudiantes.com/new/';
-  const mainSite = isEn ? 'https://www.revistacienciasestudiantes.com/en/' : 'https://www.revistacienciasestudiantes.com';
-  const followText = isEn ? 'Follow us on social media' : 'Síguenos en nuestras redes';
-  const preferencesText = isEn ? 'Manage preferences' : 'Gestionar preferencias';
-  const unsubscribeText = isEn ? 'Unsubscribe instantly' : 'Cancelar suscripción instantáneamente';
 
-  // URLs con token para que funcionen correctamente
+  const greeting = isEn ? `Dear ${nombre},` : `Estimado/a ${nombre},`;
+  const intro = isEn
+    ? 'Here is your curated selection of the latest scientific news and editorial updates from the journal.'
+    : 'Aquí tiene su selección curada de las últimas noticias científicas y actualizaciones editoriales de la revista.';
+
+  const featuredLabel = isEn ? 'FEATURED' : 'DESTACADA';
+  const readMore = isEn ? 'Read full article →' : 'Leer artículo completo →';
+  const viewArchive = isEn ? 'View full archive' : 'Ver archivo completo';
+  const homepage = isEn ? 'Visit website' : 'Visitar sitio web';
+  const followText = isEn ? 'Follow us' : 'Síguenos';
+  const preferencesText = isEn ? 'Manage preferences' : 'Gestionar preferencias';
+  const unsubscribeText = isEn ? 'Unsubscribe' : 'Cancelar suscripción';
+  const editionLabel = isEn ? 'In this edition' : 'En esta edición';
+  const journalLabel = isEn ? 'Journal' : 'Revista';
+  const scienceLabel = isEn ? 'Science' : 'Ciencia';
+
   const unsubscribeUrl = `https://unsubscribenewsletter-ggqsq2kkua-uc.a.run.app?email=${encodeURIComponent(email)}&token=${unsubscribeToken}`;
   const preferencesUrl = `https://managepreferences-ggqsq2kkua-uc.a.run.app?email=${encodeURIComponent(email)}&token=${unsubscribeToken}`;
+  const archiveUrl = isEn
+    ? `${DOMAIN}/news/index.EN.html`
+    : `${DOMAIN}/news/`;
+  const mainSite = isEn ? `${DOMAIN}/en/` : DOMAIN;
 
+  // Preferencias
   let preferencesHTML = '';
-  if (preferences && preferences.areas && preferences.areas.length > 0) {
-    const areasList = preferences.areas.join(', ');
+  if (preferences?.areas?.length > 0) {
     preferencesHTML = `
-      <p style="font-family: sans-serif; font-size: 11px; color: #666; margin: 0 0 20px 0;">
-        ${isEn ? 'Showing news from areas:' : 'Mostrando noticias de las áreas:'} 
-        <strong>${areasList}</strong>
-      </p>
-    `;
+      <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:#64748b;margin:0 0 28px 0;line-height:1.5;">
+        ${isEn ? 'Showing content from:' : 'Mostrando contenido de:'}
+        <strong style="color:#0f172a;">${preferences.areas.join(' · ')}</strong>
+      </p>`;
   }
 
+  // Índice
   let indiceHTML = '';
   if (noticias.length > 1) {
-    const itemsIndice = noticias.map((n, i) => {
-      const tit = isEn ? n.title : n.titulo;
-      return `<li style="margin-bottom: 8px;">
-        <a href="#noticia-${i}" style="color: #007398; text-decoration: none; font-family: 'Georgia', serif; font-size: 14px; font-style: italic;">
-          ${cleanString(tit)}
-        </a>
-      </li>`;
+    const items = noticias.map((n, i) => {
+      const tit = isEn ? (n.title || n.titulo) : (n.titulo || n.title);
+      const sourceBadge = n.type === 'science'
+        ? `<span style="font-size:10px;color:#ea580c;font-weight:600;margin-left:6px;">[${scienceLabel}]</span>`
+        : `<span style="font-size:10px;color:#64748b;font-weight:600;margin-left:6px;">[${journalLabel}]</span>`;
+      return `
+        <tr>
+          <td style="padding:7px 0;font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.4;">
+            <a href="#item-${i}" style="color:#0f172a;text-decoration:none;border-bottom:1px solid #e2e8f0;">
+              ${cleanString(tit)}
+            </a>${sourceBadge}
+          </td>
+        </tr>`;
     }).join('');
-    
+
     indiceHTML = `
-      <div style="margin-bottom: 40px; padding: 25px; border-left: 3px solid #007398; background-color: #f9f9f9;">
-        <p style="font-family: sans-serif; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: #555; margin-top: 0;">
-          ${editionTitle}
-        </p>
-        <ul style="margin: 0; padding-left: 15px;">${itemsIndice}</ul>
-      </div>
-    `;
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:40px;border-left:3px solid #ea580c;">
+        <tr>
+          <td style="padding:18px 22px;background-color:#f8fafc;">
+            <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#64748b;margin:0 0 12px 0;">
+              ${editionLabel}
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0">${items}</table>
+          </td>
+        </tr>
+      </table>`;
   }
 
+  // Noticias
   let noticiasHTML = '';
   noticias.forEach((n, index) => {
-    const tit = isEn ? n.title : n.titulo;
-    const cont = isEn ? n.content : n.cuerpo;
-    const photo = n.photo;
-    const slugUrl = `https://www.revistacienciasestudiantes.com/news/${n.slug}${isEn ? '.EN' : ''}.html`;
-    const fechaStr = new Date(n.fechaIso).toLocaleDateString(isEn ? 'en-US' : 'es-CL', { 
-      day: '2-digit', month: 'long', year: 'numeric' 
-    });
+    const tit = isEn ? (n.title || n.titulo || '') : (n.titulo || n.title || '');
+    const cont = isEn ? (n.content || n.cuerpo || '') : (n.cuerpo || n.content || '');
+    const photo = n.photo || '';
+    const articleUrl = isEn ? (n.urlEn || n.url) : n.url;
+    const fechaStr = n.fechaIso
+      ? new Date(n.fechaIso).toLocaleDateString(isEn ? 'en-US' : 'es-CL', {
+          day: 'numeric', month: 'long', year: 'numeric'
+        })
+      : '';
 
-    let articleHTML = '';
+    const sourceLabel = n.type === 'science' ? scienceLabel : journalLabel;
+    const safeContent = cont
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/style="[^"]*"/gi, '');
+
     if (index === 0) {
-      articleHTML = `
-        <div id="noticia-${index}" style="margin-bottom: 50px;">
-          ${photo ? `<img src="${photo}" alt="${tit}" style="max-width:100%; height:auto; border-radius:8px; margin:0 0 20px 0; display:block;">` : ''}
-          <div style="position: relative;">
-            <h2 style="color: #1a1a1a; font-family: 'Georgia', serif; font-size: 28px; line-height: 1.2; margin: 0 0 10px 0; font-weight: bold;">
-              ${cleanString(tit)}
-            </h2>
-            <div style="font-family: sans-serif; font-size: 12px; color: #007398; margin-bottom: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
-              ${featuredLabel} • ${fechaStr}
-            </div>
-            <div style="text-align: right; margin: -45px 0 20px 0;">
-              <a href="${slugUrl}" style="color: #007398; font-size: 14px; text-decoration: underline; font-weight: normal;">${readOnline}</a>
-            </div>
-          </div>
-          <div class="article-content" style="font-family: 'Georgia', serif; font-size: 17px; line-height: 1.7; color: #333; text-align: justify;">
-            ${cont}
-          </div>
-        </div>
-      `;
+      // Artículo principal
+      noticiasHTML += `
+        <table width="100%" cellpadding="0" cellspacing="0" id="item-${index}" style="margin-bottom:48px;">
+          <tr>
+            <td>
+              ${photo ? `<img src="${photo}" alt="${cleanString(tit)}" width="600" style="width:100%;max-width:600px;height:auto;display:block;border-radius:4px;margin-bottom:24px;">` : ''}
+              
+              <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#ea580c;margin:0 0 10px 0;">
+                ${featuredLabel} · ${sourceLabel}${fechaStr ? ` · ${fechaStr}` : ''}
+              </p>
+              
+              <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.25;color:#0f172a;margin:0 0 18px 0;font-weight:700;">
+                ${cleanString(tit)}
+              </h1>
+              
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:17px;line-height:1.7;color:#1e293b;">
+                ${safeContent}
+              </div>
+              
+              <p style="margin:28px 0 0 0;">
+                <a href="${articleUrl}" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#ea580c;text-decoration:none;border-bottom:2px solid #ea580c;padding-bottom:2px;">
+                  ${readMore}
+                </a>
+              </p>
+            </td>
+          </tr>
+        </table>`;
     } else {
-      articleHTML = `
-        <div id="noticia-${index}" style="margin-bottom: 40px; padding-top: 30px; border-top: 1px solid #eeeeee;">
-          <h3 style="color: #1a1a1a; font-family: 'Georgia', serif; font-size: 22px; margin: 0 0 10px 0;">
-            ${cleanString(tit)}
-          </h3>
-          ${photo ? `<img src="${photo}" alt="${tit}" style="max-width:100%; height:auto; border-radius:8px; margin:20px 0; display:block;">` : ''}
-          <div class="article-content" style="font-family: 'Georgia', serif; font-size: 15px; line-height: 1.6; color: #555;">
-            ${cont}
-          </div>
-          <div style="margin-top: 20px;">
-            <a href="${slugUrl}" style="color: #007398; font-weight: bold; text-decoration: underline;">${readOnline}</a>
-          </div>
-        </div>
-      `;
+      // Secundarios
+      noticiasHTML += `
+        <table width="100%" cellpadding="0" cellspacing="0" id="item-${index}" style="margin-bottom:40px;border-top:1px solid #e2e8f0;padding-top:32px;">
+          <tr>
+            <td>
+              <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin:0 0 8px 0;">
+                ${sourceLabel}${fechaStr ? ` · ${fechaStr}` : ''}
+              </p>
+              
+              <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.3;color:#0f172a;margin:0 0 14px 0;font-weight:700;">
+                ${cleanString(tit)}
+              </h2>
+              
+              ${photo ? `<img src="${photo}" alt="${cleanString(tit)}" width="600" style="width:100%;max-width:600px;height:auto;display:block;border-radius:4px;margin:0 0 18px 0;">` : ''}
+              
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:1.65;color:#334155;">
+                ${safeContent}
+              </div>
+              
+              <p style="margin:22px 0 0 0;">
+                <a href="${articleUrl}" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#0f172a;text-decoration:none;border-bottom:1px solid #0f172a;">
+                  ${readMore}
+                </a>
+              </p>
+            </td>
+          </tr>
+        </table>`;
     }
-    noticiasHTML += articleHTML;
   });
 
   return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body { margin: 0; padding: 0; background-color: #f3f4f6; }
-        .article-content img { max-width: 100% !important; height: auto !important; border-radius: 4px; margin: 20px 0; display: block; }
-      </style>
-    </head>
-    <body style="background-color: #f3f4f6; padding: 20px 0;">
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb;">
-        <tr>
-          <td style="padding: 50px 40px 30px 40px; text-align: center;">
-            <h1 style="font-family: 'Georgia', serif; font-size: 32px; color: #1a1a1a; margin: 0; letter-spacing: -1px;">
-              ${revistaName}
-            </h1>
-            <p style="font-family: sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 4px; color: #007398; margin: 12px 0 0 0; font-weight: bold;">
-              ${lema}
-            </p>
-            <hr style="width: 50px; border: 1px solid #1a1a1a; margin-top: 25px;">
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 0 40px 40px 40px;">
-            <p style="font-family: 'Georgia', serif; font-size: 16px; color: #1a1a1a; margin-bottom: 30px;">
-              ${greeting} <strong>${nombre}</strong>, ${intro}
-            </p>
-            ${preferencesHTML}
-            ${indiceHTML}
-            ${noticiasHTML}
-            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px; border-top: 2px solid #1a1a1a; padding-top: 30px;">
-              <tr>
-                <td align="center">
-                  <a href="${archiveUrl}" style="display: inline-block; background-color: #007398; color: #ffffff; padding: 16px 30px; font-family: sans-serif; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; text-decoration: none; border-radius: 2px; margin: 10px;">
-                    ${viewArchive}
-                  </a>
-                  <br>
-                  <a href="${mainSite}" style="color: #007398; font-size: 14px; text-decoration: underline; margin: 10px;">
-                    ${homepageText}
-                  </a>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 40px; background-color: #fafafa; border-top: 1px solid #eeeeee; text-align: center;">
-            <p style="font-family: sans-serif; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: #999; margin-bottom: 20px;">
-              ${followText}
-            </p>
-            <div style="margin-bottom: 25px;">
-              <a href="https://www.instagram.com/revistanacionalcienciae" style="text-decoration: none; margin: 0 12px;">
-                <img src="https://cdn-icons-png.flaticon.com/512/1384/1384063.png" width="24" height="24" alt="Instagram">
-              </a>
-              <a href="https://www.youtube.com/@RevistaNacionaldelasCienciaspa" style="text-decoration: none; margin: 0 12px;">
-                <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" width="24" height="24" alt="YouTube">
-              </a>
-              <a href="https://www.tiktok.com/@revistacienciaestudiante" style="text-decoration: none; margin: 0 12px;">
-                <img src="https://cdn-icons-png.flaticon.com/512/3046/3046121.png" width="24" height="24" alt="TikTok">
-              </a>
-            </div>
-            <p style="font-family: sans-serif; font-size: 12px; color: #666;">
-              <a href="mailto:contact@revistacienciasestudiantes.com" style="color: #666; text-decoration: none;">
-                contact@revistacienciasestudiantes.com
-              </a>
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 30px 40px; background-color: #1a1a1a; text-align: center;">
-            <p style="font-family: sans-serif; font-size: 10px; color: #888; margin: 0; line-height: 1.8;">
-              © 2026 ${revistaName}<br>
-              ${isEn ? 'This email was sent to' : 'Este correo fue enviado a'} ${email}.<br>
-              <a href="${preferencesUrl}" style="color: #007398; text-decoration: underline; margin-right: 15px;">
-                ${preferencesText}
-              </a>
-              <a href="${unsubscribeUrl}" style="color: #007398; text-decoration: underline;">
-                ${unsubscribeText}
-              </a>
-            </p>
-          </td>
-        </tr>
-      </table>
-      <div style="height: 50px;"></div>
-    </body>
-    </html>
-  `;
+<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>${revistaName}</title>
+  <!--[if mso]>
+  <style type="text/css">body, table, td { font-family: Georgia, serif !important; }</style>
+  <![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background-color:#ffffff;border-radius:6px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+          
+          <!-- Masthead -->
+          <tr>
+            <td style="padding:40px 40px 28px 40px;text-align:center;border-bottom:1px solid #e2e8f0;">
+              <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;color:#0f172a;margin:0 0 8px 0;font-weight:700;letter-spacing:-0.3px;">
+                ${revistaName}
+              </h1>
+              <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:2.5px;color:#ea580c;margin:0;font-weight:600;">
+                ${lema}
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 40px 20px 40px;">
+              <p style="font-family:Georgia,'Times New Roman',serif;font-size:17px;line-height:1.6;color:#0f172a;margin:0 0 8px 0;">
+                ${greeting}
+              </p>
+              <p style="font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:1.6;color:#475569;margin:0 0 28px 0;">
+                ${intro}
+              </p>
+              
+              ${preferencesHTML}
+              ${indiceHTML}
+              ${noticiasHTML}
+              
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-top:1px solid #e2e8f0;padding-top:32px;">
+                <tr>
+                  <td align="center">
+                    <a href="${archiveUrl}" style="display:inline-block;background-color:#0f172a;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;text-decoration:none;padding:14px 28px;border-radius:4px;letter-spacing:0.3px;">
+                      ${viewArchive}
+                    </a>
+                    <p style="margin:18px 0 0 0;">
+                      <a href="${mainSite}" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;color:#64748b;text-decoration:underline;">
+                        ${homepage}
+                      </a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Social -->
+          <tr>
+            <td style="padding:32px 40px;background-color:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin:0 0 16px 0;">
+                ${followText}
+              </p>
+              <p style="margin:0 0 16px 0;">
+                <a href="https://www.instagram.com/revistanacionalcienciae" style="text-decoration:none;margin:0 10px;"><img src="https://cdn-icons-png.flaticon.com/512/1384/1384063.png" width="22" height="22" alt="Instagram" style="display:inline-block;"></a>
+                <a href="https://www.youtube.com/@RevistaNacionaldelasCienciaspa" style="text-decoration:none;margin:0 10px;"><img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" width="22" height="22" alt="YouTube" style="display:inline-block;"></a>
+                <a href="https://www.tiktok.com/@revistacienciaestudiante" style="text-decoration:none;margin:0 10px;"><img src="https://cdn-icons-png.flaticon.com/512/3046/3046121.png" width="22" height="22" alt="TikTok" style="display:inline-block;"></a>
+              </p>
+              <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;color:#64748b;margin:0;">
+                <a href="mailto:contact@revistacienciasestudiantes.com" style="color:#0f172a;text-decoration:none;">contact@revistacienciasestudiantes.com</a>
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding:28px 40px;background-color:#0f172a;text-align:center;">
+              <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;color:#94a3b8;margin:0;line-height:1.7;">
+                © ${new Date().getFullYear()} ${revistaName}<br>
+                ${isEn ? 'This email was sent to' : 'Este correo fue enviado a'} ${email}<br>
+                <a href="${preferencesUrl}" style="color:#fdba74;text-decoration:underline;margin-right:12px;">${preferencesText}</a>
+                <a href="${unsubscribeUrl}" style="color:#fdba74;text-decoration:underline;">${unsubscribeText}</a>
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+        <div style="height:40px;"></div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
+
+// ==================== WELCOME EMAIL ====================
 
 function generateWelcomeHTML(nombre, email, lang) {
   const isEn = lang === 'en';
   const unsubscribeToken = generateUnsubscribeToken(email);
-  
+
+  const revistaName = isEn
+    ? 'The National Review of Sciences for Students'
+    : 'Revista Nacional de las Ciencias para Estudiantes';
+
   const texts = {
-    title: isEn ? 'Welcome to Our Scientific Community' : 'Bienvenido a Nuestra Comunidad Científica',
-    greeting: isEn ? `Dear ${nombre}` : `Estimado/a ${nombre}`,
-    intro: isEn 
-      ? 'Thank you for subscribing to our newsletter. We are thrilled to have you with us!'
-      : '¡Gracias por suscribirte a nuestro boletín! Estamos encantados de tenerte con nosotros.',
-    subtitle: isEn
-      ? 'You will now receive the latest scientific news, publications, and opportunities directly in your inbox.'
-      : 'Ahora recibirás las últimas noticias científicas, publicaciones y oportunidades directamente en tu bandeja de entrada.',
-    preferencesTitle: isEn ? 'Your Subscription Preferences' : 'Tus Preferencias de Suscripción',
-    preferencesIntro: isEn
-      ? 'You can update your preferences at any time to receive content that interests you most.'
-      : 'Puedes actualizar tus preferencias en cualquier momento para recibir el contenido que más te interese.',
-    whatsNext: isEn ? 'What You Can Expect' : 'Lo Que Puedes Esperar',
-    item1: isEn ? 'Latest research and discoveries' : 'Últimas investigaciones y descubrimientos',
+    greeting: isEn ? `Dear ${nombre},` : `Estimado/a ${nombre},`,
+    intro: isEn
+      ? 'Thank you for joining our newsletter. You will now receive carefully curated scientific news and student research updates.'
+      : 'Gracias por unirte a nuestro boletín. Ahora recibirás noticias científicas cuidadosamente seleccionadas y actualizaciones de investigación estudiantil.',
+    whatNext: isEn ? 'What to expect' : 'Qué puedes esperar',
+    item1: isEn ? 'Latest discoveries and research highlights' : 'Últimos descubrimientos y destacados de investigación',
     item2: isEn ? 'Calls for papers and opportunities' : 'Convocatorias y oportunidades',
-    item3: isEn ? 'Events and conferences' : 'Eventos y conferencias',
-    item4: isEn ? 'Exclusive content for subscribers' : 'Contenido exclusivo para suscriptores',
-    contactTitle: isEn ? 'Need Help?' : '¿Necesitas Ayuda?',
-    contactText: isEn
-      ? 'If you have any questions, feel free to contact us.'
-      : 'Si tienes alguna pregunta, no dudes en contactarnos.',
-    unsubscribe: isEn ? 'Unsubscribe' : 'Cancelar suscripción',
-    managePreferences: isEn ? 'Manage Preferences' : 'Gestionar Preferencias',
-    followUs: isEn ? 'Follow Us' : 'Síguenos',
-    journalName: isEn 
-      ? 'The National Review of Sciences for Students'
-      : 'Revista Nacional de las Ciencias para Estudiantes',
-    slogan: isEn 
-      ? 'A journal by and for students'
-      : 'Una revista por y para estudiantes'
+    item3: isEn ? 'Student achievements and events' : 'Logros estudiantiles y eventos',
+    manage: isEn ? 'Manage your preferences' : 'Gestionar preferencias',
+    visit: isEn ? 'Visit the journal' : 'Visitar la revista',
+    unsubscribe: isEn ? 'Unsubscribe' : 'Cancelar suscripción'
   };
-  
-  const mainSite = isEn 
-    ? 'https://www.revistacienciasestudiantes.com/en/'
-    : 'https://www.revistacienciasestudiantes.com';
-  
-  // URLs con token para que funcionen correctamente
+
   const unsubscribeUrl = `https://unsubscribenewsletter-ggqsq2kkua-uc.a.run.app?email=${encodeURIComponent(email)}&token=${unsubscribeToken}`;
   const preferencesUrl = `https://managepreferences-ggqsq2kkua-uc.a.run.app?email=${encodeURIComponent(email)}&token=${unsubscribeToken}`;
-  
+  const mainSite = isEn ? `${DOMAIN}/en/` : DOMAIN;
+
   return `
-    <!DOCTYPE html>
-    <html lang="${lang}">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body {
-          margin: 0;
-          padding: 0;
-          background-color: #f3f4f6;
-          font-family: 'Georgia', serif;
-          -webkit-font-smoothing: antialiased;
-        }
-        .wrapper {
-          width: 100%;
-          table-layout: fixed;
-          background-color: #f3f4f6;
-          padding: 20px 0;
-        }
-        .container {
-          max-width: 600px;
-          margin: 0 auto;
-          background-color: #ffffff;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-          background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-          padding: 40px 20px;
-          text-align: center;
-          border-bottom: 4px solid #007398;
-        }
-        .header h1 {
-          color: #ffffff;
-          font-family: 'Georgia', serif;
-          font-size: 28px;
-          margin: 0;
-          letter-spacing: -0.5px;
-        }
-        .header p {
-          color: #007398;
-          font-family: sans-serif;
-          font-size: 11px;
-          text-transform: uppercase;
-          letter-spacing: 3px;
-          margin: 10px 0 0 0;
-          font-weight: bold;
-        }
-        .content {
-          padding: 40px;
-        }
-        .greeting {
-          font-size: 18px;
-          color: #1a1a1a;
-          margin-bottom: 20px;
-          line-height: 1.5;
-        }
-        .intro {
-          font-size: 15px;
-          color: #4b5563;
-          line-height: 1.6;
-          margin-bottom: 30px;
-        }
-        .highlight-box {
-          background-color: #f9fafb;
-          border-left: 4px solid #007398;
-          padding: 20px;
-          margin: 25px 0;
-          border-radius: 0 4px 4px 0;
-        }
-        .highlight-box h3 {
-          margin: 0 0 10px 0;
-          color: #1a1a1a;
-          font-size: 16px;
-        }
-        .highlight-box ul {
-          margin: 0;
-          padding-left: 20px;
-          color: #4b5563;
-        }
-        .highlight-box li {
-          margin-bottom: 8px;
-          font-size: 14px;
-        }
-        .button-container {
-          text-align: center;
-          margin: 30px 0;
-        }
-        .btn {
-          background-color: #007398;
-          color: #ffffff;
-          padding: 14px 30px;
-          text-decoration: none;
-          border-radius: 4px;
-          font-family: sans-serif;
-          font-size: 12px;
-          font-weight: bold;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          display: inline-block;
-        }
-        .divider {
-          border: none;
-          border-top: 1px solid #e5e7eb;
-          margin: 30px 0;
-        }
-        .footer {
-          background-color: #1a1a1a;
-          padding: 30px 20px;
-          text-align: center;
-        }
-        .footer p {
-          color: #888;
-          font-size: 11px;
-          line-height: 1.8;
-          margin: 0;
-        }
-        .footer a {
-          color: #007398;
-          text-decoration: underline;
-        }
-        .social-icons {
-          margin: 20px 0;
-        }
-        .social-icons a {
-          display: inline-block;
-          margin: 0 10px;
-        }
-        .social-icons img {
-          width: 24px;
-          height: 24px;
-          opacity: 0.7;
-        }
-        @media (max-width: 600px) {
-          .content {
-            padding: 30px 20px;
-          }
-          .header h1 {
-            font-size: 24px;
-          }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="wrapper">
-        <div class="container">
-          <div class="header">
-            <h1>${texts.journalName}</h1>
-            <p>${texts.slogan}</p>
-          </div>
+<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${isEn ? 'Welcome' : 'Bienvenido'}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Georgia,'Times New Roman',serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%" style="max-width:580px;background:#ffffff;border-radius:6px;overflow:hidden;">
           
-          <div class="content">
-            <p class="greeting">${texts.greeting},</p>
-            <p class="intro">${texts.intro}</p>
-            <p class="intro">${texts.subtitle}</p>
-            
-            <div class="highlight-box">
-              <h3>${texts.whatsNext}</h3>
-              <ul>
-                <li>${texts.item1}</li>
-                <li>${texts.item2}</li>
-                <li>${texts.item3}</li>
-                <li>${texts.item4}</li>
-              </ul>
-            </div>
-            
-            <div class="highlight-box">
-              <h3>${texts.preferencesTitle}</h3>
-              <p style="margin: 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
-                ${texts.preferencesIntro}
+          <tr>
+            <td style="padding:40px 40px 28px;text-align:center;border-bottom:1px solid #e2e8f0;">
+              <h1 style="font-family:Georgia,serif;font-size:24px;color:#0f172a;margin:0 0 6px;font-weight:700;">
+                ${revistaName}
+              </h1>
+              <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#ea580c;margin:0;font-weight:600;">
+                ${isEn ? 'A journal by and for students' : 'Una revista por y para estudiantes'}
               </p>
-              <div class="button-container">
-                <a href="${preferencesUrl}" class="btn" style="margin-top: 15px;">
-                  ${texts.managePreferences}
-                </a>
-              </div>
-            </div>
-            
-            <div class="button-container">
-              <a href="${mainSite}" class="btn">
-                ${isEn ? 'Visit Our Website' : 'Visitar Nuestro Sitio'}
-              </a>
-            </div>
-            
-            <hr class="divider">
-            
-            <div style="text-align: center; margin-top: 20px;">
-              <p style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0;">
-                ${texts.contactTitle}
-              </p>
-              <p style="color: #6b7280; font-size: 13px; margin: 0;">
-                ${texts.contactText}
-                <br>
-                <a href="mailto:contact@revistacienciasestudiantes.com" style="color: #007398; text-decoration: none;">
-                  contact@revistacienciasestudiantes.com
-                </a>
-              </p>
-            </div>
-          </div>
+            </td>
+          </tr>
           
-          <div class="footer">
-            <div class="social-icons">
-              <a href="https://www.instagram.com/revistanacionalcienciae">
-                <img src="https://cdn-icons-png.flaticon.com/512/1384/1384063.png" alt="Instagram">
-              </a>
-              <a href="https://www.youtube.com/@RevistaNacionaldelasCienciaspa">
-                <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" alt="YouTube">
-              </a>
-              <a href="https://www.tiktok.com/@revistacienciaestudiante">
-                <img src="https://cdn-icons-png.flaticon.com/512/3046/3046121.png" alt="TikTok">
-              </a>
-            </div>
-            
-            <p>
-              © 2026 ${texts.journalName}<br>
-              ${isEn ? 'This email was sent to' : 'Este correo fue enviado a'} ${email}.<br>
-              <a href="${preferencesUrl}">
-                ${texts.managePreferences}
-              </a>
-              |
-              <a href="${unsubscribeUrl}">
-                ${texts.unsubscribe}
-              </a>
-            </p>
-          </div>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+          <tr>
+            <td style="padding:36px 40px;">
+              <p style="font-size:17px;color:#0f172a;margin:0 0 16px;line-height:1.5;">${texts.greeting}</p>
+              <p style="font-size:16px;color:#475569;margin:0 0 28px;line-height:1.65;">${texts.intro}</p>
+              
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-left:3px solid #ea580c;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 22px;">
+                    <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin:0 0 12px;">
+                      ${texts.whatNext}
+                    </p>
+                    <ul style="margin:0;padding-left:18px;color:#334155;font-size:15px;line-height:1.7;">
+                      <li style="margin-bottom:6px;">${texts.item1}</li>
+                      <li style="margin-bottom:6px;">${texts.item2}</li>
+                      <li>${texts.item3}</li>
+                    </ul>
+                  </td>
+                </tr>
+              </table>
+              
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom:12px;">
+                    <a href="${preferencesUrl}" style="display:inline-block;background:#0f172a;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;font-weight:600;text-decoration:none;padding:13px 26px;border-radius:4px;">
+                      ${texts.manage}
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <a href="${mainSite}" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;color:#64748b;text-decoration:underline;">
+                      ${texts.visit}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <tr>
+            <td style="padding:28px 40px;background:#0f172a;text-align:center;">
+              <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;color:#94a3b8;margin:0;line-height:1.7;">
+                © ${new Date().getFullYear()} ${revistaName}<br>
+                ${isEn ? 'Sent to' : 'Enviado a'} ${email}<br>
+                <a href="${preferencesUrl}" style="color:#fdba74;text-decoration:underline;margin-right:10px;">${texts.manage}</a>
+                <a href="${unsubscribeUrl}" style="color:#fdba74;text-decoration:underline;">${texts.unsubscribe}</a>
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
-// ==================== FUNCIÓN PRINCIPAL ====================
+// ==================== ENVÍO PRINCIPAL ====================
 
 async function queueEmail(to, subject, htmlBody) {
   try {
-    if (!to || !subject || !htmlBody) {
-      throw new Error('to, subject y htmlBody son requeridos');
-    }
-    
+    if (!to || !subject || !htmlBody) throw new Error('to, subject y htmlBody son requeridos');
+
     const db = admin.firestore();
-    const emailData = {
+    await db.collection(EMAIL_QUEUE_COLLECTION).add({
       to: [to],
       message: {
-        subject: subject,
+        subject,
         html: htmlBody,
         text: htmlBody.replace(/<[^>]*>/g, '')
       },
       createdAt: admin.firestore.FieldValue.serverTimestamp()
-    };
-    
-    await db.collection(EMAIL_QUEUE_COLLECTION).add(emailData);
+    });
     return true;
   } catch (error) {
     logger.error('Error queueing email', { to, error: error.message });
@@ -18397,21 +18357,23 @@ async function queueEmail(to, subject, htmlBody) {
 async function sendNewsletter() {
   const db = admin.firestore();
   const startTime = Date.now();
-  
-  logger.info('Iniciando envío de newsletter');
-  
+
+  logger.info('Iniciando envío de newsletter (Revista + Science)');
+
   try {
     const allNews = await fetchNews();
-    
+
     if (allNews.length === 0) {
       logger.info('No hay noticias nuevas');
       return { success: true, sent: 0, reason: 'no_news' };
     }
-    
+
+    logger.info(`Noticias encontradas: ${allNews.length} (journal + science)`);
+
     const subscribersSnapshot = await db.collection(NEWSLETTER_COLLECTION)
       .where('active', '==', true)
       .get();
-    
+
     const subscribers = [];
     subscribersSnapshot.forEach(doc => {
       const data = doc.data();
@@ -18426,67 +18388,62 @@ async function sendNewsletter() {
         });
       }
     });
-    
-    logger.info('Suscriptores activos', { count: subscribers.length });
-    
+
     if (subscribers.length === 0) {
       return { success: true, sent: 0, reason: 'no_subscribers' };
     }
-    
+
     let sentCount = 0;
     let errorCount = 0;
     let filteredCount = 0;
     const batchSize = 50;
-    
+
     for (let i = 0; i < subscribers.length; i += batchSize) {
       const batch = subscribers.slice(i, i + batchSize);
-      
+
       await Promise.all(batch.map(async (subscriber) => {
         try {
           const filteredNews = filterNewsByPreferences(allNews, subscriber.preferences);
-          
+
           if (filteredNews.length === 0) {
-            logger.info('Sin noticias para preferencias', { email: subscriber.email });
             filteredCount++;
             return;
           }
-          
+
+          // Limitar a máximo 6-7 noticias por correo para no saturar
+          const newsToSend = filteredNews.slice(0, 7);
+
           const lang = subscriber.idioma === 'en' ? 'en' : 'es';
-          const subject = generateSubject(lang, filteredNews);
+          const subject = generateSubject(lang, newsToSend);
           const unsubscribeToken = generateUnsubscribeToken(subscriber.email);
-          
+
           const htmlBody = generateElegantHTML(
             subscriber.nombre,
-            filteredNews,
+            newsToSend,
             subscriber.email,
             lang,
             unsubscribeToken,
             subscriber.preferences
           );
-          
+
           const queued = await queueEmail(subscriber.email, subject, htmlBody);
-          
+
           if (queued) {
             sentCount++;
             await db.collection(NEWSLETTER_COLLECTION).doc(subscriber.id).update({
               lastSentAt: admin.firestore.FieldValue.serverTimestamp(),
-              lastSentNews: filteredNews.map(n => n.slug)
+              lastSentNews: newsToSend.map(n => n.slug)
             });
           } else {
             errorCount++;
           }
-        } catch (subscriberError) {
-          logger.error('Error procesando suscriptor', { email: subscriber.email, error: subscriberError });
+        } catch (err) {
+          logger.error('Error procesando suscriptor', { email: subscriber.email, error: err.message });
           errorCount++;
         }
       }));
-      
-      logger.info('Progreso de envío', { 
-        processed: Math.min(i + batchSize, subscribers.length), 
-        total: subscribers.length 
-      });
     }
-    
+
     await db.collection(NEWSLETTER_HISTORY).add({
       sentAt: admin.firestore.FieldValue.serverTimestamp(),
       newsCount: allNews.length,
@@ -18496,9 +18453,9 @@ async function sendNewsletter() {
       errorCount,
       durationMs: Date.now() - startTime
     });
-    
+
     logger.info('Newsletter enviada', { sentCount, filteredCount, errorCount });
-    
+
     return {
       success: true,
       sent: sentCount,
@@ -18508,7 +18465,7 @@ async function sendNewsletter() {
       newsCount: allNews.length,
       durationMs: Date.now() - startTime
     };
-    
+
   } catch (error) {
     logger.error('Error en sendNewsletter', error);
     throw error;
@@ -18610,6 +18567,139 @@ exports.sendNewsletter = onRequest(
     }
   }
 );
+// ==================== HELPER DE PÁGINAS EDITORIALES ====================
+
+function renderEditorialPage({ title, message, submessage = '', email = '', isSuccess = false, lang = 'es', showBack = true }) {
+  const isEn = lang === 'en';
+  const revistaName = isEn
+    ? 'The National Review of Sciences for Students'
+    : 'Revista Nacional de las Ciencias para Estudiantes';
+
+  const backText = isEn ? 'Return to website' : 'Volver al sitio';
+  const domain = 'https://www.revistacienciasestudiantes.com';
+
+  // SVG icons (limpios y profesionales)
+  const iconSuccess = `
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="#0f172a" stroke-width="1.5"/>
+      <path d="M8 12.5l2.5 2.5L16 9" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+
+  const iconError = `
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="#0f172a" stroke-width="1.5"/>
+      <path d="M15 9l-6 6M9 9l6 6" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>`;
+
+  const icon = isSuccess ? iconSuccess : iconError;
+
+  return `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} · ${revistaName}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .page {
+      width: 100%;
+      max-width: 520px;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 48px 40px;
+      text-align: center;
+    }
+    .icon-wrap {
+      margin-bottom: 28px;
+      display: flex;
+      justify-content: center;
+    }
+    h1 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 16px;
+      letter-spacing: -0.2px;
+    }
+    .message {
+      font-size: 16px;
+      color: #334155;
+      margin-bottom: 12px;
+    }
+    .submessage {
+      font-size: 15px;
+      color: #64748b;
+      margin-bottom: 32px;
+    }
+    .email {
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .btn {
+      display: inline-block;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      background-color: #0f172a;
+      text-decoration: none;
+      padding: 12px 28px;
+      border-radius: 3px;
+      letter-spacing: 0.2px;
+      transition: background-color 0.15s ease;
+    }
+    .btn:hover {
+      background-color: #1e293b;
+    }
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .footer a {
+      color: #64748b;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <div class="icon-wrap">${icon}</div>
+      <h1>${title}</h1>
+      <p class="message">${message}</p>
+      ${submessage ? `<p class="submessage">${submessage}</p>` : ''}
+      ${showBack ? `<a href="${domain}" class="btn">${backText}</a>` : ''}
+    </div>
+    <div class="footer">
+      ${revistaName}
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+// ==================== UNSUBSCRIBE ====================
 
 exports.unsubscribeNewsletter = onRequest(
   {
@@ -18620,115 +18710,51 @@ exports.unsubscribeNewsletter = onRequest(
   async (req, res) => {
     const email = req.query.email || req.body?.email;
     const token = req.query.token || req.body?.token;
-    
+
+    // Error: parámetros faltantes
     if (!email || !token) {
-      res.status(400).send(`
-        <html>
-        <head>
-          <style>
-            body { font-family: 'Georgia', serif; text-align: center; margin-top: 50px; background-color: #f3f4f6; }
-            .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; }
-            h1 { color: #1a1a1a; }
-            p { color: #666; line-height: 1.6; }
-            .icon { font-size: 48px; margin-bottom: 20px; }
-            a { color: #007398; text-decoration: none; }
-            a:hover { text-decoration: underline; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="icon">❌</div>
-            <h1>Error</h1>
-            <p>Parámetros inválidos. Por favor, usa el enlace proporcionado en el correo.</p>
-            <a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a>
-          </div>
-        </body>
-        </html>
-      `);
+      res.status(400).send(renderEditorialPage({
+        title: 'Invalid request',
+        message: 'The required parameters are missing. Please use the link provided in the email.',
+        isSuccess: false,
+        lang: 'en'
+      }));
       return;
     }
-    
+
+    // Error: token inválido
     if (!verifyUnsubscribeToken(email, token)) {
-      res.status(403).send(`
-        <html>
-        <head>
-          <style>
-            body { font-family: 'Georgia', serif; text-align: center; margin-top: 50px; background-color: #f3f4f6; }
-            .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; }
-            h1 { color: #1a1a1a; }
-            p { color: #666; line-height: 1.6; }
-            .icon { font-size: 48px; margin-bottom: 20px; }
-            a { color: #007398; text-decoration: none; }
-            a:hover { text-decoration: underline; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="icon">❌</div>
-            <h1>Error</h1>
-            <p>Token inválido. Por favor, usa el enlace proporcionado en el correo.</p>
-            <a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a>
-          </div>
-        </body>
-        </html>
-      `);
+      res.status(403).send(renderEditorialPage({
+        title: 'Invalid link',
+        message: 'This unsubscribe link is invalid or has expired. Please use the most recent link from your email.',
+        isSuccess: false,
+        lang: 'en'
+      }));
       return;
     }
-    
+
     const result = await unsubscribeUser(email);
-    
+
     if (result.success) {
-      res.status(200).send(`
-        <html>
-        <head>
-          <style>
-            body { font-family: 'Georgia', serif; text-align: center; margin-top: 50px; background-color: #f3f4f6; }
-            .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; }
-            h1 { color: #1a1a1a; }
-            p { color: #666; line-height: 1.6; }
-            .icon { font-size: 48px; margin-bottom: 20px; }
-            a { color: #007398; text-decoration: none; }
-            a:hover { text-decoration: underline; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="icon">✅</div>
-            <h1>Desuscripción Exitosa</h1>
-            <p>Tu correo <strong>${email}</strong> ha sido removido de nuestra lista.</p>
-            <p>Lamentamos verte partir. Si cambias de opinión, siempre puedes volver a suscribirte.</p>
-            <a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a>
-          </div>
-        </body>
-        </html>
-      `);
+      res.status(200).send(renderEditorialPage({
+        title: 'Unsubscribed successfully',
+        message: `The address <span class="email">${email}</span> has been removed from our mailing list.`,
+        submessage: 'We are sorry to see you go. You can resubscribe at any time from our website.',
+        isSuccess: true,
+        lang: 'en'
+      }));
     } else {
-      res.status(404).send(`
-        <html>
-        <head>
-          <style>
-            body { font-family: 'Georgia', serif; text-align: center; margin-top: 50px; background-color: #f3f4f6; }
-            .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; }
-            h1 { color: #1a1a1a; }
-            p { color: #666; line-height: 1.6; }
-            .icon { font-size: 48px; margin-bottom: 20px; }
-            a { color: #007398; text-decoration: none; }
-            a:hover { text-decoration: underline; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="icon">❌</div>
-            <h1>Error</h1>
-            <p>Email no encontrado en nuestra base de datos.</p>
-            <a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a>
-          </div>
-        </body>
-        </html>
-      `);
+      res.status(404).send(renderEditorialPage({
+        title: 'Email not found',
+        message: 'We could not find this email address in our database.',
+        isSuccess: false,
+        lang: 'en'
+      }));
     }
   }
 );
+
+// ==================== MANAGE PREFERENCES ====================
 
 exports.managePreferences = onRequest(
   {
@@ -18739,83 +18765,52 @@ exports.managePreferences = onRequest(
   async (req, res) => {
     const email = req.query.email || req.body?.email;
     const token = req.query.token || req.body?.token;
-    
-    // Manejar GET - Mostrar formulario
+
+    // ---------- GET: Formulario ----------
     if (req.method === 'GET') {
       if (!email || !token) {
-        res.status(400).send(`
-          <html>
-          <head>
-            <style>
-              body { font-family: 'Georgia', serif; text-align: center; margin-top: 50px; background-color: #f3f4f6; }
-              .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; }
-              h1 { color: #1a1a1a; }
-              p { color: #666; line-height: 1.6; }
-              .icon { font-size: 48px; margin-bottom: 20px; }
-              a { color: #007398; text-decoration: none; }
-              a:hover { text-decoration: underline; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="icon">❌</div>
-              <h1>Error</h1>
-              <p>Parámetros inválidos. Por favor, usa el enlace proporcionado en el correo.</p>
-              <a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a>
-            </div>
-          </body>
-          </html>
-        `);
+        res.status(400).send(renderEditorialPage({
+          title: 'Invalid request',
+          message: 'The required parameters are missing. Please use the link provided in the email.',
+          isSuccess: false,
+          lang: 'en'
+        }));
         return;
       }
-      
+
       if (!verifyUnsubscribeToken(email, token)) {
-        res.status(403).send(`
-          <html>
-          <head>
-            <style>
-              body { font-family: 'Georgia', serif; text-align: center; margin-top: 50px; background-color: #f3f4f6; }
-              .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; }
-              h1 { color: #1a1a1a; }
-              p { color: #666; line-height: 1.6; }
-              .icon { font-size: 48px; margin-bottom: 20px; }
-              a { color: #007398; text-decoration: none; }
-              a:hover { text-decoration: underline; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="icon">❌</div>
-              <h1>Error</h1>
-              <p>Token inválido. Por favor, usa el enlace proporcionado en el correo.</p>
-              <a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a>
-            </div>
-          </body>
-          </html>
-        `);
+        res.status(403).send(renderEditorialPage({
+          title: 'Invalid link',
+          message: 'This preferences link is invalid or has expired. Please use the most recent link from your email.',
+          isSuccess: false,
+          lang: 'en'
+        }));
         return;
       }
-      
-      // Obtener preferencias actuales
+
       try {
         const db = admin.firestore();
         const snapshot = await db.collection(NEWSLETTER_COLLECTION)
           .where('email', '==', email)
           .limit(1)
           .get();
-        
+
         let currentPreferences = { areas: [] };
         let subscriberName = email.split('@')[0];
         let subscriberLang = 'es';
-        
+
         if (!snapshot.empty) {
           const data = snapshot.docs[0].data();
           currentPreferences = data.preferences || { areas: [] };
           subscriberName = data.nombre || subscriberName;
           subscriberLang = data.idioma || 'es';
         }
-        
+
         const isEn = subscriberLang === 'en';
+        const revistaName = isEn
+          ? 'The National Review of Sciences for Students'
+          : 'Revista Nacional de las Ciencias para Estudiantes';
+
         const areasList = [
           { value: 'biologia', label: isEn ? 'Biology' : 'Biología' },
           { value: 'quimica', label: isEn ? 'Chemistry' : 'Química' },
@@ -18824,121 +18819,225 @@ exports.managePreferences = onRequest(
           { value: 'computacion', label: isEn ? 'Computer Science' : 'Computación' },
           { value: 'astronomia', label: isEn ? 'Astronomy' : 'Astronomía' },
           { value: 'geologia', label: isEn ? 'Geology' : 'Geología' },
-          { value: 'ecologia', label: isEn ? 'Ecology' : 'Ecología' }
+          { value: 'ecologia', label: isEn ? 'Ecology' : 'Ecología' },
+          { value: 'medicina', label: isEn ? 'Medicine' : 'Medicina' },
+          { value: 'ingenieria', label: isEn ? 'Engineering' : 'Ingeniería' },
+          { value: 'neurociencia', label: isEn ? 'Neuroscience' : 'Neurociencia' },
+          { value: 'medio_ambiente', label: isEn ? 'Environment' : 'Medio Ambiente' }
         ];
-        
+
         const checkboxesHTML = areasList.map(area => {
           const isChecked = currentPreferences.areas?.includes(area.value) ? 'checked' : '';
-          return `<label class="area">
-            <input type="checkbox" name="areas" value="${area.value}" ${isChecked}> ${area.label}
-          </label>`;
+          return `
+            <label class="area-item">
+              <input type="checkbox" name="areas" value="${area.value}" ${isChecked}>
+              <span class="checkmark"></span>
+              <span class="label-text">${area.label}</span>
+            </label>`;
         }).join('');
+
+        res.status(200).send(`<!DOCTYPE html>
+<html lang="${subscriberLang}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${isEn ? 'Manage Preferences' : 'Gestionar Preferencias'} · ${revistaName}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .page { width: 100%; max-width: 560px; }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 48px 40px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+    .header p {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      color: #64748b;
+    }
+    .intro {
+      font-size: 16px;
+      color: #334155;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    .areas-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 20px;
+      margin-bottom: 36px;
+    }
+    .area-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      color: #0f172a;
+    }
+    .area-item:hover {
+      background-color: #f1f5f9;
+    }
+    .area-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #0f172a;
+      cursor: pointer;
+    }
+    .actions {
+      text-align: center;
+    }
+    .btn {
+      display: inline-block;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      background-color: #0f172a;
+      border: none;
+      padding: 13px 32px;
+      border-radius: 3px;
+      cursor: pointer;
+      letter-spacing: 0.2px;
+      transition: background-color 0.15s ease;
+    }
+    .btn:hover {
+      background-color: #1e293b;
+    }
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    @media (max-width: 520px) {
+      .areas-grid { grid-template-columns: 1fr; }
+      .card { padding: 36px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <div class="header">
+        <h1>${isEn ? 'Manage Preferences' : 'Gestionar Preferencias'}</h1>
+        <p>${revistaName}</p>
+      </div>
+      
+      <p class="intro">
+        ${isEn
+          ? `Hello ${subscriberName}, select the scientific areas you wish to receive.`
+          : `Hola ${subscriberName}, selecciona las áreas científicas que deseas recibir.`}
+      </p>
+      
+      <form action="https://managepreferences-ggqsq2kkua-uc.a.run.app" method="POST">
+        <input type="hidden" name="email" value="${email}">
+        <input type="hidden" name="token" value="${token}">
         
-        res.status(200).send(`
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              body { 
-                font-family: 'Georgia', serif; 
-                text-align: center; 
-                margin-top: 50px; 
-                background-color: #f3f4f6; 
-              }
-              .container { 
-                max-width: 500px; 
-                margin: 0 auto; 
-                background: white; 
-                padding: 40px; 
-                border-radius: 8px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-              }
-              h1 { color: #1a1a1a; }
-              p { color: #666; line-height: 1.6; }
-              .area { 
-                display: block; 
-                margin: 12px 0; 
-                text-align: left;
-                padding: 8px;
-                border-radius: 4px;
-                transition: background-color 0.3s;
-              }
-              .area:hover {
-                background-color: #f9fafb;
-              }
-              .area input[type="checkbox"] {
-                margin-right: 10px;
-              }
-              .btn { 
-                background-color: #007398; 
-                color: white; 
-                padding: 12px 24px; 
-                border: none; 
-                border-radius: 4px; 
-                cursor: pointer; 
-                font-size: 14px;
-                font-weight: bold;
-                margin-top: 20px;
-              }
-              .btn:hover { 
-                background-color: #005a73; 
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>${isEn ? 'Manage Preferences' : 'Gestionar Preferencias'}</h1>
-              <p>${isEn ? `Hello ${subscriberName}, select the areas that interest you:` : `Hola ${subscriberName}, selecciona las áreas que te interesan:`}</p>
-              <form action="https://managepreferences-ggqsq2kkua-uc.a.run.app" method="POST">
-                <input type="hidden" name="email" value="${email}">
-                <input type="hidden" name="token" value="${token}">
-                ${checkboxesHTML}
-                <button type="submit" class="btn">
-                  ${isEn ? 'Save Preferences' : 'Guardar Preferencias'}
-                </button>
-              </form>
-            </div>
-          </body>
-          </html>
-        `);
+        <div class="areas-grid">
+          ${checkboxesHTML}
+        </div>
+        
+        <div class="actions">
+          <button type="submit" class="btn">
+            ${isEn ? 'Save preferences' : 'Guardar preferencias'}
+          </button>
+        </div>
+      </form>
+    </div>
+    <div class="footer">
+      ${revistaName}
+    </div>
+  </div>
+</body>
+</html>`);
         return;
       } catch (error) {
         logger.error('Error getting preferences:', error);
-        res.status(500).send('Error al cargar preferencias');
+        res.status(500).send(renderEditorialPage({
+          title: 'Error',
+          message: 'An error occurred while loading your preferences. Please try again later.',
+          isSuccess: false,
+          lang: 'en'
+        }));
         return;
       }
     }
-    
-    // Manejar POST - Guardar preferencias
+
+    // ---------- POST: Guardar preferencias ----------
     if (req.method === 'POST') {
       const { email, token, areas } = req.body || {};
-      
+
       if (!email || !token) {
-        res.status(400).send('Parámetros inválidos');
+        res.status(400).send(renderEditorialPage({
+          title: 'Invalid request',
+          message: 'Required parameters are missing.',
+          isSuccess: false,
+          lang: 'en'
+        }));
         return;
       }
-      
+
       if (!verifyUnsubscribeToken(email, token)) {
-        res.status(403).send('Token inválido');
+        res.status(403).send(renderEditorialPage({
+          title: 'Invalid link',
+          message: 'This preferences link is invalid or has expired.',
+          isSuccess: false,
+          lang: 'en'
+        }));
         return;
       }
-      
+
       try {
         const db = admin.firestore();
         const snapshot = await db.collection(NEWSLETTER_COLLECTION)
           .where('email', '==', email)
           .limit(1)
           .get();
-        
+
         if (snapshot.empty) {
-          res.status(404).send('Email no encontrado');
+          res.status(404).send(renderEditorialPage({
+            title: 'Email not found',
+            message: 'We could not find this email address in our database.',
+            isSuccess: false,
+            lang: 'en'
+          }));
           return;
         }
-        
+
         const doc = snapshot.docs[0];
         const selectedAreas = Array.isArray(areas) ? areas : (areas ? [areas] : []);
-        
+
         await doc.ref.update({
           preferences: {
             areas: selectedAreas,
@@ -18946,55 +19045,37 @@ exports.managePreferences = onRequest(
           },
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        
-        res.status(200).send(`
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <style>
-              body { 
-                font-family: 'Georgia', serif; 
-                text-align: center; 
-                margin-top: 50px; 
-                background-color: #f3f4f6; 
-              }
-              .container { 
-                max-width: 500px; 
-                margin: 0 auto; 
-                background: white; 
-                padding: 40px; 
-                border-radius: 8px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-              }
-              h1 { color: #1a1a1a; }
-              p { color: #666; line-height: 1.6; }
-              .icon { font-size: 48px; margin-bottom: 20px; }
-              a { color: #007398; text-decoration: none; }
-              a:hover { text-decoration: underline; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="icon">✅</div>
-              <h1>Preferencias Actualizadas</h1>
-              <p>Tus preferencias han sido guardadas correctamente.</p>
-              <p>Recibirás noticias de las áreas seleccionadas.</p>
-              <p><a href="https://www.revistacienciasestudiantes.com">Volver al sitio</a></p>
-            </div>
-          </body>
-          </html>
-        `);
-        
+
+        res.status(200).send(renderEditorialPage({
+          title: 'Preferences updated',
+          message: 'Your preferences have been saved successfully.',
+          submessage: 'You will now receive news from the selected scientific areas.',
+          isSuccess: true,
+          lang: 'en'
+        }));
+
       } catch (error) {
         logger.error('Error updating preferences:', error);
-        res.status(500).send('Error al actualizar preferencias');
+        res.status(500).send(renderEditorialPage({
+          title: 'Error',
+          message: 'An error occurred while saving your preferences. Please try again later.',
+          isSuccess: false,
+          lang: 'en'
+        }));
       }
       return;
     }
-    
-    res.status(405).send('Method not allowed');
+
+    res.status(405).send(renderEditorialPage({
+      title: 'Method not allowed',
+      message: 'This endpoint only accepts GET and POST requests.',
+      isSuccess: false,
+      lang: 'en'
+    }));
   }
 );
+
+// ==================== SCHEDULED ====================
 
 exports.sendNewsletterScheduled = onSchedule(
   {
