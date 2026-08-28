@@ -190,6 +190,9 @@ export default function ScientificNewsUploadSection({ userData }) {
   // CONFIGURACIÓN DE TOOLBAR (para ambos editores)
   // ===================================================
   const modules = useMemo(() => ({
+    // ⚠️ Obligatorio: desactivar el módulo nativo de tablas
+    table: false,
+
     toolbar: {
       container: [
         [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
@@ -203,7 +206,7 @@ export default function ScientificNewsUploadSection({ userData }) {
         [{ 'align': [] }],
         ['blockquote', 'code-block'],
         ['link', 'image', 'video', 'formula'],
-        [{ 'table': 'TD' }], // Solo botón para insertar tabla
+        ['table'], // Botón custom para insertar tabla
         ['clean']
       ],
       handlers: {
@@ -220,13 +223,28 @@ export default function ScientificNewsUploadSection({ userData }) {
             const range = this.quill.getSelection();
             this.quill.insertEmbed(range.index, 'formula', mathText);
           }
+        },
+        // Handler para insertar tabla
+        table: function() {
+          const quill = this.quill;
+          const tableModule = quill.getModule('better-table');
+          if (tableModule) {
+            const rows = prompt(isSpanish ? 'Número de filas:' : 'Number of rows:', '3');
+            const cols = prompt(isSpanish ? 'Número de columnas:' : 'Number of columns:', '3');
+            if (rows && cols) {
+              tableModule.insertTable(parseInt(rows, 10), parseInt(cols, 10));
+            }
+          }
         }
       }
     },
+
     imageResize: {
       parchment: Quill.import('parchment'),
       modules: ['Resize', 'DisplaySize', 'Toolbar'],
     },
+
+    // Configuración de better-table
     'better-table': {
       operationMenu: {
         items: {
@@ -242,6 +260,12 @@ export default function ScientificNewsUploadSection({ userData }) {
         }
       }
     },
+
+    // ⚠️ Obligatorio para evitar el error .pop()
+    keyboard: {
+      bindings: QuillBetterTable.keyboardBindings
+    },
+
     clipboard: {
       matchVisual: false
     }
@@ -252,7 +276,9 @@ export default function ScientificNewsUploadSection({ userData }) {
     'list', 'bullet', 'indent', 'align',
     'blockquote', 'code-block', 'link', 'image', 'video', 'formula',
     'color', 'background', 'font', 'size',
-    'table', 'table-cell', 'table-row', 'table-header-cell'
+    // Formatos de better-table
+    'table', 'table-cell', 'table-row', 'table-header-cell',
+    'table-container', 'table-body', 'table-col', 'table-col-group'
   ];
 
   // ===================================================
@@ -324,6 +350,7 @@ export default function ScientificNewsUploadSection({ userData }) {
       return base64EncodeUnicode(html);
     }
   };
+
   // ===================================================
   // MANEJO DE TAGS
   // ===================================================

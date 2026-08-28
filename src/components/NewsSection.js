@@ -138,7 +138,8 @@ export default function NewsSection({ className }) {
   const [error, setError] = useState("");
   const [visibleScienceNews, setVisibleScienceNews] = useState(12);
   const [activeTab, setActiveTab] = useState('all');
-  const [showAllInternalNews, setShowAllInternalNews] = useState(false); // Estado para controlar la visibilidad
+  const [showAllInternalNews, setShowAllInternalNews] = useState(false);
+  const [selectedArea, setSelectedArea] = useState('all'); // NUEVO: Estado para el filtro de área
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -223,14 +224,22 @@ export default function NewsSection({ className }) {
     fetchNews();
   }, []);
 
+  // ========== FILTROS INTELIGENTES ==========
   const filteredInternalNews = news.filter((n) =>
     n.titulo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredScienceNews = scienceNews.filter((n) =>
-    n.title_es?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (n.author_name || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredScienceNews = scienceNews.filter((n) => {
+    // 1. Filtro por término de búsqueda (título o autor)
+    const matchesSearch = n.title_es?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (n.author_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // 2. Filtro por área seleccionada
+    const matchesArea = selectedArea === 'all' || n.area_id === selectedArea;
+    
+    // Debe cumplir ambas condiciones
+    return matchesSearch && matchesArea;
+  });
 
   const loadMoreScienceNews = () => setVisibleScienceNews((prev) => prev + 8);
 
@@ -293,6 +302,14 @@ export default function NewsSection({ className }) {
           break-inside: avoid;
           page-break-inside: avoid;
         }
+        
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
       `}} />
 
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 pt-12">
@@ -348,108 +365,156 @@ export default function NewsSection({ className }) {
         {(activeTab === 'all' || activeTab === 'science') && scienceNews.length > 0 && (
           <section className="mb-20">
             
-            {/* BLOQUE SUPERIOR: Hero + Sidebar */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 border-b-2 border-slate-900 pb-12 mb-10">
+            {/* --- FILTRO INTELIGENTE POR ÁREAS --- */}
+            <div className="mb-10 flex gap-2 overflow-x-auto hide-scrollbar pb-2">
+              <button
+                onClick={() => setSelectedArea('all')}
+                className={`whitespace-nowrap px-4 py-2 rounded-full font-system text-[10px] font-bold uppercase tracking-widest transition-all ${
+                  selectedArea === 'all'
+                    ? 'bg-[#0F172A] text-white shadow-md'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                Todas las áreas
+              </button>
               
-              {/* Artículo Principal */}
-              {featuredScience && (
-                <article 
-                  className="lg:col-span-8 group cursor-pointer lg:border-r border-slate-300 lg:pr-12"
-                  onClick={() => openScienceNews(featuredScience)}
+              {Object.entries(AREAS_MAP).map(([key, data]) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedArea(key)}
+                  className={`whitespace-nowrap px-4 py-2 rounded-full font-system text-[10px] font-bold uppercase tracking-widest transition-all ${
+                    selectedArea === key
+                      ? 'text-white shadow-md'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }`}
+                  style={{
+                    backgroundColor: selectedArea === key ? data.color : undefined,
+                  }}
                 >
-                  <div className="relative mb-6 overflow-hidden bg-slate-100">
-                    <img
-                      src={featuredScience.photo || "https://www.revistacienciasestudiantes.com/team.jpg"}
-                      className="w-full aspect-video object-cover transition-transform duration-700 group-hover:scale-[1.02]"
-                      alt={featuredScience.title_es}
-                      onError={(e) => {
-                        e.target.src = "https://www.revistacienciasestudiantes.com/team.jpg";
-                      }}
-                    />
-                    <div className="absolute bottom-0 left-0 p-3 bg-white/90 backdrop-blur-sm border-t border-r border-slate-200">
-                       <span className="font-system text-[10px] font-black uppercase tracking-widest" style={{ color: AREAS_MAP[featuredScience.area_id]?.color || '#0F172A' }}>
-                         {AREAS_MAP[featuredScience.area_id]?.es || 'General'}
-                       </span>
+                  {data.es}
+                </button>
+              ))}
+            </div>
+
+            {/* Estado vacío para filtros */}
+            {filteredScienceNews.length === 0 && (
+              <div className="py-20 text-center font-journal text-slate-500">
+                <p className="text-xl italic mb-2">No se encontraron artículos.</p>
+                <button 
+                  onClick={() => { setSearchTerm(''); setSelectedArea('all'); }}
+                  className="font-system text-xs font-bold uppercase tracking-[0.2em] text-[#EA580C] hover:text-[#0F172A] transition-colors"
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+            )}
+
+            {/* BLOQUE SUPERIOR: Hero + Sidebar */}
+            {filteredScienceNews.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 border-b-2 border-slate-900 pb-12 mb-10">
+              
+                {/* Artículo Principal */}
+                {featuredScience && (
+                  <article 
+                    className="lg:col-span-8 group cursor-pointer lg:border-r border-slate-300 lg:pr-12"
+                    onClick={() => openScienceNews(featuredScience)}
+                  >
+                    <div className="relative mb-6 overflow-hidden bg-slate-100">
+                      <img
+                        src={featuredScience.photo || "https://www.revistacienciasestudiantes.com/team.jpg"}
+                        className="w-full aspect-video object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                        alt={featuredScience.title_es}
+                        onError={(e) => {
+                          e.target.src = "https://www.revistacienciasestudiantes.com/team.jpg";
+                        }}
+                      />
+                      <div className="absolute bottom-0 left-0 p-3 bg-white/90 backdrop-blur-sm border-t border-r border-slate-200">
+                        <span className="font-system text-[10px] font-black uppercase tracking-widest" style={{ color: AREAS_MAP[featuredScience.area_id]?.color || '#0F172A' }}>
+                          {AREAS_MAP[featuredScience.area_id]?.es || 'General'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <h2 className="text-4xl md:text-5xl lg:text-[3.5rem] font-journal font-black leading-[1.1] mb-5 text-[#0F172A] group-hover:text-[#EA580C] transition-colors">
+                      {featuredScience.title_es}
+                    </h2>
+                    
+                    <div className="editorial-abstract text-large mb-6 truncate-3">
+                      {decodeBody(featuredScience.content_es, true, 300)}
+                    </div>
+
+                    <div className="flex items-center gap-3 font-system text-xs font-semibold text-slate-500 uppercase tracking-wider border-t border-slate-200 pt-4">
+                      <span 
+                        className="text-[#0F172A] hover:text-[#EA580C] cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); openAuthorProfile(featuredScience.author_slug); }}
+                      >
+                        Por {featuredScience.author_name}
+                      </span>
+                      <span>|</span>
+                      <time>{formatDate(featuredScience.createdAt)}</time>
+                    </div>
+                  </article>
+                )}
+
+                {/* Sidebar con Newsletter */}
+                <aside className="lg:col-span-4 flex flex-col gap-8">
+                  {/* Newsletter destacado */}
+                  <div className="bg-[#0F172A] text-white p-6 rounded-sm shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#EA580C] rounded-full opacity-10 translate-x-1/3 -translate-y-1/3"></div>
+                    <h3 className="font-journal text-2xl font-bold mb-3 relative z-10">Suscríbete al Boletín</h3>
+                    <p className="font-system text-sm text-slate-300 mb-4 relative z-10">
+                      Recibe todas las investigaciones y noticias directamente en tu correo.
+                    </p>
+                    <div className="relative z-10">
+                      <NewsletterSubscription variant="compact" showTitle={false} />
                     </div>
                   </div>
 
-                  <h2 className="text-4xl md:text-5xl lg:text-[3.5rem] font-journal font-black leading-[1.1] mb-5 text-[#0F172A] group-hover:text-[#EA580C] transition-colors">
-                    {featuredScience.title_es}
-                  </h2>
-                  
-                  <div className="editorial-abstract text-large mb-6 truncate-3">
-                    {decodeBody(featuredScience.content_es, true, 300)}
-                  </div>
-
-                  <div className="flex items-center gap-3 font-system text-xs font-semibold text-slate-500 uppercase tracking-wider border-t border-slate-200 pt-4">
-                    <span 
-                      className="text-[#0F172A] hover:text-[#EA580C] cursor-pointer"
-                      onClick={(e) => { e.stopPropagation(); openAuthorProfile(featuredScience.author_slug); }}
-                    >
-                      Por {featuredScience.author_name}
-                    </span>
-                    <span>|</span>
-                    <time>{formatDate(featuredScience.createdAt)}</time>
-                  </div>
-                </article>
-              )}
-
-              {/* Sidebar con Newsletter */}
-              <aside className="lg:col-span-4 flex flex-col gap-8">
-                {/* Newsletter destacado */}
-                <div className="bg-[#0F172A] text-white p-6 rounded-sm shadow-xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#EA580C] rounded-full opacity-10 translate-x-1/3 -translate-y-1/3"></div>
-                  <h3 className="font-journal text-2xl font-bold mb-3 relative z-10">Suscríbete al Boletín</h3>
-                  <p className="font-system text-sm text-slate-300 mb-4 relative z-10">
-                    Recibe todas las investigaciones y noticias directamente en tu correo.
-                  </p>
-                  <div className="relative z-10">
-                    <NewsletterSubscription variant="compact" showTitle={false} />
-                  </div>
-                </div>
-
-                {/* En Tendencia */}
-                <div>
-                  <div className="flex items-center justify-between border-b border-black pb-2 mb-4">
-                    <h3 className="font-system font-black uppercase tracking-[0.2em] text-sm text-[#0F172A]">En Tendencia</h3>
-                    <span className="w-2 h-2 bg-[#EA580C] rounded-full animate-pulse"></span>
-                  </div>
-                  
-                  <div className="flex flex-col gap-0">
-                    {sidebarScienceNews.map((item, idx) => (
-                      <article 
-                        key={item.id} 
-                        className="group cursor-pointer py-4 border-b border-slate-200 last:border-b-0 hover:bg-slate-50 transition-colors -mx-2 px-2 rounded-sm flex gap-4"
-                        onClick={() => openScienceNews(item)}
-                      >
-                        <div className="w-20 h-20 flex-shrink-0 bg-slate-100 overflow-hidden">
-                          <img
-                            src={item.photo || "https://www.revistacienciasestudiantes.com/team.jpg"}
-                            className="w-full h-full object-cover"
-                            alt={item.title_es}
-                            onError={(e) => {
-                              e.target.src = "https://www.revistacienciasestudiantes.com/team.jpg";
-                            }}
-                          />
-                        </div>
-                        
-                        <div className="flex-1">
-                          <span className="font-system text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: AREAS_MAP[item.area_id]?.color || '#0F172A' }}>
-                            {AREAS_MAP[item.area_id]?.es || 'General'}
-                          </span>
-                          <h4 className="text-sm font-journal font-bold leading-snug mb-1 text-[#0F172A] group-hover:text-[#EA580C]">
-                            {item.title_es}
-                          </h4>
-                          <time className="font-system text-[9px] text-slate-400 font-medium uppercase tracking-wider block">
-                            {formatDate(item.createdAt, true)}
-                          </time>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              </aside>
-            </div>
+                  {/* En Tendencia */}
+                  {sidebarScienceNews.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between border-b border-black pb-2 mb-4">
+                        <h3 className="font-system font-black uppercase tracking-[0.2em] text-sm text-[#0F172A]">En Tendencia</h3>
+                        <span className="w-2 h-2 bg-[#EA580C] rounded-full animate-pulse"></span>
+                      </div>
+                      
+                      <div className="flex flex-col gap-0">
+                        {sidebarScienceNews.map((item, idx) => (
+                          <article 
+                            key={item.id} 
+                            className="group cursor-pointer py-4 border-b border-slate-200 last:border-b-0 hover:bg-slate-50 transition-colors -mx-2 px-2 rounded-sm flex gap-4"
+                            onClick={() => openScienceNews(item)}
+                          >
+                            <div className="w-20 h-20 flex-shrink-0 bg-slate-100 overflow-hidden">
+                              <img
+                                src={item.photo || "https://www.revistacienciasestudiantes.com/team.jpg"}
+                                className="w-full h-full object-cover"
+                                alt={item.title_es}
+                                onError={(e) => {
+                                  e.target.src = "https://www.revistacienciasestudiantes.com/team.jpg";
+                                }}
+                              />
+                            </div>
+                            
+                            <div className="flex-1">
+                              <span className="font-system text-[9px] font-bold uppercase tracking-widest mb-1 block" style={{ color: AREAS_MAP[item.area_id]?.color || '#0F172A' }}>
+                                {AREAS_MAP[item.area_id]?.es || 'General'}
+                              </span>
+                              <h4 className="text-sm font-journal font-bold leading-snug mb-1 text-[#0F172A] group-hover:text-[#EA580C]">
+                                {item.title_es}
+                              </h4>
+                              <time className="font-system text-[9px] text-slate-400 font-medium uppercase tracking-wider block">
+                                {formatDate(item.createdAt, true)}
+                              </time>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </aside>
+              </div>
+            )}
 
             {/* BLOQUE MEDIO: Fila Visual */}
             {visualRowNews.length > 0 && (
@@ -486,7 +551,7 @@ export default function NewsSection({ className }) {
             {remainingScienceNews.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {remainingScienceNews.map((item) => (
-                   <article 
+                  <article 
                     key={item.id} 
                     className="group cursor-pointer flex gap-4 border-b border-slate-200 pb-6"
                     onClick={() => openScienceNews(item)}
