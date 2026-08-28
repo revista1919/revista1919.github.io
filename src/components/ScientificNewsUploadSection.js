@@ -295,85 +295,28 @@ export default function ScientificNewsUploadSection({ userData }) {
 
   const clearDraft = () => localStorage.removeItem('scientificNewsDraft');
 
-  // Función para manejar el pegado de contenido completo (texto + tablas)
-  const attachPasteHandler = (quill) => {
-    if (!quill || quill.__pasteTableOk) return;
-    quill.__pasteTableOk = true;
+  // Registrar matchers UNA vez por instancia de Quill (sin preventDefault)
+  const attachTableClipboard = (quill) => {
+    if (!quill || quill.__tableClipboardOk) return;
+    quill.__tableClipboardOk = true;
 
     const Delta = Quill.import('delta');
 
-    quill.root.addEventListener(
-      'paste',
-      (e) => {
-        const html = e.clipboardData?.getData('text/html') || '';
-        // Solo interceptamos si hay tabla; si no, deja el pegado normal de Quill
-        if (!html || !/<table[\s>]/i.test(html)) return;
+    // <table> de Word/Docs/web → un solo embed (no párrafos)
+    quill.clipboard.addMatcher('TABLE', (node) => {
+      const cleaned = cleanPastedTable(node);
+      if (!cleaned) return new Delta();
+      // Sustituye TODA la tabla (y su contenido hijo) por el blot
+      return new Delta().insert({ tableEmbed: cleaned }).insert('\n');
+    });
 
-        e.preventDefault();
-        e.stopPropagation();
-
-        try {
-          const doc = new DOMParser().parseFromString(html, 'text/html');
-          let index = (quill.getSelection(true) || { index: quill.getLength() }).index;
-
-          const insertDeltaAt = (delta) => {
-            if (!delta || !delta.ops || !delta.ops.length) return;
-            // Quitar saltos finales duplicados raros de Word
-            quill.updateContents(new Delta().retain(index).concat(delta), 'user');
-            index += delta.length();
-          };
-
-          const processNode = (node) => {
-            if (!node) return;
-
-            // Texto suelto
-            if (node.nodeType === Node.TEXT_NODE) {
-              const t = node.textContent || '';
-              if (t.replace(/\u00a0/g, ' ').trim() === '' && !t.includes('\n')) return;
-              if (t) {
-                quill.insertText(index, t, 'user');
-                index += t.length;
-              }
-              return;
-            }
-
-            if (node.nodeType !== Node.ELEMENT_NODE) return;
-
-            const tag = node.tagName;
-
-            // Tabla → embed (con bordes)
-            if (tag === 'TABLE') {
-              const cleaned = cleanPastedTable(node);
-              if (cleaned) {
-                quill.insertEmbed(index, 'tableEmbed', cleaned, 'user');
-                index += 1;
-                quill.insertText(index, '\n', 'user');
-                index += 1;
-              }
-              return;
-            }
-
-            // Contiene tabla anidada → procesar hijos por separado
-            if (node.querySelector && node.querySelector('table')) {
-              Array.from(node.childNodes).forEach(processNode);
-              return;
-            }
-
-            // Bloque / inline rico sin tablas → convert de Quill (negrita, listas, etc.)
-            const wrap = document.createElement('div');
-            wrap.appendChild(node.cloneNode(true));
-            const delta = quill.clipboard.convert(wrap);
-            insertDeltaAt(delta);
-          };
-
-          Array.from(doc.body.childNodes).forEach(processNode);
-          quill.setSelection(index);
-        } catch (err) {
-          console.warn('Paste with table failed', err);
-        }
-      },
-      true
-    );
+    // Por si se copia/pega una tabla ya insertada en el editor
+    quill.clipboard.addMatcher('DIV.ql-table-embed', (node) => {
+      const table = node.querySelector('table');
+      const html = table ? table.outerHTML : node.innerHTML;
+      if (!html) return new Delta();
+      return new Delta().insert({ tableEmbed: html }).insert('\n');
+    });
   };
 
   // ---------- Modules ----------
@@ -988,7 +931,7 @@ export default function ScientificNewsUploadSection({ userData }) {
                 <ReactQuill
                   ref={(ref) => {
                     editorEsRef.current = ref?.getEditor() || null;
-                    if (editorEsRef.current) attachPasteHandler(editorEsRef.current);
+                    if (editorEsRef.current) attachTableClipboard(editorEsRef.current);
                   }}
                   theme="snow"
                   value={bodyEs}
@@ -1008,7 +951,7 @@ export default function ScientificNewsUploadSection({ userData }) {
                 <ReactQuill
                   ref={(ref) => {
                     editorEnRef.current = ref?.getEditor() || null;
-                    if (editorEnRef.current) attachPasteHandler(editorEnRef.current);
+                    if (editorEnRef.current) attachTableClipboard(editorEnRef.current);
                   }}
                   theme="snow"
                   value={bodyEn}
