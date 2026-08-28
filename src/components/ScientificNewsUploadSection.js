@@ -119,7 +119,6 @@ export default function ScientificNewsUploadSection({ userData }) {
   const [featured, setFeatured] = useState(false);
   
   // Estados de UI
-  const [activeLanguage, setActiveLanguage] = useState('es');
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [showWarning, setShowWarning] = useState(true);
@@ -185,18 +184,24 @@ export default function ScientificNewsUploadSection({ userData }) {
   const modules = useMemo(() => ({
     toolbar: {
       container: [
-        [{ 'header': [2, 3, 4, false] }],
-        ['bold', 'italic', 'underline'],
+        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
         [{ 'script': 'sub'}, { 'script': 'super' }],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        [{ 'align': ['', 'center', 'justify'] }],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'font': [] }],
+        [{ 'size': ['small', false, 'large', 'huge'] }],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'list': 'check' }],
+        [{ 'indent': '-1' }, { 'indent': '+1' }],
+        [{ 'align': [] }],
+        [{ 'direction': 'rtl' }],
         ['blockquote', 'code-block'],
-        ['link', 'image', 'formula'],
+        ['link', 'image', 'video', 'formula'],
+        [{ 'table': 'TD' }, { 'table-insert-row': 'TIR' }, { 'table-insert-column': 'TIC' }, { 'table-delete-row': 'TDR' }, { 'table-delete-column': 'TDC' }, { 'table-delete-table': 'TDT' }],
         ['clean']
       ],
       handlers: {
         image: function() {
-          setActiveEditor(activeLanguage);
+          setActiveEditor(activeEditor);
           setIsEditingImage(false);
           setImageData({ url: '', width: '', height: '', align: 'left' });
           setEditingRange(null);
@@ -214,13 +219,20 @@ export default function ScientificNewsUploadSection({ userData }) {
     imageResize: {
       parchment: Quill.import('parchment'),
       modules: ['Resize', 'DisplaySize', 'Toolbar'],
+    },
+    table: true, // Habilitar tablas
+    clipboard: {
+      matchVisual: false
     }
-  }), [activeLanguage, isSpanish]);
+  }), [activeEditor, isSpanish]);
 
   const formats = [
-    'header', 'bold', 'italic', 'underline', 'script',
-    'list', 'bullet', 'align', 'blockquote', 'code-block',
-    'link', 'image', 'video', 'formula'
+    'header', 'bold', 'italic', 'underline', 'strike', 'script',
+    'list', 'bullet', 'check', 'indent', 'align', 'direction',
+    'blockquote', 'code-block', 'link', 'image', 'video', 'formula',
+    'color', 'background', 'font', 'size', 'table', 'table-insert-row',
+    'table-insert-column', 'table-delete-row', 'table-delete-column',
+    'table-delete-table'
   ];
 
   // ===================================================
@@ -263,6 +275,21 @@ export default function ScientificNewsUploadSection({ userData }) {
       formulas.forEach(formula => {
         formula.style.display = 'inline-block';
         formula.style.margin = '0 4px';
+      });
+
+      // Procesamiento de tablas
+      const tables = tempDiv.querySelectorAll('table');
+      tables.forEach(table => {
+        table.style.borderCollapse = 'collapse';
+        table.style.width = '100%';
+        table.style.margin = '2rem 0';
+        
+        const cells = table.querySelectorAll('td, th');
+        cells.forEach(cell => {
+          cell.style.border = '1px solid #ddd';
+          cell.style.padding = '12px';
+          cell.style.textAlign = 'left';
+        });
       });
 
       const finalHtml = `
@@ -502,8 +529,12 @@ export default function ScientificNewsUploadSection({ userData }) {
           font-weight: 300;
         }
 
+        .editorial-editor-wrapper .ql-editor h1, 
         .editorial-editor-wrapper .ql-editor h2, 
-        .editorial-editor-wrapper .ql-editor h3 {
+        .editorial-editor-wrapper .ql-editor h3,
+        .editorial-editor-wrapper .ql-editor h4,
+        .editorial-editor-wrapper .ql-editor h5,
+        .editorial-editor-wrapper .ql-editor h6 {
           font-family: 'Roboto', Arial, sans-serif;
           font-weight: 700;
           color: #222;
@@ -522,6 +553,32 @@ export default function ScientificNewsUploadSection({ userData }) {
         .editorial-editor-wrapper .ql-editor img {
           max-width: 100%;
           margin: 2rem 0;
+        }
+
+        .editorial-editor-wrapper .ql-editor table {
+          border-collapse: collapse;
+          width: 100%;
+          margin: 2rem 0;
+        }
+
+        .editorial-editor-wrapper .ql-editor table td,
+        .editorial-editor-wrapper .ql-editor table th {
+          border: 1px solid #ddd;
+          padding: 12px;
+          text-align: left;
+        }
+
+        .editorial-editor-wrapper .ql-editor ol,
+        .editorial-editor-wrapper .ql-editor ul {
+          margin: 1rem 0;
+          padding-left: 2rem;
+        }
+
+        .editorial-editor-wrapper .ql-editor ol ol,
+        .editorial-editor-wrapper .ql-editor ul ul,
+        .editorial-editor-wrapper .ql-editor ol ul,
+        .editorial-editor-wrapper .ql-editor ul ol {
+          margin: 0.5rem 0;
         }
 
         .ql-snow .ql-stroke {
@@ -623,28 +680,6 @@ export default function ScientificNewsUploadSection({ userData }) {
             <span className="text-sm font-medium">{status.msg}</span>
           </motion.div>
         )}
-
-        {/* --- CONTROLES EDITORIALES --- */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-300 pb-3 gap-4">
-          <div className="flex gap-6 w-full md:w-auto font-sans-nature">
-            <button
-              onClick={() => setActiveLanguage('es')}
-              className={`text-[13px] font-bold uppercase tracking-wide transition-all ${
-                activeLanguage === 'es' ? 'text-black border-b-2 border-black pb-1' : 'text-gray-500 hover:text-black pb-1'
-              }`}
-            >
-              {isSpanish ? 'Español' : 'Spanish'}
-            </button>
-            <button
-              onClick={() => setActiveLanguage('en')}
-              className={`text-[13px] font-bold uppercase tracking-wide transition-all ${
-                activeLanguage === 'en' ? 'text-black border-b-2 border-black pb-1' : 'text-gray-500 hover:text-black pb-1'
-              }`}
-            >
-              {isSpanish ? 'Inglés' : 'English'}
-            </button>
-          </div>
-        </div>
 
         {/* --- FORMULARIO PRINCIPAL --- */}
         <div className="grid grid-cols-1 gap-8">
