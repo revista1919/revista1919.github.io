@@ -34,8 +34,8 @@ function SubmitSection() {
           variants={fadeUp}
           className="mb-12 text-center"
         >
-          <h2 className="text-3xl sm:text-4xl font-serif text-black mb-3 tracking-tight">
-            Envío de <span className="italic text-[#e86125]">Manuscritos.</span>
+          <h2 className="text-4xl sm:text-5xl font-serif text-black mb-3 tracking-tight">
+            Envío de <span className="italic text-[#001833]">Manuscritos.</span>
           </h2>
           <p className="text-[15px] text-[#666666] max-w-2xl mx-auto font-sans">
             El proceso de envío constituye un acto formal que implica la aceptación íntegra de nuestras normativas editoriales y éticas.
@@ -245,7 +245,7 @@ function SubmitSection() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircleIcon className="w-4 h-4 text-[#e86125] flex-shrink-0 mt-0.5" />
-                      <span className="text-[13px] text-[#666666] font-sans">Carta de presentación firmada</span>
+                      <span className="text-[13px] text-[#666666] font-sans">Breve texto al editor explicando el valor y aporte de su artículo</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircleIcon className="w-4 h-4 text-[#e86125] flex-shrink-0 mt-0.5" />

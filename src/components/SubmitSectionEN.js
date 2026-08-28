@@ -34,8 +34,8 @@ function SubmitSection() {
           variants={fadeUp}
           className="mb-12 text-center"
         >
-          <h2 className="text-3xl sm:text-4xl font-serif text-black mb-3 tracking-tight">
-            Manuscript <span className="italic text-[#e86125]">Submission.</span>
+          <h2 className="text-4xl sm:text-5xl font-serif text-black mb-3 tracking-tight">
+            Manuscript <span className="italic text-[#001833]">Submission.</span>
           </h2>
           <p className="text-[15px] text-[#666666] max-w-2xl mx-auto font-sans">
             The submission process constitutes a formal act that implies full acceptance of our editorial and ethical regulations.
@@ -245,7 +245,7 @@ function SubmitSection() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircleIcon className="w-4 h-4 text-[#e86125] flex-shrink-0 mt-0.5" />
-                      <span className="text-[13px] text-[#666666] font-sans">Signed cover letter</span>
+                      <span className="text-[13px] text-[#666666] font-sans">Brief note to the editor explaining the value and contribution of your article</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircleIcon className="w-4 h-4 text-[#e86125] flex-shrink-0 mt-0.5" />

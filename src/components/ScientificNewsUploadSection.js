@@ -2,6 +2,8 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import 'quill-better-table/dist/quill-better-table.css'; // CSS para tablas
+import QuillBetterTable from 'quill-better-table';
 import ImageResize from 'quill-image-resize-module-react';
 import { auth } from '../firebase';
 import { debounce } from 'lodash';
@@ -26,7 +28,13 @@ import {
 // ===================================================
 // REGISTRO DE MÓDULOS ADICIONALES
 // ===================================================
-Quill.register('modules/imageResize', ImageResize);
+// Registrar ImageResize silenciosamente
+Quill.register('modules/imageResize', ImageResize, true);
+
+// Registrar BetterTable silenciosamente
+Quill.register({
+  'modules/better-table': QuillBetterTable
+}, true);
 
 // Para matemáticas
 import katex from 'katex';
@@ -190,13 +198,12 @@ export default function ScientificNewsUploadSection({ userData }) {
         [{ 'color': [] }, { 'background': [] }],
         [{ 'font': [] }],
         [{ 'size': ['small', false, 'large', 'huge'] }],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'list': 'check' }],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
         [{ 'indent': '-1' }, { 'indent': '+1' }],
         [{ 'align': [] }],
-        [{ 'direction': 'rtl' }],
         ['blockquote', 'code-block'],
         ['link', 'image', 'video', 'formula'],
-        [{ 'table': 'TD' }, { 'table-insert-row': 'TIR' }, { 'table-insert-column': 'TIC' }, { 'table-delete-row': 'TDR' }, { 'table-delete-column': 'TDC' }, { 'table-delete-table': 'TDT' }],
+        [{ 'table': 'TD' }], // Solo botón para insertar tabla
         ['clean']
       ],
       handlers: {
@@ -220,7 +227,21 @@ export default function ScientificNewsUploadSection({ userData }) {
       parchment: Quill.import('parchment'),
       modules: ['Resize', 'DisplaySize', 'Toolbar'],
     },
-    table: true, // Habilitar tablas
+    'better-table': {
+      operationMenu: {
+        items: {
+          insertColumnRight: { text: isSpanish ? 'Insertar columna derecha' : 'Insert column right' },
+          insertColumnLeft: { text: isSpanish ? 'Insertar columna izquierda' : 'Insert column left' },
+          insertRowUp: { text: isSpanish ? 'Insertar fila arriba' : 'Insert row up' },
+          insertRowDown: { text: isSpanish ? 'Insertar fila abajo' : 'Insert row down' },
+          mergeCells: { text: isSpanish ? 'Combinar celdas' : 'Merge cells' },
+          unmergeCells: { text: isSpanish ? 'Separar celdas' : 'Unmerge cells' },
+          deleteColumn: { text: isSpanish ? 'Eliminar columna' : 'Delete column' },
+          deleteRow: { text: isSpanish ? 'Eliminar fila' : 'Delete row' },
+          deleteTable: { text: isSpanish ? 'Eliminar tabla' : 'Delete table' }
+        }
+      }
+    },
     clipboard: {
       matchVisual: false
     }
@@ -228,11 +249,10 @@ export default function ScientificNewsUploadSection({ userData }) {
 
   const formats = [
     'header', 'bold', 'italic', 'underline', 'strike', 'script',
-    'list', 'bullet', 'check', 'indent', 'align', 'direction',
+    'list', 'bullet', 'indent', 'align',
     'blockquote', 'code-block', 'link', 'image', 'video', 'formula',
-    'color', 'background', 'font', 'size', 'table', 'table-insert-row',
-    'table-insert-column', 'table-delete-row', 'table-delete-column',
-    'table-delete-table'
+    'color', 'background', 'font', 'size',
+    'table', 'table-cell', 'table-row', 'table-header-cell'
   ];
 
   // ===================================================
@@ -304,7 +324,6 @@ export default function ScientificNewsUploadSection({ userData }) {
       return base64EncodeUnicode(html);
     }
   };
-
   // ===================================================
   // MANEJO DE TAGS
   // ===================================================
