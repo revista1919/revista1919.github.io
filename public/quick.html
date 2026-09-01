@@ -4,255 +4,362 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Guía Rápida Interactiva · Revista Nacional de las Ciencias para Estudiantes</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
 
+  <!-- Fuentes: Merriweather para el toque académico, Inter para la interfaz -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&display=swap" rel="stylesheet">
+
+  <!-- Iconos para interactividad visual -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
     :root {
-      /* Paleta Editorial Académica (Elsevier/T&F Style) */
-      --primary: #004b87;
-      --secondary: #006dae;
-      --accent: #e86125;
-      --text-main: #2b2b2b;
-      --text-muted: #666666;
-      --border-light: #e6e8ea;
-      --border-dark: #cbd0d5;
-      --bg-out: #f4f5f7;
-      --bg-paper: #ffffff;
-      --bg-highlight: #f8f9fa;
-      --bg-example: #f0f4f8;
-      --success: #0d8246;
+      /* Paleta Premium Editorial */
+      --brand-navy: #0B192C;       /* Azul profundo y autoritario */
+      --brand-navy-light: #1A365D; /* Azul secundario */
+      --brand-orange: #FF6B00;     /* Naranja vibrante para acciones */
+      --brand-orange-light: #FFF0E6;
+
+      --text-main: #1E293B;
+      --text-muted: #64748B;
+      --text-light: #94A3B8;
+
+      --bg-page: #F8FAFC;          /* Fondo gris muy sutil */
+      --bg-card: #FFFFFF;
+
+      --border-soft: #E2E8F0;
+      --border-medium: #CBD5E1;
+
+      --success: #10B981;
+      --success-bg: #ECFDF5;
+
+      --font-serif: 'Merriweather', serif;
+      --font-sans: 'Inter', sans-serif;
+
+      --shadow-sm: 0 1px 3px rgba(11, 25, 44, 0.05);
+      --shadow-md: 0 4px 15px rgba(11, 25, 44, 0.08);
+      --shadow-lg: 0 10px 25px rgba(11, 25, 44, 0.12);
+
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
     }
 
+    * { box-sizing: border-box; }
+
     body {
-      font-family: 'Inter', sans-serif;
-      font-size: 15px;
+      font-family: var(--font-sans);
+      font-size: 16px;
       line-height: 1.6;
       margin: 0;
       padding: 0;
-      background-color: var(--bg-out);
+      background-color: var(--bg-page);
       color: var(--text-main);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
 
-    .dashboard-wrapper {
-      max-width: 1100px;
-      margin: 40px auto;
-      display: grid;
-      grid-template-columns: 300px 1fr;
-      gap: 35px;
-      align-items: start;
+    /* ================= HERO SECTION ================= */
+    .hero {
+      background-color: var(--brand-navy);
+      color: white;
+      padding: 60px 20px;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 4px solid var(--brand-orange);
     }
 
-    .sidebar {
-      background-color: var(--bg-paper);
-      border: 1px solid var(--border-light);
-      border-top: 4px solid var(--secondary);
-      border-radius: 4px;
-      padding: 25px;
-      position: sticky;
-      top: 40px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(255,107,0,0.1) 0%, rgba(11,25,44,0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
     }
 
-    .sidebar h3 {
-      font-size: 0.9em;
+    .hero-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .tagline {
+      font-size: 0.85rem;
       text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-muted);
-      margin-top: 0;
-      margin-bottom: 20px;
-      border-bottom: 1px solid var(--border-light);
-      padding-bottom: 10px;
+      letter-spacing: 0.2em;
+      color: var(--brand-orange);
       font-weight: 700;
-    }
-
-    .doc-link {
+      margin-bottom: 15px;
       display: block;
-      padding: 12px 15px;
-      margin-bottom: 10px;
-      background-color: var(--bg-highlight);
-      border: 1px solid var(--border-light);
-      border-left: 3px solid var(--primary);
-      color: var(--text-main);
-      text-decoration: none;
-      font-weight: 500;
-      font-size: 0.95em;
-      border-radius: 0 4px 4px 0;
-      transition: all 0.2s ease;
     }
 
-    .doc-link:hover {
-      background-color: #eef2f5;
-      border-left-color: var(--accent);
-      color: var(--primary);
-    }
-
-    .doc-link span {
-      display: block;
-      font-size: 0.8em;
-      color: var(--text-muted);
-      font-weight: 400;
-      margin-top: 3px;
-    }
-
-    .sidebar .quick-tip {
-      margin-top: 25px;
-      padding: 15px;
-      background-color: #fdf6f3;
-      border-left: 3px solid var(--accent);
-      font-size: 0.85em;
-      color: #7a3512;
-      border-radius: 0 4px 4px 0;
-    }
-
-    .sidebar .quick-tip strong {
-      display: block;
-      margin-bottom: 5px;
-      text-transform: uppercase;
-      font-size: 0.8em;
-      letter-spacing: 0.05em;
-    }
-
-    .main-content {
-      background-color: var(--bg-paper);
-      border: 1px solid var(--border-light);
-      border-top: 5px solid var(--primary);
-      border-radius: 4px;
-      padding: 45px 55px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-    }
-
-    .header-main {
-      border-bottom: 1px solid var(--border-light);
-      padding-bottom: 25px;
-      margin-bottom: 35px;
-    }
-
-    .header-main h1 {
-      font-size: 2.3em;
-      font-weight: 700;
-      margin: 0 0 10px 0;
-      color: var(--primary);
+    .hero h1 {
+      font-family: var(--font-serif);
+      font-size: 3.2rem;
+      font-weight: 900;
+      margin: 0 0 20px 0;
+      line-height: 1.1;
       letter-spacing: -0.02em;
     }
 
-    .header-main p {
-      font-family: 'Lora', serif;
-      font-size: 1.15em;
-      color: var(--text-muted);
+    .hero p {
+      font-size: 1.15rem;
+      color: #CBD5E1;
+      max-width: 700px;
       margin: 0;
+      font-weight: 300;
+    }
+
+    /* ================= LAYOUT PRINCIPAL ================= */
+    .dashboard-wrapper {
+      max-width: 1200px;
+      margin: -40px auto 60px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 40px;
+      align-items: start;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ================= SIDEBAR ================= */
+    .sidebar {
+      background-color: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 30px;
+      position: sticky;
+      top: 40px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-soft);
+    }
+
+    .sidebar h3 {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      color: var(--brand-navy);
+      margin-top: 0;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--border-soft);
+    }
+
+    .doc-link {
+      display: flex;
+      align-items: flex-start;
+      gap: 15px;
+      padding: 15px;
+      margin-bottom: 12px;
+      background-color: var(--bg-page);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .doc-link::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: var(--brand-navy);
+      transition: background-color 0.3s ease;
+    }
+
+    .doc-link:hover {
+      background-color: white;
+      border-color: var(--brand-orange);
+      box-shadow: var(--shadow-sm);
+      transform: translateX(4px);
+    }
+
+    .doc-link:hover::before {
+      background-color: var(--brand-orange);
+    }
+
+    .doc-link i {
+      color: var(--brand-navy-light);
+      font-size: 1.2rem;
+      margin-top: 3px;
+      transition: color 0.3s;
+    }
+
+    .doc-link:hover i { color: var(--brand-orange); }
+
+    .doc-link-content strong {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .doc-link-content span {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .quick-tip {
+      margin-top: 30px;
+      padding: 20px;
+      background: linear-gradient(135deg, var(--brand-navy), var(--brand-navy-light));
+      color: white;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+    }
+
+    .quick-tip i {
+      color: var(--brand-orange);
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+    }
+
+    /* ================= CONTENIDO PRINCIPAL ================= */
+    .main-content {
+      background-color: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 50px 60px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-soft);
     }
 
     .alert-box {
-      background-color: #fdf6f3;
-      border-left: 4px solid var(--accent);
-      padding: 18px 25px;
-      margin-bottom: 35px;
-      font-size: 0.9em;
-      color: #7a3512;
-      border-radius: 0 4px 4px 0;
+      background-color: var(--brand-orange-light);
+      border-left: 4px solid var(--brand-orange);
+      padding: 20px 25px;
+      margin-bottom: 40px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      display: flex;
+      gap: 15px;
+      align-items: flex-start;
+    }
+
+    .alert-box i {
+      color: var(--brand-orange);
+      font-size: 1.4rem;
+      margin-top: 2px;
+    }
+
+    .alert-box div {
+      font-size: 0.95rem;
+      color: #9A3412;
     }
 
     .alert-box strong {
       text-transform: uppercase;
       letter-spacing: 0.05em;
       font-size: 0.85em;
+      display: block;
+      margin-bottom: 5px;
     }
-    /* Estilos para enlaces dentro de la caja de alerta */
-.alert-box a {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 600;
-  border-bottom: 1px solid var(--accent);
-  transition: color 0.2s ease, border-bottom-color 0.2s ease, background-color 0.2s ease;
-  padding: 0 2px;
-  border-radius: 2px;
-}
 
-.alert-box a:hover {
-  color: #c54a16;
-  border-bottom-color: #c54a16;
-  background-color: rgba(232, 97, 37, 0.08);
-}
-
-.alert-box a:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+    .alert-box a {
+      color: var(--brand-orange);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      font-weight: 600;
+    }
 
     h2 {
-      font-size: 1.45em;
-      color: var(--primary);
-      border-bottom: 1px solid var(--border-light);
-      padding-bottom: 8px;
-      margin-top: 2em;
+      font-family: var(--font-serif);
+      font-size: 1.8rem;
+      color: var(--brand-navy);
+      margin-top: 2.5em;
       margin-bottom: 1.2em;
-      font-weight: 600;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
-    h3 {
-      font-size: 1.15em;
-      color: var(--text-main);
-      margin-top: 1.8em;
-      margin-bottom: 0.8em;
-      font-weight: 600;
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 24px;
+      height: 3px;
+      background-color: var(--brand-orange);
     }
 
+    /* ================= ACORDEONES (DETAILS) ================= */
     details {
-      background-color: var(--bg-highlight);
-      border: 1px solid var(--border-light);
-      border-radius: 4px;
-      margin-bottom: 18px;
-      overflow: hidden;
-      transition: box-shadow 0.2s ease;
+      background-color: white;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-sm);
     }
 
     details:hover {
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border-color: var(--border-medium);
+      box-shadow: var(--shadow-md);
+    }
+
+    details[open] {
+      border-color: var(--brand-navy-light);
+      box-shadow: var(--shadow-md);
     }
 
     summary {
-      padding: 18px 25px;
-      font-weight: 600;
-      font-size: 1.05em;
-      color: var(--text-main);
+      padding: 20px 25px;
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--brand-navy);
       cursor: pointer;
       list-style: none;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background-color: #fbfcfd;
+      transition: color 0.3s;
     }
 
-    summary::-webkit-details-marker {
-      display: none;
-    }
+    summary:hover { color: var(--brand-orange); }
+
+    summary::-webkit-details-marker { display: none; }
 
     summary::after {
-      content: '+';
-      font-size: 1.8em;
-      color: var(--secondary);
-      font-weight: 400;
-      line-height: 1;
-      transition: transform 0.2s ease;
+      content: '\f078';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      font-size: 0.9rem;
+      color: var(--text-light);
+      transition: transform 0.3s ease, color 0.3s ease;
     }
 
     details[open] summary::after {
-      content: '−';
       transform: rotate(180deg);
+      color: var(--brand-orange);
     }
 
     details[open] summary {
-      border-bottom: 1px solid var(--border-light);
-      color: var(--primary);
+      border-bottom: 1px solid var(--border-soft);
+      color: var(--brand-orange);
     }
 
     .details-content {
       padding: 25px;
-      background-color: var(--bg-paper);
-      font-family: 'Lora', serif;
-      font-size: 1.02em;
+      background-color: #FAFCFF;
+      font-size: 0.95rem;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      animation: fadeInDown 0.4s ease-out;
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .details-content ul {
@@ -260,562 +367,586 @@
       padding-left: 1.5em;
     }
 
-    .details-content li {
-      margin-bottom: 12px;
-    }
-
-    .details-content strong {
-      font-family: 'Inter', sans-serif;
-      color: var(--text-main);
-      font-weight: 600;
-    }
+    .details-content li { margin-bottom: 12px; }
+    .details-content strong { color: var(--brand-navy); }
 
     .details-content a {
-      color: var(--secondary);
+      color: var(--brand-orange);
       text-decoration: none;
-      border-bottom: 1px solid var(--border-dark);
-      transition: color 0.2s, border-color 0.2s;
+      font-weight: 600;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s;
     }
 
-    .details-content a:hover {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
+    .details-content a:hover { border-bottom-color: var(--brand-orange); }
 
+    /* Cajas de ejemplo y código */
     .example-box {
-      background-color: var(--bg-example);
-      border-left: 3px solid var(--secondary);
-      padding: 15px 20px;
-      margin: 15px 0;
-      font-size: 0.9em;
-      border-radius: 0 4px 4px 0;
-    }
-
-    .example-box code {
-      background-color: #e9edf2;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
-      font-size: 0.9em;
-    }
-
-    .grid-2col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      background-color: white;
+      border: 1px solid var(--border-soft);
+      border-left: 4px solid var(--brand-navy-light);
+      padding: 20px;
       margin: 20px 0;
-    }
-
-    @media (max-width: 600px) {
-      .grid-2col { grid-template-columns: 1fr; }
-    }
-
-    /* Checklist Interactivo */
-    .checklist-container {
-      background-color: var(--bg-highlight);
-      border: 1px solid var(--border-light);
       border-radius: 4px;
-      padding: 30px;
-      margin-top: 20px;
+      font-size: 0.9em;
+      color: var(--text-muted);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .example-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--brand-navy);
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+
+    code {
+      background-color: #F1F5F9;
+      color: #0F172A;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.9em;
+      border: 1px solid #E2E8F0;
+    }
+
+    /* ================= CHECKLIST INTERACTIVO ================= */
+    .checklist-container {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 40px;
+      margin-top: 30px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
     }
 
     .progress-wrapper {
+      position: sticky;
+      top: -50px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(5px);
+      padding-bottom: 25px;
       margin-bottom: 25px;
+      border-bottom: 1px solid var(--border-soft);
+      z-index: 10;
     }
 
     .progress-header {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 10px;
-      font-weight: 600;
-      font-size: 0.9em;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .progress-header span:first-child {
+      font-family: var(--font-serif);
+      font-weight: 700;
+      color: var(--brand-navy);
+      font-size: 1.1rem;
+    }
+
+    #progress-text {
+      font-weight: 800;
+      color: var(--brand-orange);
+      font-size: 1.2rem;
     }
 
     .progress-bar-bg {
       height: 8px;
-      background-color: var(--border-dark);
-      border-radius: 4px;
+      background-color: var(--border-soft);
+      border-radius: 10px;
       overflow: hidden;
     }
 
     .progress-bar-fill {
       height: 100%;
-      background-color: var(--primary);
+      background: linear-gradient(90deg, var(--brand-orange), #FF8C33);
       width: 0%;
-      transition: width 0.3s ease, background-color 0.3s ease;
+      border-radius: 10px;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s;
     }
 
     .checklist-item {
       display: flex;
       align-items: flex-start;
-      margin-bottom: 18px;
+      padding: 16px;
+      margin-bottom: 12px;
+      background: var(--bg-page);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
       cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .checklist-item:hover {
+      border-color: var(--brand-orange);
+      background: white;
+      transform: translateX(4px);
     }
 
     .checklist-item input[type="checkbox"] {
       appearance: none;
       -webkit-appearance: none;
-      width: 22px;
-      height: 22px;
-      border: 2px solid var(--border-dark);
-      border-radius: 4px;
-      margin-right: 15px;
+      width: 26px;
+      height: 26px;
+      border: 2px solid var(--border-medium);
+      border-radius: 6px;
+      margin-right: 18px;
       margin-top: 2px;
       cursor: pointer;
       position: relative;
-      background-color: var(--bg-paper);
+      background-color: white;
       flex-shrink: 0;
-      transition: all 0.2s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .checklist-item input[type="checkbox"]:checked {
-      background-color: var(--success);
-      border-color: var(--success);
+      background-color: var(--brand-orange);
+      border-color: var(--brand-orange);
+      animation: popIn 0.3s ease;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.8); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
     }
 
     .checklist-item input[type="checkbox"]:checked::after {
-      content: '';
+      content: '\f00c';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      color: white;
       position: absolute;
-      left: 6px;
-      top: 2px;
-      width: 5px;
-      height: 10px;
-      border: solid white;
-      border-width: 0 2px 2px 0;
-      transform: rotate(45deg);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
     }
 
     .checklist-item label {
       cursor: pointer;
-      font-size: 0.95em;
+      font-size: 0.95rem;
       line-height: 1.5;
       color: var(--text-main);
       user-select: none;
+      padding-top: 2px;
     }
 
-    .checklist-item:hover input[type="checkbox"]:not(:checked) {
-      border-color: var(--secondary);
+    .checklist-item label strong { color: var(--brand-navy); }
+
+    .checklist-item.checked {
+      background-color: #FFF9F5;
+      border-color: #FFDBC2;
+      opacity: 0.8;
     }
 
     #success-message {
       display: none;
-      margin-top: 25px;
-      padding: 18px;
-      background-color: #e8f5e9;
-      border: 1px solid #c8e6c9;
-      color: #2e7d32;
-      border-radius: 4px;
-      font-weight: 600;
-      text-align: center;
-      font-size: 1.1em;
-      letter-spacing: 0.02em;
+      margin-top: 30px;
+      padding: 20px;
+      background-color: var(--success-bg);
+      border: 1px solid #A7F3D0;
+      border-left: 5px solid var(--success);
+      color: #065F46;
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+      font-size: 1.05rem;
+      animation: fadeInDown 0.5s ease-out;
+      align-items: center;
+      gap: 15px;
     }
 
-    /* Proceso Editorial esquemático */
+    #success-message.hidden { display: none !important; }
+    #success-message:not(.hidden) { display: flex; }
+
+    /* ================= TIMELINE PROCESO EDITORIAL ================= */
     .editorial-process {
-      background-color: #fcfcfd;
-      border: 1px solid var(--border-light);
-      border-radius: 4px;
-      padding: 25px;
-      margin-top: 20px;
+      margin-top: 40px;
+      padding: 10px 0 10px 30px;
+      border-left: 3px solid var(--border-soft);
     }
 
     .process-step {
-      display: flex;
-      align-items: flex-start;
-      margin-bottom: 20px;
-      background-color: var(--bg-paper);
-      border-radius: 4px;
-      padding: 15px 20px;
-      border-left: 4px solid var(--primary);
-      box-shadow: 0 1px 5px rgba(0,0,0,0.02);
+      position: relative;
+      margin-bottom: 40px;
+      background-color: white;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 25px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .process-step:last-child { margin-bottom: 0; }
+
+    .process-step:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--brand-navy-light);
     }
 
     .step-number {
-      background-color: var(--primary);
+      position: absolute;
+      left: -48px;
+      top: 20px;
+      background-color: var(--brand-navy);
       color: white;
       font-weight: 700;
-      font-size: 1.2em;
-      width: 32px;
-      height: 32px;
+      font-family: var(--font-serif);
+      font-size: 1.2rem;
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-right: 15px;
-      flex-shrink: 0;
+      box-shadow: 0 0 0 6px var(--bg-card);
+      transition: background-color 0.3s;
     }
 
-    .step-content {
-      font-size: 0.95em;
+    .process-step:hover .step-number {
+      background-color: var(--brand-orange);
     }
 
-    .step-content strong {
-      font-family: 'Inter', sans-serif;
-      color: var(--primary);
+    .step-content h4 {
+      margin: 0 0 10px 0;
+      font-family: var(--font-serif);
+      color: var(--brand-navy);
+      font-size: 1.15rem;
     }
 
-    .arrow-icon {
-      text-align: center;
-      color: var(--border-dark);
-      font-size: 1.2em;
-      margin: 5px 0;
-      letter-spacing: 0.2em;
-    }
-
-    /* Footer */
-    .footer {
-      margin-top: 50px;
-      text-align: center;
-      font-size: 0.8em;
+    .step-content p {
+      margin: 0;
+      font-size: 0.95rem;
       color: var(--text-muted);
-      border-top: 1px solid var(--border-light);
-      padding-top: 20px;
     }
 
-    @media (max-width: 900px) {
-      .dashboard-wrapper {
-        grid-template-columns: 1fr;
-        padding: 0 20px;
-      }
-      .sidebar {
-        position: static;
-      }
-      .main-content {
-        padding: 30px 25px;
-      }
+    .step-content ul {
+      margin: 10px 0 0 0;
+      padding-left: 20px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .step-content strong { color: var(--text-main); }
+
+    /* ================= FOOTER ================= */
+    .footer {
+      margin-top: 80px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-light);
+      border-top: 1px solid var(--border-soft);
+      padding-top: 30px;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-wrapper { grid-template-columns: 1fr; }
+      .sidebar { position: static; margin-bottom: 30px; }
+    }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 2.2rem; }
+      .main-content { padding: 30px 20px; }
+      .checklist-container { padding: 25px 15px; }
+      .editorial-process { padding-left: 20px; }
+      .step-number { left: -38px; width: 30px; height: 30px; font-size: 1rem; }
     }
   </style>
 </head>
 <body>
 
+  <!-- CABECERA PRINCIPAL (HERO) -->
+  <header class="hero">
+    <div class="hero-content">
+      <span class="tagline">Centro de Autores</span>
+      <h1>Guía Rápida para Publicar</h1>
+      <p>Prepara tu manuscrito con éxito. Descubre los requisitos esenciales, formatos requeridos y el flujo de trabajo editorial antes de enviar tu investigación.</p>
+    </div>
+  </header>
+
   <div class="dashboard-wrapper">
-    
-    <!-- Barra Lateral de Documentos -->
+
+    <!-- BARRA LATERAL DE RECURSOS -->
     <aside class="sidebar">
-      <h3>Documentos Oficiales</h3>
+      <h3>Recursos Oficiales</h3>
+
       <a href="author.html" class="doc-link">
-        Guía Completa para Autores
-        <span>Explicación detallada de cada requisito, con más ejemplos y plantillas</span>
+        <i class="fa-solid fa-book-open-reader"></i>
+        <div class="doc-link-content">
+          <strong>Guía Completa</strong>
+          <span>Manual detallado con plantillas y ejemplos avanzados.</span>
+        </div>
       </a>
+
       <a href="policies.html" class="doc-link">
-        Políticas Editoriales
-        <span>Normas de ética, alcance temático y cómo se toman las decisiones</span>
+        <i class="fa-solid fa-scale-balanced"></i>
+        <div class="doc-link-content">
+          <strong>Políticas Editoriales</strong>
+          <span>Normas de ética, toma de decisiones y alcance.</span>
+        </div>
       </a>
+
       <a href="open-access.html" class="doc-link">
-        Políticas de Acceso Abierto
-        <span>Qué significa publicar en abierto y qué derechos tienes sobre tu obra</span>
+        <i class="fa-solid fa-lock-open"></i>
+        <div class="doc-link-content">
+          <strong>Acceso Abierto</strong>
+          <span>Derechos de autor y licencias de publicación.</span>
+        </div>
       </a>
-      
+
       <div class="quick-tip">
-        <strong>Consejo</strong>
-        Esta guía es tu mapa de ruta. Ábrela sección por sección y tómate tu tiempo. Cada punto incluye enlaces a la guía completa si necesitas profundizar.
+        <i class="fa-regular fa-lightbulb"></i>
+        <strong>Consejo del Editor</strong>
+        <p style="margin:0; line-height:1.5;">Usa esta guía como tu mapa de ruta inicial. Abre cada sección y verifica los puntos. Ahorrarás semanas de correcciones técnicas en la primera fase.</p>
       </div>
     </aside>
 
-    <!-- Contenido Principal -->
+    <!-- CONTENIDO PRINCIPAL -->
     <main class="main-content">
-      <div class="header-main">
-        <h1>Guía Rápida para Autores</h1>
-        <p>Si es tu primera vez publicando un artículo, estás en el lugar correcto. Aquí te explicamos, paso a paso y con ejemplos, todo lo que necesitas tener listo antes de enviar tu manuscrito.</p>
-      </div>
 
       <div class="alert-box">
-        <strong>Aviso esencial:</strong> Esta guía es un resumen didáctico. No debería reemplazar la lectura de las políticas oficiales, pero te ayudará a entender los requisitos y a evitar errores comunes. Queda a su discreción revisar la <a href="policies.html" target="_blank">Guía Completa</a> para detalles más específicos.
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <div>
+          <strong>Aviso Esencial</strong>
+          Esta guía es un resumen didáctico estructurado para facilitar la comprensión. No reemplaza la lectura de las normativas oficiales. Sugerimos revisar la <a href="policies.html" target="_blank">Guía Completa</a> para casos específicos y directrices exhaustivas.
+        </div>
       </div>
 
-      <h2>1. Entendiendo los requisitos clave</h2>
+      <h2>1. Estructura y Formato del Manuscrito</h2>
 
       <details>
-        <summary>1.0 El Resumen (Abstract) – la puerta de entrada</summary>
+        <summary>1.0 El Resumen (Abstract) – La puerta de entrada</summary>
         <div class="details-content">
+          <p><strong>¿Qué es?</strong> Es una síntesis breve y autónoma de tu artículo. Es el elemento principal (y a veces el único) que lee un editor o revisor para decidir evaluar tu trabajo.</p>
           <ul>
-            <li><strong>¿Qué es?</strong> Es una síntesis breve y autónoma de tu artículo. Piensa que es lo primero (y a veces lo único) que lee un editor o revisor para decidir si tu trabajo merece una lectura completa.</li>
-            <li><strong>Longitud recomendada:</strong> Entre <strong>150 y 250 palabras</strong>. No uses citas, fórmulas complejas ni referencias bibliográficas.</li>
-            <li><strong>Estructura sugerida (IMRyD en miniatura, esto aplica principalmente para los artículos científicos):</strong>
+            <li><strong>Longitud:</strong> Entre <strong>150 y 250 palabras</strong>. Excluye citas bibliográficas y fórmulas complejas.</li>
+            <li><strong>Estructura IMRyD sugerida:</strong>
               <ul>
-                <li><strong>Contexto/Problema:</strong> ¿Qué se estudia y por qué importa? (1-2 frases)</li>
+                <li><strong>Contexto:</strong> ¿Qué se estudia y por qué importa? (1-2 frases)</li>
                 <li><strong>Objetivo:</strong> ¿Qué buscabas responder? (1 frase)</li>
-                <li><strong>Métodos:</strong> ¿Cómo lo hiciste? (1-2 frases, sin demasiado detalle)</li>
-                <li><strong>Resultados principales:</strong> ¿Qué encontraste? (2-3 frases con datos o hallazgos clave)</li>
-                <li><strong>Conclusión/Implicancia:</strong> ¿Qué significa tu hallazgo? (1 frase)</li>
+                <li><strong>Métodos:</strong> Diseño, participantes, instrumentos. (1-2 frases)</li>
+                <li><strong>Resultados:</strong> Hallazgos estadísticos o analíticos clave. (2-3 frases)</li>
+                <li><strong>Conclusión:</strong> Implicancia de tu hallazgo. (1 frase)</li>
               </ul>
             </li>
-            <li><strong>Consejo:</strong> Escríbelo al final, cuando todo el artículo esté listo, así reflejará fielmente tu trabajo. Debe ser legible de forma independiente, como un mini-ensayo.</li>
-            <li><strong>Versión en inglés:</strong> La revista solicita un resumen en inglés (Abstract) para que tu trabajo sea visible internacionalmente. Debe ser una traducción fiel del resumen en español.</li>
+            <li><strong>Idioma:</strong> Se requiere versión en español e inglés (Abstract) con traducción técnica fiel.</li>
           </ul>
           <div class="example-box">
-            <strong>Ejemplo simplificado:</strong> <em>"Este estudio examina el efecto de la música clásica en la concentración de estudiantes universitarios. Utilizando un diseño experimental con 60 participantes, se comparó el rendimiento en una prueba de atención con y sin música de fondo. Los resultados muestran una mejora del 15% en tareas de memoria a corto plazo con música instrumental, aunque sin diferencias en tareas de razonamiento. Se concluye que la música ambiental puede ser una herramienta de bajo costo para optimizar ciertos procesos cognitivos en entornos académicos."</em>
+            <strong>Ejemplo Estructural:</strong>
+            <em>"Este estudio examina el efecto de la música clásica en la concentración de estudiantes universitarios. Utilizando un diseño experimental con 60 participantes, se comparó el rendimiento en una prueba de atención con y sin música de fondo. Los resultados muestran una mejora del 15% en tareas de memoria a corto plazo con música instrumental (p &lt; 0.05), aunque sin diferencias en tareas de razonamiento. Se concluye que la música ambiental es una herramienta viable para optimizar procesos cognitivos específicos en entornos académicos."</em>
           </div>
         </div>
       </details>
 
       <details>
-        <summary>1.1 El archivo y el anonimato</summary>
+        <summary>1.1 El archivo y la preparación para Doble Ciego</summary>
         <div class="details-content">
           <ul>
-            <li><strong>Formato del archivo:</strong> Debes enviar tu trabajo en <strong>Microsoft Word (.docx)</strong>. Si usas LaTeX, convierte el archivo con herramientas como Pandoc y revisa que todo se vea bien.</li>
-            <li><strong>¿Qué es la revisión doble ciego?</strong> Significa que ni los revisores saben quién eres tú, ni tú sabes quiénes son ellos. Para que funcione, tu documento no debe mostrar tu nombre, tu colegio o universidad, ni ninguna pista sobre tu identidad.</li>
-            <li><strong>¿Cómo lo hago?</strong> 
+            <li><strong>Formato:</strong> Exclusivamente <strong>Microsoft Word (.docx)</strong>. Usuarios de LaTeX deben convertir mediante Pandoc.</li>
+            <li><strong>Revisión Doble Ciego (Double-blind peer review):</strong> Para garantizar la imparcialidad, los revisores no conocerán tu identidad, ni tú la de ellos.</li>
+            <li><strong>Instrucciones de Anonimización:</strong>
               <ul>
-                <li>No escribas tu nombre en la portada ni en el encabezado.</li>
-                <li>Revisa que en "agradecimientos" o "información del proyecto" no aparezcan nombres propios o instituciones que te identifiquen.</li>
-                <li>Si citas trabajos tuyos anteriores, sustitúyelos por <em>"[Anonimizado para revisión]"</em>. No te preocupes: si tu artículo es aceptado, lo restaurarás.</li>
+                <li>Elimina nombres de autores y afiliaciones debajo del título.</li>
+                <li>En la sección de Agradecimientos, omite nombres de tutores, becas o universidades.</li>
+                <li>Si te auto-citas, reemplaza tu nombre en el texto y bibliografía por <em>"[Autor anonimizado]"</em>.</li>
+                <li>Limpia los metadatos del archivo Word (Archivo > Información > Inspeccionar documento).</li>
               </ul>
             </li>
-            <li><strong>Estructura IMRyD:</strong> Es el esqueleto recomendado para artículos de investigación: <strong>I</strong>ntroducción, <strong>M</strong>étodos, <strong>R</strong>esultados y <strong>D</strong>iscusión. Te ayuda a organizar las ideas claramente.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>1.2 Extensión y Jerarquía de Títulos</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>Extensión:</strong> Entre <strong>1.000 y 10.000 palabras</strong> (incluyendo referencias). Excesos significativos requerirán justificación o serán devueltos para reducción.</li>
+            <li><strong>Jerarquía (Headings):</strong> Utiliza estrictamente los estilos predeterminados de tu procesador de texto (Título 1, Título 2, Título 3). No simules jerarquías usando solo negrita o aumento de fuente manual.</li>
           </ul>
           <div class="example-box">
-            <strong>Ejemplo visual:</strong> Si tu artículo se llama "Efecto de la música en la concentración", la sección "Métodos" explicará cuántos participantes tuviste, qué tipo de música usaste y cómo mediste la concentración. Esa es la lógica.
+            <strong>Estructura requerida:</strong><br>
+            <code>Título 1: Resultados</code><br>
+            <code>&nbsp;&nbsp;Título 2: Análisis Descriptivo de la Encuesta</code><br>
+            <code>&nbsp;&nbsp;&nbsp;&nbsp;Título 3: Variaciones por Rango Etario</code>
           </div>
         </div>
       </details>
 
       <details>
-        <summary>1.2 ¿Cuánto debe medir? ¿Cómo estructuro el texto?</summary>
+        <summary>1.3 Citación y Referencias (Chicago 17 Autor-Fecha)</summary>
         <div class="details-content">
+          <p>La revista emplea el <strong>Manual de Estilo de Chicago (17.ª ed.), sistema Autor-Fecha</strong>. Requiere cita parentética en el texto y lista alfabética al final.</p>
           <ul>
-            <li><strong>Extensión recomendada:</strong> Entre <strong>1.000 y 10.000 palabras</strong> contando las referencias. Si tu trabajo es un poco más largo, está bien, pero si se pasa mucho, el editor podría sugerirte recortar las partes que no son esenciales.</li>
-            <li><strong>Los encabezados (Headings):</strong> No hagas títulos con letra más grande y negrita manualmente. Usa los estilos <strong>"Heading 1", "Heading 2" y "Heading 3"</strong> que vienen en Word o Google Docs. 
+            <li><strong>Cita en texto:</strong>
               <div class="example-box">
-                <strong>Así se ve:</strong><br>
-                <code>Heading 1: Resultados</code><br>
-                <code>&nbsp;&nbsp;Heading 2: Análisis de la encuesta</code><br>
-                <code>&nbsp;&nbsp;&nbsp;&nbsp;Heading 3: Comparación entre grupos</code>
-              </div>
-              Esto hace que tu documento sea navegable y profesional. Es un requisito obligatorio.
-            </li>
-          </ul>
-        </div>
-      </details>
-
-      <details>
-        <summary>1.3 Cómo citar correctamente (Chicago 17)</summary>
-        <div class="details-content">
-          <ul>
-            <li><strong>Estilo oficial:</strong> La revista usa <strong>Chicago 17.ª edición, modalidad Autor-Fecha</strong>. Esto significa que en el texto pones el apellido del autor y el año, y al final del documento pones la lista completa de referencias.</li>
-            <li><strong>En el texto:</strong> 
-              <div class="example-box">
-                <em>"La evolución de las especies es un proceso gradual (Darwin 1859)"</em><br>
-                Si citas textualmente, agrega la página: <em>(Darwin 1859, 78)</em>
+                <em>Parafraseo:</em> La evolución es un proceso gradual (Darwin 1859).<br>
+                <em>Cita directa:</em> (Darwin 1859, 78).
               </div>
             </li>
-            <li><strong>Lista de referencias (ejemplo de artículo):</strong>
+            <li><strong>Lista de Referencias (Ejemplo de Revista Científica):</strong>
               <div class="example-box">
                 Dittmar, Emily L., y Douglas W. Schemske. 2023. «Temporal Variation in Selection Influences Microgeographic Local Adaptation». <em>American Naturalist</em> 202 (4): 471-85. https://doi.org/10.1086/725865.
               </div>
             </li>
-            <li><strong>Importante:</strong> Debes asegurarte de que cada cita en el texto tenga su referencia completa al final. Si usas un gestor como Zotero o Mendeley, genial; si no, revisa con calma. Consulta la <a href="author.html" target="_blank">Guía Completa</a> para más ejemplos (libros, capítulos, webs).</li>
+            <li>Se recomienda encarecidamente el uso de gestores bibliográficos (Zotero, Mendeley). Todo artículo citado en el texto debe aparecer en las referencias, y viceversa.</li>
           </ul>
         </div>
       </details>
 
       <details>
-        <summary>1.4 Palabras clave y códigos especializados (vocabularios controlados)</summary>
+        <summary>1.4 Clasificación: Palabras Clave y Códigos</summary>
         <div class="details-content">
+          <p>Para asegurar la indexación global, debes proporcionar identificadores exactos:</p>
           <ul>
-            <li><strong>¿Qué son las palabras clave?</strong> Son 2 a 6 palabras o frases cortas que describen tu tema. Las escribes en español y luego sus equivalentes en inglés. Ejemplo: <em>"marxismo, economía política, plusvalía"</em>.</li>
-            <li><strong>¿Qué son los códigos especializados?</strong> Son identificadores numéricos o alfanuméricos que usan las bases de datos para clasificar tu artículo. <strong>Solo debes escribir el código, no el nombre completo.</strong></li>
-            <li><strong>¿Cómo encuentro mi código especializado?</strong> Los códigos especializados son identificadores estandarizados que las bases de datos académicas utilizan para clasificar y organizar la literatura científica. No son palabras clave libres, sino términos o códigos oficiales de tesauros y sistemas de clasificación reconocidos internacionalmente. Dependiendo de tu área de investigación, deberás usar el sistema correspondiente:
-  <ul>
-    <li><strong>Biología, Medicina, Enfermería, Farmacología y otras Ciencias de la Salud:</strong> Usa el tesauro <a href="https://meshb.nlm.nih.gov/search" target="_blank">MeSH (Medical Subject Headings)</a> de la National Library of Medicine. Busca tu tema y obtén el código alfanumérico (ej: D008112 para "Infecciones del Sistema Respiratorio"). <em>Cómo usarlo:</em> Ingresa a la página, escribe tu término en inglés, y copia el "MeSH Unique ID" que aparece junto al descriptor.</li>
-    
-    <li><strong>Economía:</strong> Usa el <a href="https://www.aeaweb.org/econlit/jelCodes.php" target="_blank">JEL Classification System</a> de la American Economic Association. <em>Cómo usarlo:</em> Navega por las categorías jerárquicas (A-Z) y selecciona el código que mejor describa tu investigación (ej: D00 para Microeconomía General, F50 para Economía Internacional). <strong>Nota:</strong> JEL es exclusivo de economía; otras ciencias sociales usan LCSH o UNESCO.</li>
-    
-    <li><strong>Computación, Informática, IA, Robótica y Ciencia de Datos:</strong> Usa el <a href="https://dl.acm.org/ccs" target="_blank">ACM CCS (Computing Classification System 2012)</a>. <em>Cómo usarlo:</em> Navega por el árbol jerárquico o usa el buscador para encontrar el código numérico (ej: 10010147 para "Computing Methodologies"). Copia el número completo de la ruta.</li>
-    
-    <li><strong>Historia, Filosofía, Lingüística, Literatura, Teología y Estudios Culturales:</strong> Usa el <a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">UNESCO Thesaurus</a>. <em>Cómo usarlo:</em> Busca tu término en español, inglés o francés. Usa el <strong>término preferido exacto</strong> (descriptor) que aparece en los resultados. Ya no se usan códigos numéricos antiguos.</li>
-    
-    <li><strong>Psicología:</strong> Usa el <a href="https://psycnet.apa.org/thesaurus/" target="_blank">APA Thesaurus of Psychological Index Terms</a>. <em>Cómo usarlo:</em> Ingresa tu término en inglés y usa el descriptor controlado que te sugiera el sistema (ej: "cognitive processes" en lugar de "thinking" o "mental operations").</li>
-    
-    <li><strong>Agronomía, Ciencias Forestales, Zootecnia y Producción Animal:</strong> Usa <a href="https://agrovoc.fao.org/browse/agrovoc/es/" target="_blank">AGROVOC (FAO Thesaurus)</a>. <em>Cómo usarlo:</em> Busca tu término en español o inglés. Copia el código alfanumérico que aparece (ej: c_867 para "Agricultura").</li>
-    
-    <li><strong>Física:</strong> Usa <a href="https://physh.aps.org/" target="_blank">PhySH (Physics Subject Headings)</a> de la American Physical Society. <em>Cómo usarlo:</em> Busca tu concepto y usa el identificador que aparece (ej: "quantum-mechanics").</li>
-    
-    <li><strong>Matemáticas:</strong> Usa la <a href="https://mathscinet.ams.org/mathscinet/msc/msc2020.html" target="_blank">MSC (Mathematics Subject Classification 2020)</a>. <em>Cómo usarlo:</em> Navega por las secciones jerárquicas y copia el código alfanumérico de 2-5 dígitos (ej: 11N05 para "Distribución de números primos").</li>
-    
-    <li><strong>Ingeniería (Civil, Mecánica, Química, Industrial, Materiales):</strong> Usa el <a href="https://www.engineeringvillage.com/" target="_blank">Ei Thesaurus / Compendex Classification</a>. <em>Cómo usarlo:</em> Busca tu tema en Engineering Village (requiere suscripción) o consulta la clasificación temática de Compendex.</li>
-    
-    <li><strong>Ingeniería Eléctrica y Electrónica:</strong> Usa el <a href="https://www.ieee.org/publications/services/thesaurus-access-page.html" target="_blank">IEEE Thesaurus</a>. <em>Cómo usarlo:</em> Busca tu término técnico y usa el descriptor controlado que aparece.</li>
-    
-    <li><strong>Educación:</strong> Usa el <a href="https://eric.ed.gov/" target="_blank">ERIC Thesaurus</a>. <em>Cómo usarlo:</em> Busca tu tema en inglés y usa el descriptor controlado (ej: "educational technology").</li>
-    
-    <li><strong>Derecho, Sociología, Antropología, Ciencias Políticas, Trabajo Social y otras Ciencias Sociales:</strong> Usa <a href="https://id.loc.gov/authorities/subjects.html" target="_blank">LCSH (Library of Congress Subject Headings)</a>. <em>Cómo usarlo:</em> Busca tu tema y usa el encabezamiento de materia autorizado que aparece en los resultados.</li>
-    
-    <li><strong>¿No encuentras tu área?</strong> Revisa la tabla completa de vocabularios controlados en <a href="policies.html#tabla-vocabularios" target="_blank">Políticas Editoriales (Sección 3.5.1)</a>.</li>
-  </ul>
-</li>
-            <li><strong>Ejemplo concreto:</strong> 
-              <div class="example-box">
-                Si tu artículo es sobre economía, vas a JEL y buscas "Marxismo". Encontrarás el código <code>B14</code>. En el formulario de envío, solo escribes <code>B14</code>. No escribas <code>B14: Marxismo</code>.
-              </div>
+            <li><strong>Palabras clave (Keywords):</strong> 3 a 6 términos (en español e inglés).</li>
+            <li><strong>Vocabularios Controlados:</strong> Debes buscar el código alfanumérico exacto correspondiente a tu disciplina. Solo ingresa el código en el sistema, no el texto.
+              <ul>
+                <li><strong>Salud/Medicina:</strong> Tesauro <a href="https://meshb.nlm.nih.gov/search" target="_blank">MeSH</a> (Ej: <code>D008112</code>)</li>
+                <li><strong>Economía:</strong> Clasificación <a href="https://www.aeaweb.org/econlit/jelCodes.php" target="_blank">JEL</a> (Ej: <code>F50</code>)</li>
+                <li><strong>Informática:</strong> Clasificación <a href="https://dl.acm.org/ccs" target="_blank">ACM CCS</a></li>
+                <li><strong>Humanidades:</strong> Tesauro <a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">UNESCO</a></li>
+                <li><strong>Matemáticas:</strong> Clasificación <a href="https://mathscinet.ams.org/mathscinet/msc/msc2020.html" target="_blank">MSC 2020</a></li>
+              </ul>
             </li>
           </ul>
         </div>
       </details>
 
       <details>
-        <summary>1.5 Ética, originalidad y uso de IA</summary>
+        <summary>1.5 Ética, Originalidad e Inteligencia Artificial</summary>
         <div class="details-content">
           <ul>
-            <li><strong>Similitud (plagio):</strong> Tu trabajo debe ser original. Si usas fragmentos de otros (aunque los cites), el porcentaje de similitud no debe superar el <strong>15%</strong>. Se revisa con software especializado, así que escribe con tus propias palabras y cita correctamente.</li>
-            <li><strong>Uso de Inteligencia Artificial (IA):</strong> Puedes usar ChatGPT o similar para corregir ortografía o mejorar la redacción, pero <strong>debes declararlo</strong> en el formulario. No puedes usar IA para generar la investigación, los resultados o las imágenes científicas.</li>
-            <li><strong>Datos abiertos:</strong> Debes incluir una <em>Declaración de Disponibilidad de Datos</em>. Es una frase breve explicando dónde están tus datos o por qué no pueden compartirse. 
-              <div class="example-box">
-                Ejemplo: "Los datos que sustentan este estudio están disponibles en el repositorio institucional de la Universidad ... (enlace)."<br>
-                Si no aplica: "No se generaron conjuntos de datos nuevos para este artículo."
-              </div>
-            </li>
-            <li><strong>Financiamiento y conflictos:</strong> Si recibiste dinero o apoyo para tu investigación, decláralo. Si no fue así, escribe: "La presente investigación no recibió financiamiento externo".</li>
+            <li><strong>Originalidad:</strong> Tolerancia máxima de similitud (plagio) del <strong>15%</strong> detectado por software especializado (ej. Turnitin/iThenticate).</li>
+            <li><strong>Uso de IA:</strong> Se permite el uso de IA (LLMs) exclusivamente para mejora de redacción o traducción. <strong>Queda estrictamente prohibido</strong> su uso para generar datos, análisis, imágenes científicas o conclusiones. Su uso debe declararse en la carta de presentación.</li>
+            <li><strong>Disponibilidad de Datos:</strong> Es obligatorio incluir una "Declaración de Disponibilidad de Datos" al final del manuscrito, indicando en qué repositorio público se encuentran los datos, o la justificación de su privacidad.</li>
+            <li><strong>Conflictos de Interés:</strong> Declaración obligatoria de financiamientos o relaciones que puedan sesgar la investigación.</li>
           </ul>
         </div>
       </details>
 
-      <h2>2. Antes de enviar: checklist interactivo</h2>
-      <p style="font-family: 'Lora', serif; margin-bottom: 25px; color: var(--text-muted);">
-        Marca cada casilla una vez que hayas verificado el requisito. La barra de progreso te mostrará cuánto te falta para completar la revisión.
+      <!-- CHECKLIST DE PRE-ENVÍO -->
+      <h2>2. Lista de Verificación de Pre-envío</h2>
+      <p style="color: var(--text-muted); margin-bottom: 30px;">
+        Esta herramienta interactiva te ayudará a confirmar que cumples con los criterios técnicos antes de acceder al sistema de envíos.
       </p>
 
       <div class="checklist-container">
-  <div class="progress-wrapper">
-    <div class="progress-header">
-      <span>Progreso de verificación</span>
-      <span id="progress-text">0%</span>
-    </div>
-    <div class="progress-bar-bg">
-      <div class="progress-bar-fill" id="progress-bar"></div>
-    </div>
-  </div>
 
-  <form id="submission-checklist">
-    <div class="checklist-item">
-      <input type="checkbox" id="check1" class="check-input">
-      <label for="check1">El archivo está en <strong>.docx</strong> y no contiene mi nombre, institución ni agradecimientos que me identifiquen.</label>
-    </div>
-    
-    <div class="checklist-item">
-      <input type="checkbox" id="check2" class="check-input">
-      <label for="check2">Incluí un <strong>resumen (abstract)</strong> de 150 a 250 palabras que sintetiza el problema, método, resultados y conclusión, tanto en español como en inglés.</label>
-    </div>
+        <div class="progress-wrapper">
+          <div class="progress-header">
+            <span>Validación de Requisitos Técnicos</span>
+            <span id="progress-text">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-bar"></div>
+          </div>
+        </div>
 
-    <div class="checklist-item">
-      <input type="checkbox" id="check3" class="check-input">
-      <label for="check3">Redacté <strong>2 a 6 palabras clave</strong> en español y sus equivalentes en inglés, usando términos que realmente describen mi tema.</label>
-    </div>
-    
-    <div class="checklist-item">
-      <input type="checkbox" id="check4" class="check-input">
-      <label for="check4">La extensión está entre <strong>1.000 y 10.000 palabras</strong>. Si es mayor, sé que el editor podría sugerir recortes.</label>
-    </div>
-    
-    <div class="checklist-item">
-      <input type="checkbox" id="check5" class="check-input">
-      <label for="check5">Usé los estilos <strong>Heading 1, 2, 3</strong> reales para organizar las secciones (no solo negrita o tamaños manuales).</label>
-    </div>
-    
-    <div class="checklist-item">
-      <input type="checkbox" id="check6" class="check-input">
-      <label for="check6">Cada cita en el texto tiene su referencia completa en <strong>Chicago 17 (Autor-Fecha)</strong>, y viceversa.</label>
-    </div>
-    
-    <div class="checklist-item">
-      <input type="checkbox" id="check7" class="check-input">
-      <label for="check7">Tengo <strong>2 a 4 códigos de vocabulario controlado</strong> (ej. JEL, MeSH) listos para escribir en el formulario de envío.</label>
-    </div>
+        <form id="submission-checklist">
+          <div class="checklist-item">
+            <input type="checkbox" id="check1" class="check-input">
+            <label for="check1">El documento está en formato <strong>.docx</strong> y ha sido completamente <strong>anonimizado</strong> (sin nombres, instituciones ni propiedades de archivo).</label>
+          </div>
 
-    <div class="checklist-item">
-      <input type="checkbox" id="check8" class="check-input">
-      <label for="check8">Declaré el <strong>uso de IA</strong> (si corresponde), el <strong>financiamiento</strong> y confirmé que el trabajo no está enviado a otra revista.</label>
-    </div>
-  </form>
+          <div class="checklist-item">
+            <input type="checkbox" id="check2" class="check-input">
+            <label for="check2">Se incluye un <strong>Resumen (Abstract)</strong> de 150-250 palabras en español e inglés, estructurado de forma lógica.</label>
+          </div>
 
-  <div id="success-message">
-    Listo. Has verificado todos los puntos básicos. Tu manuscrito está listo para el proceso de envío formal.
-  </div>
-</div>
+          <div class="checklist-item">
+            <input type="checkbox" id="check3" class="check-input">
+            <label for="check3">El manuscrito respeta el límite de extensión (<strong>1.000 a 10.000 palabras</strong>) y usa los <strong>estilos de título</strong> jerárquicos del procesador.</label>
+          </div>
 
-      <!-- NUEVA SECCIÓN: PROCESO EDITORIAL ESQUEMÁTICO -->
-      <h2>3. ¿Qué pasa después de enviar? Proceso editorial simplificado</h2>
-      <p style="font-family: 'Lora', serif; color: var(--text-muted); margin-bottom: 20px;">
-        Entendemos que la espera puede generar dudas. Aquí te explicamos, de forma esquemática y sin tecnicismos, el camino estándar que sigue tu manuscrito bajo un modelo de <strong>revisión doble ciego</strong>. No te asustes si hay rondas de correcciones: es parte normal del proceso de mejora académica.
+          <div class="checklist-item">
+            <input type="checkbox" id="check4" class="check-input">
+            <label for="check4">Todas las citas y la lista de referencias bibliográficas están estrictamente formateadas bajo <strong>Chicago 17.ª edición (Autor-Fecha)</strong>.</label>
+          </div>
+
+          <div class="checklist-item">
+            <input type="checkbox" id="check5" class="check-input">
+            <label for="check5">Tengo identificados mis <strong>códigos de clasificación</strong> (ej. JEL, MeSH) y palabras clave para ingresarlos en el sistema.</label>
+          </div>
+
+          <div class="checklist-item">
+            <input type="checkbox" id="check6" class="check-input">
+            <label for="check6">He redactado las declaraciones obligatorias: <strong>Disponibilidad de Datos</strong>, Conflictos de Interés y Uso de IA (si aplica).</label>
+          </div>
+        </form>
+
+        <div id="success-message" class="hidden">
+          <i class="fa-solid fa-circle-check" style="font-size: 1.5rem;"></i>
+          <div>
+            <strong>¡Excelente! Manuscrito Validado.</strong><br>
+            Has verificado todos los criterios editoriales fundamentales. Tu artículo está listo para ingresar al proceso de revisión por pares.
+          </div>
+        </div>
+      </div>
+
+      <!-- PROCESO EDITORIAL -->
+      <h2>3. Flujo de Revisión Editorial</h2>
+      <p style="color: var(--text-muted); margin-bottom: 20px;">
+        La transparencia es un pilar de nuestra revista. Este es el recorrido estándar de tu manuscrito desde el envío hasta la publicación.
       </p>
 
       <div class="editorial-process">
-        
+
         <div class="process-step">
           <div class="step-number">1</div>
           <div class="step-content">
-            <strong>Recepción y verificación técnica</strong><br>
-            Tu manuscrito llega a la plataforma. Un editor de la revista revisa que cumpla con los requisitos básicos (anonimato, formato .docx, estructura, referencias). Si falta algo obvio, te lo devuelven con observaciones.
+            <h4>Filtro Técnico (Desk Review)</h4>
+            <p>El equipo de gestión verifica anonimato, formato, similitud (plagio) y enfoque temático. Si no cumple los requisitos básicos, es devuelto <em>(Desk Reject)</em>.</p>
           </div>
         </div>
-        <div class="arrow-icon">↓</div>
 
         <div class="process-step">
           <div class="step-number">2</div>
           <div class="step-content">
-            <strong>Asignación a un editor académico</strong><br>
-            El editor principal asigna tu manuscrito a un <strong>editor de sección</strong> o editor temático, que es un especialista en tu área. Él o ella evaluará si el tema encaja con la revista y si tiene potencial.
+            <h4>Asignación y Revisión por Pares (Peer Review)</h4>
+            <p>Un Editor de Sección asigna el manuscrito a <strong>2 o 3 evaluadores externos expertos (doble ciego)</strong>. Ellos evalúan el rigor metodológico, originalidad y aporte al conocimiento.</p>
           </div>
         </div>
-        <div class="arrow-icon">↓</div>
 
         <div class="process-step">
           <div class="step-number">3</div>
           <div class="step-content">
-            <strong>Invitación a revisores anónimos (doble ciego)</strong><br>
-            El editor invita a <strong>2 o 3 expertos externos</strong> (revisores pares). Estos revisores no conocen tu identidad (por eso es doble ciego) y tú no conocerás la de ellos. Ellos califican la calidad, la originalidad y la metodología de tu trabajo.
+            <h4>Decisión Editorial</h4>
+            <p>Basado en los informes, el Editor emite un fallo:</p>
+            <ul>
+              <li><strong>Aceptar:</strong> Pasa directo a producción.</li>
+              <li><strong>Revisiones Menores / Mayores:</strong> Debes corregir el manuscrito y enviar una carta detallada de respuestas a los revisores.</li>
+              <li><strong>Rechazar:</strong> Se notifican las debilidades metodológicas insalvables.</li>
+            </ul>
           </div>
         </div>
-        <div class="arrow-icon">↓</div>
 
         <div class="process-step">
           <div class="step-number">4</div>
           <div class="step-content">
-            <strong>Decisión del editor</strong><br>
-            Con base en los informes de los revisores, el editor toma una decisión. Las posibilidades son:
-            <ul style="margin-top: 5px; padding-left: 20px;">
-              <li><strong>Aceptar</strong> (raro en la primera ronda)</li>
-              <li><strong>Aceptar con cambios menores</strong> (ajustes de estilo o detalles)</li>
-              <li><strong>Revisar y reenviar</strong> (cambios mayores, necesitarás una nueva ronda de evaluación)</li>
-              <li><strong>Rechazar</strong> (no encaja o la calidad no es suficiente)</li>
-            </ul>
-          </div>
-        </div>
-        <div class="arrow-icon">↓</div>
-
-        <div class="process-step">
-          <div class="step-number">5</div>
-          <div class="step-content">
-            <strong>Rondas de correcciones (si aplican)</strong><br>
-            Si te piden cambios, tendrás un plazo (normalmente 2-4 semanas) para enviar una versión revisada. Deberás incluir una <strong>carta de respuesta</strong> explicando cómo abordaste cada comentario de los revisores. El editor puede enviar esta nueva versión a los mismos revisores o decidir por sí mismo.
-          </div>
-        </div>
-        <div class="arrow-icon">↓</div>
-
-        <div class="process-step">
-          <div class="step-number">6</div>
-          <div class="step-content">
-            <strong>Aceptación final y producción</strong><br>
-            Una vez aceptado, tu manuscrito pasa a la etapa de <strong>maquetación y corrección de estilo</strong>. Recibirás las pruebas finales (galeradas) para dar tu visto bueno. Luego se publica en la revista con su DOI y licencia de acceso abierto.
+            <h4>Producción y Publicación Abierta</h4>
+            <p>El manuscrito aceptado es maquetado (typesetting), se le asigna un DOI (Digital Object Identifier) y se publica bajo licencia Creative Commons (Acceso Abierto Diamante, sin cobros de APC).</p>
           </div>
         </div>
 
       </div>
-      <!-- FIN PROCESO EDITORIAL -->
 
+      <!-- FOOTER INTERNO -->
       <div class="footer">
         Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839<br>
-        San Felipe, Chile · Publicación de Acceso Abierto Diamante
+        San Felipe, Chile · Adheridos a los principios del <em>Committee on Publication Ethics (COPE)</em>
       </div>
+
     </main>
   </div>
 
+  <!-- SCRIPT DEL CHECKLIST INTERACTIVO -->
   <script>
-    (function() {
+    document.addEventListener('DOMContentLoaded', () => {
       const checkboxes = document.querySelectorAll('.check-input');
       const progressBar = document.getElementById('progress-bar');
       const progressText = document.getElementById('progress-text');
@@ -825,23 +956,37 @@
       function updateProgress() {
         const checkedCount = document.querySelectorAll('.check-input:checked').length;
         const percentage = Math.round((checkedCount / totalChecks) * 100);
-        
+
+        // Actualizar estilo de los items
+        checkboxes.forEach(cb => {
+          const parent = cb.closest('.checklist-item');
+          if (cb.checked) {
+            parent.classList.add('checked');
+          } else {
+            parent.classList.remove('checked');
+          }
+        });
+
+        // Actualizar barra y texto
         progressBar.style.width = percentage + '%';
         progressText.textContent = percentage + '%';
 
+        // Verificar finalización
         if (percentage === 100) {
-          progressBar.style.backgroundColor = 'var(--success)';
-          successMessage.style.display = 'block';
+          progressBar.style.background = 'linear-gradient(90deg, var(--success), #34D399)';
+          progressText.style.color = 'var(--success)';
+          successMessage.classList.remove('hidden');
         } else {
-          progressBar.style.backgroundColor = 'var(--primary)';
-          successMessage.style.display = 'none';
+          progressBar.style.background = 'linear-gradient(90deg, var(--brand-orange), #FF8C33)';
+          progressText.style.color = 'var(--brand-orange)';
+          successMessage.classList.add('hidden');
         }
       }
 
       checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', updateProgress);
       });
-    })();
+    });
   </script>
 </body>
 </html>
