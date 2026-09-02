@@ -1,4 +1,4 @@
-// src/components/SubmissionForm.js (DISEÑO EDITORIAL + LÓGICA COMPLETA + HELP CAPSULES)
+// src/components/SubmissionForm.js (DISEÑO EDITORIAL + LÓGICA COMPLETA + HELP CAPSULES + UX MEJORADA)
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth } from '../firebase';
@@ -8,6 +8,7 @@ import 'react-quill/dist/quill.snow.css';
 import { UserIcon } from '@heroicons/react/24/outline';
 import 'react-phone-number-input/style.css'
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input'
+
 // ============ COMPONENTE: HELP CAPSULE (PIN DE AYUDA) ============
 
 const AREAS_TEMATICAS = {
@@ -93,10 +94,6 @@ const AREAS_TEMATICAS = {
   }
 };
 
-// Helper para obtener áreas según idioma
-const getAreasByLanguage = (language) => {
-  return AREAS_TEMATICAS[language] || AREAS_TEMATICAS.es;
-};
 // ============ CONFIGURACIÓN DE VOCABULARIOS CONTROLADOS ============
 // ============ CONFIGURACIÓN DE VOCABULARIOS CONTROLADOS ============
 const VOCABULARIO_POR_AREA = {
@@ -1005,6 +1002,7 @@ const VOCABULARIO_POR_AREA_EN = {
     instructions: "Enter the FSTA code or term (e.g., Q04)."
   }
 };
+
 // Agrega esto después de AREAS_TEMATICAS
 const AREA_MAPPING = {};
 Object.entries(AREAS_TEMATICAS.es).forEach(([catEs, areasEs]) => {
@@ -1013,29 +1011,22 @@ Object.entries(AREAS_TEMATICAS.es).forEach(([catEs, areasEs]) => {
     const areaEn = AREAS_TEMATICAS.en[catEn]?.[index];
     if (areaEn) {
       AREA_MAPPING[areaEn] = areaEs;
-      AREA_MAPPING[areaEs] = areaEs; // Por si acaso
+      AREA_MAPPING[areaEs] = areaEs;
     }
   });
 });
 
-
-// Helper para obtener vocabulario
 // Helper para obtener vocabulario (actualizado para soportar inglés)
 const getVocabularyForArea = (area, lang = 'es') => {
-  // Si el área está en inglés, buscar su equivalente en español
   const spanishArea = AREA_MAPPING[area] || area;
   
-  // Si el idioma es inglés, buscar en VOCABULARIO_POR_AREA_EN
   if (lang === 'en') {
-    // El área ya está en inglés (viene del selector)
     const englishArea = area;
     
-    // Buscar directamente en el objeto en inglés
     if (VOCABULARIO_POR_AREA_EN[englishArea]) {
       return VOCABULARIO_POR_AREA_EN[englishArea];
     }
     
-    // Si no se encuentra, buscar el equivalente en inglés del área en español
     const areaEn = Object.keys(AREA_MAPPING).find(
       en => AREA_MAPPING[en] === spanishArea && en !== spanishArea
     );
@@ -1044,13 +1035,44 @@ const getVocabularyForArea = (area, lang = 'es') => {
       return VOCABULARIO_POR_AREA_EN[areaEn];
     }
     
-    // Fallback al español
     return VOCABULARIO_POR_AREA[spanishArea];
   }
   
-  // Para español, usar el objeto original
   return VOCABULARIO_POR_AREA[spanishArea];
 };
+
+// Helper para obtener áreas por lenguaje
+const getAreasByLanguage = (lang) => {
+  return AREAS_TEMATICAS[lang] || AREAS_TEMATICAS.es;
+};
+
+// ============ NUEVO COMPONENTE: STEP INTRO ============
+const StepIntro = ({ title, subtitle, estimate, language }) => {
+  const isSpanish = language === 'es';
+  return (
+    <div className="border-b border-slate-100 pb-6 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-serif text-[#003b5c] font-medium tracking-tight">
+            {title}
+          </h2>
+          <p className="text-slate-500 text-sm mt-1.5 leading-relaxed max-w-2xl font-sans">
+            {subtitle}
+          </p>
+        </div>
+        {estimate && (
+          <div className="flex-shrink-0 inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full text-xs font-medium text-slate-600 ring-1 ring-slate-200/80 font-sans">
+            <svg className="w-3.5 h-3.5 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {estimate}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const HelpCapsule = ({ text, title }) => {
   const [show, setShow] = useState(false);
 
@@ -1102,6 +1124,7 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
   const isSpanish = language === 'es';
   const [newTerm, setNewTerm] = useState('');
   const [error, setError] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const maxKeywords = mode === 'codes' ? 4 : 6;
   const minKeywords = mode === 'codes' ? 2 : 2;
@@ -1136,6 +1159,10 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
     onChange(updatedKeywords);
     setNewTerm('');
     setError('');
+    
+    // Micro-animación de éxito
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 2000);
   };
 
   const removeKeyword = (index) => {
@@ -1162,11 +1189,16 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
             </div>
             <div className="flex-1">
               <h4 className="font-serif font-bold text-[#003b5c] text-sm tracking-wide">
-  {vocabularyConfig.vocabulario || vocabularyConfig.vocabulary}: {vocabularyConfig.nombre || vocabularyConfig.name}
-</h4>
-<p className="text-slate-500 text-xs mt-1.5 font-sans leading-relaxed">
-  {vocabularyConfig.instrucciones || vocabularyConfig.instructions}
-</p>
+                {vocabularyConfig.vocabulario || vocabularyConfig.vocabulary}: {vocabularyConfig.nombre || vocabularyConfig.name}
+              </h4>
+              <p className="text-slate-500 text-xs mt-1.5 font-sans leading-relaxed">
+                {vocabularyConfig.instrucciones || vocabularyConfig.instructions}
+              </p>
+              <p className="text-xs text-slate-500 mt-2 font-sans leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
+                {isSpanish
+                  ? '💡 Solo necesitas el código (ej. 11N05). No el nombre completo. Si no lo encuentras, usa el enlace "Explorar vocabulario".'
+                  : '💡 You only need the code (e.g. 11N05). Not the full name. If you can\'t find it, use the "Explore vocabulary" link.'}
+              </p>
               <a
                 href={vocabularyConfig.searchUrl}
                 target="_blank"
@@ -1183,18 +1215,18 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
           </div>
           <div className="bg-white rounded-lg p-4 border border-slate-100">
             <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-  {isSpanish ? 'Formato esperado:' : 'Expected format:'}
-</span>
-<code className="ml-2 text-sm font-mono text-[#003b5c] bg-slate-50 px-2 py-1 rounded">
-  {vocabularyConfig.formato || vocabularyConfig.format}
-</code>
-<span className="text-slate-400 text-sm mx-2">·</span>
-<span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-  {isSpanish ? 'Ejemplo:' : 'Example:'}
-</span>
-<code className="ml-2 text-sm font-mono text-[#e86125] bg-slate-50 px-2 py-1 rounded">
-  {vocabularyConfig.ejemplo || vocabularyConfig.example}
-</code>
+              {isSpanish ? 'Formato esperado:' : 'Expected format:'}
+            </span>
+            <code className="ml-2 text-sm font-mono text-[#003b5c] bg-slate-50 px-2 py-1 rounded">
+              {vocabularyConfig.formato || vocabularyConfig.format}
+            </code>
+            <span className="text-slate-400 text-sm mx-2">·</span>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
+              {isSpanish ? 'Ejemplo:' : 'Example:'}
+            </span>
+            <code className="ml-2 text-sm font-mono text-[#e86125] bg-slate-50 px-2 py-1 rounded">
+              {vocabularyConfig.ejemplo || vocabularyConfig.example}
+            </code>
           </div>
         </div>
       )}
@@ -1206,13 +1238,12 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
             value={newTerm}
             onChange={(e) => setNewTerm(e.target.value)}
             onKeyPress={handleTermKeyPress}
-            // En ControlledKeywordInput
-placeholder={mode === 'codes' 
-  ? (isSpanish 
-      ? `Ej: ${vocabularyConfig.ejemplo || vocabularyConfig.example}` 
-      : `e.g., ${vocabularyConfig.example || vocabularyConfig.ejemplo}`)
-  : (isSpanish ? "Ej: Aprendizaje automático" : "e.g., Machine learning")
-}
+            placeholder={mode === 'codes' 
+              ? (isSpanish 
+                  ? `Ej: ${vocabularyConfig.ejemplo || vocabularyConfig.example}` 
+                  : `e.g., ${vocabularyConfig.example || vocabularyConfig.ejemplo}`)
+              : (isSpanish ? "Ej: Aprendizaje automático" : "e.g., Machine learning")
+            }
             className="w-full p-3.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm font-sans focus:ring-2 focus:ring-[#003b5c] focus:bg-slate-50 outline-none transition-all duration-300 shadow-sm"
           />
           {mode === 'keywords' && (
@@ -1222,6 +1253,19 @@ placeholder={mode === 'codes'
                 ? 'Son términos que describen tu investigación. Usa palabras específicas de tu campo. Por ejemplo: "machine learning", "células madre", "cambio climático". Ayudan a que otros investigadores encuentren tu trabajo.'
                 : 'These are terms that describe your research. Use specific words from your field. For example: "machine learning", "stem cells", "climate change". They help other researchers find your work.'}
             />
+          )}
+          {showSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-emerald-500 text-xs font-bold"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {isSpanish ? '¡Añadido!' : 'Added!'}
+            </motion.div>
           )}
         </div>
         <button
@@ -1238,7 +1282,7 @@ placeholder={mode === 'codes'
         <motion.div 
           initial={{ opacity: 0, y: -5 }} 
           animate={{ opacity: 1, y: 0 }} 
-          className="flex items-center gap-2 text-xs text-red-500 font-medium bg-red-50 px-3 py-2 rounded-lg"
+          className="flex items-center gap-2 text-xs text-red-500 font-medium bg-red-50 px-3 py-2 rounded-lg font-sans"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1257,11 +1301,9 @@ placeholder={mode === 'codes'
                 ? `${keywords.length} de ${minKeywords}-${maxKeywords} palabras clave requeridas`
                 : `${keywords.length} of ${minKeywords}-${maxKeywords} required keywords`)
           }
-          {keywords.length < minKeywords && (
-            <span className="ml-2">
-              {mode === 'codes' 
-                ? (isSpanish ? '(mínimo 2)' : '(minimum 2)')
-                : (isSpanish ? `(mínimo ${minKeywords})` : `(minimum ${minKeywords})`)}
+          {keywords.length >= minKeywords && (
+            <span className="ml-2 text-emerald-600">
+              {isSpanish ? '✓ ¡Perfecto!' : '✓ Perfect!'}
             </span>
           )}
         </p>
@@ -1313,7 +1355,7 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
   const isSpanish = language === 'es';
   const consentMethod = author.consentMethod || 'none';
 
-    const consentUrls = {
+  const consentUrls = {
     es: {
       pdf: 'https://www.revistacienciasestudiantes.com/consent.pdf',
       docx: 'https://www.revistacienciasestudiantes.com/acuerdo_publicacion_autor_menor_ES.docx'
@@ -1366,7 +1408,7 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
       </div>
 
       <div className="space-y-2">
-        <label className="block text-xs font-semibold text-slate-700 tracking-wide">
+        <label className="block text-xs font-semibold text-slate-700 tracking-wide font-sans">
           {isSpanish ? 'Nombre completo del tutor legal' : 'Legal guardian full name'} 
           <span className="text-red-500">*</span>
           <HelpCapsule
@@ -1380,13 +1422,13 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
           type="text"
           value={author.guardianName || ''}
           onChange={(e) => onUpdate(index, 'guardianName', e.target.value)}
-          className="w-full p-3.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm"
+          className="w-full p-3.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm font-sans"
           placeholder={isSpanish ? 'Ej: Juan Pérez López' : 'e.g., John Doe Smith'}
         />
       </div>
 
       <div className="space-y-4">
-        <label className="block text-xs font-semibold text-slate-700 tracking-wide">
+        <label className="block text-xs font-semibold text-slate-700 tracking-wide font-sans">
           {isSpanish ? 'Método de validación' : 'Validation method'}
           <HelpCapsule
             title={isSpanish ? '¿Cómo funciona la validación?' : 'How does validation work?'}
@@ -1411,8 +1453,8 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
                 {author.consentMethod === 'email' && <div className="w-2 h-2 rounded-full bg-white" />}
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold text-slate-900">{isSpanish ? 'Vía Correo' : 'Via Email'}</span>
-                <span className="text-xs text-slate-500">contact@revistacienciasestudiantes.com</span>
+                <span className="text-sm font-semibold text-slate-900 font-sans">{isSpanish ? 'Vía Correo' : 'Via Email'}</span>
+                <span className="text-xs text-slate-500 font-sans">contact@revistacienciasestudiantes.com</span>
               </div>
             </span>
           </label>
@@ -1431,8 +1473,8 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
                 {author.consentMethod === 'upload' && <div className="w-2 h-2 rounded-full bg-white" />}
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold text-slate-900">{isSpanish ? 'Subir Documento' : 'Upload File'}</span>
-                <span className="text-xs text-slate-500">{isSpanish ? 'PDF firmado' : 'Signed PDF'}</span>
+                <span className="text-sm font-semibold text-slate-900 font-sans">{isSpanish ? 'Subir Documento' : 'Upload File'}</span>
+                <span className="text-xs text-slate-500 font-sans">{isSpanish ? 'PDF firmado' : 'Signed PDF'}</span>
               </div>
             </span>
           </label>
@@ -1470,7 +1512,7 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
               const gmailUrl = `https://mail.google.com/mail/u/0/?fs=1&to=contact@revistacienciasestudiantes.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&tf=cm`;
               window.open(gmailUrl, '_blank', 'noopener,noreferrer');
             }}
-            className="w-full px-5 py-3 bg-[#003b5c] text-white rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-[#002b44] transition-colors flex items-center justify-center gap-2"
+            className="w-full px-5 py-3 bg-[#003b5c] text-white rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-[#002b44] transition-colors flex items-center justify-center gap-2 font-sans"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1480,7 +1522,7 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
         </div>
       )}
 
-            {author.consentMethod === 'upload' && (
+      {author.consentMethod === 'upload' && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <a
@@ -1542,6 +1584,7 @@ export default function SubmissionForm({ user, onSuccess }) {
   const [submissionId, setSubmissionId] = useState('');
   const [driveFolderId, setDriveFolderId] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
+  const [lastSaved, setLastSaved] = useState(null);
   
   // Estado inicial del formulario
   const initialFormState = {
@@ -1557,19 +1600,19 @@ export default function SubmissionForm({ user, onSuccess }) {
     articleType: '',
     acknowledgments: '',
     authors: [{
-  firstName: '',
-  lastName: '',
-  email: '',
-  institution: '',
-  orcid: '',
-  contribution: '',
-  isMinor: false,
-  guardianName: '',
-  consentMethod: 'none',
-  consentFile: null,
-  isCorresponding: true,
-  phone: ''
-}],
+      firstName: '',
+      lastName: '',
+      email: '',
+      institution: '',
+      orcid: '',
+      contribution: '',
+      isMinor: false,
+      guardianName: '',
+      consentMethod: 'none',
+      consentFile: null,
+      isCorresponding: true,
+      phone: ''
+    }],
     funding: {
       hasFunding: false,
       sources: '',
@@ -1639,14 +1682,14 @@ export default function SubmissionForm({ user, onSuccess }) {
       { value: 'not_applicable', label: 'Not applicable (theoretical essay, review without new data)' }
     ]
   };
-// Después de availabilityOptions y antes de los useEffect:
 
-// ============ STEPS ============
-const steps = [
-  { id: 1, title: isSpanish ? 'Manuscrito' : 'Manuscript' },
-  { id: 2, title: isSpanish ? 'Autores' : 'Authors' },
-  { id: 3, title: isSpanish ? 'Envío' : 'Submission' }
-];
+  // ============ STEPS ============
+  const steps = [
+    { id: 1, title: isSpanish ? 'Manuscrito' : 'Manuscript', estimate: isSpanish ? '~6-8 min' : '~6-8 min' },
+    { id: 2, title: isSpanish ? 'Autores' : 'Authors', estimate: isSpanish ? '~5-7 min' : '~5-7 min' },
+    { id: 3, title: isSpanish ? 'Envío' : 'Submission', estimate: isSpanish ? '~4-6 min' : '~4-6 min' }
+  ];
+
   // Sincronizar refs
   useEffect(() => {
     formDataRef.current = formData;
@@ -1665,13 +1708,14 @@ const steps = [
           manuscriptName: parsed.manuscriptName || '',
           editorComment: parsed.editorComment || ''
         }));
+        setLastSaved(new Date());
       } catch (e) {
         console.error('[DEBUG] Error cargando borrador:', e);
       }
     }
   }, []);
 
-  // Autoguardado
+  // Autoguardado con timestamp visible
   useEffect(() => {
     const interval = setInterval(() => {
       const dataToSave = {
@@ -1680,6 +1724,7 @@ const steps = [
         manuscriptName: formDataRef.current.manuscriptName,
       };
       localStorage.setItem('submissionFormDraft', JSON.stringify(dataToSave));
+      setLastSaved(new Date());
     }, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -1722,6 +1767,11 @@ const steps = [
     const newAuthors = [...formData.authors];
     newAuthors[index] = { ...newAuthors[index], [field]: value };
     setFormData(prev => ({ ...prev, authors: newAuthors }));
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[`author_${index}_${field}`];
+      return newErrors;
+    });
   };
 
   // Importar perfil del usuario logueado
@@ -1731,43 +1781,44 @@ const steps = [
     const updatedAuthors = [...formData.authors];
     const author = updatedAuthors[authorIndex];
 
-updatedAuthors[authorIndex] = {
-  firstName: user.firstName || author.firstName,
-  lastName: user.lastName || author.lastName,
-  email: user.email || author.email,
-  institution: user.institution || author.institution || '',
-  orcid: user.orcid || author.orcid || '',
-  contribution: author.contribution,
-  isMinor: author.isMinor,
-  guardianName: author.guardianName,
-  consentMethod: author.consentMethod,
-  consentFile: author.consentFile,
-  isCorresponding: author.isCorresponding,
-  phone: author.phone
-};
+    updatedAuthors[authorIndex] = {
+      firstName: user.firstName || author.firstName,
+      lastName: user.lastName || author.lastName,
+      email: user.email || author.email,
+      institution: user.institution || author.institution || '',
+      orcid: user.orcid || author.orcid || '',
+      contribution: author.contribution,
+      isMinor: author.isMinor,
+      guardianName: author.guardianName,
+      consentMethod: author.consentMethod,
+      consentFile: author.consentFile,
+      isCorresponding: author.isCorresponding,
+      phone: author.phone
+    };
     setFormData(prev => ({ ...prev, authors: updatedAuthors }));
   };
 
   // Agregar autor
-const addAuthor = () => {
-  setFormData(prev => ({
-    ...prev,
-    authors: [...prev.authors, {
-      firstName: '',
-      lastName: '',
-      email: '',
-      institution: '',
-      orcid: '',
-      contribution: '',
-      isMinor: false,
-      guardianName: '',
-      consentMethod: 'none',
-      consentFile: null,
-      isCorresponding: false,
-      phone: '',
-    }]
-  }));
-};
+  const addAuthor = () => {
+    setFormData(prev => ({
+      ...prev,
+      authors: [...prev.authors, {
+        firstName: '',
+        lastName: '',
+        email: '',
+        institution: '',
+        orcid: '',
+        contribution: '',
+        isMinor: false,
+        guardianName: '',
+        consentMethod: 'none',
+        consentFile: null,
+        isCorresponding: false,
+        phone: '',
+      }]
+    }));
+  };
+
   // Eliminar autor
   const removeAuthor = (index) => {
     if (formData.authors.length > 1) {
@@ -1817,6 +1868,11 @@ const addAuthor = () => {
       manuscript: file,
       manuscriptName: file.name
     }));
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.manuscript;
+      return newErrors;
+    });
   };
 
   // Manejador de declaraciones
@@ -1850,52 +1906,85 @@ const addAuthor = () => {
     );
   };
 
-  // Validación sin modificar estado (para renderizado)
+  // Validación sin modificar estado (para renderizado) - CORREGIDA
   const isStepValid = (step) => {
     switch (step) {
-      case 1:
-        return formData.title.trim() &&
+      case 1: {
+        const basic =
+          formData.title.trim() &&
+          formData.titleEn.trim() &&
           formData.abstract.trim() &&
-          formData.keywordsEs.length >= 2 && 
+          formData.abstractEn.trim() &&
+          formData.keywordsEs.length >= 2 &&
           formData.keywordsEs.length <= 6 &&
+          formData.keywordsEn.length >= 2 &&
+          formData.keywordsEn.length <= 6 &&
           formData.area.trim() &&
           formData.articleType;
-           if (formData.area && getVocabularyForArea(formData.area, language)) {
+
+        if (!basic) return false;
+
+        // Códigos especializados solo obligatorios si existe vocabulario para el área
+        const vocab = getVocabularyForArea(formData.area, language);
+        if (vocab) {
           if (!formData.specializedCodes || formData.specializedCodes.length < 2) {
             return false;
           }
+          if (formData.specializedCodes.length > 4) return false;
         }
-      
-            case 2:
-        const basicOk = formData.authors.every(a =>
-          a.firstName.trim() && a.lastName.trim() && a.email.trim() && a.institution.trim()
+        return true;
+      }
+
+      case 2: {
+        const basicOk = formData.authors.every(
+          (a) =>
+            a.firstName.trim() &&
+            a.lastName.trim() &&
+            a.email.trim() &&
+            a.institution.trim()
         );
-        
-        // Verificar contribución CRediT si hay más de un autor
-        const creditOk = formData.authors.length === 1 || formData.authors.every(a => a.contribution.trim());
-        
+
+        const creditOk =
+          formData.authors.length === 1 ||
+          formData.authors.every((a) => a.contribution.trim());
+
         const minorsOk = formData.authors
-          .filter(a => a.isMinor)
-          .every(a =>
-            a.guardianName.trim() &&
-            a.consentMethod !== 'none' &&
-            (a.consentMethod !== 'upload' || !!a.consentFile)
+          .filter((a) => a.isMinor)
+          .every(
+            (a) =>
+              a.guardianName.trim() &&
+              a.consentMethod !== 'none' &&
+              (a.consentMethod !== 'upload' || !!a.consentFile)
           );
-        return basicOk && creditOk && minorsOk;
-      
-      case 3:
-        let isValid = allDeclarationsAccepted() && 
-               (formData.manuscript || formData.manuscriptName) && 
-               formData.dataAvailability && formData.dataAvailability.trim() !== '';
+
+        // Teléfono solo del corresponding
+        const phoneOk = formData.authors.every((a) => {
+          if (!a.isCorresponding) return true;
+          return !!a.phone && isValidPhoneNumber(a.phone);
+        });
+
+        return basicOk && creditOk && minorsOk && phoneOk;
+      }
+
+      case 3: {
+        let isValid =
+          allDeclarationsAccepted() &&
+          (formData.manuscript || formData.manuscriptName) &&
+          formData.dataAvailability &&
+          formData.dataAvailability.trim() !== '';
+
         if (formData.requiresEthicsApproval === 'yes' && !formData.ethicsCommitteeName.trim()) {
-            isValid = false;
+          isValid = false;
         }
         if (formData.aiUsed === 'yes') {
-            const hasValidTool = formData.aiTools.some(tool => tool.name.trim() && tool.purpose.trim());
-            if (!hasValidTool) isValid = false;
+          const hasValidTool = formData.aiTools.some(
+            (tool) => tool.name.trim() && tool.purpose.trim()
+          );
+          if (!hasValidTool) isValid = false;
         }
         return isValid;
-      
+      }
+
       default:
         return true;
     }
@@ -1910,8 +1999,14 @@ const addAuthor = () => {
         if (!formData.title.trim()) {
           errors.title = isSpanish ? 'El título es obligatorio' : 'Title is required';
         }
+        if (!formData.titleEn.trim()) {
+          errors.titleEn = isSpanish ? 'El título en inglés es obligatorio' : 'English title is required';
+        }
         if (!formData.abstract.trim()) {
           errors.abstract = isSpanish ? 'El resumen es obligatorio' : 'Abstract is required';
+        }
+        if (!formData.abstractEn.trim()) {
+          errors.abstractEn = isSpanish ? 'El abstract en inglés es obligatorio' : 'English abstract is required';
         }
         if (!formData.keywordsEs || formData.keywordsEs.length < 2) {
           errors.controlledKeywords = isSpanish 
@@ -1923,10 +2018,20 @@ const addAuthor = () => {
             ? 'Máximo 6 palabras clave permitidas' 
             : 'Maximum 6 keywords allowed';
         }
+        if (!formData.keywordsEn || formData.keywordsEn.length < 2) {
+          errors.controlledKeywordsEn = isSpanish 
+            ? 'Debes agregar al menos 2 keywords en inglés' 
+            : 'You must add at least 2 keywords in English';
+        }
+        if (formData.keywordsEn && formData.keywordsEn.length > 6) {
+          errors.controlledKeywordsEn = isSpanish 
+            ? 'Máximo 6 keywords permitidas' 
+            : 'Maximum 6 keywords allowed';
+        }
         if (!formData.area.trim()) {
           errors.area = isSpanish ? 'El área temática es obligatoria' : 'Subject area is required';
         }
-                // Validación de códigos especializados (si hay área con vocabulario)
+        // Validación de códigos especializados (si hay área con vocabulario)
         if (formData.area && getVocabularyForArea(formData.area, language)) {
           if (!formData.specializedCodes || formData.specializedCodes.length < 2) {
             errors.specializedCodes = isSpanish 
@@ -1944,7 +2049,7 @@ const addAuthor = () => {
         }
         break;
         
-            case 2:
+      case 2:
         formData.authors.forEach((author, index) => {
           if (!author.firstName.trim()) {
             errors[`author_${index}_firstName`] = isSpanish ? 'Nombre requerido' : 'First name required';
@@ -1958,13 +2063,16 @@ const addAuthor = () => {
           if (!author.institution.trim()) {
             errors[`author_${index}_institution`] = isSpanish ? 'Institución requerida' : 'Institution required';
           }
-            // ✅ AGREGAR AQUÍ: Validación de teléfono para autor de correspondencia
-if (author.isCorresponding && !author.phone) {
-  errors[`author_${index}_phone`] = isSpanish 
-    ? 'Teléfono requerido para el autor de correspondencia' 
-    : 'Phone required for corresponding author';
-}
-          // NUEVO: Validación de contribución CRediT (solo si hay más de un autor)
+          if (author.isCorresponding && !author.phone) {
+            errors[`author_${index}_phone`] = isSpanish 
+              ? 'Teléfono requerido para el autor de correspondencia' 
+              : 'Phone required for corresponding author';
+          }
+          if (author.isCorresponding && author.phone && !isValidPhoneNumber(author.phone)) {
+            errors[`author_${index}_phone`] = isSpanish 
+              ? 'Teléfono inválido. Verifica el formato.' 
+              : 'Invalid phone. Check the format.';
+          }
           if (formData.authors.length > 1 && !author.contribution.trim()) {
             errors[`author_${index}_contribution`] = isSpanish 
               ? 'Debes especificar la contribución CRediT de este autor' 
@@ -2078,15 +2186,15 @@ if (author.isCorresponding && !author.phone) {
       const correspondingAuthor = formData.authors.find(a => a.isCorresponding) || formData.authors[0];
 
       const payload = {
-  title: formData.title,
-  titleEn: formData.titleEn,
-  abstract: formData.abstract,
-  abstractEn: formData.abstractEn,
-  keywordsEs: formData.keywordsEs,  // ✅ Nombre correcto
-  keywordsEn: formData.keywordsEn,  // ✅ Nombre correcto
-  keywordsVocabulario: getVocabularyForArea(formData.area, language)?.vocabulario || 'unknown',  // ✅ CORRECTO
-  specializedCodes: formData.specializedCodes,  // ✅ Nombre correcto (si el backend lo espera así)
-  area: formData.area,
+        title: formData.title,
+        titleEn: formData.titleEn,
+        abstract: formData.abstract,
+        abstractEn: formData.abstractEn,
+        keywordsEs: formData.keywordsEs,
+        keywordsEn: formData.keywordsEn,
+        keywordsVocabulario: getVocabularyForArea(formData.area, language)?.vocabulario || 'unknown',
+        specializedCodes: formData.specializedCodes,
+        area: formData.area,
         paperLanguage: formData.paperLanguage,
         articleType: formData.articleType,
         acknowledgments: formData.acknowledgments,
@@ -2095,17 +2203,17 @@ if (author.isCorresponding && !author.phone) {
         codeAvailability: formData.codeAvailability,
         codeAvailabilityEn: formData.codeAvailabilityEn,
         authors: formData.authors.map(a => ({
-  firstName: a.firstName,
-  lastName: a.lastName,
-  email: a.email,
-  institution: a.institution,
-  orcid: a.orcid || null,
-  contribution: a.contribution,
-  isMinor: a.isMinor,
-  guardianName: a.guardianName,
-  isCorresponding: a.isCorresponding,
-  phone: a.phone || '',
-})),
+          firstName: a.firstName,
+          lastName: a.lastName,
+          email: a.email,
+          institution: a.institution,
+          orcid: a.orcid || null,
+          contribution: a.contribution,
+          isMinor: a.isMinor,
+          guardianName: a.guardianName,
+          isCorresponding: a.isCorresponding,
+          phone: a.phone || '',
+        })),
         funding: formData.funding,
         conflictOfInterest: formData.conflictOfInterest,
         excludedReviewers: formData.excludedReviewers,
@@ -2126,25 +2234,20 @@ if (author.isCorresponding && !author.phone) {
         manuscriptName: formData.manuscript.name,
         wantsToBeReviewer: formData.wantsToBeReviewer,
         reviewerAreas: formData.wantsToBeReviewer ? formData.reviewerAreas : [],
-         authorUID: user.uid,
-  submitterEmail: user.email,  // ← NUEVO: Email del que sube
-  submitterName: user.displayName || `${correspondingAuthor.firstName} ${correspondingAuthor.lastName}`.trim(),  // ← NUEVO: Nombre del que sube
-  
-  // Datos del autor de correspondencia (para correos)
-  authorEmail: correspondingAuthor.email,  // ← CAMBIADO: Email del autor de correspondencia
-  authorName: `${correspondingAuthor.firstName} ${correspondingAuthor.lastName}`.trim(),  // ← CAMBIADO: Nombre del autor de correspondencia
-  
-  // También enviar la información completa del autor de correspondencia
-  correspondingAuthor: {
-    firstName: correspondingAuthor.firstName,
-    lastName: correspondingAuthor.lastName,
-    email: correspondingAuthor.email,
-    institution: correspondingAuthor.institution,
-    orcid: correspondingAuthor.orcid || null,
-    isCorresponding: true,
-    correspondingAuthorPhone: correspondingAuthor.phone || '',
-  }
-
+        authorUID: user.uid,
+        submitterEmail: user.email,
+        submitterName: user.displayName || `${correspondingAuthor.firstName} ${correspondingAuthor.lastName}`.trim(),
+        authorEmail: correspondingAuthor.email,
+        authorName: `${correspondingAuthor.firstName} ${correspondingAuthor.lastName}`.trim(),
+        correspondingAuthor: {
+          firstName: correspondingAuthor.firstName,
+          lastName: correspondingAuthor.lastName,
+          email: correspondingAuthor.email,
+          institution: correspondingAuthor.institution,
+          orcid: correspondingAuthor.orcid || null,
+          isCorresponding: true,
+          correspondingAuthorPhone: correspondingAuthor.phone || '',
+        }
       };
 
       const response = await fetch('https://submitarticle-ggqsq2kkua-uc.a.run.app', {
@@ -2197,10 +2300,12 @@ if (author.isCorresponding && !author.phone) {
               </svg>
             </div>
             <h2 className="text-4xl font-serif font-light text-white mb-4 tracking-tight">
-              {isSpanish ? 'Manuscrito Recibido' : 'Manuscript Received'}
+              {isSpanish ? '¡Manuscrito Recibido!' : 'Manuscript Received!'}
             </h2>
-            <p className="text-slate-300 text-sm font-sans tracking-wide max-w-md mx-auto">
-              {isSpanish ? 'Tu investigación está ahora en manos de nuestro equipo editorial.' : 'Your research is now in the hands of our editorial team.'}
+            <p className="text-slate-300 text-sm font-sans tracking-wide max-w-md mx-auto leading-relaxed">
+              {isSpanish 
+                ? 'Tu investigación está ahora en manos de nuestro equipo editorial. Gracias por confiar en nosotros.'
+                : 'Your research is now in the hands of our editorial team. Thank you for trusting us.'}
             </p>
           </div>
           
@@ -2230,7 +2335,7 @@ if (author.isCorresponding && !author.phone) {
                     href={`https://drive.google.com/drive/folders/${driveFolderId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-[#003b5c] text-sm font-bold hover:text-[#e86125] transition-colors uppercase tracking-wider"
+                    className="inline-flex items-center gap-2 text-[#003b5c] text-sm font-bold hover:text-[#e86125] transition-colors uppercase tracking-wider font-sans"
                   >
                     {isSpanish ? 'Abrir en Google Drive' : 'Open in Google Drive'} 
                     <span aria-hidden="true">&rarr;</span>
@@ -2255,10 +2360,44 @@ if (author.isCorresponding && !author.phone) {
                       ? 'Puedes ver el estado de tu artículo en la pestaña "Mis envíos" del portal' 
                       : 'You can check your article status in the "My submissions" tab on the portal'}
                   </p>
-                  <div className="inline-flex items-center gap-2 text-sm text-[#003b5c] font-bold uppercase tracking-wider">
+                  <div className="inline-flex items-center gap-2 text-sm text-[#003b5c] font-bold uppercase tracking-wider font-sans">
                     <span className="w-2 h-2 bg-[#e86125] rounded-full"></span>
                     {isSpanish ? 'Estado actual: Recibido' : 'Current status: Received'}
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-8 border border-slate-200">
+              <div className="flex items-start gap-6">
+                <div className="w-14 h-14 bg-[#003b5c]/5 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-7 h-7 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-serif text-[#003b5c] mb-2">
+                    {isSpanish ? 'Próximos pasos' : 'Next steps'}
+                  </h3>
+                  <ul className="text-sm text-slate-600 mb-4 font-sans space-y-2">
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 mt-0.5">✓</span>
+                      {isSpanish ? 'Tu manuscrito será revisado por nuestro equipo editorial' : 'Your manuscript will be reviewed by our editorial team'}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 mt-0.5">✓</span>
+                      {isSpanish ? 'Recibirás notificaciones por email sobre el progreso' : 'You will receive email notifications about progress'}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 mt-0.5">✓</span>
+                      {isSpanish ? 'El proceso de revisión por pares puede tomar 2-4 semanas' : 'The peer review process may take 2-4 weeks'}
+                    </li>
+                  </ul>
+                  <p className="text-xs text-slate-400 font-sans">
+                    {isSpanish 
+                      ? '💡 Recuerda: el proceso de revisión es humano y toma tiempo. ¡Gracias por tu paciencia y contribución a la ciencia!'
+                      : '💡 Remember: the review process is human and takes time. Thank you for your patience and contribution to science!'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -2270,7 +2409,6 @@ if (author.isCorresponding && !author.phone) {
 
   // Renderizado principal del formulario
   return (
-    
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans selection:bg-[#003b5c] selection:text-white pb-24">
       {/* HEADER SUPERIOR */}
       <header className="bg-white sticky top-0 z-40 border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
@@ -2285,7 +2423,7 @@ if (author.isCorresponding && !author.phone) {
               {isSpanish ? 'Portal de Autores' : 'Author Portal'}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full ring-1 ring-slate-200">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full ring-1 ring-slate-200 font-sans">
             <UserIcon className="w-4 h-4" />
             {user?.email || 'Autor'}
           </div>
@@ -2315,14 +2453,41 @@ if (author.isCorresponding && !author.phone) {
                       <span className="text-sm font-bold">{step.id}</span>
                     )}
                   </div>
-                  <span className={`text-xs font-bold uppercase tracking-widest text-center transition-colors duration-300
+                  <span className={`text-xs font-bold uppercase tracking-widest text-center transition-colors duration-300 font-sans
                     ${isActive ? 'text-[#003b5c]' : isPast ? 'text-slate-700' : 'text-slate-400'}`}>
                     {step.title}
                   </span>
+                  {isActive && (
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {step.estimate}
+                    </span>
+                  )}
                 </div>
               );
             })}
           </div>
+        </div>
+
+        {/* MENSAJE DE PROGRESO MOTIVACIONAL */}
+        <div className="mb-6 text-center">
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-sm font-sans text-slate-500"
+          >
+            {isSpanish ? (
+              <>
+                <span className="font-semibold text-[#003b5c]">Paso {currentStep} de {steps.length}</span>
+                {' '}· {currentStep === 1 ? 'Empieza por lo más importante' : currentStep === 2 ? '¡Vas muy bien!' : '¡Último tramo, ya casi!'}
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-[#003b5c]">Step {currentStep} of {steps.length}</span>
+                {' '}· {currentStep === 1 ? 'Start with the essentials' : currentStep === 2 ? 'You are doing great!' : 'Final stretch, almost there!'}
+              </>
+            )}
+          </motion.p>
         </div>
 
         {/* FORMULARIO CONTENEDOR */}
@@ -2338,19 +2503,21 @@ if (author.isCorresponding && !author.phone) {
                   exit={{ opacity: 0, x: -20 }} 
                   className="space-y-10"
                 >
-                  <div className="border-b border-slate-100 pb-4 mb-8">
-                    <h2 className="text-2xl font-serif text-[#003b5c] font-medium">
-                      {isSpanish ? 'Metadatos del Artículo' : 'Article Metadata'}
-                    </h2>
-                    <p className="text-slate-500 text-sm mt-1">
-                      {isSpanish ? 'Asegúrese de que el título y resumen coincidan exactamente con su documento Word.' : 'Ensure that the title and abstract match exactly with your Word document.'}
-                    </p>
-                  </div>
+                  <StepIntro
+                    language={language}
+                    title={isSpanish ? 'Metadatos del Artículo' : 'Article Metadata'}
+                    subtitle={
+                      isSpanish
+                        ? 'Empieza por lo más importante. El título y el resumen deben coincidir exactamente con tu documento Word. Los pins de ayuda te acompañan en cada campo. Si no estás seguro de algo, los pins de ayuda están ahí.'
+                        : 'Start with the essentials. Title and abstract must match your Word document exactly. The help pins guide you at every field. If you are unsure about something, the help pins are there.'
+                    }
+                    estimate={isSpanish ? '~6-8 min' : '~6-8 min'}
+                  />
 
                   <div className="space-y-6">
                     {/* Título */}
                     <div className="group">
-                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c]">
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c] font-sans">
                         {isSpanish ? 'Título del Trabajo' : 'Article Title'} 
                         <span className="text-red-500 ml-1">*</span>
                         <HelpCapsule
@@ -2370,14 +2537,15 @@ if (author.isCorresponding && !author.phone) {
                         placeholder={isSpanish ? 'Escriba el título completo aquí...' : 'Write the full title here...'}
                       />
                       {validationErrors.title && (
-                        <p className="text-red-500 text-xs mt-1">{validationErrors.title}</p>
+                        <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.title}</p>
                       )}
                     </div>
 
                     {/* Título en inglés */}
                     <div className="group">
-                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c]">
-                        {isSpanish ? 'Título en Inglés (Recomendado)' : 'English Title (Recommended)'}
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c] font-sans">
+                        {isSpanish ? 'Título en Inglés' : 'English Title'} 
+                        <span className="text-red-500 ml-1">*</span>
                         <HelpCapsule
                           title={isSpanish ? '¿Por qué en inglés?' : 'Why in English?'}
                           text={isSpanish
@@ -2390,14 +2558,18 @@ if (author.isCorresponding && !author.phone) {
                         name="titleEn" 
                         value={formData.titleEn} 
                         onChange={handleInputChange} 
-                        className="w-full p-4 bg-slate-50/50 border-0 ring-1 ring-slate-200 rounded-xl text-lg font-serif text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm"
-                        placeholder={isSpanish ? 'English title...' : 'English title...'}
+                        className={`w-full p-4 bg-slate-50/50 border-0 ring-1 rounded-xl text-lg font-serif text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all shadow-sm
+                          ${validationErrors.titleEn ? 'ring-red-300' : 'ring-slate-200'}`}
+                        placeholder="English title..."
                       />
+                      {validationErrors.titleEn && (
+                        <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.titleEn}</p>
+                      )}
                     </div>
 
                     {/* Resumen */}
                     <div className="group">
-                      <label className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c]">
+                      <label className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c] font-sans">
                         <span className="flex items-center">
                           {isSpanish ? 'Resumen / Abstract' : 'Abstract'} 
                           <span className="text-red-500 ml-1">*</span>
@@ -2422,19 +2594,20 @@ if (author.isCorresponding && !author.phone) {
                         placeholder={isSpanish ? 'Contexto, metodología, resultados principales y conclusiones...' : 'Context, methodology, main results and conclusions...'}
                       />
                       {validationErrors.abstract && (
-                        <p className="text-red-500 text-xs mt-1">{validationErrors.abstract}</p>
+                        <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.abstract}</p>
                       )}
                     </div>
 
                     {/* Abstract en inglés */}
                     <div className="group">
-                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c]">
-                        {isSpanish ? 'Abstract en Inglés' : 'English Abstract'}
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 transition-colors group-focus-within:text-[#003b5c] font-sans">
+                        {isSpanish ? 'Abstract en Inglés' : 'English Abstract'} 
+                        <span className="text-red-500 ml-1">*</span>
                         <HelpCapsule
                           title={isSpanish ? '¿Es obligatorio?' : 'Is it mandatory?'}
                           text={isSpanish
-                            ? 'Es altamente recomendado. Traduce tu resumen al inglés para maximizar la difusión internacional. No uses traductores automáticos sin revisar; pide ayuda a alguien con buen nivel de inglés académico.'
-                            : 'It is highly recommended. Translate your abstract to English to maximize international dissemination. Do not use automatic translators without review; ask someone with good academic English level for help.'}
+                            ? 'Es obligatorio para maximizar la difusión internacional. Traduce tu resumen al inglés. No uses traductores automáticos sin revisar; pide ayuda a alguien con buen nivel de inglés académico.'
+                            : 'It is mandatory to maximize international dissemination. Translate your abstract to English. Do not use automatic translators without review; ask someone with good academic English level for help.'}
                         />
                       </label>
                       <textarea 
@@ -2442,14 +2615,18 @@ if (author.isCorresponding && !author.phone) {
                         value={formData.abstractEn} 
                         onChange={handleInputChange} 
                         rows={6}
-                        className="w-full p-4 bg-slate-50/50 border-0 ring-1 ring-slate-200 rounded-xl text-sm font-sans text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all resize-y shadow-sm leading-relaxed"
+                        className={`w-full p-4 bg-slate-50/50 border-0 ring-1 rounded-xl text-sm font-sans text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#003b5c] transition-all resize-y shadow-sm leading-relaxed
+                          ${validationErrors.abstractEn ? 'ring-red-300' : 'ring-slate-200'}`}
                         placeholder="English abstract..."
                       />
+                      {validationErrors.abstractEn && (
+                        <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.abstractEn}</p>
+                      )}
                     </div>
 
                     {/* Comentarios al editor */}
                     <div className="group">
-                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 font-sans">
                         {isSpanish ? 'Comentarios al Editor' : 'Comments to the Editor'}
                         <HelpCapsule
                           title={isSpanish ? '¿Qué debo escribir aquí?' : 'What should I write here?'}
@@ -2482,7 +2659,7 @@ if (author.isCorresponding && !author.phone) {
                   {/* Tipo de artículo y área */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 font-sans">
                         {isSpanish ? 'Tipo de Artículo' : 'Article Type'} 
                         <span className="text-red-500 ml-1">*</span>
                         <HelpCapsule
@@ -2505,12 +2682,12 @@ if (author.isCorresponding && !author.phone) {
                         ))}
                       </select>
                       {validationErrors.articleType && (
-                        <p className="text-red-500 text-xs mt-1">{validationErrors.articleType}</p>
+                        <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.articleType}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 font-sans">
                         {isSpanish ? 'Área Temática' : 'Subject Area'} 
                         <span className="text-red-500 ml-1">*</span>
                         <HelpCapsule
@@ -2537,114 +2714,153 @@ if (author.isCorresponding && !author.phone) {
                         ))}
                       </select>
                       {validationErrors.area && (
-                        <p className="text-red-500 text-xs mt-1">{validationErrors.area}</p>
+                        <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.area}</p>
                       )}
                     </div>
                   </div>
 
-                  {/* Palabras clave */}
-                  <div className="space-y-8">
-                    <div>
-                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
-                        {isSpanish ? 'Palabras Clave (Español)' : 'Keywords (Spanish)'} 
-                        <span className="text-red-500 ml-1">*</span>
-                      </label>
+                  {/* Palabras clave - ESPAÑOL */}
+                  <div>
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-3 font-sans">
+                      {isSpanish ? 'Palabras Clave (Español)' : 'Keywords (Spanish)'} 
+                      <span className="text-red-500 ml-1">*</span>
+                      <HelpCapsule
+                        title={isSpanish ? '¿Qué palabras clave elegir?' : 'What keywords to choose?'}
+                        text={isSpanish
+                          ? 'Elige entre 2 y 6 términos que describan tu investigación. Piensa en qué buscarías en Google Scholar para encontrar tu trabajo. Usa términos específicos de tu campo.'
+                          : 'Choose between 2 and 6 terms that describe your research. Think about what you would search in Google Scholar to find your work. Use specific terms from your field.'}
+                      />
+                    </label>
+                    <ControlledKeywordInput
+                      vocabularyConfig={getVocabularyForArea(formData.area, language) || {}}
+                      value={formData.keywordsEs}
+                      onChange={(val) => {
+                        setFormData(prev => ({ ...prev, keywordsEs: val }));
+                        setValidationErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.controlledKeywords;
+                          return newErrors;
+                        });
+                      }}
+                      language={language}
+                      mode="keywords"
+                    />
+                    {validationErrors.controlledKeywords && (
+                      <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.controlledKeywords}</p>
+                    )}
+                    <p className="text-xs text-slate-500 mt-2 font-sans">
+                      {isSpanish 
+                        ? '💡 Esto ayuda a que otros estudiantes y profesores encuentren tu trabajo.'
+                        : '💡 This helps other students and professors find your work.'}
+                    </p>
+                  </div>
+
+                  {/* Keywords - INGLÉS */}
+                  <div>
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-3 font-sans">
+                      {isSpanish ? 'Keywords (Inglés)' : 'Keywords (English)'} 
+                      <span className="text-red-500 ml-1">*</span>
+                      <HelpCapsule
+                        title={isSpanish ? '¿Por qué en inglés?' : 'Why in English?'}
+                        text={isSpanish
+                          ? 'Las keywords en inglés aumentan la visibilidad internacional de tu trabajo. Traduce las palabras clave al inglés para que investigadores de todo el mundo puedan encontrar tu artículo.'
+                          : 'English keywords increase the international visibility of your work. Translate the keywords to English so researchers worldwide can find your article.'}
+                      />
+                    </label>
+                    <ControlledKeywordInput
+                      vocabularyConfig={getVocabularyForArea(formData.area, language) || {}}
+                      value={formData.keywordsEn}
+                      onChange={(val) => {
+                        setFormData(prev => ({ ...prev, keywordsEn: val }));
+                        setValidationErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.controlledKeywordsEn;
+                          return newErrors;
+                        });
+                      }}
+                      language={language}
+                      mode="keywords"
+                    />
+                    {validationErrors.controlledKeywordsEn && (
+                      <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.controlledKeywordsEn}</p>
+                    )}
+                  </div>
+
+                  {/* Códigos especializados - SOLO si hay área seleccionada con vocabulario */}
+                  {formData.area && getVocabularyForArea(formData.area, language) ? (
+                    <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 ring-1 ring-slate-200/60 shadow-sm">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-10 h-10 bg-[#003b5c]/5 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z" />
+                          </svg>
+                        </div>
+                        <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 font-sans">
+                          {isSpanish ? 'Códigos Especializados' : 'Specialized Codes'}
+                          <HelpCapsule
+                            title={isSpanish ? '¿Qué son los códigos especializados?' : 'What are specialized codes?'}
+                            text={isSpanish
+                              ? `Son códigos estandarizados del vocabulario ${getVocabularyForArea(formData.area, language)?.vocabulario || ''}. Solo necesitas ingresar el código (ej: ${getVocabularyForArea(formData.area, language)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area, language)?.ejemplo || ''}). No incluyas el término completo. Debes agregar entre 2 y 4 códigos.`
+                              : `These are standardized codes from the ${getVocabularyForArea(formData.area, language)?.vocabulario || ''} vocabulary. You only need to enter the code (e.g., ${getVocabularyForArea(formData.area, language)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area, language)?.ejemplo || ''}). Do not include the full term. You must add between 2 and 4 codes.`}
+                          />
+                        </label>
+                      </div>
+                      
+                      <p className="text-xs text-slate-500 mb-4 font-sans leading-relaxed">
+                        {isSpanish
+                          ? 'No te preocupes si es tu primera vez — aquí te guiamos. Solo necesitas el código (ej. 11N05).'
+                          : 'Don\'t worry if it\'s your first time — we guide you here. You only need the code (e.g. 11N05).'}
+                      </p>
+                      
                       <ControlledKeywordInput
-                        vocabularyConfig={getVocabularyForArea(formData.area, language) || {}}
-                        value={formData.keywordsEs}
+                        vocabularyConfig={getVocabularyForArea(formData.area, language)}
+                        value={formData.specializedCodes}
                         onChange={(val) => {
-                          setFormData(prev => ({ ...prev, keywordsEs: val }));
+                          setFormData(prev => ({ ...prev, specializedCodes: val }));
                           setValidationErrors(prev => {
                             const newErrors = { ...prev };
-                            delete newErrors.controlledKeywords;
+                            delete newErrors.specializedCodes;
                             return newErrors;
                           });
                         }}
                         language={language}
-                        mode="keywords"
+                        mode="codes"
                       />
-                      {validationErrors.controlledKeywords && (
-                        <p className="text-red-500 text-xs mt-1">{validationErrors.controlledKeywords}</p>
+                      
+                      {validationErrors.specializedCodes && (
+                        <p className="text-red-500 text-xs mt-2 flex items-center gap-1 font-sans">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {validationErrors.specializedCodes}
+                        </p>
                       )}
                     </div>
-
-                    <div>
-                      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
-                        {isSpanish ? 'Keywords (Inglés)' : 'Keywords (English)'} 
-                        <span className="text-red-500 ml-1">*</span>
-                      </label>
-                      <ControlledKeywordInput
-                        vocabularyConfig={getVocabularyForArea(formData.area, language) || {}}
-                        value={formData.keywordsEn}
-                        onChange={(val) => setFormData(prev => ({ ...prev, keywordsEn: val }))}
-                        language={language}
-                        mode="keywords"
-                      />
+                  ) : (
+                    <div className="bg-slate-50/50 rounded-xl p-8 text-center border-2 border-dashed border-slate-200">
+                      <div className="flex flex-col items-center gap-3 max-w-sm mx-auto">
+                        <div className="w-14 h-14 bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 flex items-center justify-center">
+                          <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                          </svg>
+                        </div>
+                        <p className="text-slate-600 text-sm font-medium font-sans">
+                          {isSpanish
+                            ? 'Selecciona primero un área temática'
+                            : 'Select a subject area first'}
+                        </p>
+                        <p className="text-slate-500 text-xs leading-relaxed font-sans">
+                          {isSpanish
+                            ? 'Aparecerán los códigos especializados recomendados para tu disciplina (MSC, MeSH, JEL, etc.). No te preocupes si es la primera vez: te guiamos.'
+                            : 'The recommended specialized codes for your discipline will appear (MSC, MeSH, JEL, etc.). Don\'t worry if it\'s your first time — we guide you.'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-{/* Códigos especializados - SOLO si hay área seleccionada con vocabulario */}
-{formData.area && getVocabularyForArea(formData.area, language) ? (
-  <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 ring-1 ring-slate-200/60 shadow-sm">
-    <div className="flex items-center gap-2 mb-4">
-      <div className="w-10 h-10 bg-[#003b5c]/5 rounded-lg flex items-center justify-center">
-        <svg className="w-5 h-5 text-[#003b5c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z" />
-        </svg>
-      </div>
-      <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600">
-        {isSpanish ? 'Códigos Especializados' : 'Specialized Codes'}
-        <HelpCapsule
-          title={isSpanish ? '¿Qué son los códigos especializados?' : 'What are specialized codes?'}
-          text={isSpanish
-            ? `Son códigos estandarizados del vocabulario ${getVocabularyForArea(formData.area, language)?.vocabulario || ''}. Solo necesitas ingresar el código (ej: ${getVocabularyForArea(formData.area, language)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area, language)?.ejemplo || ''}). No incluyas el término completo. Debes agregar entre 2 y 4 códigos.`
-            : `These are standardized codes from the ${getVocabularyForArea(formData.area, language)?.vocabulario || ''} vocabulary. You only need to enter the code (e.g., ${getVocabularyForArea(formData.area, language)?.ejemplo?.split(':')[0] || getVocabularyForArea(formData.area, language)?.ejemplo || ''}). Do not include the full term. You must add between 2 and 4 codes.`}
-        />
-      </label>
-    </div>
-    
-    <ControlledKeywordInput
-      vocabularyConfig={getVocabularyForArea(formData.area, language)}
-      value={formData.specializedCodes}
-      onChange={(val) => {
-        setFormData(prev => ({ ...prev, specializedCodes: val }));
-        setValidationErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.specializedCodes;
-          return newErrors;
-        });
-      }}
-      language={language}
-      mode="codes"
-    />
-    
-    {validationErrors.specializedCodes && (
-      <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        {validationErrors.specializedCodes}
-      </p>
-    )}
-  </div>
-) : (
-  <div className="bg-slate-50/50 rounded-xl p-6 text-center border-2 border-dashed border-slate-200">
-    <div className="flex flex-col items-center gap-3">
-      <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
-        <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-        </svg>
-      </div>
-      <p className="text-slate-500 text-sm font-sans">
-        {isSpanish 
-          ? 'Selecciona un área temática para ver los códigos especializados disponibles.'
-          : 'Select a subject area to see available specialized codes.'}
-      </p>
-    </div>
-  </div>
-)}
+                  )}
+
                   {/* Idioma del manuscrito */}
                   <div>
-                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 font-sans">
                       {isSpanish ? 'Idioma del Manuscrito' : 'Manuscript Language'} 
                       <span className="text-red-500 ml-1">*</span>
                     </label>
@@ -2658,6 +2874,20 @@ if (author.isCorresponding && !author.phone) {
                       <option value="en">English</option>
                     </select>
                   </div>
+
+                  {/* Mensaje de impacto */}
+                  <div className="bg-gradient-to-r from-[#003b5c] to-[#005282] rounded-xl p-5 text-white">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <p className="text-sm font-sans leading-relaxed">
+                        {isSpanish 
+                          ? 'Tu investigación puede llegar a otros estudiantes y profesores. La revista es de acceso abierto (CC-BY), lo que significa que tu trabajo será libremente accesible y citado en todo el mundo.'
+                          : 'Your research can reach other students and professors. The journal is open access (CC-BY), meaning your work will be freely accessible and cited worldwide.'}
+                      </p>
+                    </div>
+                  </div>
                 </motion.div>
               )}
 
@@ -2670,14 +2900,16 @@ if (author.isCorresponding && !author.phone) {
                   exit={{ opacity: 0, x: -20 }} 
                   className="space-y-10"
                 >
-                  <div className="border-b border-slate-100 pb-4 mb-8">
-                    <h2 className="text-2xl font-serif text-[#003b5c] font-medium">
-                      {isSpanish ? 'Autores y Ética' : 'Authors & Ethics'}
-                    </h2>
-                    <p className="text-slate-500 text-sm mt-1">
-                      {isSpanish ? 'Incluya a todos los autores que contribuyeron significativamente al trabajo.' : 'Include all authors who significantly contributed to the work.'}
-                    </p>
-                  </div>
+                  <StepIntro
+                    language={language}
+                    title={isSpanish ? 'Autores y Ética' : 'Authors & Ethics'}
+                    subtitle={
+                      isSpanish
+                        ? 'Incluye a todos los que contribuyeron de verdad. Si eres el único autor, no necesitas CRediT. Estamos contigo en cada detalle.'
+                        : 'Include everyone who truly contributed. If you are the sole author, CRediT is not required. We are with you on every detail.'
+                    }
+                    estimate={isSpanish ? '~5-7 min' : '~5-7 min'}
+                  />
 
                   {/* Sección de autores */}
                   <div className="space-y-6">
@@ -2692,6 +2924,7 @@ if (author.isCorresponding && !author.phone) {
                               type="button"
                               onClick={() => removeAuthor(index)}
                               className="text-slate-400 hover:text-red-500 transition-colors"
+                              title={isSpanish ? 'Eliminar autor' : 'Remove author'}
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2702,37 +2935,39 @@ if (author.isCorresponding && !author.phone) {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-sans">
                               {isSpanish ? 'Nombre' : 'First name'} *
                             </label>
                             <input
                               type="text"
                               value={author.firstName}
                               onChange={(e) => handleAuthorChange(index, 'firstName', e.target.value)}
-                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all
+                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans
                                 ${validationErrors[`author_${index}_firstName`] ? 'ring-red-300' : 'ring-slate-200'}`}
+                              placeholder={isSpanish ? 'Ej: María' : 'e.g., Mary'}
                             />
                             {validationErrors[`author_${index}_firstName`] && (
-                              <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_firstName`]}</p>
+                              <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors[`author_${index}_firstName`]}</p>
                             )}
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-sans">
                               {isSpanish ? 'Apellido' : 'Last name'} *
                             </label>
                             <input
                               type="text"
                               value={author.lastName}
                               onChange={(e) => handleAuthorChange(index, 'lastName', e.target.value)}
-                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all
+                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans
                                 ${validationErrors[`author_${index}_lastName`] ? 'ring-red-300' : 'ring-slate-200'}`}
+                              placeholder={isSpanish ? 'Ej: García' : 'e.g., Smith'}
                             />
                             {validationErrors[`author_${index}_lastName`] && (
-                              <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_lastName`]}</p>
+                              <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors[`author_${index}_lastName`]}</p>
                             )}
                           </div>
                           <div>
-                            <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-sans">
                               {isSpanish ? 'Institución' : 'Institution'} *
                               <HelpCapsule
                                 title={isSpanish ? '¿Qué institución pongo?' : 'What institution do I put?'}
@@ -2745,92 +2980,94 @@ if (author.isCorresponding && !author.phone) {
                               type="text"
                               value={author.institution}
                               onChange={(e) => handleAuthorChange(index, 'institution', e.target.value)}
-                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all
+                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans
                                 ${validationErrors[`author_${index}_institution`] ? 'ring-red-300' : 'ring-slate-200'}`}
+                              placeholder={isSpanish ? 'Ej: Universidad de Chile' : 'e.g., University of Chile'}
                             />
                             {validationErrors[`author_${index}_institution`] && (
-                              <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_institution`]}</p>
+                              <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors[`author_${index}_institution`]}</p>
                             )}
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-sans">
                               {isSpanish ? 'Email' : 'Email'} *
                             </label>
                             <input
                               type="email"
                               value={author.email}
                               onChange={(e) => handleAuthorChange(index, 'email', e.target.value)}
-                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all
+                              className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans
                                 ${validationErrors[`author_${index}_email`] ? 'ring-red-300' : 'ring-slate-200'}`}
+                              placeholder={isSpanish ? 'ejemplo@correo.com' : 'example@email.com'}
                             />
                             {validationErrors[`author_${index}_email`] && (
-                              <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_email`]}</p>
+                              <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors[`author_${index}_email`]}</p>
                             )}
                           </div>
-{author.isCorresponding && (
-  <div className="md:col-span-2">
-    
-    <div className="mb-2">
-      <label className="flex items-center text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-        {isSpanish ? 'Teléfono de contacto' : 'Contact phone'} 
-        <span className="text-red-500 ml-1">*</span>
-        <HelpCapsule
-          title={isSpanish ? '¿Qué número debo poner?' : 'What number should I enter?'}
-          text={isSpanish
-            ? 'Selecciona tu país y escribe tu número. Ejemplo Chile: selecciona 🇨🇱 y escribe 9 6165 3836.'
-            : 'Select your country and enter your number. Example: select 🇺🇸 and write 555 123 4567.'}
-        />
-      </label>
-      
-      <p className="text-[13px] text-slate-500 leading-relaxed">
-        {isSpanish 
-          ? 'Selecciona tu país e ingresa tu número (con o sin espacios).' 
-          : 'Select your country and enter your number.'}
-      </p>
-    </div>
-    
-    <PhoneInput
-      international
-      defaultCountry="CL"
-      value={author.phone || undefined}
-      onChange={(value) => {
-        handleAuthorChange(index, 'phone', value || '')
-      }}
-      placeholder={isSpanish ? "Ej: 9 6165 3836" : "Ex: 555 123 4567"}
-      className={`PhoneInput ${validationErrors[`author_${index}_phone`] ? 'PhoneInput--error' : ''}`}
-    />
-    
-    {/* Previsualización limpia */}
-    {author.phone && isValidPhoneNumber(author.phone) && (
-      <div className="mt-2 flex items-center gap-1.5 px-1">
-        <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
-        <p className="text-[13px] text-slate-600">
-          {isSpanish ? 'Se registrará como:' : 'Will be registered as:'}{' '}
-          <strong className="font-medium text-slate-800">
-            {author.phone}
-          </strong>
-        </p>
-      </div>
-    )}
-    
-    {validationErrors[`author_${index}_phone`] && (
-      <motion.p 
-        initial={{ opacity: 0, y: -5 }} 
-        animate={{ opacity: 1, y: 0 }}
-        className="text-red-500 text-xs mt-1.5 flex items-center gap-1 px-1"
-      >
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        {validationErrors[`author_${index}_phone`]}
-      </motion.p>
-    )}
-  </div>
-)}
+
+                          {author.isCorresponding && (
+                            <div className="md:col-span-2">
+                              <div className="mb-2">
+                                <label className="flex items-center text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-sans">
+                                  {isSpanish ? 'Teléfono de contacto' : 'Contact phone'} 
+                                  <span className="text-red-500 ml-1">*</span>
+                                  <HelpCapsule
+                                    title={isSpanish ? '¿Qué número debo poner?' : 'What number should I enter?'}
+                                    text={isSpanish
+                                      ? 'Selecciona tu país y escribe tu número. Ejemplo Chile: selecciona 🇨🇱 y escribe 9 6165 3836.'
+                                      : 'Select your country and enter your number. Example: select 🇺🇸 and write 555 123 4567.'}
+                                  />
+                                </label>
+                                
+                                <p className="text-[13px] text-slate-500 leading-relaxed font-sans">
+                                  {isSpanish 
+                                    ? 'Selecciona tu país e ingresa tu número (con o sin espacios).' 
+                                    : 'Select your country and enter your number.'}
+                                </p>
+                              </div>
+                              
+                              <PhoneInput
+                                international
+                                defaultCountry="CL"
+                                value={author.phone || undefined}
+                                onChange={(value) => {
+                                  handleAuthorChange(index, 'phone', value || '')
+                                }}
+                                placeholder={isSpanish ? "Ej: 9 6165 3836" : "Ex: 555 123 4567"}
+                                className={`PhoneInput ${validationErrors[`author_${index}_phone`] ? 'PhoneInput--error' : ''}`}
+                              />
+                              
+                              {author.phone && isValidPhoneNumber(author.phone) && (
+                                <div className="mt-2 flex items-center gap-1.5 px-1">
+                                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  <p className="text-[13px] text-slate-600 font-sans">
+                                    {isSpanish ? 'Se registrará como:' : 'Will be registered as:'}{' '}
+                                    <strong className="font-medium text-slate-800">
+                                      {author.phone}
+                                    </strong>
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {validationErrors[`author_${index}_phone`] && (
+                                <motion.p 
+                                  initial={{ opacity: 0, y: -5 }} 
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="text-red-500 text-xs mt-1.5 flex items-center gap-1 px-1 font-sans"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  {validationErrors[`author_${index}_phone`]}
+                                </motion.p>
+                              )}
+                            </div>
+                          )}
+
                           <div>
-                            <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-sans">
                               ORCID
                               <HelpCapsule
                                 title={isSpanish ? '¿Qué es ORCID?' : 'What is ORCID?'}
@@ -2851,7 +3088,8 @@ if (author.isCorresponding && !author.phone) {
                                 <button
                                   type="button"
                                   onClick={() => handleImportMyProfile(index)}
-                                  className="px-3 py-2 bg-[#003b5c] hover:bg-[#002b44] text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 whitespace-nowrap"
+                                  className="px-3 py-2 bg-[#003b5c] hover:bg-[#002b44] text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 whitespace-nowrap font-sans"
+                                  title={isSpanish ? 'Importar mi perfil' : 'Import my profile'}
                                 >
                                   <UserIcon className="w-3 h-3" />
                                   {isSpanish ? 'Yo' : 'Me'}
@@ -2859,10 +3097,11 @@ if (author.isCorresponding && !author.phone) {
                               )}
                             </div>
                           </div>
-                                                    {/* Contribución - SOLO si hay más de un autor */}
+
+                          {/* Contribución - SOLO si hay más de un autor */}
                           {formData.authors.length > 1 ? (
                             <div>
-                              <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                              <label className="flex items-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-sans">
                                 {isSpanish ? 'Contribución (CRediT)' : 'Contribution (CRediT)'} *
                                 <HelpCapsule
                                   title={isSpanish ? '¿Qué es el formato CRediT?' : 'What is the CRediT format?'}
@@ -2875,14 +3114,14 @@ if (author.isCorresponding && !author.phone) {
                                 value={author.contribution}
                                 onChange={(e) => handleAuthorChange(index, 'contribution', e.target.value)}
                                 rows={3}
-                                className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y
+                                className={`w-full p-3 bg-white border-0 ring-1 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y font-sans
                                   ${validationErrors[`author_${index}_contribution`] ? 'ring-red-300' : 'ring-slate-200'}`}
                                 placeholder={isSpanish 
                                   ? 'Ej: Conceptualización, Metodología, Análisis formal, Redacción - borrador original' 
                                   : 'e.g., Conceptualization, Methodology, Formal analysis, Writing - original draft'}
                               />
                               {validationErrors[`author_${index}_contribution`] && (
-                                <p className="text-red-500 text-xs mt-1">{validationErrors[`author_${index}_contribution`]}</p>
+                                <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors[`author_${index}_contribution`]}</p>
                               )}
                               <p className="text-[10px] text-slate-400 mt-1 font-sans">
                                 {isSpanish 
@@ -2912,33 +3151,33 @@ if (author.isCorresponding && !author.phone) {
                         {/* Menor de edad */}
                         <div className="mt-6 pt-4 border-t border-slate-200">
                           <label className="flex items-center gap-3 cursor-pointer">
-  <input
-    type="checkbox"
-    checked={author.isMinor}
-    onChange={(e) => {
-      const isMinor = e.target.checked;
-      const newAuthors = [...formData.authors];
-      newAuthors[index] = {
-        ...newAuthors[index],
-        isMinor: isMinor,
-        guardianName: isMinor ? newAuthors[index].guardianName : '',
-        consentMethod: isMinor ? newAuthors[index].consentMethod : 'none',
-        consentFile: isMinor ? newAuthors[index].consentFile : null
-      };
-      setFormData(prev => ({ ...prev, authors: newAuthors }));
-    }}
-    className="w-4 h-4 text-[#003b5c] rounded"
-  />
-  <span className="text-sm text-slate-700 font-sans">
-    {isSpanish ? 'Este autor es menor de edad' : 'This author is a minor'}
-  </span>
-  <HelpCapsule
-    title={isSpanish ? '¿Qué significa ser menor?' : 'What does being a minor mean?'}
-    text={isSpanish
-      ? 'Si alguno de los autores tiene menos de 18 años, debe marcarse esta casilla. Se requerirá autorización de un tutor legal para poder publicar el artículo.'
-      : 'If any of the authors is under 18 years old, this box must be checked. Authorization from a legal guardian will be required to publish the article.'}
-  />
-</label>
+                            <input
+                              type="checkbox"
+                              checked={author.isMinor}
+                              onChange={(e) => {
+                                const isMinor = e.target.checked;
+                                const newAuthors = [...formData.authors];
+                                newAuthors[index] = {
+                                  ...newAuthors[index],
+                                  isMinor: isMinor,
+                                  guardianName: isMinor ? newAuthors[index].guardianName : '',
+                                  consentMethod: isMinor ? newAuthors[index].consentMethod : 'none',
+                                  consentFile: isMinor ? newAuthors[index].consentFile : null
+                                };
+                                setFormData(prev => ({ ...prev, authors: newAuthors }));
+                              }}
+                              className="w-4 h-4 text-[#003b5c] rounded"
+                            />
+                            <span className="text-sm text-slate-700 font-sans">
+                              {isSpanish ? 'Este autor es menor de edad' : 'This author is a minor'}
+                            </span>
+                            <HelpCapsule
+                              title={isSpanish ? '¿Qué significa ser menor?' : 'What does being a minor mean?'}
+                              text={isSpanish
+                                ? 'Si alguno de los autores tiene menos de 18 años, debe marcarse esta casilla. Se requerirá autorización de un tutor legal para poder publicar el artículo.'
+                                : 'If any of the authors is under 18 years old, this box must be checked. Authorization from a legal guardian will be required to publish the article.'}
+                            />
+                          </label>
 
                           {author.isMinor && (
                             <MinorConsentSection
@@ -2975,7 +3214,7 @@ if (author.isCorresponding && !author.phone) {
                     <button
                       type="button"
                       onClick={addAuthor}
-                      className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:border-[#003b5c] hover:text-[#003b5c] transition-colors font-sans text-sm"
+                      className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:border-[#003b5c] hover:text-[#003b5c] transition-colors font-sans text-sm font-medium"
                     >
                       + {isSpanish ? 'Agregar otro autor' : 'Add another author'}
                     </button>
@@ -2986,7 +3225,7 @@ if (author.isCorresponding && !author.phone) {
                     <h3 className="font-serif font-bold text-[#003b5c] mb-4">
                       {isSpanish ? 'Financiación' : 'Funding'}
                     </h3>
-                    <label className="flex items-center gap-3 mb-4">
+                    <label className="flex items-center gap-3 mb-4 cursor-pointer">
                       <input
                         type="checkbox"
                         name="funding.hasFunding"
@@ -3010,7 +3249,7 @@ if (author.isCorresponding && !author.phone) {
                             name="funding.sources"
                             value={formData.funding.sources}
                             onChange={handleInputChange}
-                            className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
+                            className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans"
                             placeholder={isSpanish ? 'FONDECYT, ANID...' : 'NSF, NIH...'}
                           />
                         </div>
@@ -3023,7 +3262,7 @@ if (author.isCorresponding && !author.phone) {
                             name="funding.grantNumbers"
                             value={formData.funding.grantNumbers}
                             onChange={handleInputChange}
-                            className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
+                            className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans"
                             placeholder="123456, 789012"
                           />
                         </div>
@@ -3033,7 +3272,7 @@ if (author.isCorresponding && !author.phone) {
 
                   {/* Conflicto de intereses */}
                   <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
-                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 font-sans">
                       {isSpanish ? 'Conflicto de Intereses' : 'Conflict of Interest'}
                       <HelpCapsule
                         title={isSpanish ? '¿Qué es un conflicto de intereses?' : 'What is a conflict of interest?'}
@@ -3047,14 +3286,14 @@ if (author.isCorresponding && !author.phone) {
                       value={formData.conflictOfInterest}
                       onChange={handleInputChange}
                       rows={3}
-                      className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y"
+                      className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y font-sans"
                       placeholder={isSpanish ? 'Los autores declaran no tener conflictos de interés.' : 'The authors declare no conflicts of interest.'}
                     />
                   </div>
 
                   {/* Aprobación ética */}
                   <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
-                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 font-sans">
                       {isSpanish ? 'Aprobación Ética' : 'Ethics Approval'}
                       <HelpCapsule
                         title={isSpanish ? '¿Necesito aprobación ética?' : 'Do I need ethics approval?'}
@@ -3084,7 +3323,7 @@ if (author.isCorresponding && !author.phone) {
                           name="ethicsCommitteeName"
                           value={formData.ethicsCommitteeName}
                           onChange={handleInputChange}
-                          className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
+                          className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans"
                           placeholder={isSpanish ? 'Comité de Ética Universidad X, Acta 123, 01/2024' : 'Ethics Committee University X, Protocol 123, 01/2024'}
                         />
                       </motion.div>
@@ -3102,18 +3341,20 @@ if (author.isCorresponding && !author.phone) {
                   exit={{ opacity: 0, x: -20 }} 
                   className="space-y-10"
                 >
-                  <div className="border-b border-slate-100 pb-4 mb-8">
-                    <h2 className="text-2xl font-serif text-[#003b5c] font-medium">
-                      {isSpanish ? 'Declaraciones Finales' : 'Final Declarations'}
-                    </h2>
-                    <p className="text-slate-500 text-sm mt-1">
-                      {isSpanish ? 'Requisito obligatorio para el proceso de revisión por pares.' : 'Mandatory requirement for the peer review process.'}
-                    </p>
-                  </div>
+                  <StepIntro
+                    language={language}
+                    title={isSpanish ? 'Declaraciones Finales y Envío' : 'Final Declarations & Submission'}
+                    subtitle={
+                      isSpanish
+                        ? 'Último tramo. Las declaraciones protegen tu trabajo y la integridad de la revista. El manuscrito debe ir anonimizado. Ya casi.'
+                        : 'Final stretch. The declarations protect your work and the journal\'s integrity. The manuscript must be anonymized. Almost there.'
+                    }
+                    estimate={isSpanish ? '~4-6 min' : '~4-6 min'}
+                  />
 
                   {/* Uso de IA */}
                   <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
-                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 font-sans">
                       {isSpanish ? 'Uso de Inteligencia Artificial' : 'Use of Artificial Intelligence'}
                       <HelpCapsule
                         title={isSpanish ? '¿Debo declarar uso de IA?' : 'Should I declare AI use?'}
@@ -3133,82 +3374,84 @@ if (author.isCorresponding && !author.phone) {
                     </select>
 
                     {formData.aiUsed === 'yes' && (
-  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
-    {formData.aiTools.map((tool, index) => (
-      <div key={index} className="bg-white rounded-lg p-4 ring-1 ring-slate-200">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Campo 1: Nombre de la herramienta */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              {isSpanish ? 'Herramienta' : 'Tool'} *
-            </label>
-            <input
-              type="text"
-              value={tool.name}
-              onChange={(e) => handleAIToolChange(index, 'name', e.target.value)}
-              placeholder="ChatGPT, Claude, Gemini..."
-              className="w-full p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
-            />
-          </div>
-          
-          {/* Campo 2: Versión (SEPARADO) */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              {isSpanish ? 'Versión' : 'Version'}
-            </label>
-            <input
-              type="text"
-              value={tool.version}
-              onChange={(e) => handleAIToolChange(index, 'version', e.target.value)}
-              placeholder="GPT-4, Claude 3.5, etc."
-              className="w-full p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
-            />
-          </div>
-          
-          {/* Campo 3: Propósito */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              {isSpanish ? 'Propósito' : 'Purpose'} *
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={tool.purpose}
-                onChange={(e) => handleAIToolChange(index, 'purpose', e.target.value)}
-                placeholder={isSpanish ? 'Análisis de datos' : 'Data analysis'}
-                className="flex-1 p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
-              />
-              {formData.aiTools.length > 1 && (
-                <button 
-                  type="button" 
-                  onClick={() => removeAITool(index)} 
-                  className="text-slate-400 hover:text-red-500 p-2 transition-colors flex-shrink-0"
-                  title={isSpanish ? 'Eliminar herramienta' : 'Remove tool'}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    ))}
-    <button
-      type="button"
-      onClick={addAITool}
-      className="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-[#003b5c] hover:text-[#003b5c] transition-colors font-sans text-sm"
-    >
-      + {isSpanish ? 'Agregar otra herramienta' : 'Add another tool'}
-    </button>
-  </motion.div>
-)}
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
+                        <p className="text-xs text-slate-500 font-sans leading-relaxed">
+                          {isSpanish 
+                            ? 'No te preocupes si usaste IA — solo sé transparente. Indica qué herramienta usaste y para qué.'
+                            : 'Don\'t worry if you used AI — just be transparent. Indicate what tool you used and for what purpose.'}
+                        </p>
+                        {formData.aiTools.map((tool, index) => (
+                          <div key={index} className="bg-white rounded-lg p-4 ring-1 ring-slate-200">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-sans">
+                                  {isSpanish ? 'Herramienta' : 'Tool'} *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={tool.name}
+                                  onChange={(e) => handleAIToolChange(index, 'name', e.target.value)}
+                                  placeholder="ChatGPT, Claude, Gemini..."
+                                  className="w-full p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans"
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-sans">
+                                  {isSpanish ? 'Versión' : 'Version'}
+                                </label>
+                                <input
+                                  type="text"
+                                  value={tool.version}
+                                  onChange={(e) => handleAIToolChange(index, 'version', e.target.value)}
+                                  placeholder="GPT-4, Claude 3.5, etc."
+                                  className="w-full p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans"
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-sans">
+                                  {isSpanish ? 'Propósito' : 'Purpose'} *
+                                </label>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={tool.purpose}
+                                    onChange={(e) => handleAIToolChange(index, 'purpose', e.target.value)}
+                                    placeholder={isSpanish ? 'Análisis de datos' : 'Data analysis'}
+                                    className="flex-1 p-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans"
+                                  />
+                                  {formData.aiTools.length > 1 && (
+                                    <button 
+                                      type="button" 
+                                      onClick={() => removeAITool(index)} 
+                                      className="text-slate-400 hover:text-red-500 p-2 transition-colors flex-shrink-0"
+                                      title={isSpanish ? 'Eliminar herramienta' : 'Remove tool'}
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={addAITool}
+                          className="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-[#003b5c] hover:text-[#003b5c] transition-colors font-sans text-sm"
+                        >
+                          + {isSpanish ? 'Agregar otra herramienta' : 'Add another tool'}
+                        </button>
+                      </motion.div>
+                    )}
                   </div>
 
                   {/* Disponibilidad de datos */}
                   <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
-                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 font-sans">
                       {isSpanish ? 'Disponibilidad de Datos' : 'Data Availability'} *
                       <HelpCapsule
                         title={isSpanish ? '¿Qué es la disponibilidad de datos?' : 'What is data availability?'}
@@ -3230,15 +3473,25 @@ if (author.isCorresponding && !author.phone) {
                       ))}
                     </select>
                     {validationErrors.dataAvailability && (
-                      <p className="text-red-500 text-xs mt-1">{validationErrors.dataAvailability}</p>
+                      <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.dataAvailability}</p>
                     )}
+                    <p className="text-xs text-slate-500 font-sans mt-2">
+                      {isSpanish 
+                        ? '💡 Si es un ensayo teórico o revisión sin datos nuevos, selecciona "No aplica".'
+                        : '💡 If it is a theoretical essay or review without new data, select "Not applicable".'}
+                    </p>
                   </div>
 
                   {/* Declaraciones obligatorias */}
                   <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
-                    <h3 className="font-serif font-bold text-[#003b5c] mb-4">
+                    <h3 className="font-serif font-bold text-[#003b5c] mb-2">
                       {isSpanish ? 'Declaraciones Obligatorias' : 'Mandatory Declarations'}
                     </h3>
+                    <p className="text-xs text-slate-500 mb-4 font-sans leading-relaxed">
+                      {isSpanish 
+                        ? 'Estas declaraciones protegen la integridad de tu trabajo y de la revista. No te preocupes — son estándar en todas las revistas académicas.'
+                        : 'These declarations protect the integrity of your work and the journal. Don\'t worry — they are standard in all academic journals.'}
+                    </p>
                     <div className="space-y-4">
                       {[
                         { key: 'originalAndSimilarity', 
@@ -3290,7 +3543,7 @@ if (author.isCorresponding && !author.phone) {
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <h4 className={`text-sm font-bold tracking-wide transition-colors ${isChecked ? 'text-[#003b5c]' : 'text-slate-800'}`}>
+                                <h4 className={`text-sm font-bold tracking-wide font-sans transition-colors ${isChecked ? 'text-[#003b5c]' : 'text-slate-800'}`}>
                                   {decl.title}
                                 </h4>
                                 <HelpCapsule
@@ -3325,17 +3578,17 @@ if (author.isCorresponding && !author.phone) {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-bold tracking-wide">
+                            <h4 className="text-sm font-bold tracking-wide font-sans">
                               {isSpanish ? 'Licencia Creative Commons CC-BY 4.0' : 'Creative Commons CC-BY 4.0 License'}
                             </h4>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#e86125]/10 text-[#e86125] uppercase">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#e86125]/10 text-[#e86125] uppercase font-sans">
                               Open Access
                             </span>
                             <HelpCapsule
                               title={isSpanish ? '¿Qué es CC-BY 4.0?' : 'What is CC-BY 4.0?'}
                               text={isSpanish
-                                ? 'Esta licencia permite que otros compartan y adapten tu trabajo, incluso con fines comerciales, siempre que te den crédito. Es la licencia más abierta y la que promueve la revista.'
-                                : 'This license allows others to share and adapt your work, even for commercial purposes, as long as they give you credit. It is the most open license and the one promoted by the journal.'}
+                                ? 'Esta licencia permite que otros compartan y adapten tu trabajo, incluso con fines comerciales, siempre que te den crédito. Es la licencia más abierta y la que promueve la revista. Tu trabajo será libremente accesible y citable.'
+                                : 'This license allows others to share and adapt your work, even for commercial purposes, as long as they give you credit. It is the most open license and the one promoted by the journal. Your work will be freely accessible and citable.'}
                             />
                           </div>
                           <p className="mt-1 text-xs text-slate-500 font-sans leading-relaxed">
@@ -3347,21 +3600,43 @@ if (author.isCorresponding && !author.phone) {
                       </label>
                     </div>
                     {validationErrors.declarations && (
-                      <p className="text-red-500 text-xs mt-2">{validationErrors.declarations}</p>
+                      <p className="text-red-500 text-xs mt-2 font-sans">{validationErrors.declarations}</p>
                     )}
                   </div>
 
-                  {/* Subir manuscrito */}
-                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
-                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                  {/* Subir manuscrito - VERSIÓN MEJORADA */}
+                  <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60 space-y-5">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 font-sans">
                       {isSpanish ? 'Manuscrito Anonimizado' : 'Anonymized Manuscript'} *
                       <HelpCapsule
                         title={isSpanish ? '¿Qué es un manuscrito anonimizado?' : 'What is an anonymized manuscript?'}
                         text={isSpanish
-                          ? 'Debes subir tu manuscrito SIN nombres de autores ni afiliaciones. Esto permite una revisión por pares imparcial. Revisa que no haya metadatos con tu nombre en el documento.'
-                          : 'You must upload your manuscript WITHOUT author names or affiliations. This allows impartial peer review. Check that there are no metadata with your name in the document.'}
+                          ? 'Debes subir tu manuscrito SIN nombres de autores ni afiliaciones. Esto permite una revisión por pares imparcial. Revisa también los metadatos del archivo.'
+                          : 'Upload your manuscript WITHOUT author names or affiliations. This allows impartial peer review. Also check the file metadata.'}
                       />
                     </label>
+
+                    {/* Checklist rápida */}
+                    <div className="bg-white rounded-lg p-4 ring-1 ring-slate-200 space-y-2.5">
+                      <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-2 font-sans">
+                        {isSpanish ? 'Antes de subir, verifica:' : 'Before uploading, check:'}
+                      </p>
+                      <ul className="space-y-1.5 text-xs text-slate-600 font-sans">
+                        <li className="flex items-start gap-2">
+                          <span className="text-emerald-500 mt-0.5">✓</span>
+                          {isSpanish ? 'No aparecen nombres ni afiliaciones en el texto' : 'No names or affiliations appear in the text'}
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-emerald-500 mt-0.5">✓</span>
+                          {isSpanish ? 'Metadatos del Word limpios (Archivo → Info → Propiedades)' : 'Word metadata cleaned (File → Info → Properties)'}
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-emerald-500 mt-0.5">✓</span>
+                          {isSpanish ? 'Solo .doc o .docx · máximo 10 MB' : 'Only .doc or .docx · max 10 MB'}
+                        </li>
+                      </ul>
+                    </div>
+
                     <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors
                       ${validationErrors.manuscript ? 'border-red-300 bg-red-50' : 'border-slate-300 bg-white hover:border-[#003b5c]'}`}>
                       <input
@@ -3371,22 +3646,34 @@ if (author.isCorresponding && !author.phone) {
                         className="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:bg-[#003b5c] file:text-white file:font-bold file:uppercase file:tracking-wider file:text-xs hover:file:bg-[#002b44] font-sans"
                       />
                       {formData.manuscriptName && (
-                        <div className="mt-4 flex items-center justify-center gap-3 text-[#003b5c] text-sm font-sans bg-green-50 px-4 py-2 rounded-lg">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <motion.div
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-4 flex items-center justify-center gap-3 text-[#003b5c] text-sm font-sans bg-emerald-50 px-4 py-2.5 rounded-lg ring-1 ring-emerald-200/60"
+                        >
+                          <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          {formData.manuscriptName}
-                        </div>
+                          <span className="font-medium">{formData.manuscriptName}</span>
+                          <span className="text-emerald-600 text-xs">
+                            {isSpanish ? '· Listo. Puedes cambiarlo si quieres' : '· Ready. You can change it if you want'}
+                          </span>
+                        </motion.div>
                       )}
                     </div>
                     {validationErrors.manuscript && (
-                      <p className="text-red-500 text-xs mt-1">{validationErrors.manuscript}</p>
+                      <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.manuscript}</p>
                     )}
+                    <p className="text-xs text-slate-500 font-sans">
+                      {isSpanish 
+                        ? '💡 Sube la versión anonimizada para revisión justa por pares. Si te equivocas, puedes corregir después.'
+                        : '💡 Upload the anonymized version for fair peer review. If you make a mistake, you can correct it later.'}
+                    </p>
                   </div>
 
                   {/* Agradecimientos */}
                   <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
-                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 font-sans">
                       {isSpanish ? 'Agradecimientos' : 'Acknowledgments'} (opcional)
                       <HelpCapsule
                         title={isSpanish ? '¿A quién agradezco?' : 'Who do I thank?'}
@@ -3400,14 +3687,14 @@ if (author.isCorresponding && !author.phone) {
                       value={formData.acknowledgments}
                       onChange={handleInputChange}
                       rows={3}
-                      className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y"
+                      className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all resize-y font-sans"
                       placeholder={isSpanish ? 'Agradecemos al Dr. Juan Pérez por sus comentarios...' : 'We thank Dr. John Smith for his comments...'}
                     />
                   </div>
 
                   {/* Revisores excluidos */}
                   <div className="bg-slate-50/50 rounded-xl p-6 ring-1 ring-slate-200/60">
-                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                    <label className="flex items-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 font-sans">
                       {isSpanish ? 'Revisores a Excluir' : 'Reviewers to Exclude'} (opcional)
                       <HelpCapsule
                         title={isSpanish ? '¿Por qué excluir revisores?' : 'Why exclude reviewers?'}
@@ -3421,7 +3708,7 @@ if (author.isCorresponding && !author.phone) {
                       name="excludedReviewers"
                       value={formData.excludedReviewers}
                       onChange={handleInputChange}
-                      className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all"
+                      className="w-full p-3 bg-white border-0 ring-1 ring-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#003b5c] outline-none transition-all font-sans"
                       placeholder={isSpanish ? 'Dra. Ana López; Dr. Carlos Mendoza' : 'Dr. Jane Smith; Prof. Michael Brown'}
                     />
                   </div>
@@ -3441,8 +3728,8 @@ if (author.isCorresponding && !author.phone) {
                         </h3>
                         <p className="text-sm text-slate-600 mb-5 font-sans leading-relaxed">
                           {isSpanish 
-                            ? 'Nuestra revista busca constantemente revisores comprometidos. Si te interesa contribuir con tu experiencia, indícalo aquí. Esto no afecta la evaluación de tu artículo actual.'
-                            : 'Our journal is constantly seeking committed reviewers. If you are interested in contributing with your expertise, please indicate it here. This does not affect the evaluation of your current article.'}
+                            ? 'Contribuye a la comunidad científica revisando trabajos de otros estudiantes. Si te interesa, indícalo aquí. Esto no afecta la evaluación de tu artículo actual.'
+                            : 'Contribute to the scientific community by reviewing other students\' work. If you are interested, indicate it here. This does not affect the evaluation of your current article.'}
                         </p>
 
                         <label className="flex items-center gap-3 cursor-pointer group mb-5">
@@ -3572,7 +3859,7 @@ if (author.isCorresponding && !author.phone) {
               <button 
                 type="button" 
                 onClick={prevStep} 
-                className={`px-6 py-3 rounded-xl font-bold text-sm tracking-wide transition-all 
+                className={`px-6 py-3 rounded-xl font-bold text-sm tracking-wide transition-all font-sans
                   ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
               >
                 &larr; {isSpanish ? 'Volver' : 'Back'}
@@ -3582,7 +3869,7 @@ if (author.isCorresponding && !author.phone) {
                 <button 
                   type="button" 
                   onClick={nextStep} 
-                  className="px-8 py-3 bg-[#003b5c] text-white rounded-xl font-bold text-sm tracking-wide hover:bg-[#00273f] hover:shadow-lg hover:shadow-[#003b5c]/20 transition-all active:scale-95"
+                  className="px-8 py-3 bg-[#003b5c] text-white rounded-xl font-bold text-sm tracking-wide hover:bg-[#00273f] hover:shadow-lg hover:shadow-[#003b5c]/20 transition-all active:scale-95 font-sans"
                 >
                   {isSpanish ? 'Continuar' : 'Continue'} &rarr;
                 </button>
@@ -3590,7 +3877,7 @@ if (author.isCorresponding && !author.phone) {
                 <button 
                   type="submit" 
                   disabled={uploading || !isStepValid(3)}
-                  className="px-10 py-3 bg-gradient-to-r from-[#003b5c] to-[#005282] text-white rounded-xl font-bold text-sm tracking-wide hover:shadow-xl hover:shadow-[#003b5c]/30 transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-10 py-3 bg-gradient-to-r from-[#003b5c] to-[#005282] text-white rounded-xl font-bold text-sm tracking-wide hover:shadow-xl hover:shadow-[#003b5c]/30 transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed font-sans"
                 >
                   {uploading 
                     ? (isSpanish ? 'Enviando...' : 'Submitting...') 
@@ -3615,10 +3902,24 @@ if (author.isCorresponding && !author.phone) {
               </motion.p>
             )}
 
-            {/* Indicador de guardado automático */}
-            <div className="mt-4 text-[10px] text-slate-400 text-center tracking-widest uppercase border-t border-slate-200 pt-4 font-sans">
-              <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
-              {isSpanish ? 'Borrador guardado automáticamente cada 30 segundos' : 'Draft auto-saved every 30 seconds'}
+            {/* Indicador de guardado automático mejorado */}
+            <div className="mt-6 pt-5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-center gap-2 text-[11px] text-slate-500 font-sans">
+              <span className="inline-flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                {isSpanish ? 'Borrador guardado automáticamente' : 'Draft auto-saved'}
+              </span>
+              {lastSaved && (
+                <span className="text-slate-400">
+                  · {isSpanish ? 'última vez' : 'last'} {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              <span className="hidden sm:inline text-slate-300">·</span>
+              <span className="text-slate-400">
+                {isSpanish ? 'Puedes cerrar y continuar después' : 'You can close and continue later'}
+              </span>
             </div>
           </form>
         </div>
