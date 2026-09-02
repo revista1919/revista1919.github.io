@@ -1045,7 +1045,25 @@ const getVocabularyForArea = (area, lang = 'es') => {
 const getAreasByLanguage = (lang) => {
   return AREAS_TEMATICAS[lang] || AREAS_TEMATICAS.es;
 };
-
+// ============ COMPONENTE: ICONO DE AMPOLLETA (BULB) ============
+const BulbIcon = ({ className = "w-4 h-4 text-[#003b5c]", strokeWidth = 1.5 }) => {
+  return (
+    <svg 
+      className={className} 
+      fill="none" 
+      stroke="currentColor" 
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        strokeWidth={strokeWidth} 
+        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" 
+      />
+    </svg>
+  );
+};
 // ============ NUEVO COMPONENTE: STEP INTRO ============
 const StepIntro = ({ title, subtitle, estimate, language }) => {
   const isSpanish = language === 'es';
@@ -1195,10 +1213,15 @@ const ControlledKeywordInput = ({ vocabularyConfig, value, onChange, language, m
                 {vocabularyConfig.instrucciones || vocabularyConfig.instructions}
               </p>
               <p className="text-xs text-slate-500 mt-2 font-sans leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
-                {isSpanish
-                  ? '💡 Solo necesitas el código (ej. 11N05). No el nombre completo. Si no lo encuentras, usa el enlace "Explorar vocabulario".'
-                  : '💡 You only need the code (e.g. 11N05). Not the full name. If you can\'t find it, use the "Explore vocabulary" link.'}
-              </p>
+  <span className="inline-flex items-start gap-2">
+    <BulbIcon className="w-4 h-4 text-[#003b5c] flex-shrink-0 mt-0.5" />
+    <span>
+      {isSpanish
+        ? 'Verifica si tu tesauro usa códigos (ej: 11N05, D008112) o términos/descriptores (ej: quantum-mechanics, Sociology). Ingresa lo que corresponda según el vocabulario indicado arriba. Si no lo encuentras, usa el enlace "Explorar vocabulario".'
+        : 'Check if your thesaurus uses codes (e.g., 11N05, D008112) or terms/descriptors (e.g., quantum-mechanics, Sociology). Enter what corresponds according to the vocabulary indicated above. If you can\'t find it, use the "Explore vocabulary" link.'}
+    </span>
+  </span>
+</p>
               <a
                 href={vocabularyConfig.searchUrl}
                 target="_blank"
@@ -2394,10 +2417,15 @@ export default function SubmissionForm({ user, onSuccess }) {
                     </li>
                   </ul>
                   <p className="text-xs text-slate-400 font-sans">
-                    {isSpanish 
-                      ? '💡 Recuerda: el proceso de revisión es humano y toma tiempo. ¡Gracias por tu paciencia y contribución a la ciencia!'
-                      : '💡 Remember: the review process is human and takes time. Thank you for your patience and contribution to science!'}
-                  </p>
+  <span className="inline-flex items-center gap-2">
+    <BulbIcon className="w-4 h-4 text-[#003b5c] flex-shrink-0" />
+    <span>
+      {isSpanish 
+        ? 'Recuerda: el proceso de revisión es humano y toma tiempo. ¡Gracias por tu paciencia y contribución a la ciencia!'
+        : 'Remember: the review process is human and takes time. Thank you for your patience and contribution to science!'}
+    </span>
+  </span>
+</p>
                 </div>
               </div>
             </div>
@@ -2749,10 +2777,15 @@ export default function SubmissionForm({ user, onSuccess }) {
                       <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.controlledKeywords}</p>
                     )}
                     <p className="text-xs text-slate-500 mt-2 font-sans">
-                      {isSpanish 
-                        ? '💡 Esto ayuda a que otros estudiantes y profesores encuentren tu trabajo.'
-                        : '💡 This helps other students and professors find your work.'}
-                    </p>
+  <span className="inline-flex items-center gap-2">
+    <BulbIcon className="w-4 h-4 text-[#003b5c] flex-shrink-0" />
+    <span>
+      {isSpanish 
+        ? 'Esto ayuda a que otros estudiantes y profesores encuentren tu trabajo.'
+        : 'This helps other students and professors find your work.'}
+    </span>
+  </span>
+</p>
                   </div>
 
                   {/* Keywords - INGLÉS */}
@@ -3476,10 +3509,15 @@ export default function SubmissionForm({ user, onSuccess }) {
                       <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.dataAvailability}</p>
                     )}
                     <p className="text-xs text-slate-500 font-sans mt-2">
-                      {isSpanish 
-                        ? '💡 Si es un ensayo teórico o revisión sin datos nuevos, selecciona "No aplica".'
-                        : '💡 If it is a theoretical essay or review without new data, select "Not applicable".'}
-                    </p>
+  <span className="inline-flex items-center gap-2">
+    <BulbIcon className="w-4 h-4 text-[#003b5c] flex-shrink-0" />
+    <span>
+      {isSpanish 
+        ? 'Si es un ensayo teórico o revisión sin datos nuevos, selecciona "No aplica".'
+        : 'If it is a theoretical essay or review without new data, select "Not applicable".'}
+    </span>
+  </span>
+</p>
                   </div>
 
                   {/* Declaraciones obligatorias */}
@@ -3665,10 +3703,15 @@ export default function SubmissionForm({ user, onSuccess }) {
                       <p className="text-red-500 text-xs mt-1 font-sans">{validationErrors.manuscript}</p>
                     )}
                     <p className="text-xs text-slate-500 font-sans">
-                      {isSpanish 
-                        ? '💡 Sube la versión anonimizada para revisión justa por pares. Si te equivocas, puedes corregir después.'
-                        : '💡 Upload the anonymized version for fair peer review. If you make a mistake, you can correct it later.'}
-                    </p>
+  <span className="inline-flex items-center gap-2">
+    <BulbIcon className="w-4 h-4 text-[#003b5c] flex-shrink-0" />
+    <span>
+      {isSpanish 
+        ? 'Sube la versión anonimizada para revisión justa por pares. Si te equivocas, puedes corregir después.'
+        : 'Upload the anonymized version for fair peer review. If you make a mistake, you can correct it later.'}
+    </span>
+  </span>
+</p>
                   </div>
 
                   {/* Agradecimientos */}
