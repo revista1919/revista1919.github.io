@@ -3666,10 +3666,6 @@ export default function SubmissionForm({ user, onSuccess }) {
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="text-emerald-500 mt-0.5">✓</span>
-                          {isSpanish ? 'Metadatos del Word limpios (Archivo → Info → Propiedades)' : 'Word metadata cleaned (File → Info → Properties)'}
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-emerald-500 mt-0.5">✓</span>
                           {isSpanish ? 'Solo .doc o .docx · máximo 10 MB' : 'Only .doc or .docx · max 10 MB'}
                         </li>
                       </ul>
