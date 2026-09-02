@@ -3909,6 +3909,47 @@ function createMetadataTable(submissionData, docxElements) {
     ],
   });
 }
+async function anonymizeDocumentProperties(zip, submissionId) {
+  try {
+    const corePath = 'docProps/core.xml';
+    
+    if (!zip.file(corePath)) {
+      console.log('ℹ️ No se encontró docProps/core.xml – nada que anonimizar');
+      return;
+    }
+
+    let coreXml = await zip.file(corePath).async('string');
+
+    // Valores neutros
+    const anonymousAuthor = 'Revista Nacional de las Ciencias para Estudiantes';
+    const anonymousModifier = 'Sistema Editorial';
+    const now = new Date().toISOString();
+
+    // Reemplazos seguros (solo las propiedades de autoría)
+    coreXml = coreXml
+      // Autor / Creator
+      .replace(/<dc:creator[^>]*>[\s\S]*?<\/dc:creator>/i, 
+               `<dc:creator>${anonymousAuthor}</dc:creator>`)
+      // Last Modified By
+      .replace(/<cp:lastModifiedBy[^>]*>[\s\S]*?<\/cp:lastModifiedBy>/i, 
+               `<cp:lastModifiedBy>${anonymousModifier}</cp:lastModifiedBy>`)
+      // Opcional: limpiar también el título del documento (si no quieres que aparezca el título original en las propiedades)
+      // .replace(/<dc:title[^>]*>[\s\S]*?<\/dc:title>/i, 
+      //          `<dc:title>${submissionId}</dc:title>`)
+      ;
+
+    // Si quieres ser más agresivo y eliminar completamente las etiquetas de autoría:
+    // coreXml = coreXml
+    //   .replace(/<dc:creator[^>]*>[\s\S]*?<\/dc:creator>/gi, '')
+    //   .replace(/<cp:lastModifiedBy[^>]*>[\s\S]*?<\/cp:lastModifiedBy>/gi, '');
+
+    zip.file(corePath, coreXml);
+    console.log('🔒 Propiedades del documento anonimizadas');
+
+  } catch (error) {
+    console.warn('⚠️ Error anonimizando propiedades (no crítico):', error.message);
+  }
+}
 // ===================== GENERAR PORTADA PREMIUM =====================
 async function generateCoverDocx(submissionData, requestId) {
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
@@ -4168,138 +4209,171 @@ async function generateCoverDocx(submissionData, requestId) {
   return await Packer.toBuffer(doc);
 }
 
-// ===================== ESTANDARIZAR ESTILOS =====================
 async function standardizeStyles(originalZip) {
-  console.log('🎨 Estandarizando tipografía...');
-  
+  console.log('🎨 Estandarizando tipografía (modo seguro)...');
+
   try {
     const stylesPath = 'word/styles.xml';
-    
     if (!originalZip.file(stylesPath)) {
       console.warn('⚠️ No se encontró styles.xml');
       return;
     }
-    
+
     let stylesXml = await originalZip.file(stylesPath).async('string');
-    
-    // Estilo Normal
-    stylesXml = stylesXml.replace(
-      /<w:style w:type="paragraph" w:default="1" w:styleId="Normal">[\s\S]*?<\/w:style>/,
-      `<w:style w:type="paragraph" w:default="1" w:styleId="Normal">
-        <w:name w:val="Normal"/>
-        <w:qFormat/>
-        <w:pPr>
-          <w:spacing w:line="360" w:lineRule="auto"/>
-          <w:jc w:val="both"/>
-        </w:pPr>
-        <w:rPr>
-          <w:rFonts w:ascii="${TYPOGRAPHY.body.font}" w:hAnsi="${TYPOGRAPHY.body.font}" w:eastAsia="${TYPOGRAPHY.body.font}" w:cs="${TYPOGRAPHY.body.font}"/>
-          <w:color w:val="${TYPOGRAPHY.body.color}"/>
-          <w:sz w:val="${TYPOGRAPHY.body.size}"/>
-          <w:szCs w:val="${TYPOGRAPHY.body.size}"/>
-        </w:rPr>
-      </w:style>`
-    );
-    
-    // Heading 1
-    stylesXml = stylesXml.replace(
-      /<w:style w:type="paragraph" w:styleId="Heading1">[\s\S]*?<\/w:style>/,
-      `<w:style w:type="paragraph" w:styleId="Heading1">
-        <w:name w:val="heading 1"/>
-        <w:basedOn w:val="Normal"/>
-        <w:next w:val="Normal"/>
-        <w:qFormat/>
-        <w:pPr>
-          <w:spacing w:before="${TYPOGRAPHY.heading1.spacingBefore}" w:after="${TYPOGRAPHY.heading1.spacingAfter}"/>
-          <w:keepNext/>
-        </w:pPr>
-        <w:rPr>
-          <w:rFonts w:ascii="${TYPOGRAPHY.heading1.font}" w:hAnsi="${TYPOGRAPHY.heading1.font}" w:eastAsia="${TYPOGRAPHY.heading1.font}" w:cs="${TYPOGRAPHY.heading1.font}"/>
-          <w:b/>
-          <w:color w:val="${TYPOGRAPHY.heading1.color}"/>
-          <w:sz w:val="${TYPOGRAPHY.heading1.size}"/>
-          <w:szCs w:val="${TYPOGRAPHY.heading1.size}"/>
-        </w:rPr>
-      </w:style>`
-    );
-    
-    // Heading 2
-    stylesXml = stylesXml.replace(
-      /<w:style w:type="paragraph" w:styleId="Heading2">[\s\S]*?<\/w:style>/,
-      `<w:style w:type="paragraph" w:styleId="Heading2">
-        <w:name w:val="heading 2"/>
-        <w:basedOn w:val="Normal"/>
-        <w:next w:val="Normal"/>
-        <w:qFormat/>
-        <w:pPr>
-          <w:spacing w:before="${TYPOGRAPHY.heading2.spacingBefore}" w:after="${TYPOGRAPHY.heading2.spacingAfter}"/>
-          <w:keepNext/>
-        </w:pPr>
-        <w:rPr>
-          <w:rFonts w:ascii="${TYPOGRAPHY.heading2.font}" w:hAnsi="${TYPOGRAPHY.heading2.font}" w:eastAsia="${TYPOGRAPHY.heading2.font}" w:cs="${TYPOGRAPHY.heading2.font}"/>
-          <w:b/>
-          <w:color w:val="${TYPOGRAPHY.heading2.color}"/>
-          <w:sz w:val="${TYPOGRAPHY.heading2.size}"/>
-          <w:szCs w:val="${TYPOGRAPHY.heading2.size}"/>
-        </w:rPr>
-      </w:style>`
-    );
-    
-    // Heading 3
-    stylesXml = stylesXml.replace(
-      /<w:style w:type="paragraph" w:styleId="Heading3">[\s\S]*?<\/w:style>/,
-      `<w:style w:type="paragraph" w:styleId="Heading3">
-        <w:name w:val="heading 3"/>
-        <w:basedOn w:val="Normal"/>
-        <w:next w:val="Normal"/>
-        <w:qFormat/>
-        <w:pPr>
-          <w:spacing w:before="${TYPOGRAPHY.heading3.spacingBefore}" w:after="${TYPOGRAPHY.heading3.spacingAfter}"/>
-          <w:keepNext/>
-        </w:pPr>
-        <w:rPr>
-          <w:rFonts w:ascii="${TYPOGRAPHY.heading3.font}" w:hAnsi="${TYPOGRAPHY.heading3.font}" w:eastAsia="${TYPOGRAPHY.heading3.font}" w:cs="${TYPOGRAPHY.heading3.font}"/>
-          <w:b/>
-          <w:i/>
-          <w:color w:val="${TYPOGRAPHY.heading3.color}"/>
-          <w:sz w:val="${TYPOGRAPHY.heading3.size}"/>
-          <w:szCs w:val="${TYPOGRAPHY.heading3.size}"/>
-        </w:rPr>
-      </w:style>`
-    );
-    
-    // Heading 4
-    stylesXml = stylesXml.replace(
-      /<w:style w:type="paragraph" w:styleId="Heading4">[\s\S]*?<\/w:style>/,
-      `<w:style w:type="paragraph" w:styleId="Heading4">
-        <w:name w:val="heading 4"/>
-        <w:basedOn w:val="Normal"/>
-        <w:next w:val="Normal"/>
-        <w:qFormat/>
-        <w:pPr>
-          <w:spacing w:before="${TYPOGRAPHY.heading4.spacingBefore}" w:after="${TYPOGRAPHY.heading4.spacingAfter}"/>
-          <w:keepNext/>
-        </w:pPr>
-        <w:rPr>
-          <w:rFonts w:ascii="${TYPOGRAPHY.heading4.font}" w:hAnsi="${TYPOGRAPHY.heading4.font}" w:eastAsia="${TYPOGRAPHY.heading4.font}" w:cs="${TYPOGRAPHY.heading4.font}"/>
-          <w:b/>
-          <w:color w:val="${TYPOGRAPHY.heading4.color}"/>
-          <w:sz w:val="${TYPOGRAPHY.heading4.size}"/>
-          <w:szCs w:val="${TYPOGRAPHY.heading4.size}"/>
-        </w:rPr>
-      </w:style>`
-    );
-    
+
+    // 1. Actualizar docDefaults (esto afecta a todo lo que no tenga formato directo)
+    // Esto es lo más importante y menos destructivo
+    const docDefaultsRegex = /<w:docDefaults>[\s\S]*?<\/w:docDefaults>/;
+    const newDocDefaults = `
+      <w:docDefaults>
+        <w:rPrDefault>
+          <w:rPr>
+            <w:rFonts w:ascii="Georgia" w:hAnsi="Georgia" w:eastAsia="Georgia" w:cs="Georgia"/>
+            <w:color w:val="${COLORS.textDark}"/>
+            <w:sz w:val="22"/>
+            <w:szCs w:val="22"/>
+          </w:rPr>
+        </w:rPrDefault>
+        <w:pPrDefault>
+          <w:pPr>
+            <w:spacing w:line="360" w:lineRule="auto"/>
+            <w:jc w:val="both"/>
+          </w:pPr>
+        </w:pPrDefault>
+      </w:docDefaults>`;
+
+    if (docDefaultsRegex.test(stylesXml)) {
+      stylesXml = stylesXml.replace(docDefaultsRegex, newDocDefaults);
+    } else {
+      // Si no existe, lo insertamos después de <w:styles ...>
+      stylesXml = stylesXml.replace(
+        /(<w:styles[^>]*>)/,
+        `$1${newDocDefaults}`
+      );
+    }
+
+    // 2. Actualizar solo las propiedades de tipografía de Normal / Heading1-4
+    // sin destruir el resto del estilo (basedOn, link, uiPriority, etc.)
+    const styleUpdates = {
+      Normal: {
+        font: 'Georgia',
+        size: 22,
+        color: COLORS.textDark,
+        bold: false,
+        italic: false,
+        spacingBefore: null,
+        spacingAfter: null,
+        line: 360
+      },
+      Heading1: {
+        font: 'Helvetica',
+        size: 32,
+        color: COLORS.primary,
+        bold: true,
+        italic: false,
+        spacingBefore: 400,
+        spacingAfter: 200
+      },
+      Heading2: {
+        font: 'Helvetica',
+        size: 28,
+        color: COLORS.primary,
+        bold: true,
+        italic: false,
+        spacingBefore: 300,
+        spacingAfter: 150
+      },
+      Heading3: {
+        font: 'Helvetica',
+        size: 24,
+        color: COLORS.primary,
+        bold: true,
+        italic: true,
+        spacingBefore: 250,
+        spacingAfter: 100
+      },
+      Heading4: {
+        font: 'Georgia',
+        size: 22,
+        color: COLORS.textDark,
+        bold: true,
+        italic: false,
+        spacingBefore: 200,
+        spacingAfter: 80
+      }
+    };
+
+    for (const [styleId, props] of Object.entries(styleUpdates)) {
+      // Buscamos el estilo completo
+      const styleRegex = new RegExp(
+        `(<w:style[^>]*w:styleId="${styleId}"[^>]*>)([\\s\\S]*?)(</w:style>)`,
+        'i'
+      );
+
+      stylesXml = stylesXml.replace(styleRegex, (match, openTag, content, closeTag) => {
+        // Actualizamos o inyectamos rPr
+        let newContent = content;
+
+        // --- rPr (fuente, tamaño, color, bold, italic) ---
+        const rPrRegex = /<w:rPr>[\s\S]*?<\/w:rPr>/;
+        const newRPr = `
+          <w:rPr>
+            <w:rFonts w:ascii="${props.font}" w:hAnsi="${props.font}" w:eastAsia="${props.font}" w:cs="${props.font}"/>
+            <w:color w:val="${props.color}"/>
+            <w:sz w:val="${props.size}"/>
+            <w:szCs w:val="${props.size}"/>
+            ${props.bold ? '<w:b/>' : ''}
+            ${props.italic ? '<w:i/>' : ''}
+          </w:rPr>`;
+
+        if (rPrRegex.test(newContent)) {
+          newContent = newContent.replace(rPrRegex, newRPr);
+        } else {
+          // Insertamos antes del cierre del estilo
+          newContent = newContent + newRPr;
+        }
+
+        // --- pPr (spacing) solo si se define ---
+        if (props.spacingBefore !== null || props.spacingAfter !== null || props.line) {
+          const pPrRegex = /<w:pPr>[\s\S]*?<\/w:pPr>/;
+          const spacingAttrs = [];
+          if (props.spacingBefore != null) spacingAttrs.push(`w:before="${props.spacingBefore}"`);
+          if (props.spacingAfter != null) spacingAttrs.push(`w:after="${props.spacingAfter}"`);
+          if (props.line) spacingAttrs.push(`w:line="${props.line}" w:lineRule="auto"`);
+
+          const newPPr = `
+            <w:pPr>
+              <w:spacing ${spacingAttrs.join(' ')}/>
+              <w:keepNext/>
+            </w:pPr>`;
+
+          if (pPrRegex.test(newContent)) {
+            // Solo actualizamos el spacing, intentamos no destruir el resto
+            newContent = newContent.replace(
+              /<w:spacing[^/]*\/>/,
+              `<w:spacing ${spacingAttrs.join(' ')}/>`
+            );
+            // Si no había spacing, lo añadimos
+            if (!/<w:spacing/.test(newContent)) {
+              newContent = newContent.replace(pPrRegex, (m) => m.replace('</w:pPr>', `${newPPr.match(/<w:spacing[^/]*\/>/)[0]}</w:pPr>`));
+            }
+          } else {
+            newContent = newPPr + newContent;
+          }
+        }
+
+        return openTag + newContent + closeTag;
+      });
+    }
+
     originalZip.file(stylesPath, stylesXml);
-    console.log('✅ Tipografía estandarizada');
-    
+    console.log('✅ Tipografía estandarizada de forma segura');
+
   } catch (error) {
-    console.warn('⚠️ Error estandarizando estilos:', error.message);
+    console.warn('⚠️ Error estandarizando estilos (no crítico):', error.message);
   }
 }
-
-// ===================== FUSIONAR DOCX =====================
-async function mergeDocxWithOriginal(coverDocxBuffer, originalBuffer, originalZip) {
+async function mergeDocxWithOriginal(coverDocxBuffer, originalBuffer, originalZip, submissionData) {
   try {
     if (!jszipLib) {
       throw new Error('jszip no disponible');
@@ -4389,6 +4463,8 @@ async function mergeDocxWithOriginal(coverDocxBuffer, originalBuffer, originalZi
     // ===================== ESTANDARIZAR ESTILOS =====================
     await standardizeStyles(originalZip);
     
+await anonymizeDocumentProperties(originalZip, submissionData?.submissionId || 'SUB-ANON');
+
     return originalZip;
     
   } catch (error) {
@@ -5299,8 +5375,8 @@ exports.submitArticle = onRequest(
         
         console.log(`[${requestId}] ✅ Documento original leído: ${(originalBuffer.length / 1024).toFixed(2)} KB`);
         
-        // Fusionar portada con original
-        const mergedZip = await mergeDocxWithOriginal(coverDocxBuffer, originalBuffer, originalZip);
+        // En la función submitArticle, donde fusionas:
+const mergedZip = await mergeDocxWithOriginal(coverDocxBuffer, originalBuffer, originalZip, submissionData);
         
         // Generar DOCX final
         const finalDocxBuffer = await mergedZip.generateAsync({ 
