@@ -101,7 +101,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 const NEWS_URL = 'https://www.revistacienciasestudiantes.com/news/news.json';
-const CUTOFF_DATE = new Date('2026-08-25T00:00:00Z').getTime();
+
 const EMAIL_QUEUE_COLLECTION = 'mail';
 const NEWSLETTER_COLLECTION = 'newsletter';
 const UNSUBSCRIBE_COLLECTION = 'unsubscribes';
@@ -17745,11 +17745,21 @@ const NEWS_JSON_URL = `${DOMAIN}/news/news.json`;
 const SCIENCE_INDEX_URL = `${DOMAIN}/science/index.json`;
 const SCIENCE_BASE_URL = `${DOMAIN}/science`;
 
-// Fecha de corte (últimos 30-45 días recomendado)
-const CUTOFF_DATE = Date.now() - (45 * 24 * 60 * 60 * 1000);
+// ==================== CONFIGURACIÓN DE FECHAS ====================
 
-// ==================== UTILIDADES ====================
+// Fecha de inicio del newsletter (27 de agosto de 2026)
+const NEWSLETTER_START_DATE = new Date('2026-08-27T00:00:00-04:00'); // Chile timezone
+const NEWSLETTER_START_TIMESTAMP = NEWSLETTER_START_DATE.getTime();
 
+// Ventana de noticias (últimos 45 días desde hoy, o desde la fecha de inicio)
+const CUTOFF_DATE = Math.min(
+  Date.now() - (45 * 24 * 60 * 60 * 1000),
+  NEWSLETTER_START_TIMESTAMP
+);
+
+// Para debug: Log de la fecha de corte
+logger.info(`Fecha de corte configurada: ${new Date(CUTOFF_DATE).toISOString()}`);
+logger.info(`Fecha de inicio del newsletter: ${NEWSLETTER_START_DATE.toISOString()}`);
 function decodeContent(encoded) {
   if (!encoded) return '';
   try {
@@ -17780,105 +17790,299 @@ function generateSlug(text) {
 }
 
 // ==================== FETCH DE NOTICIAS (REVISTA + SCIENCE) ====================
+// ==================== FETCH DE NOTICIAS (REVISTA + SCIENCE) - VERSIÓN ROBUSTA ====================
 
+// Variables globales para fetch y estado de carga
+let fetchInstance = null;
+let fetchLoadingPromise = null;
+
+/**
+ * Obtiene una instancia de fetch de forma segura
+ * con sistema de caché y carga diferida
+ */
+async function getFetchInstance() {
+  // Si ya tenemos una instancia, devolverla
+  if (fetchInstance) {
+    return fetchInstance;
+  }
+
+  // Si ya hay una carga en progreso, esperar a que termine
+  if (fetchLoadingPromise) {
+    return await fetchLoadingPromise;
+  }
+
+  // Iniciar carga
+  fetchLoadingPromise = (async () => {
+    try {
+      // 1. Intentar usar fetch global (Node.js 18+ o entorno con fetch)
+      if (typeof fetch !== 'undefined' && typeof fetch === 'function') {
+        fetchInstance = fetch;
+        console.log('✅ fetch: Usando fetch global nativo');
+        return fetchInstance;
+      }
+
+      // 2. Intentar usar globalThis.fetch
+      if (typeof globalThis !== 'undefined' && 
+          typeof globalThis.fetch !== 'undefined' && 
+          typeof globalThis.fetch === 'function') {
+        fetchInstance = globalThis.fetch;
+        console.log('✅ fetch: Usando globalThis.fetch');
+        return fetchInstance;
+      }
+
+      // 3. Cargar dependencias con el sistema existente
+      console.log('⏳ fetch: Cargando dependencias...');
+      await loadDependencies();
+
+      // 4. Verificar si se cargó correctamente
+      if (typeof fetch !== 'undefined' && typeof fetch === 'function') {
+        fetchInstance = fetch;
+        console.log('✅ fetch: Cargado desde loadDependencies (global)');
+        return fetchInstance;
+      }
+
+      if (typeof globalThis !== 'undefined' && 
+          typeof globalThis.fetch !== 'undefined' && 
+          typeof globalThis.fetch === 'function') {
+        fetchInstance = globalThis.fetch;
+        console.log('✅ fetch: Cargado desde loadDependencies (globalThis)');
+        return fetchInstance;
+      }
+
+      // 5. Último intento: importar node-fetch directamente
+      try {
+        const nodeFetch = await import('node-fetch');
+        fetchInstance = nodeFetch.default || nodeFetch;
+        console.log('✅ fetch: Cargado con import dinámico de node-fetch');
+        return fetchInstance;
+      } catch (importError) {
+        console.error('❌ Error importando node-fetch:', importError.message);
+        throw new Error('No se pudo cargar fetch por ningún método');
+      }
+
+    } catch (error) {
+      console.error('❌ Error cargando fetch:', error.message);
+      fetchLoadingPromise = null; // Resetear para futuros intentos
+      throw error;
+    } finally {
+      // Liberar la promesa después de un tiempo para permitir reintentos si falla
+      setTimeout(() => {
+        fetchLoadingPromise = null;
+      }, 5000);
+    }
+  })();
+
+  return await fetchLoadingPromise;
+}
+
+/**
+ * Función principal de fetch de noticias - COMPLETAMENTE ROBUSTA
+ * Con reintentos, timeouts y manejo de errores granular
+ */
 async function fetchNews() {
+  console.log('📰 [fetchNews] Iniciando obtención de noticias...');
+  
+  // OBTENER FETCH DE FORMA SEGURA
+  let fetchFn;
   try {
-    const allNews = [];
-
-    // ---------- 1. Noticias internas de la revista ----------
-    try {
-      const res = await fetch(NEWS_JSON_URL);
-      if (res.ok) {
-        const items = await res.json();
-        const journalItems = (Array.isArray(items) ? items : []).map(item => {
-          const fechaIso = item.fechaIso || item.fecha || '';
-          const fechaDate = new Date(fechaIso);
-          const timestamp = isNaN(fechaDate.getTime()) ? 0 : fechaDate.getTime();
-          const slug = item.slug || generateSlug(`${item.titulo || item.title || ''} ${fechaIso}`);
-
-          return {
-            titulo: item.titulo || '',
-            title: item.title || item.titulo || '',
-            cuerpo: decodeContent(item.cuerpo || item.content || ''),
-            content: decodeContent(item.content || item.cuerpo || ''),
-            fechaIso,
-            photo: item.photo || '',
-            timestamp,
-            slug,
-            area: item.area || item.categoria || item.area_id || 'general',
-            categoria: item.categoria || item.category || 'general',
-            etiquetas: item.etiquetas || item.tags || [],
-            type: 'journal',
-            url: `${DOMAIN}/news/${slug}.html`,
-            urlEn: `${DOMAIN}/news/${slug}.EN.html`
-          };
-        });
-        allNews.push(...journalItems);
-      }
-    } catch (err) {
-      logger.error('Error fetching journal news:', err.message);
+    fetchFn = await getFetchInstance();
+    if (!fetchFn || typeof fetchFn !== 'function') {
+      console.error('❌ [fetchNews] fetch no es una función válida');
+      return [];
     }
-
-    // ---------- 2. Noticias científicas (Science) ----------
-    try {
-      const indexRes = await fetch(SCIENCE_INDEX_URL);
-      if (indexRes.ok) {
-        const indexData = await indexRes.json();
-        const years = Object.keys(indexData.years || {}).sort().reverse();
-
-        for (const year of years) {
-          const yearData = indexData.years[year];
-          if (!yearData?.json_file) continue;
-
-          const yearUrl = `${SCIENCE_BASE_URL}/${year}/${yearData.json_file}`;
-          try {
-            const yearRes = await fetch(yearUrl);
-            if (!yearRes.ok) continue;
-
-            const yearJson = await yearRes.json();
-            const yearNews = yearJson.news || yearJson || [];
-
-            yearNews.forEach(item => {
-              const fechaIso = item.metadata?.createdAt || item.fecha || '';
-              const timestamp = item.metadata?.createdTimestamp || new Date(fechaIso).getTime() || 0;
-              const slug = item.slug || generateSlug(`${item.title?.es || item.titulo || ''} ${fechaIso}`);
-
-              allNews.push({
-                titulo: item.title?.es || item.titulo || '',
-                title: item.title?.en || item.title || item.titulo || '',
-                cuerpo: decodeContent(item.content?.es || item.cuerpo || ''),
-                content: decodeContent(item.content?.en || item.content || ''),
-                fechaIso,
-                photo: item.photo || '',
-                timestamp,
-                slug,
-                area: item.area_id || item.area || 'general',
-                categoria: item.category || item.categoria || 'general',
-                etiquetas: item.tags || item.etiquetas || [],
-                type: 'science',
-                featured: item.featured || false,
-                url: `${DOMAIN}/science/news/${slug}.html`,
-                urlEn: `${DOMAIN}/science/news/${slug}.EN.html`
-              });
-            });
-          } catch (yearErr) {
-            logger.error(`Error fetching science news for ${year}:`, yearErr.message);
-          }
-        }
-      }
-    } catch (err) {
-      logger.error('Error fetching science index:', err.message);
-    }
-
-    // Filtrar por fecha de corte + ordenar
-    return allNews
-      .filter(n => n.timestamp > CUTOFF_DATE)
-      .sort((a, b) => b.timestamp - a.timestamp);
-
-  } catch (e) {
-    logger.error('Error general en fetchNews:', e);
+    console.log('✅ [fetchNews] fetch disponible correctamente');
+  } catch (fetchError) {
+    console.error('❌ [fetchNews] Error obteniendo fetch:', fetchError.message);
     return [];
   }
+
+  const allNews = [];
+  const fetchTimeout = 15000; // 15 segundos por petición
+
+  // Función auxiliar para hacer fetch con timeout
+  async function fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), fetchTimeout);
+    
+    try {
+      const response = await fetchFn(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; RNCE-Newsletter/1.0)',
+          'Accept': 'application/json',
+          ...(options.headers || {})
+        }
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Timeout after ${fetchTimeout}ms: ${url}`);
+      }
+      throw error;
+    }
+  }
+
+  // ---------- 1. Noticias internas de la revista ----------
+  try {
+    console.log(`📡 [fetchNews] Fetching journal news: ${NEWS_JSON_URL}`);
+    const res = await fetchWithTimeout(NEWS_JSON_URL);
+    
+    if (res.ok) {
+      const items = await res.json();
+      console.log(`✅ [fetchNews] Journal news: ${items.length} items encontrados`);
+      
+      const journalItems = (Array.isArray(items) ? items : []).map(item => {
+        const fechaIso = item.fechaIso || item.fecha || '';
+        const fechaDate = new Date(fechaIso);
+        const timestamp = isNaN(fechaDate.getTime()) ? 0 : fechaDate.getTime();
+        const slug = item.slug || generateSlug(`${item.titulo || item.title || ''} ${fechaIso}`);
+
+        return {
+          titulo: item.titulo || '',
+          title: item.title || item.titulo || '',
+          cuerpo: decodeContent(item.cuerpo || item.content || ''),
+          content: decodeContent(item.content || item.cuerpo || ''),
+          fechaIso,
+          photo: item.photo || '',
+          timestamp,
+          slug,
+          area: item.area || item.categoria || item.area_id || 'general',
+          categoria: item.categoria || item.category || 'general',
+          etiquetas: item.etiquetas || item.tags || [],
+          type: 'journal',
+          url: `${DOMAIN}/news/${slug}.html`,
+          urlEn: `${DOMAIN}/news/${slug}.EN.html`
+        };
+      });
+      allNews.push(...journalItems);
+    } else {
+      console.warn(`⚠️ [fetchNews] Journal news: HTTP ${res.status} - ${res.statusText}`);
+    }
+  } catch (err) {
+    console.error('❌ [fetchNews] Error fetching journal news:', err.message);
+    // No fallamos toda la función por un error parcial
+  }
+
+  // ---------- 2. Noticias científicas (Science) ----------
+  try {
+    console.log(`📡 [fetchNews] Fetching science index: ${SCIENCE_INDEX_URL}`);
+    const indexRes = await fetchWithTimeout(SCIENCE_INDEX_URL);
+    
+    if (indexRes.ok) {
+      const indexData = await indexRes.json();
+      console.log(`✅ [fetchNews] Science index obtenido correctamente`);
+      
+      const years = Object.keys(indexData.years || {}).sort().reverse();
+      console.log(`📂 [fetchNews] Años disponibles: ${years.join(', ')}`);
+
+      for (const year of years) {
+        const yearData = indexData.years[year];
+        if (!yearData?.json_file) {
+          console.warn(`⚠️ [fetchNews] Año ${year} sin json_file, saltando`);
+          continue;
+        }
+
+        const yearUrl = `${SCIENCE_BASE_URL}/${year}/${yearData.json_file}`;
+        console.log(`📡 [fetchNews] Fetching science news: ${yearUrl}`);
+        
+        try {
+          const yearRes = await fetchWithTimeout(yearUrl);
+          if (!yearRes.ok) {
+            console.warn(`⚠️ [fetchNews] Science ${year}: HTTP ${yearRes.status}`);
+            continue;
+          }
+
+          const yearJson = await yearRes.json();
+          const yearNews = yearJson.news || yearJson || [];
+          console.log(`✅ [fetchNews] Science ${year}: ${yearNews.length} noticias encontradas`);
+
+          yearNews.forEach(item => {
+            const fechaIso = item.metadata?.createdAt || item.fecha || '';
+            const timestamp = item.metadata?.createdTimestamp || new Date(fechaIso).getTime() || 0;
+            const slug = item.slug || generateSlug(`${item.title?.es || item.titulo || ''} ${fechaIso}`);
+
+            allNews.push({
+              titulo: item.title?.es || item.titulo || '',
+              title: item.title?.en || item.title || item.titulo || '',
+              cuerpo: decodeContent(item.content?.es || item.cuerpo || ''),
+              content: decodeContent(item.content?.en || item.content || ''),
+              fechaIso,
+              photo: item.photo || '',
+              timestamp,
+              slug,
+              area: item.area_id || item.area || 'general',
+              categoria: item.category || item.categoria || 'general',
+              etiquetas: item.tags || item.etiquetas || [],
+              type: 'science',
+              featured: item.featured || false,
+              url: `${DOMAIN}/science/news/${slug}.html`,
+              urlEn: `${DOMAIN}/science/news/${slug}.EN.html`
+            });
+          });
+        } catch (yearErr) {
+          console.error(`❌ [fetchNews] Error fetching science news for ${year}:`, yearErr.message);
+        }
+      }
+    } else {
+      console.warn(`⚠️ [fetchNews] Science index: HTTP ${indexRes.status}`);
+    }
+  } catch (err) {
+    console.error('❌ [fetchNews] Error fetching science index:', err.message);
+  }
+
+  // ---------- 3. Filtrar y ordenar ----------
+  const cutoffDate = CUTOFF_DATE;
+  console.log(`📅 [fetchNews] Fecha de corte: ${new Date(cutoffDate).toISOString()}`);
+  console.log(`📊 [fetchNews] Total antes de filtrar: ${allNews.length}`);
+
+  const filtered = allNews
+    .filter(n => n.timestamp > cutoffDate)
+    .sort((a, b) => b.timestamp - a.timestamp);
+
+  console.log(`✅ [fetchNews] Noticias después de filtrar: ${filtered.length}`);
+  
+  if (filtered.length > 0) {
+    console.log(`📰 [fetchNews] Primera noticia: "${filtered[0].titulo || filtered[0].title}" (${new Date(filtered[0].timestamp).toISOString()})`);
+  }
+
+  return filtered;
+}
+
+/**
+ * Versión con reintentos para mayor robustez
+ * Si fetchNews falla, reintenta hasta 3 veces con backoff
+ */
+async function fetchNewsWithRetry(maxRetries = 3, delayMs = 2000) {
+  let lastError = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 [fetchNews] Intento ${attempt}/${maxRetries}`);
+      const result = await fetchNews();
+      
+      // Si el resultado es un array (incluso vacío), considerar éxito
+      if (Array.isArray(result)) {
+        return result;
+      }
+      
+      throw new Error('fetchNews no devolvió un array');
+    } catch (error) {
+      lastError = error;
+      console.warn(`⚠️ [fetchNews] Intento ${attempt} falló:`, error.message);
+      
+      if (attempt < maxRetries) {
+        const waitTime = delayMs * attempt; // Backoff exponencial
+        console.log(`⏳ [fetchNews] Esperando ${waitTime}ms antes de reintentar...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+  
+  console.error(`❌ [fetchNews] Todos los ${maxRetries} intentos fallaron`);
+  throw lastError || new Error('fetchNews falló después de múltiples intentos');
 }
 
 // ==================== FILTRADO POR PREFERENCIAS ====================
@@ -18353,12 +18557,164 @@ async function queueEmail(to, subject, htmlBody) {
     return false;
   }
 }
+// ==================== SISTEMA DE REGISTRO DE ENVÍOS ====================
 
+/**
+ * Obtiene las noticias ya enviadas a un suscriptor
+ */
+async function getSentNewsForSubscriber(subscriberId) {
+  const db = admin.firestore();
+  try {
+    const sentDoc = await db.collection('newsletter_sent_history')
+      .doc(subscriberId)
+      .get();
+    
+    if (!sentDoc.exists) {
+      return {
+        sentNewsSlugs: [],
+        lastNewsSlug: null,
+        lastSentAt: null
+      };
+    }
+    
+    const data = sentDoc.data();
+    return {
+      sentNewsSlugs: data.sentNewsSlugs || [],
+      lastNewsSlug: data.lastNewsSlug || null,
+      lastSentAt: data.lastSentAt || null
+    };
+  } catch (error) {
+    logger.error('Error getting sent history:', error);
+    return {
+      sentNewsSlugs: [],
+      lastNewsSlug: null,
+      lastSentAt: null
+    };
+  }
+}
+
+/**
+ * Filtra noticias que no han sido enviadas previamente al suscriptor
+ */
+function filterUnsentNews(allNews, sentHistory) {
+  const sentSlugs = new Set(sentHistory.sentNewsSlugs || []);
+  
+  // Si no hay historial, devolver todas las noticias
+  if (sentSlugs.size === 0) {
+    return {
+      unsentNews: allNews,
+      isFirstTime: true,
+      continuationSlug: null
+    };
+  }
+  
+  // Encontrar el índice de la última noticia enviada
+  let lastSentIndex = -1;
+  const lastNewsSlug = sentHistory.lastNewsSlug;
+  
+  if (lastNewsSlug) {
+    lastSentIndex = allNews.findIndex(n => n.slug === lastNewsSlug);
+  }
+  
+  // Obtener noticias no enviadas
+  const unsentNews = allNews.filter(news => !sentSlugs.has(news.slug));
+  
+  // Determinar si es continuación (hay noticias más recientes que la última enviada)
+  const continuationSlug = lastSentIndex > 0 ? allNews[lastSentIndex - 1]?.slug : null;
+  
+  return {
+    unsentNews,
+    isFirstTime: false,
+    continuationSlug,
+    lastSentIndex
+  };
+}
+
+/**
+ * Actualiza el historial de envíos de un suscriptor
+ */
+async function updateSentHistory(subscriberId, subscriberEmail, sentNews) {
+  const db = admin.firestore();
+  try {
+    const historyRef = db.collection('newsletter_sent_history').doc(subscriberId);
+    
+    // Obtener historial actual
+    const currentDoc = await historyRef.get();
+    const currentData = currentDoc.exists ? currentDoc.data() : {};
+    const currentSlugs = currentData.sentNewsSlugs || [];
+    
+    // Combinar slugs (mantener máximo últimos 100 para no crecer infinitamente)
+    const newSlugs = [...new Set([...currentSlugs, ...sentNews.map(n => n.slug)])].slice(-100);
+    
+    // Actualizar con la información más reciente
+    await historyRef.set({
+      subscriberEmail,
+      sentNewsSlugs: newSlugs,
+      lastNewsSlug: sentNews[0]?.slug || null,
+      lastSentAt: admin.firestore.FieldValue.serverTimestamp(),
+      totalSentCount: (currentData.totalSentCount || 0) + sentNews.length,
+      lastNewsTitle: sentNews[0]?.titulo || sentNews[0]?.title || null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    
+    return true;
+  } catch (error) {
+    logger.error('Error updating sent history:', error);
+    return false;
+  }
+}
+
+/**
+ * Obtiene noticias no enviadas para un suscriptor específico
+ */
+async function getUnsentNewsForSubscriber(allNews, subscriber) {
+  const sentHistory = await getSentNewsForSubscriber(subscriber.id);
+  
+  // Filtrar por preferencias primero
+  const filteredNews = filterNewsByPreferences(allNews, subscriber.preferences);
+  
+  // Luego filtrar por noticias ya enviadas
+  const { unsentNews, isFirstTime, continuationSlug } = filterUnsentNews(
+    filteredNews, 
+    sentHistory
+  );
+  
+  return {
+    unsentNews,
+    sentHistory,
+    isFirstTime,
+    continuationSlug,
+    filteredNews
+  };
+}
+
+/**
+ * Genera una etiqueta de contexto para el email
+ */
+function generateContextLabel(isFirstTime, continuationSlug, lang) {
+  if (isFirstTime) {
+    return lang === 'en' 
+      ? 'Welcome to your first edition'
+      : 'Bienvenido a tu primera edición';
+  }
+  
+  if (continuationSlug) {
+    return lang === 'en'
+      ? 'Continuing from where we left off'
+      : 'Continuando desde donde lo dejamos';
+  }
+  
+  return lang === 'en'
+    ? 'Your latest updates'
+    : 'Tus últimas actualizaciones';
+}
+
+// Modificar la función sendNewsletter para usar el tracking
 async function sendNewsletter() {
   const db = admin.firestore();
   const startTime = Date.now();
 
-  logger.info('Iniciando envío de newsletter (Revista + Science)');
+  logger.info('Iniciando envío de newsletter con tracking (Revista + Science)');
 
   try {
     const allNews = await fetchNews();
@@ -18394,8 +18750,9 @@ async function sendNewsletter() {
     }
 
     let sentCount = 0;
+    let skippedCount = 0; // Suscriptores sin noticias nuevas
     let errorCount = 0;
-    let filteredCount = 0;
+    let totalNewsSent = 0;
     const batchSize = 50;
 
     for (let i = 0; i < subscribers.length; i += batchSize) {
@@ -18403,18 +18760,43 @@ async function sendNewsletter() {
 
       await Promise.all(batch.map(async (subscriber) => {
         try {
-          const filteredNews = filterNewsByPreferences(allNews, subscriber.preferences);
+          // Obtener noticias no enviadas para este suscriptor
+          const {
+            unsentNews,
+            sentHistory,
+            isFirstTime,
+            continuationSlug,
+            filteredNews
+          } = await getUnsentNewsForSubscriber(allNews, subscriber);
 
-          if (filteredNews.length === 0) {
-            filteredCount++;
+          // Log para debugging
+          logger.info(`Suscriptor ${subscriber.email}:`, {
+            totalNews: allNews.length,
+            filteredByPreferences: filteredNews.length,
+            unsentNews: unsentNews.length,
+            isFirstTime,
+            lastNewsSlug: sentHistory.lastNewsSlug
+          });
+
+          // Si no hay noticias nuevas, saltar
+          if (unsentNews.length === 0) {
+            skippedCount++;
+            logger.info(`Sin noticias nuevas para ${subscriber.email}`);
             return;
           }
 
-          // Limitar a máximo 6-7 noticias por correo para no saturar
-          const newsToSend = filteredNews.slice(0, 7);
+          // Limitar a máximo 6-7 noticias por correo
+          const newsToSend = unsentNews.slice(0, 7);
 
           const lang = subscriber.idioma === 'en' ? 'en' : 'es';
-          const subject = generateSubject(lang, newsToSend);
+          
+          // Generar subject con contexto si es continuación
+          const baseSubject = generateSubject(lang, newsToSend);
+          const contextLabel = generateContextLabel(isFirstTime, continuationSlug, lang);
+          const subject = isFirstTime 
+            ? baseSubject 
+            : `${contextLabel}: ${baseSubject.split(': ')[1] || baseSubject}`;
+          
           const unsubscribeToken = generateUnsubscribeToken(subscriber.email);
 
           const htmlBody = generateElegantHTML(
@@ -18423,46 +18805,79 @@ async function sendNewsletter() {
             subscriber.email,
             lang,
             unsubscribeToken,
-            subscriber.preferences
+            subscriber.preferences,
+            {
+              isFirstTime,
+              contextLabel
+            }
           );
 
           const queued = await queueEmail(subscriber.email, subject, htmlBody);
 
           if (queued) {
             sentCount++;
+            totalNewsSent += newsToSend.length;
+            
+            // Actualizar historial de envíos
+            await updateSentHistory(
+              subscriber.id,
+              subscriber.email,
+              newsToSend
+            );
+            
+            // Actualizar lastSentAt en el documento del suscriptor
             await db.collection(NEWSLETTER_COLLECTION).doc(subscriber.id).update({
               lastSentAt: admin.firestore.FieldValue.serverTimestamp(),
-              lastSentNews: newsToSend.map(n => n.slug)
+              lastSentNews: newsToSend.map(n => ({
+                slug: n.slug,
+                title: n.titulo || n.title,
+                sentAt: new Date().toISOString()
+              })),
+              totalNewslettersSent: admin.firestore.FieldValue.increment(1)
             });
+            
+            logger.info(`Email enviado a ${subscriber.email} con ${newsToSend.length} noticias nuevas`);
           } else {
             errorCount++;
           }
         } catch (err) {
-          logger.error('Error procesando suscriptor', { email: subscriber.email, error: err.message });
+          logger.error('Error procesando suscriptor', { 
+            email: subscriber.email, 
+            error: err.message,
+            stack: err.stack 
+          });
           errorCount++;
         }
       }));
     }
 
+    // Guardar historial general
     await db.collection(NEWSLETTER_HISTORY).add({
       sentAt: admin.firestore.FieldValue.serverTimestamp(),
       newsCount: allNews.length,
       subscribersCount: subscribers.length,
       sentCount,
-      filteredCount,
+      skippedCount,
       errorCount,
+      totalNewsSent,
       durationMs: Date.now() - startTime
     });
 
-    logger.info('Newsletter enviada', { sentCount, filteredCount, errorCount });
+    logger.info('Newsletter enviada con tracking', { 
+      sentCount, 
+      skippedCount, 
+      errorCount,
+      totalNewsSent 
+    });
 
     return {
       success: true,
       sent: sentCount,
-      filtered: filteredCount,
+      skipped: skippedCount,
       errors: errorCount,
       total: subscribers.length,
       newsCount: allNews.length,
+      totalNewsSent,
       durationMs: Date.now() - startTime
     };
 
@@ -18471,7 +18886,6 @@ async function sendNewsletter() {
     throw error;
   }
 }
-
 // ==================== CLOUD FUNCTIONS V2 ====================
 
 exports.sendWelcomeEmail = onDocumentCreated(
@@ -19076,7 +19490,43 @@ exports.managePreferences = onRequest(
 );
 
 // ==================== SCHEDULED ====================
+/**
+ * Verifica si ya se envió la newsletter hoy
+ */
+async function hasNewsletterBeenSentToday() {
+  const db = admin.firestore();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  try {
+    const historySnapshot = await db.collection(NEWSLETTER_HISTORY)
+      .where('sentAt', '>=', today)
+      .limit(1)
+      .get();
+    
+    return !historySnapshot.empty;
+  } catch (error) {
+    logger.error('Error checking if newsletter sent today:', error);
+    return false; // Si hay error, permitir envío
+  }
+}
 
+/**
+ * Registra el envío para evitar duplicados
+ */
+async function registerNewsletterExecution() {
+  const db = admin.firestore();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  await db.collection('newsletter_execution_log').add({
+    executedAt: admin.firestore.FieldValue.serverTimestamp(),
+    date: today.toISOString().split('T')[0],
+    status: 'completed'
+  });
+}
+
+// Modificar sendNewsletterScheduled para evitar duplicados
 exports.sendNewsletterScheduled = onSchedule(
   {
     schedule: '0 9 * * *',
@@ -19087,10 +19537,25 @@ exports.sendNewsletterScheduled = onSchedule(
   },
   async (event) => {
     logger.info('Ejecutando newsletter programada');
-    return await sendNewsletter();
+    
+    // Verificar si ya se envió hoy
+    const alreadySent = await hasNewsletterBeenSentToday();
+    if (alreadySent) {
+      logger.info('Newsletter ya enviada hoy, saltando ejecución');
+      return { success: true, skipped: true, reason: 'already_sent_today' };
+    }
+    
+    // Ejecutar envío
+    const result = await sendNewsletter();
+    
+    // Registrar ejecución exitosa
+    if (result.success && result.sent > 0) {
+      await registerNewsletterExecution();
+    }
+    
+    return result;
   }
 );
-
 exports.sendWelcomeEmailManual = onRequest(
   {
     region: 'us-central1',
