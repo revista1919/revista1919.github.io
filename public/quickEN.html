@@ -33,6 +33,8 @@
 
       --success: #10B981;
       --success-bg: #ECFDF5;
+      --warning: #F59E0B;
+      --warning-bg: #FFFBEB;
 
       --font-serif: 'Merriweather', serif;
       --font-sans: 'Inter', sans-serif;
@@ -51,7 +53,7 @@
     body {
       font-family: var(--font-sans);
       font-size: 16px;
-      line-height: 1.6;
+      line-height: 1.7;
       margin: 0;
       padding: 0;
       background-color: var(--bg-page);
@@ -292,6 +294,15 @@
       background-color: var(--brand-orange);
     }
 
+    h3 {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      color: var(--brand-navy-light);
+      margin-top: 1.5em;
+      margin-bottom: 1em;
+      font-weight: 700;
+    }
+
     /* ================= ACCORDIONS (DETAILS) ================= */
     details {
       background-color: white;
@@ -367,7 +378,7 @@
       padding-left: 1.5em;
     }
 
-    .details-content li { margin-bottom: 12px; }
+    .details-content li { margin-bottom: 15px; }
     .details-content strong { color: var(--brand-navy); }
 
     .details-content a {
@@ -402,6 +413,54 @@
       letter-spacing: 0.05em;
     }
 
+.tip-box {
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border: 1px solid var(--border-soft);
+  border-left: 4px solid var(--brand-navy-light);
+  padding: 20px 25px;
+  margin: 20px 0;
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.tip-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 107, 0, 0.03));
+  pointer-events: none;
+}
+
+.tip-box:hover {
+  border-color: var(--brand-orange);
+  box-shadow: var(--shadow-md);
+  transform: translateX(4px);
+}
+
+.tip-box i {
+  margin-right: 12px;
+  color: var(--brand-orange);
+  font-size: 1.1em;
+  transition: transform 0.3s ease;
+}
+
+.tip-box:hover i {
+  transform: scale(1.1);
+}
+
+.tip-box strong {
+  color: var(--brand-navy);
+  font-weight: 700;
+}
+
     code {
       background-color: #F1F5F9;
       color: #0F172A;
@@ -410,6 +469,32 @@
       font-family: 'Courier New', Courier, monospace;
       font-size: 0.9em;
       border: 1px solid #E2E8F0;
+    }
+
+    /* Article types table */
+    .article-types-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.9rem;
+    }
+
+    .article-types-table th {
+      background-color: var(--brand-navy);
+      color: white;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .article-types-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-soft);
+      vertical-align: top;
+    }
+
+    .article-types-table tr:hover {
+      background-color: #F8FAFC;
     }
 
     /* ================= INTERACTIVE CHECKLIST ================= */
@@ -655,6 +740,7 @@
       .checklist-container { padding: 25px 15px; }
       .editorial-process { padding-left: 20px; }
       .step-number { left: -38px; width: 30px; height: 30px; font-size: 1rem; }
+      .article-types-table { font-size: 0.8rem; }
     }
   </style>
 </head>
@@ -717,100 +803,444 @@
         </div>
       </div>
 
-      <h2>1. Manuscript Structure and Format</h2>
+      <!-- ================= SECTION 1: TYPES OF ARTICLES ================= -->
+      <h2>1. What Type of Article Am I Going to Write?</h2>
+      
+      <div class="tip-box">
+        <i class="fa-solid fa-lightbulb"></i>
+        <strong>Step 1:</strong> Before you begin, identify what type of article you are going to submit. Each type has specific structure and content requirements.
+      </div>
+
+      <table class="article-types-table">
+        <thead>
+          <tr>
+            <th>Article Type</th>
+            <th>What is it?</th>
+            <th>Basic Structure</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Original Research</strong></td>
+            <td>Presents new results from your own study (experiment, survey, data analysis)</td>
+            <td>Introduction → Methods → Results → Discussion → Conclusion (IMRaD)</td>
+          </tr>
+          <tr>
+            <td><strong>Academic Essay</strong></td>
+            <td>Analyzes a topic with arguments based on bibliographic sources</td>
+            <td>Thesis → Arguments → Counterarguments → Conclusion</td>
+          </tr>
+          <tr>
+            <td><strong>Reflective Essay</strong></td>
+            <td>Presents personal reflections on an experience or reading</td>
+            <td>Experience → Personal analysis → Theoretical connection → Learning</td>
+          </tr>
+          <tr>
+            <td><strong>Case Report</strong></td>
+            <td>Describes a unique and interesting case (clinical, social, technical)</td>
+            <td>Case presentation → Diagnosis/Analysis → Intervention → Follow-up</td>
+          </tr>
+          <tr>
+            <td><strong>Systematic Review</strong></td>
+            <td>Critically summarizes existing literature on a specific question</td>
+            <td>Question → Search methodology → Analysis → Conclusions</td>
+          </tr>
+          <tr>
+            <td><strong>Book Review</strong></td>
+            <td>Critical review of a recent academic book</td>
+            <td>Book details → Summary → Critical analysis → Recommendation</td>
+          </tr>
+        </tbody>
+      </table>
 
       <details>
-        <summary>1.0 The Abstract – Your Gateway</summary>
+        <summary>1.1 Specific Structures for Each Type</summary>
+        <div class="details-content">
+          <h3>Original Research</h3>
+          <ul>
+            <li><strong>Introduction:</strong> Context, problem, objectives (why did you do this?)</li>
+            <li><strong>Methods:</strong> Design, participants, instruments, procedure (how did you do it?)</li>
+            <li><strong>Results:</strong> Findings, data, tables, figures (what did you find?)</li>
+            <li><strong>Discussion:</strong> Interpretation, comparison with literature, limitations (what does it mean?)</li>
+            <li><strong>Conclusion:</strong> Synthesis of contributions and future lines of research</li>
+          </ul>
+
+          <h3>Academic Essay</h3>
+          <ul>
+            <li><strong>Clear thesis:</strong> Your main argument in the first paragraph</li>
+            <li><strong>Development:</strong> 3-4 arguments with evidence (citations, data, examples)</li>
+            <li><strong>Counterarguments:</strong> Acknowledge and refute opposing positions</li>
+            <li><strong>Conclusion:</strong> Reaffirm thesis and propose implications</li>
+          </ul>
+
+          <h3>Case Report</h3>
+          <ul>
+            <li><strong>Context:</strong> Why is this case unique or relevant?</li>
+            <li><strong>Detailed description:</strong> Objective data, chronology, observations</li>
+            <li><strong>Analysis:</strong> What makes it special? Comparison with literature</li>
+            <li><strong>Lessons learned:</strong> What can other professionals/students learn?</li>
+          </ul>
+
+          <h3>Systematic Review</h3>
+          <ul>
+            <li><strong>Research question:</strong> Formulated with PICO criteria (Population, Intervention, Comparison, Outcome)</li>
+            <li><strong>Search strategy:</strong> Databases consulted, terms, dates, inclusion/exclusion criteria</li>
+            <li><strong>Flow diagram:</strong> How many articles found, excluded, included</li>
+            <li><strong>Synthesis:</strong> Summary of findings, quality of evidence, heterogeneity</li>
+          </ul>
+
+          <h3>Book Review</h3>
+          <ul>
+            <li><strong>Bibliographic record:</strong> Author, title, publisher, year, ISBN, pages</li>
+            <li><strong>Objective summary:</strong> Main ideas of the book (without unnecessary spoilers)</li>
+            <li><strong>Critical analysis:</strong> Strengths, weaknesses, contribution to the field</li>
+            <li><strong>Recommendation:</strong> Who is this book useful for?</li>
+          </ul>
+
+          <div class="tip-box">
+            <i class="fa-solid fa-circle-info"></i>
+            <strong>Remember:</strong> If you have doubts about which type corresponds, write to <code>editor@revistacienciasestudiantes.com</code> with a 100-word summary of your idea and we will guide you.
+          </div>
+        </div>
+      </details>
+
+      <!-- ================= SECTION 2: FORMAT AND PREPARATION ================= -->
+      <h2>2. Format and Manuscript Preparation</h2>
+
+      <details>
+        <summary>2.1 How Do I Prepare My File Correctly?</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>File format:</strong> We only accept <strong>Microsoft Word (.docx)</strong>. If you use Google Docs, go to "File → Download → Microsoft Word (.docx)". If you use LaTeX, export via Pandoc or an online converter.</li>
+            <li><strong>Font:</strong> Times New Roman, size 12, 1.5 line spacing (this is standard and facilitates reading)</li>
+            <li><strong>Margins:</strong> 2.5 cm on all sides (Word's default setting)</li>
+            <li><strong>Page numbering:</strong> Include at the bottom right</li>
+          </ul>
+
+          <div class="example-box">
+            <strong>How to configure Word?</strong><br>
+            Open Word → "Layout" tab → "Margins" → "Normal (2.5 cm)"<br>
+            "Home" tab → select all (Ctrl+A) → choose "Times New Roman", size 12<br>
+            "Layout" tab → "Paragraph Spacing" → "1.5 lines"
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>2.2 How Do I Use Headings and Subheadings (Heading Styles)?</summary>
+        <div class="details-content">
+          <p><strong>What are "Heading Styles"?</strong> They are Word's predefined styles that hierarchically structure your document (like a family tree). It is not the same as simply putting text in bold and larger size.</p>
+          
+          <ul>
+            <li><strong>Why are they important?</strong>
+              <ul>
+                <li>The editorial system automatically detects them to create the table of contents</li>
+                <li>They facilitate the reviewer's navigation through the document</li>
+                <li>They help in the conversion to PDF/HTML for final publication</li>
+              </ul>
+            </li>
+            <li><strong>How to apply them?</strong>
+              <div class="example-box">
+                <strong>Steps in Word:</strong><br>
+                1. Select the title text<br>
+                2. Go to the "Home" tab<br>
+                3. In the "Styles" section, choose "Heading 1" (for main sections), "Heading 2" (for subsections), "Heading 3" (for sub-subsections)
+              </div>
+            </li>
+            <li><strong>Example of correct hierarchy:</strong>
+              <div class="example-box">
+                <strong>Heading 1:</strong> Methodology<br>
+                <strong>&nbsp;&nbsp;Heading 2:</strong> Participants<br>
+                <strong>&nbsp;&nbsp;Heading 2:</strong> Instruments<br>
+                <strong>&nbsp;&nbsp;&nbsp;&nbsp;Heading 3:</strong> Satisfaction survey<br>
+                <strong>Heading 1:</strong> Results
+              </div>
+            </li>
+          </ul>
+
+          <div class="tip-box">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <strong>Common mistake:</strong> Simulating headings with "bold + size 16 + centered". This is not detected by the system and causes technical problems. Use the predefined styles!
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>2.3 Anonymization for Double-Blind Peer Review</summary>
+        <div class="details-content">
+          <p><strong>What does "double-blind" mean?</strong> Neither the reviewers know who you are, nor will you know who they are. This guarantees impartiality.</p>
+          
+          <ul>
+            <li><strong>What should I remove from the manuscript?</strong>
+              <ul>
+                <li>Your name and co-authors' names (on the first page and in headers/footers)</li>
+                <li>Institutional affiliation (university, school, laboratory)</li>
+                <li>Acknowledgments that reveal identity (tutor, professor, specific scholarship)</li>
+                <li>Names of projects with identifiable funding</li>
+                <li>Self-citations that say "as we showed in our previous study (Pérez 2023)"</li>
+              </ul>
+            </li>
+            <li><strong>How do I manage the removed information?</strong>
+              <div class="tip-box">
+                <i class="fa-solid fa-lightbulb"></i>
+                <strong>The two-file rule:</strong><br>
+                <strong>File A (to send for review):</strong> Completely anonymous, without traces of identity<br>
+                <strong>File B (for you, do not send it):</strong> With all complete data<br><br>
+                When the article is ACCEPTED, you will send File B for final publication with all your data.
+              </div>
+            </li>
+            <li><strong>How do I replace self-citations?</strong>
+              <div class="example-box">
+                <strong>Instead of:</strong> "As we demonstrated previously (Pérez and González 2022)..."<br>
+                <strong>Write:</strong> "As has been demonstrated previously ([Author anonymized] 2022)..."<br><br>
+                In the reference list, also replace:<br>
+                <strong>Before:</strong> Pérez, J. and González, M. (2022)...<br>
+                <strong>After:</strong> [Author anonymized]. (2022)...
+              </div>
+            </li>
+            <li><strong>What about file metadata?</strong>
+              <div class="example-box">
+                <strong>How to remove metadata in Word:</strong><br>
+                File → Info → "Inspect Document" → "Inspect" → "Remove All" in document properties and personal information
+              </div>
+            </li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>2.4 The Abstract – Your Gateway</summary>
         <div class="details-content">
           <p><strong>What is it?</strong> A brief, self-contained synthesis of your article. It is the main element (and sometimes the only one) that an editor or reviewer reads to decide whether to evaluate your work.</p>
+          
           <ul>
             <li><strong>Length:</strong> Between <strong>150 and 250 words</strong>. Excludes bibliographic citations and complex formulas.</li>
-            <li><strong>Suggested IMRaD structure:</strong>
+            <li><strong>Language:</strong> A version in English and Spanish with faithful technical translation is required.</li>
+            <li><strong>What to include?</strong>
               <ul>
-                <li><strong>Context:</strong> What is studied and why does it matter? (1–2 sentences)</li>
+                <li><strong>Context:</strong> What is studied and why does it matter? (1-2 sentences)</li>
                 <li><strong>Objective:</strong> What were you trying to answer? (1 sentence)</li>
-                <li><strong>Methods:</strong> Design, participants, instruments. (1–2 sentences)</li>
-                <li><strong>Results:</strong> Key statistical or analytical findings. (2–3 sentences)</li>
+                <li><strong>Methods:</strong> Design, participants, instruments. (1-2 sentences)</li>
+                <li><strong>Results:</strong> Key statistical or analytical findings. (2-3 sentences)</li>
                 <li><strong>Conclusion:</strong> Implication of your finding. (1 sentence)</li>
               </ul>
             </li>
-            <li><strong>Language:</strong> A version in Spanish and English (Abstract) with faithful technical translation is required.</li>
           </ul>
+          
           <div class="example-box">
-            <strong>Structural Example:</strong>
+            <strong>Structural Example (Original Research):</strong><br>
             <em>"This study examines the effect of classical music on the concentration of university students. Using an experimental design with 60 participants, performance on an attention test with and without background music was compared. Results show a 15% improvement in short-term memory tasks with instrumental music (p &lt; 0.05), although there were no differences in reasoning tasks. It is concluded that ambient music is a viable tool to optimize specific cognitive processes in academic settings."</em>
           </div>
-        </div>
-      </details>
 
-      <details>
-        <summary>1.1 The File and Double-Blind Preparation</summary>
-        <div class="details-content">
-          <ul>
-            <li><strong>Format:</strong> Exclusively <strong>Microsoft Word (.docx)</strong>. LaTeX users must convert using Pandoc.</li>
-            <li><strong>Double-Blind Peer Review:</strong> To ensure impartiality, reviewers will not know your identity, nor will you know theirs.</li>
-            <li><strong>Anonymization Instructions:</strong>
-              <ul>
-                <li>Remove author names and affiliations below the title.</li>
-                <li>In the Acknowledgments section, omit names of tutors, scholarships, or universities.</li>
-                <li>If you self-cite, replace your name in the text and bibliography with <em>"[Author anonymized]"</em>.</li>
-                <li>Clean Word file metadata (File > Info > Inspect Document).</li>
-              </ul>
-            </li>
-          </ul>
-        </div>
-      </details>
-
-      <details>
-        <summary>1.2 Length and Heading Hierarchy</summary>
-        <div class="details-content">
-          <ul>
-            <li><strong>Length:</strong> Between <strong>1,000 and 10,000 words</strong> (including references). Significant excesses will require justification or will be returned for reduction.</li>
-            <li><strong>Hierarchy (Headings):</strong> Strictly use the default styles of your word processor (Heading 1, Heading 2, Heading 3). Do not simulate hierarchies using only bold or manual font size increases.</li>
-          </ul>
           <div class="example-box">
-            <strong>Required structure:</strong><br>
-            <code>Heading 1: Results</code><br>
-            <code>&nbsp;&nbsp;Heading 2: Descriptive Analysis of the Survey</code><br>
-            <code>&nbsp;&nbsp;&nbsp;&nbsp;Heading 3: Variations by Age Group</code>
+            <strong>Example for Book Review:</strong><br>
+            <em>"This review analyzes 'The Selfish Gene' by Richard Dawkins, evaluating its contribution to science communication and its relevance after four decades. The central concepts proposed by the author are examined, contrasting them with later developments in evolutionary biology. The work stands out for its expository clarity, although it presents limitations in the discussion of altruism and group selection. It is recommended as essential reading for biology students and the general public interested in evolution."</em>
           </div>
         </div>
       </details>
 
       <details>
-        <summary>1.3 Citation and References (Chicago 17 Author-Date)</summary>
+        <summary>2.5 Length and Limits</summary>
         <div class="details-content">
-          <p>The journal uses the <strong>Chicago Manual of Style (17th ed.), Author-Date system</strong>. It requires parenthetical citation in the text and an alphabetical list at the end.</p>
           <ul>
-            <li><strong>In-text citation:</strong>
-              <div class="example-box">
-                <em>Paraphrase:</em> The evolution of species is a gradual process (Darwin 1859).<br>
-                <em>Direct quote:</em> (Darwin 1859, 78).
-              </div>
+            <li><strong>General length:</strong> Between <strong>1,000 and 10,000 words</strong> (including references).</li>
+            <li><strong>Variations by type:</strong>
+              <ul>
+                <li><strong>Book Review:</strong> 1,000-2,000 words</li>
+                <li><strong>Case Report:</strong> 2,000-4,000 words</li>
+                <li><strong>Reflective Essay:</strong> 1,500-3,000 words</li>
+                <li><strong>Academic Essay:</strong> 3,000-6,000 words</li>
+                <li><strong>Original Research:</strong> 3,000-8,000 words</li>
+                <li><strong>Systematic Review:</strong> 4,000-10,000 words</li>
+              </ul>
             </li>
-            <li><strong>Reference List (Scientific Journal Example):</strong>
-              <div class="example-box">
-                Dittmar, Emily L., and Douglas W. Schemske. 2023. "Temporal Variation in Selection Influences Microgeographic Local Adaptation." <em>American Naturalist</em> 202 (4): 471-85. https://doi.org/10.1086/725865.
-              </div>
+            <li><strong>What counts as a "word"?</strong> Everything: title, abstract, main text, footnotes, references, tables (each cell counts).</li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- ================= SECTION 3: CITATION ================= -->
+      <h2>3. Citation and References</h2>
+
+      <details>
+        <summary>3.1 What Citation Style Do We Use?</summary>
+        <div class="details-content">
+          <p>The journal uses the <strong>Chicago Manual of Style (17th ed.), Author-Date system</strong>. This means:</p>
+          
+          <ul>
+            <li><strong>Parenthetical citation in text:</strong> Author's last name + year of publication, in parentheses</li>
+            <li><strong>Alphabetical list at the end:</strong> All complete references, ordered by last name</li>
+          </ul>
+
+          <div class="example-box">
+            <strong>Examples of in-text citations:</strong><br><br>
+            <strong>Paraphrase (you rephrase the idea):</strong><br>
+            Evolution is a gradual process (Darwin 1859)<br><br>
+            <strong>Direct quote (you copy verbatim):</strong><br>
+            "Natural selection works slowly" (Darwin 1859, 78)<br><br>
+            <strong>Two authors:</strong><br>
+            (Pérez and González 2022)<br><br>
+            <strong>Three or more authors:</strong><br>
+            (Smith et al. 2021)
+          </div>
+
+          <div class="example-box">
+            <strong>Examples in the reference list:</strong><br><br>
+            <strong>Journal article:</strong><br>
+            Dittmar, Emily L., and Douglas W. Schemske. 2023. "Temporal Variation in Selection Influences Microgeographic Local Adaptation." <em>American Naturalist</em> 202 (4): 471-85. https://doi.org/10.1086/725865.<br><br>
+            <strong>Book:</strong><br>
+            Darwin, Charles. 1859. <em>On the Origin of Species</em>. London: John Murray.<br><br>
+            <strong>Book chapter:</strong><br>
+            Smith, John. 2020. "Evolutionary Theory Today." In <em>Modern Biology</em>, edited by Ana Pérez, 45-67. Madrid: Scientific Publishing.
+          </div>
+
+          <div class="tip-box">
+            <i class="fa-solid fa-lightbulb"></i>
+            <strong>Recommendation:</strong> Use free bibliographic managers like <a href="https://www.zotero.org/" target="_blank">Zotero</a> or <a href="https://www.mendeley.com/" target="_blank">Mendeley</a>. They automatically export in Chicago 17 format. They will save you hours of work and errors.
+          </div>
+        </div>
+      </details>
+
+      <!-- ================= SECTION 4: CLASSIFICATION ================= -->
+      <h2>4. Classification: Keywords and Controlled Vocabularies</h2>
+
+      <details>
+        <summary>4.1 What Are Controlled Vocabularies and Why Do They Matter?</summary>
+        <div class="details-content">
+          <p><strong>Simple definition:</strong> They are official lists of standardized terms that academic databases use to classify and find articles. They are like "official tags" that help your article appear in relevant searches.</p>
+          
+          <ul>
+            <li><strong>Why do we ask for them?</strong>
+              <ul>
+                <li>Your article will be found by other researchers in international databases</li>
+                <li>Guarantees that you use recognized terminology in your discipline</li>
+                <li>Facilitates the assignment of specialized reviewers</li>
+              </ul>
             </li>
-            <li>The use of bibliographic managers (Zotero, Mendeley) is strongly recommended. Every article cited in the text must appear in the references, and vice versa.</li>
+            <li><strong>How do they work?</strong> Instead of using your own words, you search the thesaurus for the official term that best describes your topic. For example, instead of "heart attack", MeSH uses "Myocardial Infarction".</li>
           </ul>
         </div>
       </details>
 
       <details>
-        <summary>1.4 Classification: Keywords and Codes</summary>
+        <summary>4.2 How Do I Search in Each Controlled Vocabulary?</summary>
         <div class="details-content">
-          <p>To ensure global indexing, you must provide exact identifiers:</p>
+          <p>Here we explain step by step how to use each system according to your discipline:</p>
+          
+          <h3>Health and Medicine: MeSH (Medical Subject Headings)</h3>
           <ul>
-            <li><strong>Keywords:</strong> 3 to 6 terms (in English and Spanish).</li>
-            <li><strong>Controlled Vocabularies:</strong> You must search for the exact alphanumeric code corresponding to your discipline. Only enter the code in the system, not the text.
+            <li><strong>What is it?</strong> The thesaurus of the U.S. National Library of Medicine</li>
+            <li><strong>How to search?</strong>
+              <ol>
+                <li>Go to <a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov/search</a></li>
+                <li>Type your term in English (e.g., "heart attack")</li>
+                <li>The system will show you the official term: "Myocardial Infarction"</li>
+                <li>Use that exact term (in English) as a keyword</li>
+              </ol>
+            </li>
+            <li><strong>Does it have codes?</strong> Yes (e.g., D009203), but it is not necessary to enter them in the system. Just use the term in English.</li>
+          </ul>
+
+          <h3>Economics: JEL (Journal of Economic Literature)</h3>
+          <ul>
+            <li><strong>What is it?</strong> Classification system of the American Economic Association</li>
+            <li><strong>How to search?</strong>
+              <ol>
+                <li>Go to <a href="https://www.aeaweb.org/econlit/jelCodes.php" target="_blank">aeaweb.org/econlit/jelCodes.php</a></li>
+                <li>Browse by categories (e.g., F - International Economics)</li>
+                <li>Select the specific code (e.g., F50 - International Relations and International Political Economy)</li>
+                <li>Enter the alphanumeric code in your submission</li>
+              </ol>
+            </li>
+            <li><strong>Does it have codes?</strong> Yes, it uses alphanumeric codes (letter + numbers). It is one of the few systems that uses them.</li>
+          </ul>
+
+          <h3>Computer Science: ACM CCS (Computing Classification System)</h3>
+          <ul>
+            <li><strong>What is it?</strong> Classification system of the Association for Computing Machinery</li>
+            <li><strong>How to search?</strong>
+              <ol>
+                <li>Go to <a href="https://dl.acm.org/ccs" target="_blank">dl.acm.org/ccs</a></li>
+                <li>Use the search engine or browse hierarchical categories</li>
+                <li>Each term has an associated code (e.g., "Machine learning" = Computing methodologies~Machine learning)</li>
+                <li>Copy the complete term with its hierarchy</li>
+              </ol>
+            </li>
+            <li><strong>Does it have codes?</strong> Uses descriptive terms with hierarchy, not simple numerical codes.</li>
+          </ul>
+
+          <h3>Humanities and Social Sciences: UNESCO Thesaurus</h3>
+          <ul>
+            <li><strong>What is it?</strong> Multidisciplinary thesaurus of UNESCO</li>
+            <li><strong>How to search?</strong>
+              <ol>
+                <li>Go to <a href="https://vocabularies.unesco.org/browser/thesaurus/en/" target="_blank">vocabularies.unesco.org</a></li>
+                <li>Type your term in English</li>
+                <li>Browse related terms</li>
+                <li>Use the exact term that appears in the thesaurus</li>
+              </ol>
+            </li>
+            <li><strong>Does it have codes?</strong> Does not use alphanumeric codes. Only descriptive terms.</li>
+          </ul>
+
+          <h3>Mathematics: MSC 2020 (Mathematics Subject Classification)</h3>
+          <ul>
+            <li><strong>What is it?</strong> Classification system of the American Mathematical Society</li>
+            <li><strong>How to search?</strong>
+              <ol>
+                <li>Go to <a href="https://mathscinet.ams.org/mathscinet/msc/msc2020.html" target="_blank">mathscinet.ams.org</a></li>
+                <li>Browse by mathematical areas</li>
+                <li>Each area has specific codes (e.g., 03-XX Mathematical logic and foundations)</li>
+                <li>Select the most specific code for your topic</li>
+              </ol>
+            </li>
+            <li><strong>Does it have codes?</strong> Yes, it uses hierarchical alphanumeric codes.</li>
+          </ul>
+
+          <div class="tip-box">
+            <i class="fa-solid fa-table"></i>
+            <strong>Complete table:</strong> Find the <a href="https://www.revistacienciasestudiantes.com/policiesEN.html#controlled-vocabularies" target="_blank">complete table of controlled vocabularies here</a> with all systems accepted by discipline.
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>4.3 Keywords</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>How many?</strong> 3 to 6 terms</li>
+            <li><strong>In what language?</strong> English and Spanish (technical translation)</li>
+            <li><strong>How to choose them?</strong>
               <ul>
-                <li><strong>Health/Medicine:</strong> <a href="https://meshb.nlm.nih.gov/search" target="_blank">MeSH</a> thesaurus (e.g., <code>D008112</code>)</li>
-                <li><strong>Economics:</strong> <a href="https://www.aeaweb.org/econlit/jelCodes.php" target="_blank">JEL</a> classification (e.g., <code>F50</code>)</li>
-                <li><strong>Computer Science:</strong> <a href="https://dl.acm.org/ccs" target="_blank">ACM CCS</a> classification</li>
-                <li><strong>Humanities:</strong> <a href="https://vocabularies.unesco.org/browser/thesaurus/en/" target="_blank">UNESCO</a> thesaurus</li>
-                <li><strong>Mathematics:</strong> <a href="https://mathscinet.ams.org/mathscinet/msc/msc2020.html" target="_blank">MSC 2020</a> classification</li>
+                <li>Use specific terms, not general ones (better "multiple linear regression" than "statistics")</li>
+                <li>Combine controlled vocabulary with commonly used terms in your field</li>
+                <li>Think: what words would someone search to find your article?</li>
+              </ul>
+            </li>
+          </ul>
+
+          <div class="example-box">
+            <strong>Example:</strong><br>
+            <strong>English:</strong> environmental education; climate change; student perception; school curriculum; sustainable development<br><br>
+            <strong>Spanish:</strong> educación ambiental; cambio climático; percepción estudiantil; currículo escolar; desarrollo sostenible
+          </div>
+        </div>
+      </details>
+
+      <!-- ================= SECTION 5: ETHICS ================= -->
+      <h2>5. Ethics and Originality</h2>
+
+      <details>
+        <summary>5.1 Plagiarism and Similarity</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>What is plagiarism?</strong> Using ideas, text, or data from others without properly citing</li>
+            <li><strong>Similarity limit:</strong> Maximum <strong>15%</strong> detected by specialized software (Turnitin/iThenticate)</li>
+            <li><strong>How to avoid it?</strong>
+              <ul>
+                <li>Always cite when you use others' ideas (even if you rephrase them)</li>
+                <li>Use quotation marks for verbatim quotes</li>
+                <li>Truly paraphrase: understand the idea and write it in your own words, don't just change some words</li>
               </ul>
             </li>
           </ul>
@@ -818,19 +1248,51 @@
       </details>
 
       <details>
-        <summary>1.5 Ethics, Originality, and Artificial Intelligence</summary>
+        <summary>5.2 Use of Artificial Intelligence</summary>
         <div class="details-content">
           <ul>
-            <li><strong>Originality:</strong> Maximum tolerance for similarity (plagiarism) of <strong>15%</strong> detected by specialized software (e.g., Turnitin/iThenticate).</li>
-            <li><strong>Use of AI:</strong> The use of AI (LLMs) is permitted exclusively for improving writing or translation. <strong>It is strictly prohibited</strong> to use it to generate data, analyses, scientific images, or conclusions. Its use must be declared in the cover letter.</li>
-            <li><strong>Data Availability:</strong> It is mandatory to include a "Data Availability Statement" at the end of the manuscript, indicating in which public repository the data is located, or the justification for its privacy.</li>
-            <li><strong>Conflicts of Interest:</strong> Mandatory declaration of funding or relationships that may bias the research.</li>
+            <li><strong>What is allowed?</strong> Use of AI (ChatGPT, Claude, etc.) for:
+              <ul>
+                <li>Improving writing and clarity</li>
+                <li>Translating abstracts</li>
+                <li>Suggesting restructuring</li>
+                <li>Correcting grammar</li>
+              </ul>
+            </li>
+            <li><strong>What is prohibited?</strong>
+              <ul>
+                <li>Generating false or simulated data</li>
+                <li>Creating statistical analyses without verification</li>
+                <li>Generating scientific images</li>
+                <li>Writing conclusions without support from your data</li>
+              </ul>
+            </li>
+            <li><strong>Should I declare it?</strong> Yes, in the cover letter indicate: "ChatGPT was used to improve the writing of the abstract in English" or similar.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>5.3 Mandatory Declarations</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>Data Availability:</strong> Where is your data? Can others access it?
+              <div class="example-box">
+                <strong>Example:</strong> "The data supporting this study are available in the institutional repository [URL] or upon reasonable request to the corresponding author."
+              </div>
+            </li>
+            <li><strong>Conflicts of Interest:</strong> Did you receive funding? Any interest that could bias?
+              <div class="example-box">
+                <strong>Example:</strong> "The authors declare no conflicts of interest." or "This study was funded by [scholarship/name]."
+              </div>
+            </li>
+            <li><strong>Use of AI:</strong> If you used AI tools, declare it specifically.</li>
           </ul>
         </div>
       </details>
 
       <!-- PRE-SUBMISSION CHECKLIST -->
-      <h2>2. Pre-Submission Verification Checklist</h2>
+      <h2>6. Pre-Submission Verification Checklist</h2>
       <p style="color: var(--text-muted); margin-bottom: 30px;">
         This interactive tool will help you confirm that you meet the technical criteria before accessing the submission system.
       </p>
@@ -850,32 +1312,37 @@
         <form id="submission-checklist">
           <div class="checklist-item">
             <input type="checkbox" id="check1" class="check-input">
-            <label for="check1">The document is in <strong>.docx</strong> format and has been fully <strong>anonymized</strong> (no names, institutions, or file properties).</label>
+            <label for="check1">I have identified the <strong>type of article</strong> I am going to submit and know its specific structure.</label>
           </div>
 
           <div class="checklist-item">
             <input type="checkbox" id="check2" class="check-input">
-            <label for="check2">An <strong>Abstract</strong> of 150–250 words is included in English and Spanish, logically structured.</label>
+            <label for="check2">The document is in <strong>.docx</strong> format and has been fully <strong>anonymized</strong> (no names, institutions, or metadata).</label>
           </div>
 
           <div class="checklist-item">
             <input type="checkbox" id="check3" class="check-input">
-            <label for="check3">The manuscript respects the length limit (<strong>1,000 to 10,000 words</strong>) and uses the processor's hierarchical <strong>heading styles</strong>.</label>
+            <label for="check3">I have used Word's <strong>heading styles</strong> correctly (Heading 1, Heading 2, etc.) to structure hierarchically.</label>
           </div>
 
           <div class="checklist-item">
             <input type="checkbox" id="check4" class="check-input">
-            <label for="check4">All citations and the reference list are strictly formatted under <strong>Chicago 17th edition (Author-Date)</strong>.</label>
+            <label for="check4">An <strong>Abstract</strong> of 150-250 words is included in English and Spanish.</label>
           </div>
 
           <div class="checklist-item">
             <input type="checkbox" id="check5" class="check-input">
-            <label for="check5">I have identified my <strong>classification codes</strong> (e.g., JEL, MeSH) and keywords to enter into the system.</label>
+            <label for="check5">All citations and references are formatted under <strong>Chicago 17th edition (Author-Date)</strong>.</label>
           </div>
 
           <div class="checklist-item">
             <input type="checkbox" id="check6" class="check-input">
-            <label for="check6">I have drafted the mandatory declarations: <strong>Data Availability</strong>, Conflicts of Interest, and Use of AI (if applicable).</label>
+            <label for="check6">I have searched and noted the <strong>classification terms or codes</strong> in the controlled vocabulary corresponding to my discipline.</label>
+          </div>
+
+          <div class="checklist-item">
+            <input type="checkbox" id="check7" class="check-input">
+            <label for="check7">I have drafted the mandatory declarations: <strong>Data Availability</strong>, Conflicts of Interest, and Use of AI (if applicable).</label>
           </div>
         </form>
 
@@ -889,7 +1356,7 @@
       </div>
 
       <!-- EDITORIAL PROCESS -->
-      <h2>3. Editorial Review Flow</h2>
+      <h2>7. Editorial Review Flow</h2>
       <p style="color: var(--text-muted); margin-bottom: 20px;">
         Transparency is a pillar of our journal. This is the standard journey of your manuscript from submission to publication.
       </p>
