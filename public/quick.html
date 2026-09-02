@@ -413,21 +413,53 @@
       letter-spacing: 0.05em;
     }
 
-    .tip-box {
-      background-color: #EFF6FF;
-      border: 1px solid #BFDBFE;
-      border-left: 4px solid #3B82F6;
-      padding: 15px 20px;
-      margin: 15px 0;
-      border-radius: 4px;
-      font-size: 0.9em;
-      color: #1E40AF;
-    }
+.tip-box {
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border: 1px solid var(--border-soft);
+  border-left: 4px solid var(--brand-navy-light);
+  padding: 20px 25px;
+  margin: 20px 0;
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
 
-    .tip-box i {
-      margin-right: 8px;
-      color: #3B82F6;
-    }
+.tip-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 107, 0, 0.03));
+  pointer-events: none;
+}
+
+.tip-box:hover {
+  border-color: var(--brand-orange);
+  box-shadow: var(--shadow-md);
+  transform: translateX(4px);
+}
+
+.tip-box i {
+  margin-right: 12px;
+  color: var(--brand-orange);
+  font-size: 1.1em;
+  transition: transform 0.3s ease;
+}
+
+.tip-box:hover i {
+  transform: scale(1.1);
+}
+
+.tip-box strong {
+  color: var(--brand-navy);
+  font-weight: 700;
+}
 
     code {
       background-color: #F1F5F9;
