@@ -16,31 +16,33 @@
   <style>
     :root {
       /* Paleta Premium Editorial */
-      --brand-navy: #0B192C;       /* Azul profundo y autoritario */
-      --brand-navy-light: #1A365D; /* Azul secundario */
-      --brand-orange: #FF6B00;     /* Naranja vibrante para acciones */
+      --brand-navy: #0B192C;
+      --brand-navy-light: #1A365D;
+      --brand-orange: #FF6B00;
       --brand-orange-light: #FFF0E6;
-
+      
       --text-main: #1E293B;
       --text-muted: #64748B;
       --text-light: #94A3B8;
-
-      --bg-page: #F8FAFC;          /* Fondo gris muy sutil */
+      
+      --bg-page: #F8FAFC;
       --bg-card: #FFFFFF;
-
+      
       --border-soft: #E2E8F0;
       --border-medium: #CBD5E1;
-
+      
       --success: #10B981;
       --success-bg: #ECFDF5;
-
+      --warning: #F59E0B;
+      --warning-bg: #FFFBEB;
+      
       --font-serif: 'Merriweather', serif;
       --font-sans: 'Inter', sans-serif;
-
+      
       --shadow-sm: 0 1px 3px rgba(11, 25, 44, 0.05);
       --shadow-md: 0 4px 15px rgba(11, 25, 44, 0.08);
       --shadow-lg: 0 10px 25px rgba(11, 25, 44, 0.12);
-
+      
       --radius-sm: 6px;
       --radius-md: 12px;
       --radius-lg: 16px;
@@ -51,7 +53,7 @@
     body {
       font-family: var(--font-sans);
       font-size: 16px;
-      line-height: 1.6;
+      line-height: 1.7;
       margin: 0;
       padding: 0;
       background-color: var(--bg-page);
@@ -292,6 +294,15 @@
       background-color: var(--brand-orange);
     }
 
+    h3 {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      color: var(--brand-navy-light);
+      margin-top: 1.5em;
+      margin-bottom: 1em;
+      font-weight: 700;
+    }
+
     /* ================= ACORDEONES (DETAILS) ================= */
     details {
       background-color: white;
@@ -367,7 +378,7 @@
       padding-left: 1.5em;
     }
 
-    .details-content li { margin-bottom: 12px; }
+    .details-content li { margin-bottom: 15px; }
     .details-content strong { color: var(--brand-navy); }
 
     .details-content a {
@@ -402,6 +413,22 @@
       letter-spacing: 0.05em;
     }
 
+    .tip-box {
+      background-color: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      border-left: 4px solid #3B82F6;
+      padding: 15px 20px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: #1E40AF;
+    }
+
+    .tip-box i {
+      margin-right: 8px;
+      color: #3B82F6;
+    }
+
     code {
       background-color: #F1F5F9;
       color: #0F172A;
@@ -410,6 +437,32 @@
       font-family: 'Courier New', Courier, monospace;
       font-size: 0.9em;
       border: 1px solid #E2E8F0;
+    }
+
+    /* Tabla de tipos de artículos */
+    .article-types-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.9rem;
+    }
+
+    .article-types-table th {
+      background-color: var(--brand-navy);
+      color: white;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .article-types-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-soft);
+      vertical-align: top;
+    }
+
+    .article-types-table tr:hover {
+      background-color: #F8FAFC;
     }
 
     /* ================= CHECKLIST INTERACTIVO ================= */
@@ -655,6 +708,7 @@
       .checklist-container { padding: 25px 15px; }
       .editorial-process { padding-left: 20px; }
       .step-number { left: -38px; width: 30px; height: 30px; font-size: 1rem; }
+      .article-types-table { font-size: 0.8rem; }
     }
   </style>
 </head>
@@ -717,15 +771,220 @@
         </div>
       </div>
 
-      <h2>1. Estructura y Formato del Manuscrito</h2>
+      <!-- ================= SECCIÓN 1: TIPOS DE ARTÍCULOS ================= -->
+      <h2>1. ¿Qué tipo de artículo voy a escribir?</h2>
+      
+      <div class="tip-box">
+        <i class="fa-solid fa-lightbulb"></i>
+        <strong>Paso 1:</strong> Antes de empezar, identifica qué tipo de artículo vas a enviar. Cada tipo tiene requisitos específicos de estructura y contenido.
+      </div>
+
+      <table class="article-types-table">
+        <thead>
+          <tr>
+            <th>Tipo de Artículo</th>
+            <th>¿Qué es?</th>
+            <th>Estructura Básica</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Investigación Original</strong></td>
+            <td>Presenta resultados nuevos de un estudio propio (experimento, encuesta, análisis de datos)</td>
+            <td>Introducción → Métodos → Resultados → Discusión → Conclusión (IMRyD)</td>
+          </tr>
+          <tr>
+            <td><strong>Ensayo Académico</strong></td>
+            <td>Analiza un tema con argumentos basados en fuentes bibliográficas</td>
+            <td>Tesis → Argumentos → Contraargumentos → Conclusión</td>
+          </tr>
+          <tr>
+            <td><strong>Ensayo Reflexivo</strong></td>
+            <td>Expone reflexiones personales sobre una experiencia o lectura</td>
+            <td>Experiencia → Análisis personal → Conexión teórica → Aprendizaje</td>
+          </tr>
+          <tr>
+            <td><strong>Reporte de Caso</strong></td>
+            <td>Describe un caso único e interesante (clínico, social, técnico)</td>
+            <td>Presentación del caso → Diagnóstico/Análisis → Intervención → Seguimiento</td>
+          </tr>
+          <tr>
+            <td><strong>Revisión Sistemática</strong></td>
+            <td>Resume críticamente la literatura existente sobre una pregunta específica</td>
+            <td>Pregunta → Metodología de búsqueda → Análisis → Conclusiones</td>
+          </tr>
+          <tr>
+            <td><strong>Book Review</strong></td>
+            <td>Reseña crítica de un libro académico reciente</td>
+            <td>Datos del libro → Resumen → Análisis crítico → Recomendación</td>
+          </tr>
+        </tbody>
+      </table>
 
       <details>
-        <summary>1.0 El Resumen (Abstract) – La puerta de entrada</summary>
+        <summary>1.1 Estructuras específicas para cada tipo</summary>
+        <div class="details-content">
+          <h3>Investigación Original</h3>
+          <ul>
+            <li><strong>Introducción:</strong> Contexto, problema, objetivos (¿por qué hiciste esto?)</li>
+            <li><strong>Métodos:</strong> Diseño, participantes, instrumentos, procedimiento (¿cómo lo hiciste?)</li>
+            <li><strong>Resultados:</strong> Hallazgos, datos, tablas, figuras (¿qué encontraste?)</li>
+            <li><strong>Discusión:</strong> Interpretación, comparación con literatura, limitaciones (¿qué significa?)</li>
+            <li><strong>Conclusión:</strong> Síntesis de aportes y futuras líneas de investigación</li>
+          </ul>
+
+          <h3>Ensayo Académico</h3>
+          <ul>
+            <li><strong>Tesis clara:</strong> Tu argumento principal en el primer párrafo</li>
+            <li><strong>Desarrollo:</strong> 3-4 argumentos con evidencia (citas, datos, ejemplos)</li>
+            <li><strong>Contraargumentos:</strong> Reconocer y refutar posiciones contrarias</li>
+            <li><strong>Conclusión:</strong> Reafirmar tesis y proponer implicaciones</li>
+          </ul>
+
+          <h3>Reporte de Caso</h3>
+          <ul>
+            <li><strong>Contexto:</strong> ¿Por qué este caso es único o relevante?</li>
+            <li><strong>Descripción detallada:</strong> Datos objetivos, cronología, observaciones</li>
+            <li><strong>Análisis:</strong> ¿Qué lo hace especial? Comparación con literatura</li>
+            <li><strong>Lecciones aprendidas:</strong> ¿Qué pueden aprender otros profesionales/estudiantes?</li>
+          </ul>
+
+          <h3>Revisión Sistemática</h3>
+          <ul>
+            <li><strong>Pregunta de investigación:</strong> Formulada con criterios PICO (Población, Intervención, Comparación, Outcome)</li>
+            <li><strong>Estrategia de búsqueda:</strong> Bases de datos consultadas, términos, fechas, criterios de inclusión/exclusión</li>
+            <li><strong>Diagrama de flujo:</strong> Cuántos artículos encontrados, excluidos, incluidos</li>
+            <li><strong>Síntesis:</strong> Resumen de hallazgos, calidad de evidencia, heterogeneidad</li>
+          </ul>
+
+          <h3>Book Review</h3>
+          <ul>
+            <li><strong>Ficha bibliográfica:</strong> Autor, título, editorial, año, ISBN, páginas</li>
+            <li><strong>Resumen objetivo:</strong> Ideas principales del libro (sin spoilers innecesarios)</li>
+            <li><strong>Análisis crítico:</strong> Fortalezas, debilidades, aporte al campo</li>
+            <li><strong>Recomendación:</strong> ¿Para quién es útil este libro?</li>
+          </ul>
+
+          <div class="tip-box">
+            <i class="fa-solid fa-circle-info"></i>
+            <strong>Recuerda:</strong> Si tienes dudas sobre qué tipo corresponde, escribe a <code>editor@revistacienciasestudiantes.com</code> con un resumen de 100 palabras de tu idea y te orientaremos.
+          </div>
+        </div>
+      </details>
+
+      <!-- ================= SECCIÓN 2: FORMATO Y PREPARACIÓN ================= -->
+      <h2>2. Formato y Preparación del Manuscrito</h2>
+
+      <details>
+        <summary>2.1 ¿Cómo preparo mi archivo correctamente?</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>Formato de archivo:</strong> Solo aceptamos <strong>Microsoft Word (.docx)</strong>. Si usas Google Docs, ve a "Archivo → Descargar → Microsoft Word (.docx)". Si usas LaTeX, exporta mediante Pandoc o un conversor online.</li>
+            <li><strong>Tipo de letra:</strong> Times New Roman, tamaño 12, interlineado 1.5 (esto es estándar y facilita la lectura)</li>
+            <li><strong>Márgenes:</strong> 2.5 cm en todos los lados (configuración por defecto de Word)</li>
+            <li><strong>Numeración de páginas:</strong> Incluir en la parte inferior derecha</li>
+          </ul>
+
+          <div class="example-box">
+            <strong>¿Cómo configurar Word?</strong><br>
+            Abre Word → pestaña "Diseño" → "Márgenes" → "Normal (2.5 cm)"<br>
+            Pestaña "Inicio" → selecciona todo (Ctrl+E) → elige "Times New Roman", tamaño 12<br>
+            Pestaña "Diseño" → "Espaciado entre párrafos" → "1.5 líneas"
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>2.2 ¿Cómo uso los títulos y subtítulos (Heading Styles)?</summary>
+        <div class="details-content">
+          <p><strong>¿Qué son los "Heading Styles"?</strong> Son los estilos predefinidos de Word que estructuran jerárquicamente tu documento (como un árbol genealógico). No es lo mismo que simplemente poner texto en negrita y tamaño más grande.</p>
+          
+          <ul>
+            <li><strong>¿Por qué son importantes?</strong>
+              <ul>
+                <li>El sistema editorial los detecta automáticamente para crear la tabla de contenidos</li>
+                <li>Facilitan la navegación del revisor en el documento</li>
+                <li>Ayudan en la conversión a PDF/HTML para la publicación final</li>
+              </ul>
+            </li>
+            <li><strong>¿Cómo aplicarlos?</strong>
+              <div class="example-box">
+                <strong>Pasos en Word:</strong><br>
+                1. Selecciona el texto del título<br>
+                2. Ve a la pestaña "Inicio"<br>
+                3. En la sección "Estilos", elige "Título 1" (para secciones principales), "Título 2" (para subsecciones), "Título 3" (para sub-subsecciones)
+              </div>
+            </li>
+            <li><strong>Ejemplo de jerarquía correcta:</strong>
+              <div class="example-box">
+                <strong>Título 1:</strong> Metodología<br>
+                <strong>&nbsp;&nbsp;Título 2:</strong> Participantes<br>
+                <strong>&nbsp;&nbsp;Título 2:</strong> Instrumentos<br>
+                <strong>&nbsp;&nbsp;&nbsp;&nbsp;Título 3:</strong> Encuesta de satisfacción<br>
+                <strong>Título 1:</strong> Resultados
+              </div>
+            </li>
+          </ul>
+
+          <div class="tip-box">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <strong>Error común:</strong> Simular títulos con "negrita + tamaño 16 + centrado". Esto no es detectado por el sistema y causa problemas técnicos. ¡Usa los estilos predefinidos!
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>2.3 Anonimización para Revisión por Pares Doble Ciego</summary>
+        <div class="details-content">
+          <p><strong>¿Qué significa "doble ciego"?</strong> Ni los revisores saben quién eres, ni tú sabrás quiénes son ellos. Esto garantiza imparcialidad.</p>
+          
+          <ul>
+            <li><strong>¿Qué debo eliminar del manuscrito?</strong>
+              <ul>
+                <li>Tu nombre y el de coautores (en la primera página y en encabezados/pies de página)</li>
+                <li>Afiliación institucional (universidad, colegio, laboratorio)</li>
+                <li>Agradecimientos que revelen identidad (tutor, profesor, beca específica)</li>
+                <li>Nombres de proyectos con financiamiento identificable</li>
+                <li>Auto-citas que digan "como mostramos en nuestro estudio anterior (Pérez 2023)"</li>
+              </ul>
+            </li>
+            <li><strong>¿Cómo manejo la información eliminada?</strong>
+              <div class="tip-box">
+                <i class="fa-solid fa-lightbulb"></i>
+                <strong>La regla de los dos archivos:</strong><br>
+                <strong>Archivo A (para enviar a revisión):</strong> Completamente anónimo, sin rastros de identidad<br>
+                <strong>Archivo B (para ti, no lo envías):</strong> Con todos los datos completos<br><br>
+                Cuando el artículo sea ACEPTADO, enviarás el Archivo B para la publicación final con todos tus datos.
+              </div>
+            </li>
+            <li><strong>¿Cómo reemplazo auto-citas?</strong>
+              <div class="example-box">
+                <strong>En lugar de:</strong> "Como demostramos previamente (Pérez y González 2022)..."<br>
+                <strong>Escribe:</strong> "Como se ha demostrado previamente ([Autor anonimizado] 2022)..."<br><br>
+                En la lista de referencias, también reemplaza:<br>
+                <strong>Antes:</strong> Pérez, J. y González, M. (2022)...<br>
+                <strong>Después:</strong> [Autor anonimizado]. (2022)...
+              </div>
+            </li>
+            <li><strong>¿Qué pasa con los metadatos del archivo?</strong>
+              <div class="example-box">
+                <strong>Cómo eliminar metadatos en Word:</strong><br>
+                Archivo → Información → "Inspeccionar documento" → "Inspeccionar" → "Quitar todo" en propiedades del documento e información personal
+              </div>
+            </li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>2.4 El Resumen (Abstract) – La puerta de entrada</summary>
         <div class="details-content">
           <p><strong>¿Qué es?</strong> Es una síntesis breve y autónoma de tu artículo. Es el elemento principal (y a veces el único) que lee un editor o revisor para decidir evaluar tu trabajo.</p>
+          
           <ul>
             <li><strong>Longitud:</strong> Entre <strong>150 y 250 palabras</strong>. Excluye citas bibliográficas y fórmulas complejas.</li>
-            <li><strong>Estructura IMRyD sugerida:</strong>
+            <li><strong>Idioma:</strong> Se requiere versión en español e inglés (Abstract) con traducción técnica fiel.</li>
+            <li><strong>¿Qué incluir?</strong>
               <ul>
                 <li><strong>Contexto:</strong> ¿Qué se estudia y por qué importa? (1-2 frases)</li>
                 <li><strong>Objetivo:</strong> ¿Qué buscabas responder? (1 frase)</li>
@@ -734,83 +993,222 @@
                 <li><strong>Conclusión:</strong> Implicancia de tu hallazgo. (1 frase)</li>
               </ul>
             </li>
-            <li><strong>Idioma:</strong> Se requiere versión en español e inglés (Abstract) con traducción técnica fiel.</li>
           </ul>
+          
           <div class="example-box">
-            <strong>Ejemplo Estructural:</strong>
+            <strong>Ejemplo Estructural (Investigación Original):</strong><br>
             <em>"Este estudio examina el efecto de la música clásica en la concentración de estudiantes universitarios. Utilizando un diseño experimental con 60 participantes, se comparó el rendimiento en una prueba de atención con y sin música de fondo. Los resultados muestran una mejora del 15% en tareas de memoria a corto plazo con música instrumental (p &lt; 0.05), aunque sin diferencias en tareas de razonamiento. Se concluye que la música ambiental es una herramienta viable para optimizar procesos cognitivos específicos en entornos académicos."</em>
           </div>
-        </div>
-      </details>
 
-      <details>
-        <summary>1.1 El archivo y la preparación para Doble Ciego</summary>
-        <div class="details-content">
-          <ul>
-            <li><strong>Formato:</strong> Exclusivamente <strong>Microsoft Word (.docx)</strong>. Usuarios de LaTeX deben convertir mediante Pandoc.</li>
-            <li><strong>Revisión Doble Ciego (Double-blind peer review):</strong> Para garantizar la imparcialidad, los revisores no conocerán tu identidad, ni tú la de ellos.</li>
-            <li><strong>Instrucciones de Anonimización:</strong>
-              <ul>
-                <li>Elimina nombres de autores y afiliaciones debajo del título.</li>
-                <li>En la sección de Agradecimientos, omite nombres de tutores, becas o universidades.</li>
-                <li>Si te auto-citas, reemplaza tu nombre en el texto y bibliografía por <em>"[Autor anonimizado]"</em>.</li>
-                <li>Limpia los metadatos del archivo Word (Archivo > Información > Inspeccionar documento).</li>
-              </ul>
-            </li>
-          </ul>
-        </div>
-      </details>
-
-      <details>
-        <summary>1.2 Extensión y Jerarquía de Títulos</summary>
-        <div class="details-content">
-          <ul>
-            <li><strong>Extensión:</strong> Entre <strong>1.000 y 10.000 palabras</strong> (incluyendo referencias). Excesos significativos requerirán justificación o serán devueltos para reducción.</li>
-            <li><strong>Jerarquía (Headings):</strong> Utiliza estrictamente los estilos predeterminados de tu procesador de texto (Título 1, Título 2, Título 3). No simules jerarquías usando solo negrita o aumento de fuente manual.</li>
-          </ul>
           <div class="example-box">
-            <strong>Estructura requerida:</strong><br>
-            <code>Título 1: Resultados</code><br>
-            <code>&nbsp;&nbsp;Título 2: Análisis Descriptivo de la Encuesta</code><br>
-            <code>&nbsp;&nbsp;&nbsp;&nbsp;Título 3: Variaciones por Rango Etario</code>
+            <strong>Ejemplo para Book Review:</strong><br>
+            <em>"Esta reseña analiza 'El Gen Egoísta' de Richard Dawkins, evaluando su contribución a la divulgación científica y su vigencia después de cuatro décadas. Se examinan los conceptos centrales propuestos por el autor, contrastándolos con desarrollos posteriores en biología evolutiva. La obra destaca por su claridad expositiva, aunque presenta limitaciones en la discusión sobre altruismo y selección de grupo. Se recomienda como lectura fundamental para estudiantes de biología y público general interesado en evolución."</em>
           </div>
         </div>
       </details>
 
       <details>
-        <summary>1.3 Citación y Referencias (Chicago 17 Autor-Fecha)</summary>
+        <summary>2.5 Extensión y límites</summary>
         <div class="details-content">
-          <p>La revista emplea el <strong>Manual de Estilo de Chicago (17.ª ed.), sistema Autor-Fecha</strong>. Requiere cita parentética en el texto y lista alfabética al final.</p>
           <ul>
-            <li><strong>Cita en texto:</strong>
-              <div class="example-box">
-                <em>Parafraseo:</em> La evolución es un proceso gradual (Darwin 1859).<br>
-                <em>Cita directa:</em> (Darwin 1859, 78).
-              </div>
+            <li><strong>Extensión general:</strong> Entre <strong>1.000 y 10.000 palabras</strong> (incluyendo referencias).</li>
+            <li><strong>Variaciones por tipo:</strong>
+              <ul>
+                <li><strong>Book Review:</strong> 1.000-2.000 palabras</li>
+                <li><strong>Reporte de Caso:</strong> 2.000-4.000 palabras</li>
+                <li><strong>Ensayo Reflexivo:</strong> 1.500-3.000 palabras</li>
+                <li><strong>Ensayo Académico:</strong> 3.000-6.000 palabras</li>
+                <li><strong>Investigación Original:</strong> 3.000-8.000 palabras</li>
+                <li><strong>Revisión Sistemática:</strong> 4.000-10.000 palabras</li>
+              </ul>
             </li>
-            <li><strong>Lista de Referencias (Ejemplo de Revista Científica):</strong>
-              <div class="example-box">
-                Dittmar, Emily L., y Douglas W. Schemske. 2023. «Temporal Variation in Selection Influences Microgeographic Local Adaptation». <em>American Naturalist</em> 202 (4): 471-85. https://doi.org/10.1086/725865.
-              </div>
+            <li><strong>¿Qué cuenta como "palabra"?</strong> Todo: título, resumen, texto principal, notas al pie, referencias, tablas (cada celda cuenta).</li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- ================= SECCIÓN 3: CITACIÓN ================= -->
+      <h2>3. Citación y Referencias</h2>
+
+      <details>
+        <summary>3.1 ¿Qué estilo de citación usamos?</summary>
+        <div class="details-content">
+          <p>La revista emplea el <strong>Manual de Estilo de Chicago (17.ª edición), sistema Autor-Fecha</strong>. Esto significa:</p>
+          
+          <ul>
+            <li><strong>Cita parentética en el texto:</strong> Apellido del autor + año de publicación, entre paréntesis</li>
+            <li><strong>Lista alfabética al final:</strong> Todas las referencias completas, ordenadas por apellido</li>
+          </ul>
+
+          <div class="example-box">
+            <strong>Ejemplos de citas en el texto:</strong><br><br>
+            <strong>Parafraseo (reformulas la idea):</strong><br>
+            La evolución es un proceso gradual (Darwin 1859)<br><br>
+            <strong>Cita directa (copias textualmente):</strong><br>
+            "La selección natural obra lentamente" (Darwin 1859, 78)<br><br>
+            <strong>Dos autores:</strong><br>
+            (Pérez y González 2022)<br><br>
+            <strong>Tres o más autores:</strong><br>
+            (Smith et al. 2021)
+          </div>
+
+          <div class="example-box">
+            <strong>Ejemplos en la lista de referencias:</strong><br><br>
+            <strong>Artículo de revista:</strong><br>
+            Dittmar, Emily L., y Douglas W. Schemske. 2023. "Temporal Variation in Selection Influences Microgeographic Local Adaptation". <em>American Naturalist</em> 202 (4): 471-85. https://doi.org/10.1086/725865.<br><br>
+            <strong>Libro:</strong><br>
+            Darwin, Charles. 1859. <em>On the Origin of Species</em>. London: John Murray.<br><br>
+            <strong>Capítulo de libro:</strong><br>
+            Smith, John. 2020. "Evolutionary Theory Today". En <em>Modern Biology</em>, editado por Ana Pérez, 45-67. Madrid: Editorial Científica.
+          </div>
+
+          <div class="tip-box">
+            <i class="fa-solid fa-lightbulb"></i>
+            <strong>Recomendación:</strong> Usa gestores bibliográficos gratuitos como <a href="https://www.zotero.org/" target="_blank">Zotero</a> o <a href="https://www.mendeley.com/" target="_blank">Mendeley</a>. Exportan automáticamente en formato Chicago 17. Te ahorrarán horas de trabajo y errores.
+          </div>
+        </div>
+      </details>
+
+      <!-- ================= SECCIÓN 4: CLASIFICACIÓN ================= -->
+      <h2>4. Clasificación: Palabras Clave y Vocabularios Controlados</h2>
+
+      <details>
+        <summary>4.1 ¿Qué son los vocabularios controlados y por qué importan?</summary>
+        <div class="details-content">
+          <p><strong>Definición simple:</strong> Son listas oficiales de términos estandarizados que las bases de datos académicas usan para clasificar y encontrar artículos. Son como "etiquetas oficiales" que ayudan a que tu artículo aparezca en búsquedas relevantes.</p>
+          
+          <ul>
+            <li><strong>¿Por qué los pedimos?</strong>
+              <ul>
+                <li>Tu artículo será encontrado por otros investigadores en bases de datos internacionales</li>
+                <li>Garantiza que uses terminología reconocida en tu disciplina</li>
+                <li>Facilita la asignación de revisores especializados</li>
+              </ul>
             </li>
-            <li>Se recomienda encarecidamente el uso de gestores bibliográficos (Zotero, Mendeley). Todo artículo citado en el texto debe aparecer en las referencias, y viceversa.</li>
+            <li><strong>¿Cómo funcionan?</strong> En lugar de usar tus propias palabras, buscas en el tesauro el término oficial que mejor describa tu tema. Por ejemplo, en vez de "infarto al corazón", el MeSH usa "Myocardial Infarction".</li>
           </ul>
         </div>
       </details>
 
       <details>
-        <summary>1.4 Clasificación: Palabras Clave y Códigos</summary>
+        <summary>4.2 ¿Cómo busco en cada vocabulario controlado?</summary>
         <div class="details-content">
-          <p>Para asegurar la indexación global, debes proporcionar identificadores exactos:</p>
+          <p>Aquí te explicamos paso a paso cómo usar cada sistema según tu disciplina:</p>
+          
+          <h3>Salud y Medicina: MeSH (Medical Subject Headings)</h3>
           <ul>
-            <li><strong>Palabras clave (Keywords):</strong> 3 a 6 términos (en español e inglés).</li>
-            <li><strong>Vocabularios Controlados:</strong> Debes buscar el código alfanumérico exacto correspondiente a tu disciplina. Solo ingresa el código en el sistema, no el texto.
+            <li><strong>¿Qué es?</strong> El tesauro de la Biblioteca Nacional de Medicina de EE.UU.</li>
+            <li><strong>¿Cómo buscar?</strong>
+              <ol>
+                <li>Entra a <a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov/search</a></li>
+                <li>Escribe tu término en inglés (ej: "heart attack")</li>
+                <li>El sistema te mostrará el término oficial: "Myocardial Infarction"</li>
+                <li>Usa ese término exacto (en inglés) como palabra clave</li>
+              </ol>
+            </li>
+            <li><strong>¿Tiene códigos?</strong> Sí (ej: D009203), pero no es necesario que los ingreses en el sistema. Solo usa el término en inglés.</li>
+          </ul>
+
+          <h3>Economía: JEL (Journal of Economic Literature)</h3>
+          <ul>
+            <li><strong>¿Qué es?</strong> Sistema de clasificación de la American Economic Association</li>
+            <li><strong>¿Cómo buscar?</strong>
+              <ol>
+                <li>Entra a <a href="https://www.aeaweb.org/econlit/jelCodes.php" target="_blank">aeaweb.org/econlit/jelCodes.php</a></li>
+                <li>Navega por categorías (ej: F - International Economics)</li>
+                <li>Selecciona el código específico (ej: F50 - International Relations and International Political Economy)</li>
+                <li>Ingresa el código alfanumérico en tu envío</li>
+              </ol>
+            </li>
+            <li><strong>¿Tiene códigos?</strong> Sí, usa códigos alfanuméricos (letra + números). Es de los pocos sistemas que los usa.</li>
+          </ul>
+
+          <h3>Informática: ACM CCS (Computing Classification System)</h3>
+          <ul>
+            <li><strong>¿Qué es?</strong> Sistema de clasificación de la Association for Computing Machinery</li>
+            <li><strong>¿Cómo buscar?</strong>
+              <ol>
+                <li>Entra a <a href="https://dl.acm.org/ccs" target="_blank">dl.acm.org/ccs</a></li>
+                <li>Usa el buscador o navega por categorías jerárquicas</li>
+                <li>Cada término tiene un código asociado (ej: "Machine learning" = Computing methodologies~Machine learning)</li>
+                <li>Copia el término completo con su jerarquía</li>
+              </ol>
+            </li>
+            <li><strong>¿Tiene códigos?</strong> Usa términos descriptivos con jerarquía, no códigos numéricos simples.</li>
+          </ul>
+
+          <h3>Humanidades y Ciencias Sociales: UNESCO Thesaurus</h3>
+          <ul>
+            <li><strong>¿Qué es?</strong> Tesauro multidisciplinario de la UNESCO</li>
+            <li><strong>¿Cómo buscar?</strong>
+              <ol>
+                <li>Entra a <a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></li>
+                <li>Escribe tu término en español</li>
+                <li>Navega por términos relacionados</li>
+                <li>Usa el término exacto que aparece en el tesauro</li>
+              </ol>
+            </li>
+            <li><strong>¿Tiene códigos?</strong> No usa códigos alfanuméricos. Solo términos descriptivos.</li>
+          </ul>
+
+          <h3>Matemáticas: MSC 2020 (Mathematics Subject Classification)</h3>
+          <ul>
+            <li><strong>¿Qué es?</strong> Sistema de clasificación de la American Mathematical Society</li>
+            <li><strong>¿Cómo buscar?</strong>
+              <ol>
+                <li>Entra a <a href="https://mathscinet.ams.org/mathscinet/msc/msc2020.html" target="_blank">mathscinet.ams.org</a></li>
+                <li>Navega por áreas matemáticas</li>
+                <li>Cada área tiene códigos específicos (ej: 03-XX Mathematical logic and foundations)</li>
+                <li>Selecciona el código más específico para tu tema</li>
+              </ol>
+            </li>
+            <li><strong>¿Tiene códigos?</strong> Sí, usa códigos alfanuméricos jerárquicos.</li>
+          </ul>
+
+          <div class="tip-box">
+            <i class="fa-solid fa-table"></i>
+            <strong>Tabla completa:</strong> Encuentra la <a href="https://www.revistacienciasestudiantes.com/policies.html#tabla-vocabularios" target="_blank">tabla completa de vocabularios controlados aquí</a> con todos los sistemas aceptados por disciplina.
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>4.3 Palabras clave (Keywords)</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>¿Cuántas?</strong> 3 a 6 términos</li>
+            <li><strong>¿En qué idioma?</strong> Español e inglés (traducción técnica)</li>
+            <li><strong>¿Cómo elegirlas?</strong>
               <ul>
-                <li><strong>Salud/Medicina:</strong> Tesauro <a href="https://meshb.nlm.nih.gov/search" target="_blank">MeSH</a> (Ej: <code>D008112</code>)</li>
-                <li><strong>Economía:</strong> Clasificación <a href="https://www.aeaweb.org/econlit/jelCodes.php" target="_blank">JEL</a> (Ej: <code>F50</code>)</li>
-                <li><strong>Informática:</strong> Clasificación <a href="https://dl.acm.org/ccs" target="_blank">ACM CCS</a></li>
-                <li><strong>Humanidades:</strong> Tesauro <a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">UNESCO</a></li>
-                <li><strong>Matemáticas:</strong> Clasificación <a href="https://mathscinet.ams.org/mathscinet/msc/msc2020.html" target="_blank">MSC 2020</a></li>
+                <li>Usa términos específicos, no generales (mejor "regresión lineal múltiple" que "estadística")</li>
+                <li>Combina vocabulario controlado con términos de uso común en tu campo</li>
+                <li>Piensa: ¿qué palabras buscaría alguien para encontrar tu artículo?</li>
+              </ul>
+            </li>
+          </ul>
+
+          <div class="example-box">
+            <strong>Ejemplo:</strong><br>
+            <strong>Español:</strong> educación ambiental; cambio climático; percepción estudiantil; currículo escolar; desarrollo sostenible<br><br>
+            <strong>English:</strong> environmental education; climate change; student perception; school curriculum; sustainable development
+          </div>
+        </div>
+      </details>
+
+      <!-- ================= SECCIÓN 5: ÉTICA ================= -->
+      <h2>5. Ética y Originalidad</h2>
+
+      <details>
+        <summary>5.1 Plagio y similitud</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>¿Qué es plagio?</strong> Usar ideas, texto o datos de otros sin citar adecuadamente</li>
+            <li><strong>Límite de similitud:</strong> Máximo <strong>15%</strong> detectado por software especializado (Turnitin/iThenticate)</li>
+            <li><strong>¿Cómo evitarlo?</strong>
+              <ul>
+                <li>Cita siempre que uses ideas de otros (aunque las reformules)</li>
+                <li>Usa comillas para citas textuales</li>
+                <li>Parafrasea de verdad: entiende la idea y escríbela con tus palabras, no solo cambies algunas palabras</li>
               </ul>
             </li>
           </ul>
@@ -818,19 +1216,51 @@
       </details>
 
       <details>
-        <summary>1.5 Ética, Originalidad e Inteligencia Artificial</summary>
+        <summary>5.2 Uso de Inteligencia Artificial</summary>
         <div class="details-content">
           <ul>
-            <li><strong>Originalidad:</strong> Tolerancia máxima de similitud (plagio) del <strong>15%</strong> detectado por software especializado (ej. Turnitin/iThenticate).</li>
-            <li><strong>Uso de IA:</strong> Se permite el uso de IA (LLMs) exclusivamente para mejora de redacción o traducción. <strong>Queda estrictamente prohibido</strong> su uso para generar datos, análisis, imágenes científicas o conclusiones. Su uso debe declararse en la carta de presentación.</li>
-            <li><strong>Disponibilidad de Datos:</strong> Es obligatorio incluir una "Declaración de Disponibilidad de Datos" al final del manuscrito, indicando en qué repositorio público se encuentran los datos, o la justificación de su privacidad.</li>
-            <li><strong>Conflictos de Interés:</strong> Declaración obligatoria de financiamientos o relaciones que puedan sesgar la investigación.</li>
+            <li><strong>¿Qué se permite?</strong> Uso de IA (ChatGPT, Claude, etc.) para:
+              <ul>
+                <li>Mejorar redacción y claridad</li>
+                <li>Traducir resúmenes</li>
+                <li>Sugerir reestructuraciones</li>
+                <li>Corregir gramática</li>
+              </ul>
+            </li>
+            <li><strong>¿Qué está prohibido?</strong>
+              <ul>
+                <li>Generar datos falsos o simulados</li>
+                <li>Crear análisis estadísticos sin verificación</li>
+                <li>Generar imágenes científicas</li>
+                <li>Escribir conclusiones sin respaldo en tus datos</li>
+              </ul>
+            </li>
+            <li><strong>¿Debo declararlo?</strong> Sí, en la carta de presentación indica: "Se utilizó ChatGPT para mejorar la redacción del resumen en inglés" o similar.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>5.3 Declaraciones obligatorias</summary>
+        <div class="details-content">
+          <ul>
+            <li><strong>Disponibilidad de Datos:</strong> ¿Dónde están tus datos? ¿Pueden otros acceder?
+              <div class="example-box">
+                <strong>Ejemplo:</strong> "Los datos que sustentan este estudio están disponibles en el repositorio institucional [URL] o mediante solicitud razonable al autor de correspondencia."
+              </div>
+            </li>
+            <li><strong>Conflictos de Interés:</strong> ¿Recibiste financiamiento? ¿Algún interés que pueda sesgar?
+              <div class="example-box">
+                <strong>Ejemplo:</strong> "Los autores declaran no tener conflictos de interés." o "Este estudio fue financiado por [beca/nombre]."
+              </div>
+            </li>
+            <li><strong>Uso de IA:</strong> Si usaste herramientas de IA, decláralo específicamente.</li>
           </ul>
         </div>
       </details>
 
       <!-- CHECKLIST DE PRE-ENVÍO -->
-      <h2>2. Lista de Verificación de Pre-envío</h2>
+      <h2>6. Lista de Verificación de Pre-envío</h2>
       <p style="color: var(--text-muted); margin-bottom: 30px;">
         Esta herramienta interactiva te ayudará a confirmar que cumples con los criterios técnicos antes de acceder al sistema de envíos.
       </p>
@@ -850,32 +1280,37 @@
         <form id="submission-checklist">
           <div class="checklist-item">
             <input type="checkbox" id="check1" class="check-input">
-            <label for="check1">El documento está en formato <strong>.docx</strong> y ha sido completamente <strong>anonimizado</strong> (sin nombres, instituciones ni propiedades de archivo).</label>
+            <label for="check1">He identificado el <strong>tipo de artículo</strong> que voy a enviar y conozco su estructura específica.</label>
           </div>
 
           <div class="checklist-item">
             <input type="checkbox" id="check2" class="check-input">
-            <label for="check2">Se incluye un <strong>Resumen (Abstract)</strong> de 150-250 palabras en español e inglés, estructurado de forma lógica.</label>
+            <label for="check2">El documento está en formato <strong>.docx</strong> y ha sido completamente <strong>anonimizado</strong> (sin nombres, instituciones ni metadatos).</label>
           </div>
 
           <div class="checklist-item">
             <input type="checkbox" id="check3" class="check-input">
-            <label for="check3">El manuscrito respeta el límite de extensión (<strong>1.000 a 10.000 palabras</strong>) y usa los <strong>estilos de título</strong> jerárquicos del procesador.</label>
+            <label for="check3">He usado los <strong>estilos de título</strong> de Word correctamente (Título 1, Título 2, etc.) para estructurar jerárquicamente.</label>
           </div>
 
           <div class="checklist-item">
             <input type="checkbox" id="check4" class="check-input">
-            <label for="check4">Todas las citas y la lista de referencias bibliográficas están estrictamente formateadas bajo <strong>Chicago 17.ª edición (Autor-Fecha)</strong>.</label>
+            <label for="check4">Se incluye un <strong>Resumen (Abstract)</strong> de 150-250 palabras en español e inglés.</label>
           </div>
 
           <div class="checklist-item">
             <input type="checkbox" id="check5" class="check-input">
-            <label for="check5">Tengo identificados mis <strong>códigos de clasificación</strong> (ej. JEL, MeSH) y palabras clave para ingresarlos en el sistema.</label>
+            <label for="check5">Todas las citas y referencias están formateadas bajo <strong>Chicago 17.ª edición (Autor-Fecha)</strong>.</label>
           </div>
 
           <div class="checklist-item">
             <input type="checkbox" id="check6" class="check-input">
-            <label for="check6">He redactado las declaraciones obligatorias: <strong>Disponibilidad de Datos</strong>, Conflictos de Interés y Uso de IA (si aplica).</label>
+            <label for="check6">He buscado y anotado los <strong>términos o códigos de clasificación</strong> en el vocabulario controlado correspondiente a mi disciplina.</label>
+          </div>
+
+          <div class="checklist-item">
+            <input type="checkbox" id="check7" class="check-input">
+            <label for="check7">He redactado las declaraciones obligatorias: <strong>Disponibilidad de Datos</strong>, Conflictos de Interés y Uso de IA (si aplica).</label>
           </div>
         </form>
 
@@ -889,7 +1324,7 @@
       </div>
 
       <!-- PROCESO EDITORIAL -->
-      <h2>3. Flujo de Revisión Editorial</h2>
+      <h2>7. Flujo de Revisión Editorial</h2>
       <p style="color: var(--text-muted); margin-bottom: 20px;">
         La transparencia es un pilar de nuestra revista. Este es el recorrido estándar de tu manuscrito desde el envío hasta la publicación.
       </p>
