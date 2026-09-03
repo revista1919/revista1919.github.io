@@ -12,7 +12,12 @@ import {
   CheckCircleIcon,
   ArrowRightIcon,
   HeartIcon,
-  LightBulbIcon
+  LightBulbIcon,
+  FlagIcon,
+  DocumentTextIcon,
+  ScaleIcon,
+  EyeIcon,
+  LockClosedIcon
 } from '@heroicons/react/24/outline';
 import { useLanguage } from '../hooks/useLanguage';
 
@@ -23,64 +28,68 @@ function AimsScopeSection() {
   // ================= TEXTOS BILINGÜES =================
   const texts = {
     // Header
-    tagline: isSpanish ? 'Misión y Alcance' : 'Aims & Scope',
+    tagline: isSpanish ? 'Misión · Alcance · Objetivos' : 'Mission · Scope · Objectives',
     title: isSpanish ? (
-      <>Impulsando a la próxima generación del <span className="italic text-[#e86125]">rigor científico.</span></>
+      <>Un espacio para la <span className="italic text-[#e86125]">investigación temprana</span> con estándares profesionales.</>
     ) : (
-      <>Empowering the next generation of <span className="italic text-[#e86125]">scientific rigor.</span></>
+      <>A space for <span className="italic text-[#e86125]">early research</span> with professional standards.</>
     ),
     subtitle: isSpanish 
-      ? 'Una revista científica arbitrada por pares, dedicada a difundir e impulsar la investigación temprana a nivel escolar y universitario.'
-      : 'A peer-reviewed scientific journal dedicated to disseminating and promoting early research at the school and university level.',
+      ? 'La Revista Nacional de las Ciencias para Estudiantes define claramente su propósito editorial, las disciplinas que abarca y los tipos de contribuciones que recibe.'
+      : 'The National Review of Sciences for Students clearly defines its editorial purpose, the disciplines it covers, and the types of contributions it receives.',
 
     // Mission section
-    missionTitle: isSpanish ? 'Nuestra Misión' : 'Our Mission',
+    missionTitle: isSpanish ? 'Propósito Editorial' : 'Editorial Purpose',
     missionText1: isSpanish 
-      ? 'La Revista Nacional de las Ciencias para Estudiantes es una publicación académica arbitrada, de acceso abierto Diamante y sin fines de lucro. Nuestro propósito es democratizar el acceso a la publicación científica y demostrar que el talento investigativo no tiene por qué esperar a un posgrado.'
-      : 'The National Review of Sciences for Students is a peer-reviewed, Diamond Open Access, non-profit academic publication. Our purpose is to democratize access to scientific publishing and demonstrate that research talent does not have to wait for graduate school.',
+      ? 'La Revista Nacional de las Ciencias para Estudiantes es una publicación académica arbitrada, de acceso abierto Diamante y sin fines de lucro. Nuestro propósito es proporcionar una plataforma de publicación rigurosa donde estudiantes de educación media y universitaria puedan comunicar sus investigaciones bajo los mismos estándares de calidad que una revista consolidada.'
+      : 'The National Review of Sciences for Students is a peer-reviewed, Diamond Open Access, non-profit academic publication. Our purpose is to provide a rigorous publishing platform where secondary and university students can communicate their research under the same quality standards as an established journal.',
     
+    missionText2: isSpanish 
+      ? 'La Revista no busca ser un espacio de especialización inaccesible, sino un puente formativo entre el aula y la publicación académica profesional.'
+      : 'The Journal does not seek to be an inaccessible specialized space, but rather a formative bridge between the classroom and professional academic publishing.',
+
     quote: isSpanish 
-      ? '"Operamos como una iniciativa científica independiente, libre de afiliaciones institucionales restrictivas, lo que nos garantiza una autonomía editorial total."'
-      : '"We operate as an independent scientific initiative, free from restrictive institutional affiliations, which guarantees us total editorial autonomy."',
+      ? '"No publicamos por publicar: publicamos para formar, para visibilizar y para demostrar que la edad no es límite para el rigor."'
+      : '"We do not publish for the sake of publishing: we publish to educate, to give visibility, and to demonstrate that age is no limit to rigor."',
 
     // Objectives
-    objectivesTitle: isSpanish ? 'Objetivos Fundamentales' : 'Core Objectives',
+    objectivesTitle: isSpanish ? 'Objetivos Editoriales' : 'Editorial Objectives',
     objectives: [
       {
-        icon: UserGroupIcon,
-        title: isSpanish ? 'Fomento de la Investigación Estudiantil' : 'Student Research Promotion',
+        icon: FlagIcon,
+        title: isSpanish ? 'Visibilizar Talento Temprano' : 'Showcasing Early Talent',
         desc: isSpanish 
-          ? 'Proporcionar una plataforma profesional donde estudiantes de educación media y superior puedan iniciarse en la comunicación científica formal.'
-          : 'Provide a professional platform where secondary and higher education students can begin formal scientific communication.'
+          ? 'Dar visibilidad a investigaciones estudiantiles que, por su calidad, merecen un espacio en el registro académico formal.'
+          : 'Give visibility to student research that, due to its quality, deserves a place in the formal academic record.'
       },
       {
         icon: AcademicCapIcon,
-        title: isSpanish ? 'Experiencia Académica Integral' : 'Comprehensive Academic Experience',
+        title: isSpanish ? 'Formar en Publicación Académica' : 'Training in Academic Publishing',
         desc: isSpanish 
-          ? 'Ofrecer un espacio de publicación riguroso que opera bajo los mismos estándares de integridad que una revista consolidada, adaptando el enfoque al nivel formativo.'
-          : 'Offer a rigorous publication space operating under the same integrity standards as established journals, adapting the approach to the formative level.'
+          ? 'Enseñar el proceso completo de publicación: preparación de manuscritos, respuesta a revisores, ética y buenas prácticas.'
+          : 'Teach the complete publication process: manuscript preparation, reviewer response, ethics, and good practices.'
       },
       {
-        icon: HeartIcon,
-        title: isSpanish ? 'Ciencia Abierta y Equidad' : 'Open Science and Equity',
+        icon: GlobeAltIcon,
+        title: isSpanish ? 'Democratizar el Conocimiento' : 'Democratizing Knowledge',
         desc: isSpanish 
-          ? 'Garantizar que la capacidad económica no sea barrera mediante el modelo Diamante (sin APC ni suscripciones).'
-          : 'Ensure that economic capacity is not a barrier through the Diamond model (no APCs or subscriptions).'
+          ? 'Eliminar barreras económicas mediante el acceso abierto Diamante, garantizando que publicar sea gratuito para autores y lectores.'
+          : 'Eliminate economic barriers through Diamond Open Access, ensuring that publishing is free for authors and readers.'
       },
       {
-        icon: LightBulbIcon,
-        title: isSpanish ? 'Desarrollo de Competencias' : 'Competency Development',
+        icon: ScaleIcon,
+        title: isSpanish ? 'Garantizar Rigor Metodológico' : 'Ensuring Methodological Rigor',
         desc: isSpanish 
-          ? 'Facilitar el aprendizaje del proceso editorial completo: preparación de manuscritos, citación Chicago, vocabularios controlados, respuesta a revisores, ética de publicación.'
-          : 'Facilitate learning of the complete editorial process: manuscript preparation, Chicago citation, controlled vocabularies, reviewer response, publication ethics.'
+          ? 'Aplicar revisión por pares doble ciego estricta con estándares internacionales (COPE, ICMJE) a cada manuscrito recibido.'
+          : 'Apply strict double-blind peer review with international standards (COPE, ICMJE) to every manuscript received.'
       }
     ],
 
     // Scope
     scopeTitle: isSpanish ? 'Alcance Temático' : 'Thematic Scope',
     scopeSubtitle: isSpanish 
-      ? 'Aceptamos contribuciones en español e inglés de todas las disciplinas académicas.'
-      : 'We accept contributions in Spanish and English from all academic disciplines.',
+      ? 'La Revista es multidisciplinaria y acepta contribuciones en español e inglés de todas las áreas del conocimiento académico.'
+      : 'The Journal is multidisciplinary and accepts contributions in Spanish and English from all areas of academic knowledge.',
     
     areas: [
       {
@@ -128,72 +137,72 @@ function AimsScopeSection() {
     ],
 
     // Manuscript types
-    typesTitle: isSpanish ? 'Tipos de Manuscritos Aceptados' : 'Accepted Manuscript Types',
+    typesTitle: isSpanish ? 'Tipos de Contribuciones Aceptadas' : 'Accepted Contribution Types',
     typesSubtitle: isSpanish 
-      ? 'Cada tipo tiene requisitos específicos de estructura y contenido.'
-      : 'Each type has specific structure and content requirements.',
+      ? 'La Revista recibe seis formatos distintos, cada uno con requisitos específicos de estructura, contenido y extensión.'
+      : 'The Journal receives six distinct formats, each with specific structure, content, and length requirements.',
     types: [
       {
         name: isSpanish ? 'Artículo de Investigación Original' : 'Original Research Article',
         length: isSpanish ? '3.000–8.000 palabras' : '3,000–8,000 words',
         desc: isSpanish 
-          ? 'Presenta resultados inéditos de investigaciones empíricas o teóricas, estructurado bajo el formato IMRyD.'
-          : 'Presents unpublished results of empirical or theoretical research, structured under IMRaD format.'
+          ? 'Resultados inéditos de investigaciones empíricas o teóricas estructurados en formato IMRyD.'
+          : 'Unpublished results of empirical or theoretical research structured in IMRaD format.'
       },
       {
         name: isSpanish ? 'Ensayo Académico' : 'Academic Essay',
         length: isSpanish ? '3.000–6.000 palabras' : '3,000–6,000 words',
         desc: isSpanish 
-          ? 'Texto argumentativo que desarrolla una tesis original sustentada en una revisión crítica de la literatura.'
-          : 'Argumentative text that develops an original thesis supported by a critical literature review.'
+          ? 'Tesis original sustentada en revisión crítica de literatura con aparato argumentativo riguroso.'
+          : 'Original thesis supported by critical literature review with rigorous argumentative apparatus.'
       },
       {
         name: isSpanish ? 'Ensayo Reflexivo' : 'Reflective Essay',
         length: isSpanish ? '1.500–3.000 palabras' : '1,500–3,000 words',
         desc: isSpanish 
-          ? 'Exposición de reflexiones personales sobre una experiencia o lectura, con conexión teórica.'
-          : 'Exposition of personal reflections on an experience or reading, with theoretical connection.'
+          ? 'Reflexiones personales sobre una experiencia académica con conexión teórica fundamentada.'
+          : 'Personal reflections on an academic experience with well-founded theoretical connection.'
       },
       {
         name: isSpanish ? 'Reporte de Caso' : 'Case Report',
         length: isSpanish ? '2.000–4.000 palabras' : '2,000–4,000 words',
         desc: isSpanish 
-          ? 'Describe un caso único e interesante (clínico, social, técnico) con análisis y lecciones aprendidas.'
-          : 'Describes a unique and interesting case (clinical, social, technical) with analysis and lessons learned.'
+          ? 'Caso único (clínico, social, técnico) con análisis detallado y lecciones aprendidas.'
+          : 'Unique case (clinical, social, technical) with detailed analysis and lessons learned.'
       },
       {
         name: isSpanish ? 'Revisión Sistemática' : 'Systematic Review',
         length: isSpanish ? '4.000–10.000 palabras' : '4,000–10,000 words',
         desc: isSpanish 
-          ? 'Resume críticamente la literatura existente sobre una pregunta específica con metodología explícita.'
-          : 'Critically summarizes existing literature on a specific question with explicit methodology.'
+          ? 'Síntesis crítica de evidencia existente con metodología explícita y reproducible.'
+          : 'Critical synthesis of existing evidence with explicit and reproducible methodology.'
       },
       {
         name: isSpanish ? 'Book Review (Reseña)' : 'Book Review',
         length: isSpanish ? '1.000–2.000 palabras' : '1,000–2,000 words',
         desc: isSpanish 
-          ? 'Reseña crítica de un libro académico reciente con análisis y recomendación.'
-          : 'Critical review of a recent academic book with analysis and recommendation.'
+          ? 'Análisis crítico de una obra académica reciente de relevancia demostrable.'
+          : 'Critical analysis of a recent academic work of demonstrable relevance.'
       }
     ],
 
     // Values
-    valuesTitle: isSpanish ? 'Valores Diferenciadores' : 'Differentiating Values',
+    valuesTitle: isSpanish ? 'Principios Rectores' : 'Guiding Principles',
     values: [
       {
-        icon: HeartIcon,
-        title: isSpanish ? 'Sin Fines de Lucro' : 'Non-Profit',
-        desc: isSpanish ? 'Acceso Abierto Diamante' : 'Diamond Open Access'
+        icon: LockClosedIcon,
+        title: isSpanish ? 'Acceso Abierto Diamante' : 'Diamond Open Access',
+        desc: isSpanish ? 'Sin costos para autores ni lectores' : 'No costs for authors or readers'
       },
       {
-        icon: ShieldCheckIcon,
+        icon: EyeIcon,
         title: isSpanish ? 'Doble Ciego Estricto' : 'Strict Double-Blind',
-        desc: isSpanish ? 'Evaluación imparcial' : 'Impartial evaluation'
+        desc: isSpanish ? 'Evaluación imparcial y anónima' : 'Impartial and anonymous evaluation'
       },
       {
         icon: SparklesIcon,
         title: isSpanish ? 'Carácter Formativo' : 'Formative Character',
-        desc: isSpanish ? 'Retroalimentación constructiva' : 'Constructive feedback'
+        desc: isSpanish ? 'Retroalimentación orientada al aprendizaje' : 'Learning-oriented feedback'
       },
       {
         icon: GlobeAltIcon,
@@ -203,43 +212,60 @@ function AimsScopeSection() {
       {
         icon: BookOpenIcon,
         title: isSpanish ? 'Bilingüe' : 'Bilingual',
-        desc: isSpanish ? 'Español e Inglés' : 'Spanish and English'
+        desc: isSpanish ? 'Publicación en español e inglés' : 'Publication in Spanish and English'
       },
       {
-        icon: CheckCircleIcon,
-        title: isSpanish ? 'Estándares Internacionales' : 'International Standards',
+        icon: ShieldCheckIcon,
+        title: isSpanish ? 'Ética Internacional' : 'International Ethics',
         desc: isSpanish ? 'COPE, BOAI, CRediT, ICMJE' : 'COPE, BOAI, CRediT, ICMJE'
       }
     ],
 
     // Audience
-    audienceTitle: isSpanish ? 'Público Objetivo' : 'Target Audience',
+    audienceTitle: isSpanish ? 'Comunidad a la que Servimos' : 'Community We Serve',
     audience: [
       {
-        title: isSpanish ? 'Autores' : 'Authors',
+        title: isSpanish ? 'Autores Estudiantes' : 'Student Authors',
         desc: isSpanish 
-          ? 'Estudiantes de educación media (secundaria) y superior (universitaria) de Chile y Latinoamérica.'
-          : 'Secondary and higher education students from Chile and Latin America.'
+          ? 'Estudiantes de educación media y universitaria de Chile y Latinoamérica que inician su trayectoria de publicación.'
+          : 'Secondary and university students from Chile and Latin America beginning their publication journey.'
       },
       {
-        title: isSpanish ? 'Lectores' : 'Readers',
+        title: isSpanish ? 'Comunidad Académica' : 'Academic Community',
         desc: isSpanish 
-          ? 'Comunidad académica global, investigadores, docentes y estudiantes.'
-          : 'Global academic community, researchers, educators, and students.'
+          ? 'Investigadores, docentes y académicos interesados en la producción científica emergente.'
+          : 'Researchers, educators, and academics interested in emerging scientific production.'
       },
       {
-        title: isSpanish ? 'Revisores' : 'Reviewers',
+        title: isSpanish ? 'Revisores Formadores' : 'Formative Reviewers',
         desc: isSpanish 
-          ? 'Académicos, profesores y estudiantes destacados con experiencia demostrable.'
-          : 'Academics, professors, and outstanding students with demonstrable experience.'
+          ? 'Académicos y estudiantes destacados que contribuyen a la evaluación constructiva de manuscritos.'
+          : 'Academics and outstanding students who contribute to constructive manuscript evaluation.'
       }
     ],
 
+    // Exclusions
+    exclusionsTitle: isSpanish ? 'Lo que NO Publicamos' : 'What We Do NOT Publish',
+    exclusions: [
+      isSpanish 
+        ? 'Documentos de trabajo preliminares (working papers) sin proceso formal de investigación'
+        : 'Preliminary working papers without a formal research process',
+      isSpanish 
+        ? 'Preprints en estado no finalizado o informes técnicos no arbitrados'
+        : 'Unfinished preprints or non-peer-reviewed technical reports',
+      isSpanish 
+        ? 'Contenido que no cumpla con los estándares de originalidad (máximo 15% de similitud)'
+        : 'Content that does not meet originality standards (maximum 15% similarity)',
+      isSpanish 
+        ? 'Manuscritos que no se ajusten al estilo Chicago 17.ª edición (Autor-Fecha)'
+        : 'Manuscripts that do not conform to Chicago 17th ed. (Author-Date) style',
+    ],
+
     // CTA
-    ctaTitle: isSpanish ? '¿Listo para publicar?' : 'Ready to publish?',
+    ctaTitle: isSpanish ? '¿Quieres ser parte de este proyecto?' : 'Want to be part of this project?',
     ctaText: isSpanish 
-      ? 'Revisa nuestra guía completa para autores y comienza tu viaje en la publicación académica.'
-      : 'Check our complete author guidelines and begin your journey in academic publishing.',
+      ? 'Consulta nuestra guía completa para autores y descubre los requisitos detallados para preparar tu manuscrito.'
+      : 'Check our complete author guidelines and discover the detailed requirements to prepare your manuscript.',
     ctaButton: isSpanish ? 'Ver Guía para Autores' : 'View Author Guidelines',
     ctaLink: isSpanish ? '/author.html' : '/authorEN.html',
   };
@@ -289,7 +315,7 @@ function AimsScopeSection() {
           <div className="h-[2px] w-16 bg-[#e86125] mx-auto mt-6"></div>
         </motion.div>
 
-        {/* MISIÓN */}
+        {/* PROPÓSITO EDITORIAL */}
         <motion.div 
           initial="hidden"
           whileInView="visible"
@@ -306,6 +332,9 @@ function AimsScopeSection() {
               <p className="text-[16px] text-[#2b2b2b] leading-relaxed font-sans">
                 {texts.missionText1}
               </p>
+              <p className="text-[14px] text-[#666666] leading-relaxed font-sans">
+                {texts.missionText2}
+              </p>
               
               <blockquote className="border-l-4 border-[#e86125] pl-6 py-2">
                 <p className="font-serif text-xl md:text-2xl font-light text-black leading-snug italic">
@@ -317,15 +346,15 @@ function AimsScopeSection() {
             <div className="lg:col-span-5">
               <div className="bg-[#f8f9fa] border border-[#e6e8ea] rounded-sm p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <ShieldCheckIcon className="w-8 h-8 text-[#002147]" />
+                  <DocumentTextIcon className="w-8 h-8 text-[#002147]" />
                   <h4 className="font-serif font-semibold text-black text-lg">
-                    {isSpanish ? 'Compromiso Editorial' : 'Editorial Commitment'}
+                    {isSpanish ? 'Definición Formal' : 'Formal Definition'}
                   </h4>
                 </div>
                 <p className="text-[13px] text-[#666666] leading-relaxed font-sans">
                   {isSpanish 
-                    ? 'Adheridos a los más altos estándares internacionales de ética y calidad académica. Nuestro compromiso es con la integridad científica y el desarrollo formativo de cada autor.'
-                    : 'Adhering to the highest international standards of ethics and academic quality. Our commitment is to scientific integrity and the formative development of every author.'
+                    ? 'Publicación académica arbitrada, de acceso abierto Diamante y sin fines de lucro, adherida a los principios del Committee on Publication Ethics (COPE) y la Budapest Open Access Initiative (BOAI).'
+                    : 'Peer-reviewed academic publication, Diamond Open Access and non-profit, adhering to the principles of the Committee on Publication Ethics (COPE) and the Budapest Open Access Initiative (BOAI).'
                   }
                 </p>
               </div>
@@ -333,7 +362,7 @@ function AimsScopeSection() {
           </motion.div>
         </motion.div>
 
-        {/* OBJETIVOS */}
+        {/* OBJETIVOS EDITORIALES */}
         <motion.div 
           initial="hidden"
           whileInView="visible"
@@ -408,7 +437,7 @@ function AimsScopeSection() {
           </div>
         </motion.div>
 
-        {/* TIPOS DE MANUSCRITOS */}
+        {/* TIPOS DE CONTRIBUCIONES */}
         <motion.div 
           initial="hidden"
           whileInView="visible"
@@ -453,7 +482,34 @@ function AimsScopeSection() {
           </div>
         </motion.div>
 
-        {/* VALORES DIFERENCIADORES */}
+        {/* LO QUE NO PUBLICAMOS */}
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={staggerContainer}
+          className="mb-20"
+        >
+          <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-8 text-center">
+            {texts.exclusionsTitle}
+          </h3>
+          
+          <motion.div 
+            variants={staggerItem}
+            className="bg-[#f8f9fa] border border-[#e6e8ea] rounded-sm p-6 max-w-3xl mx-auto"
+          >
+            <ul className="space-y-3">
+              {texts.exclusions.map((exclusion, i) => (
+                <li key={i} className="flex items-start gap-3 text-[13px] text-[#666666] font-sans">
+                  <XCircleIcon className="w-4 h-4 text-[#e86125] flex-shrink-0 mt-0.5" />
+                  <span>{exclusion}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </motion.div>
+
+        {/* PRINCIPIOS RECTORES */}
         <motion.div 
           initial="hidden"
           whileInView="visible"
@@ -484,7 +540,7 @@ function AimsScopeSection() {
           </div>
         </motion.div>
 
-        {/* PÚBLICO OBJETIVO */}
+        {/* COMUNIDAD */}
         <motion.div 
           initial="hidden"
           whileInView="visible"
