@@ -73,7 +73,7 @@ function GuidelinesSection() {
               </a>
             </div>
 
-            {/* Normative Documents */}
+{/* Normative Documents */}
 <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">
   <h3 className="text-[13px] font-bold font-sans uppercase tracking-wider text-black px-6 pt-5 pb-3 border-b border-[#e6e8ea]">
     Normative Documents
@@ -83,7 +83,8 @@ function GuidelinesSection() {
       { href: '/authorEN.html', title: 'Complete Author Guidelines' },
       { href: '/practicesEN.html', title: 'Good Practices and Ethics Guide' },
       { href: '/open-accessEN.html', title: 'Open Access Policies' },
-      { href: '/copyright-and-licenseEN.html', title: 'License & Copyright' }  // ← NUEVO
+      { href: '/peer-reviewEN.html', title: 'Peer Review Policy' },
+      { href: '/copyright-and-licenseEN.html', title: 'License & Copyright' }
     ].map((item) => (
       <a 
         key={item.href}

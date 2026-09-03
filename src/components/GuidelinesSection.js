@@ -73,7 +73,7 @@ function GuidelinesSection() {
               </a>
             </div>
 
-          {/* Documentos Normativos */}
+         {/* Documentos Normativos */}
 <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">
   <h3 className="text-[13px] font-bold font-sans uppercase tracking-wider text-black px-6 pt-5 pb-3 border-b border-[#e6e8ea]">
     Documentos Normativos
@@ -83,7 +83,8 @@ function GuidelinesSection() {
       { href: '/author.html', title: 'Guía Completa para Autores' },
       { href: '/practices.html', title: 'Guía de Buenas Prácticas y Ética' },
       { href: '/open-access.html', title: 'Políticas de Open Access' },
-      { href: '/copyright-and-license.html', title: 'Licencia y Derechos de Autor' }  // ← NUEVO
+      { href: '/peer-review.html', title: 'Política de Revisión por Pares' },
+      { href: '/copyright-and-license.html', title: 'Licencia y Derechos de Autor' }
     ].map((item) => (
       <a 
         key={item.href}

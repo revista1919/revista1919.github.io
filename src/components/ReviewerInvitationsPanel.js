@@ -407,11 +407,28 @@ export default function ReviewerInvitationsPanel({ user, onAccept }) {
           </div>
           
           {/* Descripción */}
-          <div className="bg-gray-50 p-3 sm:p-4 rounded-xl mb-4 text-xs sm:text-sm text-gray-600">
-            <p className="leading-relaxed">
-              {texts.invitationDescription}
-            </p>
-          </div>
+<div className="bg-gray-50 p-3 sm:p-4 rounded-xl mb-4 text-xs sm:text-sm text-gray-600">
+  <p className="leading-relaxed">
+    {texts.invitationDescription}
+  </p>
+  
+  {/* NUEVO: Enlace a políticas de revisión por pares */}
+  <a
+    href={isSpanish 
+      ? 'https://www.revistacienciasestudiantes.com/peer-review.html' 
+      : 'https://www.revistacienciasestudiantes.com/peer-reviewEN.html'
+    }
+    target="_blank"
+    rel="noopener noreferrer"
+    className="mt-3 inline-flex items-center gap-2 text-[#003b5c] hover:text-[#e86125] font-semibold transition-colors underline underline-offset-4 decoration-[#cbd0d5] hover:decoration-[#e86125]"
+  >
+    <ShieldCheckIcon className="w-4 h-4 flex-shrink-0" />
+    {isSpanish 
+      ? 'Al aceptar esta invitación, te adhieres a la Política de Revisión por Pares' 
+      : 'By accepting this invitation, you adhere to the Peer Review Policy'
+    }
+  </a>
+</div>
           
           {/* Error local */}
           {localError && (

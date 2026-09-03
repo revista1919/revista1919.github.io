@@ -229,6 +229,13 @@ module.exports = (env, argv) => {
           
           // Inglés
           { from: 'public/copyright-and-licenseEN.html', to: 'copyright-and-licenseEN.html', noErrorOnMissing: true },
+          
+          // ============ NUEVOS ARCHIVOS HTML - Peer Review ============
+          // Español
+          { from: 'public/peer-review.html', to: 'peer-review.html', noErrorOnMissing: true },
+          
+          // Inglés
+          { from: 'public/peer-reviewEN.html', to: 'peer-reviewEN.html', noErrorOnMissing: true },
         ],
       }),
       

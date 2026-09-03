@@ -874,16 +874,48 @@ const ReviewerOnboarding = () => {
                       })}
                     </div>
                   </div>
+{error && (
+  <motion.div 
+    initial={{ opacity: 0, y: -10 }} 
+    animate={{ opacity: 1, y: 0 }} 
+    className="bg-red-50 border-l-4 border-red-500 p-4 text-sm text-red-700 font-medium rounded-r-lg"
+  >
+    {error}
+  </motion.div>
+)}
 
-                  {error && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -10 }} 
-                      animate={{ opacity: 1, y: 0 }} 
-                      className="bg-red-50 border-l-4 border-red-500 p-4 text-sm text-red-700 font-medium rounded-r-lg"
-                    >
-                      {error}
-                    </motion.div>
-                  )}
+{/* NUEVO: Aviso de adhesión a políticas */}
+<div className="bg-[#003b5c]/5 border border-[#003b5c]/20 rounded-xl p-5 flex items-start gap-4">
+  <ShieldCheckIcon className="w-6 h-6 text-[#003b5c] flex-shrink-0 mt-0.5" />
+  <div>
+    <p className="text-sm font-serif font-bold text-[#003b5c] mb-1">
+      {isSpanish ? 'Adhesión a Políticas de Revisión' : 'Adherence to Review Policies'}
+    </p>
+    <p className="text-xs text-slate-600 leading-relaxed mb-3">
+      {isSpanish 
+        ? 'Al consolidar su perfil como par evaluador, usted acepta y se adhiere a las normas, criterios y procedimientos establecidos en la Política de Revisión por Pares de la Revista.'
+        : 'By consolidating your peer reviewer profile, you accept and adhere to the rules, criteria, and procedures established in the Journal\'s Peer Review Policy.'
+      }
+    </p>
+    <a
+      href={isSpanish 
+        ? 'https://www.revistacienciasestudiantes.com/peer-review.html' 
+        : 'https://www.revistacienciasestudiantes.com/peer-reviewEN.html'
+      }
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#e86125] hover:text-[#c9521d] transition-colors"
+    >
+      <DocumentTextIcon className="w-4 h-4" />
+      {isSpanish 
+        ? 'Leer Política de Revisión por Pares' 
+        : 'Read Peer Review Policy'
+      }
+    </a>
+  </div>
+</div>
+
+
 
                   <div className="pt-4 flex justify-end border-t border-slate-100 mt-8">
                     <button 

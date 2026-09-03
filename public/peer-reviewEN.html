@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peer Review Policy · National Review of Sciences for Students</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --brand-navy: #0B192C;
+      --brand-navy-light: #1A365D;
+      --brand-orange: #FF6B00;
+      --brand-orange-light: #FFF0E6;
+      --text-main: #1E293B;
+      --text-muted: #64748B;
+      --text-light: #94A3B8;
+      --bg-page: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --border-soft: #E2E8F0;
+      --border-medium: #CBD5E1;
+      --success: #10B981;
+      --success-bg: #ECFDF5;
+      --warning: #F59E0B;
+      --warning-bg: #FFFBEB;
+      --danger: #EF4444;
+      --danger-bg: #FEF2F2;
+      --info: #3B82F6;
+      --info-bg: #EFF6FF;
+      --font-serif: 'Merriweather', serif;
+      --font-sans: 'Inter', sans-serif;
+      --shadow-sm: 0 1px 3px rgba(11, 25, 44, 0.05);
+      --shadow-md: 0 4px 15px rgba(11, 25, 44, 0.08);
+      --shadow-lg: 0 10px 25px rgba(11, 25, 44, 0.12);
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.75;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, var(--brand-navy) 0%, #132B4A 50%, var(--brand-navy-light) 100%);
+      color: white;
+      padding: 80px 20px 60px;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 4px solid var(--brand-orange);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -60%;
+      right: -15%;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(255,107,0,0.15) 0%, rgba(11,25,44,0) 70%);
+      border-radius: 50%;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, rgba(11,25,44,0) 70%);
+      border-radius: 50%;
+    }
+
+    .hero-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+
+    .hero-icon {
+      width: 80px;
+      height: 80px;
+      background: rgba(255,107,0,0.15);
+      border: 2px solid var(--brand-orange);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 25px;
+      font-size: 2.5rem;
+      color: var(--brand-orange);
+    }
+
+    .tagline {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      color: var(--brand-orange);
+      font-weight: 700;
+      margin-bottom: 15px;
+      display: block;
+    }
+
+    .hero h1 {
+      font-family: var(--font-serif);
+      font-size: 2.8rem;
+      font-weight: 900;
+      margin-bottom: 20px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: #CBD5E1;
+      max-width: 750px;
+      margin: 0 auto;
+      font-weight: 300;
+      line-height: 1.8;
+    }
+
+    .dashboard-wrapper {
+      max-width: 1100px;
+      margin: -30px auto 60px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 35px;
+      align-items: start;
+      position: relative;
+      z-index: 2;
+    }
+
+    .sidebar {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 25px;
+      position: sticky;
+      top: 30px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-soft);
+    }
+
+    .sidebar h3 {
+      font-family: var(--font-serif);
+      font-size: 1rem;
+      color: var(--brand-navy);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .sidebar-nav {
+      list-style: none;
+      padding: 0;
+    }
+
+    .sidebar-nav li {
+      margin-bottom: 8px;
+    }
+
+    .sidebar-nav a {
+      display: block;
+      padding: 10px 14px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      border-radius: var(--radius-sm);
+      transition: all 0.3s;
+      border-left: 3px solid transparent;
+    }
+
+    .sidebar-nav a:hover,
+    .sidebar-nav a.active {
+      background: var(--brand-orange-light);
+      color: var(--brand-navy);
+      border-left-color: var(--brand-orange);
+      font-weight: 600;
+    }
+
+    .main-content {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 50px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-soft);
+    }
+
+    .section-block {
+      margin-bottom: 50px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .section-block:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    h2 {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      color: var(--brand-navy);
+      margin-bottom: 20px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    h2 .section-number {
+      background: var(--brand-navy);
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      color: var(--brand-navy-light);
+      margin: 25px 0 12px;
+      font-weight: 700;
+    }
+
+    p {
+      margin-bottom: 15px;
+      color: var(--text-main);
+    }
+
+    ul, ol {
+      margin: 15px 0 20px 25px;
+      color: var(--text-main);
+    }
+
+    li {
+      margin-bottom: 10px;
+      line-height: 1.7;
+    }
+
+    strong { color: var(--brand-navy); }
+
+    .info-box {
+      background: var(--info-bg);
+      border: 1px solid #BFDBFE;
+      border-left: 4px solid var(--info);
+      padding: 18px 22px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+    }
+
+    .warning-box {
+      background: var(--warning-bg);
+      border: 1px solid #FDE68A;
+      border-left: 4px solid var(--warning);
+      padding: 18px 22px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+    }
+
+    .danger-box {
+      background: var(--danger-bg);
+      border: 1px solid #FECACA;
+      border-left: 4px solid var(--danger);
+      padding: 18px 22px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+    }
+
+    .success-box {
+      background: var(--success-bg);
+      border: 1px solid #A7F3D0;
+      border-left: 4px solid var(--success);
+      padding: 18px 22px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+    }
+
+    .criterion-card {
+      background: var(--bg-page);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-bottom: 15px;
+      transition: all 0.3s;
+    }
+
+    .criterion-card:hover {
+      border-color: var(--brand-orange);
+      box-shadow: var(--shadow-md);
+    }
+
+    .criterion-card h4 {
+      font-family: var(--font-serif);
+      color: var(--brand-navy);
+      margin-bottom: 8px;
+    }
+
+    .score-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 0.85rem;
+    }
+
+    .score-table th {
+      background: var(--brand-navy);
+      color: white;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .score-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .score-table tr:nth-child(even) {
+      background: var(--bg-page);
+    }
+
+    .flow-step {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 30px;
+      position: relative;
+    }
+
+    .flow-step::before {
+      content: '';
+      position: absolute;
+      left: 22px;
+      top: 50px;
+      bottom: -30px;
+      width: 2px;
+      background: var(--border-medium);
+    }
+
+    .flow-step:last-child::before {
+      display: none;
+    }
+
+    .flow-number {
+      width: 45px;
+      height: 45px;
+      background: var(--brand-navy);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      z-index: 1;
+      border: 3px solid white;
+      box-shadow: var(--shadow-md);
+    }
+
+    .flow-content {
+      flex: 1;
+      padding-top: 5px;
+    }
+
+    .flow-content h4 {
+      font-family: var(--font-serif);
+      color: var(--brand-navy);
+      margin-bottom: 5px;
+    }
+
+    .flow-content p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .footer {
+      margin-top: 60px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-light);
+      border-top: 1px solid var(--border-soft);
+      padding-top: 25px;
+    }
+
+    @media (max-width: 900px) {
+      .dashboard-wrapper { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .main-content { padding: 30px 20px; }
+      .hero h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="hero">
+    <div class="hero-content">
+      <div class="hero-icon">
+        <i class="fa-solid fa-user-shield"></i>
+      </div>
+      <span class="tagline">Evaluation Regulatory Framework</span>
+      <h1>Peer Review Policy</h1>
+      <p>Double-blind evaluation process, reviewer selection criteria, complete editorial workflow, and confidentiality standards that guarantee the academic integrity of every manuscript.</p>
+    </div>
+  </header>
+
+  <div class="dashboard-wrapper">
+    
+    <aside class="sidebar">
+      <h3><i class="fa-solid fa-list-ul"></i> Table of Contents</h3>
+      <ul class="sidebar-nav">
+        <li><a href="#principles">General Principles</a></li>
+        <li><a href="#model">Review Model</a></li>
+        <li><a href="#selection">Reviewer Selection</a></li>
+        <li><a href="#criteria">Evaluation Criteria</a></li>
+        <li><a href="#process">Editorial Process</a></li>
+        <li><a href="#confidentiality">Confidentiality</a></li>
+        <li><a href="#conflicts">Conflicts of Interest</a></li>
+        <li><a href="#ethics">Reviewer Ethics</a></li>
+        <li><a href="#committee">Committee Promotion</a></li>
+        <li><a href="#appeals">Appeals</a></li>
+      </ul>
+    </aside>
+
+    <main class="main-content">
+
+      <!-- 01. GENERAL PRINCIPLES -->
+      <div class="section-block" id="principles">
+        <h2><span class="section-number">01</span> General Principles</h2>
+        <p>The <strong>National Review of Sciences for Students</strong> establishes this peer review policy as the normative instrument governing the academic evaluation process for manuscripts submitted for consideration. This process constitutes the central mechanism of scientific quality control and is governed by the following fundamental principles:</p>
+        <ul>
+          <li><strong>Impartiality:</strong> Evaluations are based exclusively on scientific merit, originality, methodological rigor, and suitability to the Journal's thematic scope, without consideration of gender, institutional affiliation, ethnic origin, nationality, sexual orientation, religious beliefs, or political positions.</li>
+          <li><strong>Confidentiality:</strong> The entire process is conducted under strict confidentiality. Manuscripts under review are confidential documents and may not be shared, discussed, or disclosed to unauthorized third parties.</li>
+          <li><strong>Transparency:</strong> Evaluation policies, criteria, and procedures are communicated openly and accessibly to all participants in the editorial process.</li>
+          <li><strong>Academic Integrity:</strong> The Journal adheres to the highest ethical standards promoted by the <em>Committee on Publication Ethics (COPE)</em> and rejects any form of plagiarism, data fabrication, result manipulation, or inappropriate scientific conduct.</li>
+          <li><strong>Formative Character:</strong> Given the student-focused nature of the Journal, peer review serves a fundamental pedagogical function: evaluation reports must be constructive, specific, and oriented toward the academic development of authors.</li>
+        </ul>
+      </div>
+
+      <!-- 02. REVIEW MODEL -->
+      <div class="section-block" id="model">
+        <h2><span class="section-number">02</span> Review Model: Strict Double-Blind</h2>
+        <p>The Journal operates under a <strong>strict double-blind peer review</strong> system. This model guarantees that:</p>
+        <ul>
+          <li><strong>The reviewer does not know the author's identity:</strong> The manuscript provided to the reviewer has been completely anonymized. It contains no name, institutional affiliation, identifying acknowledgments, or references that could reveal authorship.</li>
+          <li><strong>The author does not know the reviewer's identity:</strong> The author receives no information about who evaluated their manuscript. Review reports are delivered without signature or identifying data.</li>
+        </ul>
+        <div class="info-box">
+          <i class="fa-solid fa-circle-info"></i> <strong>Manuscript Anonymization:</strong> The reviewer receives only the anonymized text, the abstract, and the keywords. They do not have access to the cover letter, author data, or the complete editorial folder. The document they receive is created specifically for their individual review.
+        </div>
+        <div class="warning-box">
+          <i class="fa-solid fa-triangle-exclamation"></i> <strong>Identity Detection:</strong> If during the review process the reviewer identifies or reasonably suspects the author's identity, they are obligated to notify the editor immediately via email at <strong>editor@revistacienciasestudiantes.com</strong>. In such cases, the review will be annulled and a new reviewer assigned.
+        </div>
+      </div>
+
+      <!-- 03. REVIEWER SELECTION -->
+      <div class="section-block" id="selection">
+        <h2><span class="section-number">03</span> Reviewer Selection and Assignment</h2>
+        
+        <h3>3.1. Assignment Responsibility</h3>
+        <p>The selection and assignment of reviewers is the responsibility of the <strong>Section Editor</strong> assigned to the manuscript. The Section Editor may consult the Editorial Committee to identify suitable candidates, but the final assignment decision rests on their editorial judgment.</p>
+
+        <h3>3.2. Reviewer Profile</h3>
+        <p>The Journal recognizes its mission to foster student academic participation. Therefore, the reviewer profile is flexible and adapts to the level of the manuscript evaluated:</p>
+        <ul>
+          <li><strong>Fundamental requirement:</strong> The reviewer must demonstrate <strong>outstanding competence in the manuscript's subject area</strong>. This competence may be accredited through:
+            <ul>
+              <li>Academic trajectory (professors, researchers, academics)</li>
+              <li>Previous publications in relevant journals or conferences</li>
+              <li>External recognition in academic or scientific competitions</li>
+              <li>Demonstrable research experience</li>
+            </ul>
+          </li>
+          <li><strong>University and academic reviewers:</strong> Prioritized for manuscripts by university authors, ensuring an appropriate level of evaluation.</li>
+          <li><strong>School-level reviewers:</strong> Participation of secondary education students as reviewers is permitted, exclusively for manuscripts by school-level authors, and provided they demonstrate:
+            <ul>
+              <li>External recognition in relevant competitions (olympiads, science fairs, awards)</li>
+              <li>Publication or research experience</li>
+              <li>Verifiable mastery of the specific topic</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h3>3.3. Number of Reviewers</h3>
+        <ul>
+          <li><strong>General rule:</strong> Each manuscript is evaluated by <strong>two (2) independent reviewers</strong>.</li>
+          <li><strong>Third reviewer:</strong> The Section Editor may request the opinion of a <strong>third reviewer</strong> when there is substantial disagreement between the first two reports, or when an additional specialized opinion is deemed pertinent.</li>
+        </ul>
+
+        <h3>3.4. Internal/External Balance</h3>
+        <ul>
+          <li>Members of the <strong>Editorial Committee</strong> may act as reviewers.</li>
+          <li>A <strong>balance</strong> between internal and external reviewers will always be sought.</li>
+          <li>At minimum, <strong>at least one reviewer must be external</strong> to the Journal (without affiliation to the Editorial Committee).</li>
+        </ul>
+
+        <h3>3.5. Reviewers for English-Language Manuscripts</h3>
+        <p>For manuscripts submitted in English, reviewers who <strong>master the English language</strong> at an academic level are required, ensuring accurate evaluation of the linguistic and technical quality of the text.</p>
+
+        <h3>3.6. Reviewer Replacement</h3>
+        <p>If a reviewer exceeds the established deadline to complete their evaluation, the Section Editor will contact them via email and, if deemed pertinent, via telephone. If the reviewer does not respond or states they cannot complete the review, the Editor may invite a <strong>replacement reviewer</strong> to ensure process continuity.</p>
+      </div>
+
+      <!-- 04. EVALUATION CRITERIA -->
+      <div class="section-block" id="criteria">
+        <h2><span class="section-number">04</span> Evaluation Criteria</h2>
+        <p>Reviewers evaluate each manuscript according to the following <strong>four fundamental criteria</strong>, assigning a score of <strong>0 to 2</strong> for each criterion:</p>
+
+        <div class="criterion-card">
+          <h4><i class="fa-solid fa-bullseye"></i> 4.1. Topic Relevance</h4>
+          <p>Is the topic relevant to the disciplinary area and to the Journal's scope?</p>
+          <ul>
+            <li><strong>0 — Low:</strong> Topic has little relevance or is out of scope</li>
+            <li><strong>1 — Medium:</strong> Topic is relevant but has significant limitations</li>
+            <li><strong>2 — High:</strong> Topic is highly relevant and of current interest to the community</li>
+          </ul>
+        </div>
+
+        <div class="criterion-card">
+          <h4><i class="fa-solid fa-flask-vial"></i> 4.2. Methodology / Rigor</h4>
+          <p>Is the methodology sound, appropriate, and correctly applied?</p>
+          <ul>
+            <li><strong>0 — Weak:</strong> Methodology is inappropriate or poorly applied</li>
+            <li><strong>1 — Acceptable:</strong> Methodology is adequate but has identifiable weaknesses</li>
+            <li><strong>2 — Sound:</strong> Methodology is rigorous, reproducible, and well-founded</li>
+          </ul>
+        </div>
+
+        <div class="criterion-card">
+          <h4><i class="fa-solid fa-align-left"></i> 4.3. Clarity and Organization</h4>
+          <p>Is the text clear, coherent, and correctly structured?</p>
+          <ul>
+            <li><strong>0 — Confusing:</strong> Difficult to follow, disorganized, requires deep restructuring</li>
+            <li><strong>1 — Acceptable:</strong> Understandable but with aspects that could be improved in structure or writing</li>
+            <li><strong>2 — Excellent:</strong> Clear, well-structured, with outstanding argumentative flow</li>
+          </ul>
+        </div>
+
+        <div class="criterion-card">
+          <h4><i class="fa-solid fa-lightbulb"></i> 4.4. Originality / Contribution</h4>
+          <p>Does the article contribute original, novel ideas or a significant contribution to knowledge?</p>
+          <ul>
+            <li><strong>0 — Low:</strong> Not original, repetitive, no identifiable contribution</li>
+            <li><strong>1 — Moderate:</strong> Presents some originality with limited contribution</li>
+            <li><strong>2 — High:</strong> Highly original with significant contribution to the field</li>
+          </ul>
+        </div>
+
+        <div class="danger-box">
+          <i class="fa-solid fa-circle-exclamation"></i> <strong>Minimum Score:</strong> The evaluation system does not allow advancement if a fundamental criterion presents a score of <strong>zero (0)</strong>. This ensures that no manuscript with critical weaknesses in methodology, originality, or relevance goes unnoticed. A manuscript with a score of 0 in any criterion will be considered <strong>not suitable for publication</strong>.
+        </div>
+
+        <h3>4.5. Final Recommendation</h3>
+        <p>In addition to the per-criterion scores, the reviewer must issue a <strong>final recommendation</strong> to the editor, selecting from the following options:</p>
+        <table class="score-table">
+          <thead>
+            <tr>
+              <th>Recommendation</th>
+              <th>Meaning</th>
+              <th>Editorial Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Accept</strong></td>
+              <td>The article is publishable in its current form</td>
+              <td>Moves to editorial production</td>
+            </tr>
+            <tr>
+              <td><strong>Minor Revisions</strong></td>
+              <td>Requires specific non-substantial changes</td>
+              <td>Author corrects and resubmits without new external review round</td>
+            </tr>
+            <tr>
+              <td><strong>Major Revisions</strong></td>
+              <td>Requires substantial changes in content or methodology</td>
+              <td>Author corrects and manuscript is evaluated again</td>
+            </tr>
+            <tr>
+              <td><strong>Reject</strong></td>
+              <td>Not suitable for publication</td>
+              <td>Unresolvable weaknesses are notified</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 05. EDITORIAL PROCESS -->
+      <div class="section-block" id="process">
+        <h2><span class="section-number">05</span> Complete Editorial Process</h2>
+        
+        <div class="flow-step">
+          <div class="flow-number">1</div>
+          <div class="flow-content">
+            <h4>Technical Screening (Desk Review)</h4>
+            <p>The management team verifies anonymization, format, similarity (plagiarism), and thematic focus. If basic requirements are not met, it is returned without external review.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-number">2</div>
+          <div class="flow-content">
+            <h4>Editor and Reviewer Assignment</h4>
+            <p>The Editor-in-Chief assigns a Section Editor. The Section Editor selects and invites 2 (or 3) reviewers with competence in the manuscript's subject area.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-number">3</div>
+          <div class="flow-content">
+            <h4>Double-Blind Evaluation</h4>
+            <p>Each reviewer accesses an anonymized document created exclusively for their review. They complete the evaluation with scores, comments for the author, and confidential comments for the editor.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-number">4</div>
+          <div class="flow-content">
+            <h4>Editorial Decision</h4>
+            <p>The Section Editor analyzes the review reports and issues the decision: Accept, Minor Revisions, Major Revisions, or Reject. The decision is communicated to the author through the author portal and email notification.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-number">5</div>
+          <div class="flow-content">
+            <h4>Second Round (if applicable)</h4>
+            <p>For major revisions, the author corrects the manuscript and submits a response letter. The Editor evaluates the corrections. <strong>Second-round reviewers are not necessarily the same</strong> as those from the first round.</p>
+          </div>
+        </div>
+
+        <div class="flow-step">
+          <div class="flow-number">6</div>
+          <div class="flow-content">
+            <h4>Production and Publication</h4>
+            <p>The accepted manuscript is typeset, assigned a DOI, and published under a Creative Commons license (Diamond Open Access).</p>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <i class="fa-solid fa-circle-info"></i> <strong>Response Letter:</strong> The response letter that the author submits with their corrections is reviewed <strong>exclusively by the Section Editor</strong>. It is not shared with reviewers to prevent the leakage of confidential information and maintain the integrity of the double-blind process.
+        </div>
+      </div>
+
+      <!-- 06. CONFIDENTIALITY -->
+      <div class="section-block" id="confidentiality">
+        <h2><span class="section-number">06</span> Confidentiality and Document Management</h2>
+        
+        <h3>6.1. Confidentiality Agreement</h3>
+        <p>Upon accepting the review invitation, the reviewer enters into a <strong>confidentiality agreement</strong> through the Journal's digital platform. This agreement establishes:</p>
+        <ul>
+          <li>The manuscript is a confidential document and may not be shared with third parties.</li>
+          <li>The content may not be used for personal benefit or that of third parties before its publication.</li>
+          <li>The author's identity must not be sought or disclosed.</li>
+          <li>Comments and evaluations are editorial property and may not be made public.</li>
+        </ul>
+
+        <h3>6.2. Document Access</h3>
+        <ul>
+          <li>The reviewer receives <strong>only an anonymized document</strong> created specifically for their individual review.</li>
+          <li>They do not have access to the complete editorial folder or additional manuscript information.</li>
+          <li>They may <strong>download</strong> the document for offline reading, but the formal review is conducted through comments in Google Docs.</li>
+          <li>Comments are made <strong>exclusively on the Google Docs platform</strong> (this procedure may vary; any changes will be notified).</li>
+        </ul>
+
+        <h3>6.3. Information Available to the Reviewer</h3>
+        <p>The reviewer has access exclusively to:</p>
+        <ul>
+          <li>The complete anonymized text of the manuscript</li>
+          <li>The abstract</li>
+          <li>The keywords</li>
+          <li>The subject area</li>
+          <li>The article type</li>
+        </ul>
+        <p>The reviewer <strong>does not have access</strong> to: author's name, institutional affiliation, cover letter, response letter, contact information, or the manuscript's editorial history.</p>
+      </div>
+
+      <!-- 07. CONFLICTS OF INTEREST -->
+      <div class="section-block" id="conflicts">
+        <h2><span class="section-number">07</span> Conflicts of Interest</h2>
+        <p>A <strong>conflict of interest</strong> is understood as any situation in which personal, academic, financial, institutional, or professional interests may improperly influence the evaluation of a manuscript.</p>
+        
+        <h3>7.1. Mandatory Declaration</h3>
+        <p>Upon accepting the review invitation, the reviewer must <strong>mandatorily declare</strong> any real, potential, or perceived conflict of interest, including:</p>
+        <ul>
+          <li>Personal or family relationship with the author</li>
+          <li>Recent academic collaboration with the author (last 3 years)</li>
+          <li>Membership in the same institution or research group</li>
+          <li>Financial or commercial interest in the research outcome</li>
+          <li>Direct competition for resources or publications</li>
+          <li>Tutoring, mentoring, or academic supervision relationship</li>
+        </ul>
+
+        <h3>7.2. Procedure in Case of Conflict</h3>
+        <p>If the reviewer declares a conflict of interest, the Section Editor will evaluate the situation and may:</p>
+        <ul>
+          <li>Accept the review if the conflict is minor and does not compromise impartiality</li>
+          <li>Reassign the manuscript to another reviewer</li>
+          <li>Request additional information from the reviewer</li>
+        </ul>
+      </div>
+
+      <!-- 08. REVIEWER ETHICS -->
+      <div class="section-block" id="ethics">
+        <h2><span class="section-number">08</span> Reviewer Ethics and Responsibilities</h2>
+        
+        <h3>8.1. Use of Artificial Intelligence</h3>
+        <ul>
+          <li><strong>Not permitted:</strong> The use of AI for the <strong>complete review</strong> of the document.</li>
+          <li>The reviewer may <strong>consult specific information</strong> that helps them support their judgment (e.g., verifying a statistical method, confirming a bibliographic reference).</li>
+          <li>The evaluation, scientific judgment, and recommendations must reflect <strong>the reviewer's own criteria</strong>.</li>
+          <li>It is prohibited to enter the manuscript, or substantial parts thereof, into AI services that may retain or reuse the information.</li>
+        </ul>
+
+        <h3>8.2. Detection of Plagiarism or Misconduct</h3>
+        <p>If the reviewer detects indications of plagiarism, data fabrication, image manipulation, or other scientific misconduct, they must:</p>
+        <ol>
+          <li>Record the observation in the <strong>confidential comments for the editor</strong></li>
+          <li>Provide specific details (location, type of irregularity, evidence)</li>
+          <li>Not communicate their suspicions directly to the author</li>
+        </ol>
+
+        <h3>8.3. Review Deadlines</h3>
+        <p>The reviewer is expected to complete their evaluation within the <strong>established deadline</strong> (typically 3-4 weeks). If unable to meet the deadline, they must notify the editor as early as possible.</p>
+
+        <h3>8.4. Report Quality</h3>
+        <p>Review reports must be:</p>
+        <ul>
+          <li><strong>Constructive:</strong> Oriented toward improving the manuscript, pointing out strengths and areas for improvement.</li>
+          <li><strong>Specific:</strong> With concrete references to sections, paragraphs, or elements of the text.</li>
+          <li><strong>Respectful:</strong> With a professional academic tone, free of personal disqualifications.</li>
+          <li><strong>Well-founded:</strong> Supported by clear scientific and methodological criteria.</li>
+        </ul>
+      </div>
+
+      <!-- 09. COMMITTEE PROMOTION -->
+      <div class="section-block" id="committee">
+        <h2><span class="section-number">09</span> Promotion to the Editorial and Scientific Committee</h2>
+        
+        <h3>9.1. Invitation Process</h3>
+        <p>Reviewers who demonstrate sustained excellence in their evaluations may be invited to join the <strong>Scientific Committee</strong> or <strong>Editorial Committee</strong> of the Journal. The promotion process is as follows:</p>
+        <ul>
+          <li><strong>Step 1 — Identification:</strong> Section Editors identify reviewers with exceptional performance (report quality, punctuality, methodological rigor).</li>
+          <li><strong>Step 2 — Editor-in-Chief Approval:</strong> The Editor-in-Chief must <strong>previously approve</strong> any promotion invitation. This approval is an unavoidable requirement before extending the invitation.</li>
+          <li><strong>Step 3 — Formal Invitation:</strong> The invitation is extended to the reviewer, detailing the responsibilities and benefits of membership.</li>
+        </ul>
+
+        <h3>9.2. Participation Restriction</h3>
+        <p>An Editorial Committee member <strong>may not act as editor of their own manuscript</strong> nor participate in the review process of a work they authored or co-authored. An editor without conflicts of interest will be assigned, and it will be ensured that the author is not selected as a reviewer of their own work.</p>
+
+        <h3>9.3. Removal from the Reviewer Panel</h3>
+        <p>A reviewer may be removed from the panel for the following reasons:</p>
+        <ul>
+          <li>Persistently low or insufficient review quality</li>
+          <li>Breach of confidentiality</li>
+          <li>Inappropriate conduct toward authors or editors</li>
+          <li>Repeatedly undeclared conflicts of interest</li>
+          <li>Deadline non-compliance is treated <strong>more permissively</strong>, requiring a sustained pattern of unjustified non-compliance to consider removal.</li>
+        </ul>
+      </div>
+
+      <!-- 10. APPEALS -->
+      <div class="section-block" id="appeals">
+        <h2><span class="section-number">10</span> Appeals and Controversies</h2>
+        
+        <h3>10.1. Right of Appeal</h3>
+        <p>The author has the right to appeal an editorial decision through written communication addressed to <strong>editor@revistacienciasestudiantes.com</strong>. The appeal must be submitted within <strong>30 calendar days</strong> following notification of the decision.</p>
+
+        <h3>10.2. Appeal Procedure</h3>
+        <ul>
+          <li>The appeal must be grounded in procedural errors, non-compliance with editorial procedure, or manifestly incorrect interpretation of the manuscript.</li>
+          <li>Appeals based solely on disagreement with the reviewers' scientific criteria will not be accepted.</li>
+          <li>The Section Editor will initially review the appeal.</li>
+          <li>If the appeal is considered valid, it will be elevated to the <strong>Editor-in-Chief</strong> for case review.</li>
+          <li>The Editor-in-Chief's decision is <strong>final and unappealable</strong>.</li>
+        </ul>
+
+        <h3>10.3. Reviewer Anonymity in Publication</h3>
+        <ul>
+          <li>Reviewers remain <strong>anonymous in the published manuscript</strong>.</li>
+          <li>At the end of each issue, a <strong>general acknowledgment</strong> is published thanking all contributing reviewers.</li>
+          <li><strong>It is not indicated</strong> which reviewer evaluated which specific manuscript.</li>
+        </ul>
+
+        <h3>10.4. Author-Reviewer Contact</h3>
+        <p>The author <strong>cannot directly contact the reviewer</strong>, as they do not know their identity. Any communication related to the review must be channeled exclusively through the Section Editor via the editorial email.</p>
+
+        <div class="success-box">
+          <i class="fa-solid fa-circle-check"></i> <strong>Journal Commitment:</strong> The Journal adheres to the principles of the <em>Committee on Publication Ethics (COPE)</em> and is committed to maintaining an integral, transparent, and formative peer review process that contributes to the academic development of the student and scientific community.
+        </div>
+      </div>
+
+      <div class="footer">
+        National Review of Sciences for Students · ISSN 3087-2839<br>
+        San Felipe, Chile · Independent Academic Publication · © <span id="current-year"></span>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    document.getElementById('current-year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

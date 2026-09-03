@@ -329,26 +329,76 @@ const ReviewerResponsePage = () => {
               </div>
             )}
 
-            {/* Conflicto de intereses */}
-            <div className="mb-8">
-              <label className="block font-['Playfair_Display'] font-bold text-[#0A1929] mb-3">
-                {isSpanish ? 'Conflicto de Intereses' : 'Conflict of Interest'}
-              </label>
-              <textarea
-                value={conflict}
-                onChange={(e) => setConflict(e.target.value)}
-                rows="4"
-                className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora'] text-sm"
-                placeholder={isSpanish 
-                  ? 'Declara cualquier conflicto de interés (o escribe "Ninguno")' 
-                  : 'Declare any conflict of interest (or write "None")'}
-              />
-              <p className="text-xs text-[#5A6B7A] mt-2 font-['Lora']">
-                {isSpanish 
-                  ? 'Ejemplo: "Soy coinvestigador en el mismo proyecto" o "Ninguno"'
-                  : 'Example: "I am co-investigator in the same project" or "None"'}
-              </p>
-            </div>
+            {/* Conflicto de intereses */}{/* Conflicto de intereses */}
+<div className="mb-8">
+  <label className="block font-['Playfair_Display'] font-bold text-[#0A1929] mb-3">
+    {isSpanish ? 'Conflicto de Intereses' : 'Conflict of Interest'}
+  </label>
+  <textarea
+    value={conflict}
+    onChange={(e) => setConflict(e.target.value)}
+    rows="4"
+    className="w-full p-4 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl focus:ring-2 focus:ring-[#C0A86A] focus:border-transparent font-['Lora'] text-sm"
+    placeholder={isSpanish 
+      ? 'Declara cualquier conflicto de interés (o escribe "Ninguno")' 
+      : 'Declare any conflict of interest (or write "None")'}
+  />
+  <p className="text-xs text-[#5A6B7A] mt-2 font-['Lora']">
+    {isSpanish 
+      ? 'Ejemplo: "Soy coinvestigador en el mismo proyecto" o "Ninguno"'
+      : 'Example: "I am co-investigator in the same project" or "None"'}
+  </p>
+</div>
+
+{/* NUEVO: Aviso de adhesión a políticas de revisión */}
+<div className="mb-8 p-5 bg-[#F5F7FA] border border-[#E5E9F0] rounded-xl">
+  <div className="flex items-start gap-3">
+    <svg 
+      className="w-5 h-5 text-[#0A1929] flex-shrink-0 mt-0.5" 
+      fill="none" 
+      stroke="currentColor" 
+      viewBox="0 0 24 24"
+    >
+      <path 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        strokeWidth={2} 
+        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" 
+      />
+    </svg>
+    <div>
+      <p className="font-['Playfair_Display'] font-bold text-[#0A1929] text-sm mb-2">
+        {isSpanish 
+          ? 'Adhesión a la Política de Revisión por Pares' 
+          : 'Adherence to Peer Review Policy'
+        }
+      </p>
+      <p className="text-xs text-[#5A6B7A] font-['Lora'] leading-relaxed mb-3">
+        {isSpanish 
+          ? 'Al aceptar esta invitación, usted declara conocer y aceptar las normas, criterios de evaluación, deberes de confidencialidad y procedimientos establecidos en la Política de Revisión por Pares de la Revista.'
+          : 'By accepting this invitation, you declare that you know and accept the rules, evaluation criteria, confidentiality duties, and procedures established in the Journal\'s Peer Review Policy.'
+        }
+      </p>
+      <a
+        href={isSpanish 
+          ? 'https://www.revistacienciasestudiantes.com/peer-review.html' 
+          : 'https://www.revistacienciasestudiantes.com/peer-reviewEN.html'
+        }
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 text-[#C0A86A] hover:text-[#A58D4F] font-['Playfair_Display'] font-bold text-xs uppercase tracking-wider transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+        {isSpanish 
+          ? 'Leer Política Completa' 
+          : 'Read Full Policy'
+        }
+      </a>
+    </div>
+  </div>
+</div>
 
             {/* Botones de acción */}
             <div className="grid grid-cols-2 gap-4">
