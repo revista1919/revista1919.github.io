@@ -74,29 +74,30 @@ function GuidelinesSection() {
             </div>
 
             {/* Normative Documents */}
-            <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">
-              <h3 className="text-[13px] font-bold font-sans uppercase tracking-wider text-black px-6 pt-5 pb-3 border-b border-[#e6e8ea]">
-                Normative Documents
-              </h3>
-              <div className="divide-y divide-[#e6e8ea]">
-                {[
-                  { href: '/authorEN.html', title: 'Complete Author Guidelines' },
-                  { href: '/practicesEN.html', title: 'Good Practices and Ethics Guide' },
-                  { href: '/open-accessEN.html', title: 'Open Access Policies' }
-                ].map((item) => (
-                  <a 
-                    key={item.href}
-                    href={item.href} 
-                    className="group flex items-center justify-between px-6 py-4 hover:bg-[#f8f9fa] transition-colors"
-                  >
-                    <span className="text-[14px] font-sans font-semibold text-[#2b2b2b] group-hover:text-[#e86125] transition-colors">
-                      {item.title}
-                    </span>
-                    <ArrowRightIcon className="w-4 h-4 text-[#a0a0a0] group-hover:text-[#e86125]" />
-                  </a>
-                ))}
-              </div>
-            </div>
+<div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">
+  <h3 className="text-[13px] font-bold font-sans uppercase tracking-wider text-black px-6 pt-5 pb-3 border-b border-[#e6e8ea]">
+    Normative Documents
+  </h3>
+  <div className="divide-y divide-[#e6e8ea]">
+    {[
+      { href: '/authorEN.html', title: 'Complete Author Guidelines' },
+      { href: '/practicesEN.html', title: 'Good Practices and Ethics Guide' },
+      { href: '/open-accessEN.html', title: 'Open Access Policies' },
+      { href: '/copyright-and-licenseEN.html', title: 'License & Copyright' }  // ← NUEVO
+    ].map((item) => (
+      <a 
+        key={item.href}
+        href={item.href} 
+        className="group flex items-center justify-between px-6 py-4 hover:bg-[#f8f9fa] transition-colors"
+      >
+        <span className="text-[14px] font-sans font-semibold text-[#2b2b2b] group-hover:text-[#e86125] transition-colors">
+          {item.title}
+        </span>
+        <ArrowRightIcon className="w-4 h-4 text-[#a0a0a0] group-hover:text-[#e86125]" />
+      </a>
+    ))}
+  </div>
+</div>
 
             {/* Technical Specifications */}
             <div className="bg-white border border-[#e6e8ea] rounded-sm shadow-sm">

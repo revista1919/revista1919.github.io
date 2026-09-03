@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>License & Copyright · National Review of Sciences for Students</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+
+    :root {
+      --primary: #004b87;       
+      --secondary: #006dae;     
+      --accent: #e86125;        
+      --text-main: #2b2b2b;     
+      --text-muted: #666666;    
+      --border-light: #e6e8ea;  
+      --border-dark: #cbd0d5;   
+      --bg-out: #f4f5f7;        
+      --bg-paper: #ffffff;      
+      --bg-highlight: #f8f9fa;  
+      --link: #006dae;
+    }
+
+    body {
+      font-family: 'Lora', 'Georgia', Times, serif;
+      font-size: 16px;
+      line-height: 1.75;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-out);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .page-wrapper {
+      max-width: 850px;
+      margin: 60px auto;
+      background-color: var(--bg-paper);
+      padding: 70px 90px;
+      border: 1px solid var(--border-light);
+      border-top: 5px solid var(--primary);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    }
+
+    .header {
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 30px;
+      margin-bottom: 50px;
+      text-align: left;
+    }
+
+    .header img {
+      max-width: 180px;
+      margin-bottom: 25px;
+      display: block;
+    }
+
+    .header h1 {
+      font-family: 'Inter', sans-serif;
+      font-size: 2.2em;
+      font-weight: 700;
+      line-height: 1.2;
+      margin: 0;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
+
+    .document-meta {
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 15px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    h2, h3, h4 {
+      font-family: 'Inter', sans-serif;
+      color: var(--primary);
+      margin-top: 2.5em;
+      font-weight: 600;
+    }
+
+    h2 {
+      font-size: 1.25em;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 8px;
+      margin-bottom: 1em;
+    }
+
+    h3 {
+      font-size: 1.1em;
+      color: var(--text-main);
+      margin-bottom: 0.8em;
+    }
+
+    h4 {
+      font-size: 0.95em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5em;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      color: var(--text-main);
+    }
+
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 1.5em;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-main);
+    }
+
+    a {
+      color: var(--link);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--primary);
+      border-bottom: 1px solid var(--primary);
+      background-color: transparent;
+    }
+
+    .highlight-box {
+      background-color: var(--bg-highlight);
+      border-left: 4px solid var(--accent);
+      padding: 20px 25px;
+      margin: 2em 0;
+      font-size: 0.95em;
+      color: var(--text-main);
+      border-radius: 0 4px 4px 0;
+    }
+
+    .highlight-box p:last-child {
+      margin-bottom: 0;
+    }
+
+    .license-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin: 2.5em 0;
+    }
+
+    .license-summary div {
+      background-color: var(--bg-highlight);
+      padding: 24px;
+      border-radius: 4px;
+      border: 1px solid var(--border-light);
+      transition: box-shadow 0.2s ease;
+    }
+
+    .license-summary div:hover {
+      box-shadow: 0 4px 15px rgba(0, 75, 135, 0.08);
+    }
+
+    .license-summary h4 {
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 0.75em;
+      color: var(--primary);
+      margin-top: 0;
+    }
+
+    .footer {
+      margin-top: 80px;
+      padding-top: 30px;
+      border-top: 1px solid var(--border-light);
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    @media (max-width: 768px) {
+      .page-wrapper { 
+        margin: 0; 
+        padding: 30px 20px; 
+        border: none;
+        border-top: 4px solid var(--primary);
+      }
+      .header h1 { font-size: 1.7em; }
+      .document-meta { flex-direction: column; align-items: flex-start; gap: 5px; }
+      .license-summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Header -->
+    <div class="header">
+      <img src="logo.png" alt="Logo National Review of Sciences for Students">
+      <h1>License & Copyright</h1>
+      <div class="document-meta">Diamond Route · Intellectual Property Regulatory Framework · Version 1.0, July 2026 · San Felipe, Chile</div>
+    </div>
+
+    <!-- 01. Foundations and Guiding Principles -->
+    <h2 id="foundations">01. Foundations, Purpose, and Guiding Principles of Intellectual Property</h2>
+    <p>The <strong>National Review of Sciences for Students</strong> (hereinafter, "the Journal"), in its capacity as an academic publication committed to the dissemination of knowledge and the promotion of student research, establishes this licensing and copyright policy as a binding legal-regulatory instrument for authors, editors, reviewers, and third-party users of the published content.</p>
+    <p>This document is articulated in strict accordance with the principles of the <strong>Budapest Open Access Initiative (BOAI)</strong>, the recommendations of the <strong>Directory of Open Access Journals (DOAJ)</strong>, and the open science policies promoted by <strong>Plan S</strong> and the guidelines of the <strong>Committee on Publication Ethics (COPE)</strong>. Its primary purpose is to guarantee the maximum circulation and legal reuse of scientific works, while simultaneously preserving the moral and economic integrity of the creators' rights.</p>
+    <p>The spirit of this regulation is based on a fundamental premise: <strong>the ownership of the work belongs inviolably to its authors</strong>. The Journal does not claim, under any circumstances, the transfer or exclusive assignment of the exploitation rights over the manuscripts. The only consideration required, essential for the viability of the editorial process, is the granting of a limited and specific license for first publication.</p>
+
+    <!-- 02. Copyright Ownership -->
+    <h2 id="ownership">02. Ownership, Scope, and Reservation of Copyright</h2>
+    
+    <h3>2.1. Full Preservation of Moral and Economic Rights</h3>
+    <p>In accordance with international intellectual property legislation and, subsidiarily, the applicable Chilean regulations (Law No. 17.336 on Intellectual Property), the author(s) of the manuscript (hereinafter referred to as "the Author" or "the Authors") <strong>fully, perpetually, and inalienably retain</strong> all moral and economic rights derived from their scientific work.</p>
+    <p>The moral rights, which include the right of paternity, the right to the integrity of the work, the right of disclosure, and the right of withdrawal from commerce, remain under the exclusive ownership of the Author. The Journal is obligated to ensure the correct attribution of authorship in any reproduction, distribution, or public communication of the article, unequivocally citing the names of the creators.</p>
+    
+    <h3>2.2. Absence of Copyright Transfer</h3>
+    <p>It is expressly stipulated that <strong>no transfer of copyright ownership occurs</strong>. The Author does not assign, alienate, or limit their capacity to dispose of the work. Any contractual clause outside this policy that purported to operate a transfer of rights to the Journal shall be deemed unwritten and without any legal validity.</p>
+    <p>The only faculty granted to the Journal, by virtue of the act of submission and subsequent acceptance of the manuscript, is that of <strong>non-exclusive licensee</strong> for the realization of the first academic publication, under the terms and with the strict limits detailed in Chapter 3 of this document.</p>
+
+    <!-- 03. License for First Publication -->
+    <h2 id="permission">03. License for First Publication: Legal Nature and Rights Granted</h2>
+    
+    <h3>3.1. Definition of the Non-Exclusive License</h3>
+    <p>By submitting their manuscript for consideration by the Journal and, where applicable, accepting its publication, the Author grants the Journal a <strong>non-exclusive, royalty-free, perpetual, and worldwide right</strong> for the editorial exploitation of the work in its capacity as <strong>first publication</strong>. This license is understood to be limited in its object and purpose: to enable the Journal to fulfill its founding mission of academic dissemination.</p>
+    <p>This permission comprises, by way of illustration but not limitation, the following acts of exploitation:</p>
+    <ul>
+      <li><strong>Reproduction:</strong> Fixation of the work in any medium or format, whether printed, electronic, optical, or digital, including the making of technical copies necessary for preservation and archiving.</li>
+      <li><strong>Public Communication:</strong> Making the article available to the public through the Journal's website, institutional digital repositories, bibliographic databases, academic networks, and other dissemination platforms selected by the Editorial Committee.</li>
+      <li><strong>Technical Transformation:</strong> Adaptation of the manuscript's format (layout, conversion to PDF, XML, HTML, ePub, or other digital standards) for exclusively editorial and preservation purposes, without altering in any way the scientific substance or the integrity of the intellectual content.</li>
+      <li><strong>Assignment of Persistent Identifiers:</strong> Registration of the article and assignment of a Digital Object Identifier (<strong>DOI</strong>) and other standardized bibliographic metadata (ISSN, ISBN), in order to guarantee the citability and traceability of the document.</li>
+      <li><strong>Distribution and Dissemination:</strong> Exchange of metadata and full texts with national and international indexes, aggregators, and academic directories (such as DOAJ, Latindex, Redalyc, SciELO, or OpenAlex), provided that the attribution of authorship is respected.</li>
+    </ul>
+
+    <h3>3.2. Temporary Exclusivity Clause for First Publication</h3>
+    <p>The only temporary limitation imposed on the Author lies in the <strong>primacy of publication</strong>. The Author agrees not to publish the manuscript, in its final version accepted by the Journal, in another academic or commercial medium, until the Journal has proceeded to its formal online publication. Once the first publication is materialized, the exclusivity ceases ipso jure and the Author recovers full capacity to dispose of the work under the broadly permissive terms of the <strong>CC BY 4.0</strong> license described in Chapter 4.</p>
+    <p>Expressly excluded from this limitation is the deposit of preprints or preliminary versions of the manuscript in open access repositories, provided this circumstance is declared at the time of submission and the similarity and originality policies established in the editorial policies manual are respected.</p>
+
+    <!-- 04. Publication License: Creative Commons CC BY 4.0 -->
+    <h2 id="cc-license">04. Publication License: Total Permissiveness (Creative Commons CC BY 4.0)</h2>
+    <p>The Journal publishes all its articles under the <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong> license. This license constitutes the gold standard of open access and is explicitly recommended by <strong>DOAJ</strong> for journals seeking to maximize the visibility and impact of their content.</p>
+    
+    <div class="highlight-box">
+      <p><strong>Declaration of compliance with DOAJ:</strong> This license complies with the copyright requirements established by the <em>Directory of Open Access Journals</em>, which mandates that the exploitation rights remain in the hands of the authors and that reuse is guaranteed without economic or technical restrictions, except for the obligation of attribution.</p>
+    </div>
+
+    <h3>4.1. Scope of Rights Granted to Third Parties (Users)</h3>
+    <p>Under the CC BY 4.0 license, any natural or legal person (hereinafter, "the User") may freely exercise the following acts over the published article, without additional authorization from the Author or the Journal:</p>
+    
+    <div class="license-summary">
+      <div>
+        <h4>Share</h4>
+        <p>Copy, distribute, and publicly communicate the article in any medium, format, or support, with total freedom, even for commercial or for-profit purposes.</p>
+      </div>
+      <div>
+        <h4>Adapt</h4>
+        <p>Remix, transform, translate, create derivative works, and build upon the article for any purpose, including explicit commercial use.</p>
+      </div>
+      <div>
+        <h4>No Additional Permissions</h4>
+        <p>Legal terms or technological measures (DRM) that legally restrict others from doing anything the license permits may not be applied.</p>
+      </div>
+      <div>
+        <h4>Non-Exclusivity</h4>
+        <p>The license is not exclusive. The Author retains the right to exploit the work in any other medium, simultaneously or subsequently to publication in the Journal.</p>
+      </div>
+    </div>
+
+    <h3>4.2. Sole Obligation of the User: Attribution (BY)</h3>
+    <p>The only sine qua non condition for the exercise of the rights described above is strict compliance with <strong>attribution</strong>. The User must provide appropriate credit in the following manner:</p>
+    <ul>
+      <li><strong>Identification of the Authors:</strong> Clearly indicate the name or names of the original authors of the work, as they appear in the publication.</li>
+      <li><strong>Identification of the Source:</strong> Cite the original source of publication, including the full name of the Journal, the volume, the issue (if applicable), and the year of publication.</li>
+      <li><strong>Provide the DOI:</strong> Include the persistent link or DOI of the article that redirects to the official version published on the Journal's website.</li>
+      <li><strong>Indicate if Changes Were Made:</strong> In the case of a derivative work, reasonably indicate the modifications made to the original material.</li>
+      <li><strong>Link to the License:</strong> Provide a link to the CC BY 4.0 license or the corresponding legal code.</li>
+    </ul>
+    <p>The attribution must not in any way suggest that the authors or the Journal endorse the User or the particular use made of the work, unless expressly authorized.</p>
+
+    <!-- 05. Self-Archiving and Deposit -->
+    <h2 id="self-archiving">05. Self-Archiving and Author Distribution Policy (No Embargo)</h2>
+    
+    <h3>5.1. Unrestricted Right of Deposit</h3>
+    <p>By virtue of the retention of economic rights and the CC BY 4.0 license, the Author has the legal and irrevocable right to deposit the <strong>final published version of the article (Version of Record, VoR)</strong> — that is, the PDF file generated by the Journal with its editorial layout — in any open access repository or platform, <strong>immediately after publication, without any embargo period (waiting period)</strong>.</p>
+    <p>The authorized destinations for self-archiving include, but are not limited to:</p>
+    <ul>
+      <li>Institutional repositories of the Author's university or research center.</li>
+      <li>Subject or disciplinary repositories (e.g., arXiv, SocArXiv, RePEc, bioRxiv, among others).</li>
+      <li>Academic social networks and reference managers (ResearchGate, Academia.edu, Mendeley, Zotero).</li>
+      <li>Personal web pages, blogs, academic portfolios, or self-publishing platforms.</li>
+    </ul>
+
+    <h3>5.2. Conditions of Deposit</h3>
+    <p>The only requirement for the validity of the deposit is the <strong>preservation of the integrity of the original bibliographic reference</strong>. The Author undertakes to ensure that any reproduction of the published version in an external repository includes, visibly and completely, the following information: Authors, Article title, Journal name, Volume, Issue, Year of publication, and the corresponding DOI.</p>
+
+    <!-- 06. Reuse Rights and Derivative Works -->
+    <h2 id="reuse">06. Reuse Rights, Translations, and Derivative Works</h2>
+    <p>This regulatory framework expressly recognizes and protects the Author's right to <strong>reuse the entire or partial content</strong> of their article in future publications, whether their own or by third parties, under the following modalities:</p>
+    <ul>
+      <li><strong>Compendiums and Books:</strong> The Author may include the article, unmodified or adapted, as a chapter in a book, anthology, or compendium authored by them, provided that the original publication in the Journal is cited.</li>
+      <li><strong>Translations:</strong> The Author may authorize or personally carry out the translation of the article into any language and publish it in any medium, citing the original version in Spanish or English.</li>
+      <li><strong>Teaching and Research:</strong> The Author may use the article as study, teaching, or research material, reproducing it in course repositories or learning platforms, without any restriction.</li>
+      <li><strong>Secondary Publication (Reissue):</strong> The Author may submit the article to a second journal or medium, provided that the latter explicitly accepts the nature of the reissue and the attribution to the original source is respected.</li>
+    </ul>
+    <p>In all the above cases, the Author's freedom of action is total. The Journal does not exercise any veto right nor requires prior authorization, in accordance with the principles of <em>free culture</em> and <em>open science</em>.</p>
+
+    <!-- 07. Rights of the Journal as Publisher -->
+    <h2 id="journal-rights">07. Rights and Obligations of the Journal in its Capacity as Publisher</h2>
+    <p>While the authors retain full ownership of the work, the Journal, as manager of the editorial process, acquires a series of <strong>related rights over the editorial product</strong>, that is, over the layout, design, compilation of the issue, and the dissemination platform. These rights are of a technical nature and do not in any way limit the Author's exploitation rights over their text.</p>
+    <p>The Journal reserves the right to:</p>
+    <ul>
+      <li><strong>Compilation:</strong> Assemble the articles into issues, volumes, or special editions, forming a collective work whose editorial ownership corresponds to the Journal.</li>
+      <li><strong>Formal Correction:</strong> Make orthographic, typographic, stylistic, and formatting corrections, without altering the scientific content or the meaning of the manuscript.</li>
+      <li><strong>Management of the Integrity of the Record:</strong> Apply watermarks, retraction notices, corrections, or expressions of concern to published files, in accordance with the Journal's ethical policies, to safeguard the reliability of the academic record.</li>
+      <li><strong>Digital Preservation:</strong> Store and preserve files in long-term conservation repositories (currently Zenodo and associated systems), guaranteeing perpetual accessibility of the work.</li>
+    </ul>
+    <p>The Journal is obligated to <strong>maintain open and free access</strong> to published articles in perpetuity, without imposing economic, technical, or legal barriers on readers.</p>
+
+    <!-- 08. Warranties and Responsibilities of the Author -->
+    <h2 id="warranties">08. Warranties, Declarations, and Responsibilities of the Author</h2>
+    <p>By the act of submitting the manuscript and accepting this policy, the Author <strong>declares, warrants, and assumes responsibility</strong> for the following:</p>
+    <ul>
+      <li><strong>Originality:</strong> The work is original and of their intellectual creation, not having been copied, plagiarized, or illegitimately reproduced from third-party sources.</li>
+      <li><strong>Legal Ownership:</strong> They possess legitimate and exclusive ownership of all copyright over the manuscript, or have the necessary authorizations, licenses, or assignments from all co-authors and/or third parties to grant the publication permission described herein.</li>
+      <li><strong>Absence of Conflicts:</strong> The content of the manuscript does not violate the intellectual property, privacy, honor, image, or confidentiality rights of third parties.</li>
+      <li><strong>Authorization for Third-Party Material:</strong> In the case of including figures, tables, excerpts, or any material protected by copyright belonging to third parties, they have previously obtained the corresponding written permissions and can evidence them upon request from the Journal.</li>
+      <li><strong>Consent of Co-Authors:</strong> All co-authors have read, understood, and fully accepted this licensing and copyright policy, and consent to the publication of the work under the CC BY 4.0 license.</li>
+    </ul>
+    <p>The Author releases the Journal from any liability arising from claims, demands, or lawsuits filed by third parties in relation to the authorship, originality, or content of the manuscript. Any breach of these warranties may result in the retraction of the article in accordance with COPE flowcharts.</p>
+
+    <!-- 09. Third-Party Claims and Procedure -->
+    <h2 id="claims">09. Third-Party Claims and Infringement Procedure</h2>
+    <p>If a third party considers that an article published in the Journal infringes their copyright, they must formally notify their claim to the editorial team via the contact email, providing:</p>
+    <ol>
+      <li>The precise identification of the allegedly infringed work.</li>
+      <li>The identification of the article in question (including DOI or URL).</li>
+      <li>The contact details of the claimant.</li>
+      <li>A sworn statement of good faith accrediting the ownership of the rights.</li>
+    </ol>
+    <p>The Journal undertakes to acknowledge receipt of the claim within a maximum period of five business days and to initiate a preliminary investigation, following the guidelines of the <strong>Committee on Publication Ethics (COPE)</strong>. During the investigation, the article may be marked with an <em>Expression of Concern</em>. If the claim is successful, the article will be retracted or corrected.</p>
+
+    <!-- 10. Validity and Modifications -->
+    <h2 id="validity">10. Validity, Interpretation, and Modification of this Policy</h2>
+    <p>This licensing and copyright policy enters into force as of the publication date indicated in the header of this document and applies to all manuscripts submitted and published as of that date. For previously published manuscripts, the policy in force at the time of their publication shall apply, unless the Author expressly consents to adhere to this regulation.</p>
+    <p>The Editorial Committee reserves the right to interpret, update, or modify this document to adapt it to changes in legislation, international open access standards (such as DOAJ or COPE), or unforeseen technical requirements. Any modification will be notified on the Journal's website and will not have retroactive effect on already published articles.</p>
+    <p>For all matters not provided for in this instrument, the provisions of Chilean intellectual property legislation (Law No. 17.336) shall apply, and subsidiarily, the international treaties subscribed by the Republic of Chile on copyright matters, such as the Berne Convention.</p>
+
+    <p style="margin-top: 40px;">For any legal or academic queries regarding this policy, please do not hesitate to <a href="mailto:editor@revistacienciasestudiantes.com">contact the editorial team</a>.</p>
+
+    <!-- Footer -->
+    <div class="footer" id="footer">
+      National Review of Sciences for Students · ISSN 3087-2839 <br>
+      San Felipe, Chile · Independent Academic Publication · Diamond Open Access · © <span id="current-year"></span>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('current-year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

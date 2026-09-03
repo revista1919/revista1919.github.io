@@ -222,6 +222,13 @@ module.exports = (env, argv) => {
           { from: 'public/practicesEN.html', to: 'practicesEN.html', noErrorOnMissing: true },
           { from: 'public/open-accessEN.html', to: 'open-accessEN.html', noErrorOnMissing: true },
           { from: 'public/quickEN.html', to: 'quickEN.html', noErrorOnMissing: true },
+          
+          // ============ NUEVOS ARCHIVOS HTML - Copyright y Licencia ============
+          // Español
+          { from: 'public/copyright-and-license.html', to: 'copyright-and-license.html', noErrorOnMissing: true },
+          
+          // Inglés
+          { from: 'public/copyright-and-licenseEN.html', to: 'copyright-and-licenseEN.html', noErrorOnMissing: true },
         ],
       }),
       
