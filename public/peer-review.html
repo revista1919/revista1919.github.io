@@ -6,171 +6,158 @@
   <title>Política de Revisión por Pares · Revista Nacional de las Ciencias para Estudiantes</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
-      --brand-navy: #0B192C;
-      --brand-navy-light: #1A365D;
-      --brand-orange: #FF6B00;
-      --brand-orange-light: #FFF0E6;
-      --text-main: #1E293B;
-      --text-muted: #64748B;
-      --text-light: #94A3B8;
-      --bg-page: #F8FAFC;
-      --bg-card: #FFFFFF;
-      --border-soft: #E2E8F0;
-      --border-medium: #CBD5E1;
+      --primary: #004b87;
+      --secondary: #006dae;
+      --accent: #e86125;
+      --text-main: #2b2b2b;
+      --text-muted: #666666;
+      --text-light: #a0a0a0;
+      --border-light: #e6e8ea;
+      --border-dark: #cbd0d5;
+      --bg-out: #f4f5f7;
+      --bg-paper: #ffffff;
+      --bg-highlight: #f8f9fa;
+      --bg-warning: #fdf6f3;
+      --link: #006dae;
       --success: #10B981;
       --success-bg: #ECFDF5;
-      --warning: #F59E0B;
-      --warning-bg: #FFFBEB;
       --danger: #EF4444;
       --danger-bg: #FEF2F2;
+      --warning: #F59E0B;
+      --warning-bg: #FFFBEB;
       --info: #3B82F6;
       --info-bg: #EFF6FF;
-      --font-serif: 'Merriweather', serif;
-      --font-sans: 'Inter', sans-serif;
       --shadow-sm: 0 1px 3px rgba(11, 25, 44, 0.05);
       --shadow-md: 0 4px 15px rgba(11, 25, 44, 0.08);
       --shadow-lg: 0 10px 25px rgba(11, 25, 44, 0.12);
       --radius-sm: 6px;
       --radius-md: 12px;
-      --radius-lg: 16px;
+      --font-serif: 'Lora', Georgia, Times, serif;
+      --font-sans: 'Inter', sans-serif;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; }
 
     body {
-      font-family: var(--font-sans);
+      font-family: var(--font-serif);
       font-size: 16px;
       line-height: 1.75;
-      background-color: var(--bg-page);
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-out);
       color: var(--text-main);
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    .hero {
-      background: linear-gradient(135deg, var(--brand-navy) 0%, #132B4A 50%, var(--brand-navy-light) 100%);
-      color: white;
-      padding: 80px 20px 60px;
-      position: relative;
-      overflow: hidden;
-      border-bottom: 4px solid var(--brand-orange);
+    /* ================= HEADER BLANCO ================= */
+    .header {
+      background-color: var(--bg-paper);
+      border-bottom: 4px solid var(--primary);
+      padding: 40px 20px;
+      box-shadow: var(--shadow-sm);
     }
 
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: -60%;
-      right: -15%;
-      width: 700px;
-      height: 700px;
-      background: radial-gradient(circle, rgba(255,107,0,0.15) 0%, rgba(11,25,44,0) 70%);
-      border-radius: 50%;
-    }
-
-    .hero::after {
-      content: '';
-      position: absolute;
-      bottom: -30%;
-      left: -10%;
-      width: 500px;
-      height: 500px;
-      background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, rgba(11,25,44,0) 70%);
-      border-radius: 50%;
-    }
-
-    .hero-content {
-      max-width: 1100px;
+    .header-content {
+      max-width: 1200px;
       margin: 0 auto;
-      position: relative;
-      z-index: 1;
-      text-align: center;
-    }
-
-    .hero-icon {
-      width: 80px;
-      height: 80px;
-      background: rgba(255,107,0,0.15);
-      border: 2px solid var(--brand-orange);
-      border-radius: 50%;
       display: flex;
       align-items: center;
-      justify-content: center;
-      margin: 0 auto 25px;
-      font-size: 2.5rem;
-      color: var(--brand-orange);
+      gap: 30px;
+      flex-wrap: wrap;
     }
 
-    .tagline {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.25em;
-      color: var(--brand-orange);
-      font-weight: 700;
-      margin-bottom: 15px;
+    .header img {
+      max-width: 180px;
+      height: auto;
       display: block;
     }
 
-    .hero h1 {
-      font-family: var(--font-serif);
-      font-size: 2.8rem;
-      font-weight: 900;
-      margin-bottom: 20px;
+    .header-text {
+      flex: 1;
+      min-width: 280px;
+    }
+
+    .header h1 {
+      font-family: var(--font-sans);
+      font-size: 2.2em;
+      font-weight: 700;
       line-height: 1.2;
+      margin: 0;
       letter-spacing: -0.02em;
+      color: var(--text-main);
     }
 
-    .hero p {
-      font-size: 1.1rem;
-      color: #CBD5E1;
-      max-width: 750px;
-      margin: 0 auto;
-      font-weight: 300;
-      line-height: 1.8;
+    .document-meta {
+      font-family: var(--font-sans);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 10px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
+    .document-meta .badge {
+      background: var(--primary);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+    }
+
+    /* ================= LAYOUT PRINCIPAL ================= */
     .dashboard-wrapper {
-      max-width: 1100px;
-      margin: -30px auto 60px;
+      max-width: 1200px;
+      margin: 40px auto 60px;
       padding: 0 20px;
       display: grid;
       grid-template-columns: 300px 1fr;
       gap: 35px;
       align-items: start;
-      position: relative;
-      z-index: 2;
     }
 
+    /* ================= SIDEBAR (TOC) ================= */
     .sidebar {
-      background: var(--bg-card);
+      background-color: var(--bg-paper);
       border-radius: var(--radius-md);
       padding: 25px;
       position: sticky;
       top: 30px;
       box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border-soft);
+      border: 1px solid var(--border-light);
+      border-top: 4px solid var(--primary);
     }
 
     .sidebar h3 {
-      font-family: var(--font-serif);
-      font-size: 1rem;
-      color: var(--brand-navy);
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--primary);
+      margin-top: 0;
       margin-bottom: 20px;
       padding-bottom: 12px;
-      border-bottom: 2px solid var(--border-soft);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+      border-bottom: 2px solid var(--border-light);
+      font-weight: 700;
     }
 
     .sidebar-nav {
       list-style: none;
       padding: 0;
+      margin: 0;
     }
 
     .sidebar-nav li {
-      margin-bottom: 8px;
+      margin-bottom: 5px;
     }
 
     .sidebar-nav a {
@@ -178,133 +165,239 @@
       padding: 10px 14px;
       color: var(--text-muted);
       text-decoration: none;
-      font-size: 0.85rem;
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
+      font-weight: 500;
       border-radius: var(--radius-sm);
       transition: all 0.3s;
       border-left: 3px solid transparent;
+      line-height: 1.4;
     }
 
     .sidebar-nav a:hover,
     .sidebar-nav a.active {
-      background: var(--brand-orange-light);
-      color: var(--brand-navy);
-      border-left-color: var(--brand-orange);
+      background: #FFF0E6;
+      color: var(--primary);
+      border-left-color: var(--accent);
       font-weight: 600;
     }
 
+    .quick-tip {
+      margin-top: 25px;
+      padding: 18px;
+      background: linear-gradient(135deg, var(--primary), #1A365D);
+      color: #ffffff;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .quick-tip i {
+      color: var(--accent);
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .quick-tip strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #ffffff;
+    }
+
+    .quick-tip p {
+      color: #ffffff;
+    }
+
+    .quick-tip a {
+      color: #FFD700;
+    }
+
+    .quick-tip span {
+      color: #ffffff;
+    }
+    /* ================= CONTENIDO PRINCIPAL ================= */
     .main-content {
-      background: var(--bg-card);
+      background-color: var(--bg-paper);
       border-radius: var(--radius-md);
-      padding: 50px;
+      padding: 45px 50px;
       box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border-soft);
-    }
-
-    .section-block {
-      margin-bottom: 50px;
-      padding-bottom: 40px;
-      border-bottom: 1px solid var(--border-soft);
-    }
-
-    .section-block:last-child {
-      border-bottom: none;
-      margin-bottom: 0;
-      padding-bottom: 0;
+      border: 1px solid var(--border-light);
     }
 
     h2 {
-      font-family: var(--font-serif);
-      font-size: 1.5rem;
-      color: var(--brand-navy);
-      margin-bottom: 20px;
-      font-weight: 900;
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      font-family: var(--font-sans);
+      font-size: 1.3em;
+      color: var(--primary);
+      margin-top: 2.5em;
+      margin-bottom: 1em;
+      font-weight: 700;
+      border-bottom: 2px solid var(--border-light);
+      padding-bottom: 10px;
+      scroll-margin-top: 30px;
     }
 
-    h2 .section-number {
-      background: var(--brand-navy);
-      color: white;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.9rem;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
+    h2:first-child { margin-top: 0; }
 
     h3 {
-      font-family: var(--font-serif);
-      font-size: 1.15rem;
-      color: var(--brand-navy-light);
-      margin: 25px 0 12px;
-      font-weight: 700;
+      font-family: var(--font-sans);
+      font-size: 1.05em;
+      color: var(--text-main);
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      font-weight: 600;
+    }
+
+    h4 {
+      font-family: var(--font-sans);
+      font-size: 0.85em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5em;
+      font-weight: 600;
     }
 
     p {
-      margin-bottom: 15px;
+      margin-top: 0;
+      margin-bottom: 1.3em;
       color: var(--text-main);
     }
 
     ul, ol {
-      margin: 15px 0 20px 25px;
-      color: var(--text-main);
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 1.5em;
     }
 
     li {
-      margin-bottom: 10px;
+      margin-bottom: 0.5em;
       line-height: 1.7;
     }
 
-    strong { color: var(--brand-navy); }
+    strong { color: #1a1a1a; }
 
-    .info-box {
-      background: var(--info-bg);
-      border: 1px solid #BFDBFE;
-      border-left: 4px solid var(--info);
-      padding: 18px 22px;
-      margin: 20px 0;
-      border-radius: var(--radius-sm);
-      font-size: 0.9rem;
+    a {
+      color: var(--link);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--primary);
+      border-bottom: 1px solid var(--primary);
+    }
+
+    code {
+      background-color: #F1F5F9;
+      color: #0F172A;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.85em;
+      border: 1px solid #E2E8F0;
+    }
+
+    /* Cajas */
+    .highlight-box {
+      background-color: var(--bg-highlight);
+      border-left: 4px solid var(--primary);
+      padding: 20px 25px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     }
 
     .warning-box {
-      background: var(--warning-bg);
-      border: 1px solid #FDE68A;
-      border-left: 4px solid var(--warning);
-      padding: 18px 22px;
-      margin: 20px 0;
-      border-radius: var(--radius-sm);
-      font-size: 0.9rem;
-    }
-
-    .danger-box {
-      background: var(--danger-bg);
-      border: 1px solid #FECACA;
-      border-left: 4px solid var(--danger);
-      padding: 18px 22px;
-      margin: 20px 0;
-      border-radius: var(--radius-sm);
-      font-size: 0.9rem;
+      background-color: var(--bg-warning);
+      border-left: 4px solid var(--accent);
+      padding: 20px 25px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     }
 
     .success-box {
-      background: var(--success-bg);
-      border: 1px solid #A7F3D0;
+      background-color: var(--success-bg);
       border-left: 4px solid var(--success);
+      padding: 18px 22px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .tip-box {
+      background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--accent);
       padding: 18px 22px;
       margin: 20px 0;
       border-radius: var(--radius-sm);
-      font-size: 0.9rem;
+      font-size: 0.9em;
+      color: var(--text-main);
+    }
+
+    .tip-box strong { color: var(--primary); }
+
+    .example-box {
+      background-color: white;
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--primary);
+      padding: 18px 20px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9em;
+      color: var(--text-muted);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .example-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      font-family: var(--font-sans);
+    }
+
+    /* Tablas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2em 0;
+      font-family: var(--font-sans);
+      font-size: 0.85em;
+    }
+
+    table th, table td {
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+      color: var(--text-main);
+    }
+
+    table th {
+      font-weight: 600;
+      border-top: 2px solid var(--border-dark);
+      border-bottom: 1px solid var(--border-dark);
+      color: var(--primary);
+      background-color: var(--bg-highlight);
+    }
+
+    table tr:last-child td {
+      border-bottom: 2px solid var(--border-dark);
+    }
+
+    table td {
+      border-bottom: 1px solid var(--border-light);
     }
 
     .criterion-card {
-      background: var(--bg-page);
-      border: 1px solid var(--border-soft);
+      background: var(--bg-highlight);
+      border: 1px solid var(--border-light);
       border-radius: var(--radius-sm);
       padding: 20px;
       margin-bottom: 15px;
@@ -312,511 +405,504 @@
     }
 
     .criterion-card:hover {
-      border-color: var(--brand-orange);
+      border-color: var(--accent);
       box-shadow: var(--shadow-md);
+      transform: translateX(4px);
     }
 
     .criterion-card h4 {
-      font-family: var(--font-serif);
-      color: var(--brand-navy);
-      margin-bottom: 8px;
+      color: var(--primary);
+      margin-top: 0;
+      text-transform: none;
+      letter-spacing: normal;
+      font-size: 1em;
+      font-weight: 700;
     }
 
-    .score-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 15px 0;
-      font-size: 0.85rem;
+    /* Timeline */
+    .editorial-process {
+      margin-top: 35px;
+      padding: 10px 0 10px 25px;
+      border-left: 3px solid var(--border-light);
     }
 
-    .score-table th {
-      background: var(--brand-navy);
-      color: white;
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-    }
-
-    .score-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border-soft);
-    }
-
-    .score-table tr:nth-child(even) {
-      background: var(--bg-page);
-    }
-
-    .flow-step {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 30px;
+    .process-step {
       position: relative;
+      margin-bottom: 30px;
+      background-color: var(--bg-paper);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s;
     }
 
-    .flow-step::before {
-      content: '';
+    .process-step:last-child { margin-bottom: 0; }
+
+    .process-step:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary);
+    }
+
+    .step-number {
       position: absolute;
-      left: 22px;
-      top: 50px;
-      bottom: -30px;
-      width: 2px;
-      background: var(--border-medium);
-    }
-
-    .flow-step:last-child::before {
-      display: none;
-    }
-
-    .flow-number {
-      width: 45px;
-      height: 45px;
-      background: var(--brand-navy);
+      left: -40px;
+      top: 18px;
+      background-color: var(--primary);
       color: white;
+      font-weight: 700;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
-      font-size: 1.1rem;
-      flex-shrink: 0;
-      z-index: 1;
-      border: 3px solid white;
-      box-shadow: var(--shadow-md);
+      box-shadow: 0 0 0 5px var(--bg-paper);
     }
 
-    .flow-content {
-      flex: 1;
-      padding-top: 5px;
+    .step-content h4 {
+      margin: 0 0 8px 0;
+      font-family: var(--font-sans);
+      color: var(--primary);
+      font-size: 1rem;
+      text-transform: none;
+      letter-spacing: normal;
     }
 
-    .flow-content h4 {
-      font-family: var(--font-serif);
-      color: var(--brand-navy);
-      margin-bottom: 5px;
-    }
-
-    .flow-content p {
-      font-size: 0.9rem;
+    .step-content p {
+      margin: 0;
+      font-size: 0.85rem;
       color: var(--text-muted);
+      font-family: var(--font-sans);
+      line-height: 1.6;
     }
 
+    .step-content ul {
+      margin: 8px 0 0 0;
+      padding-left: 18px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+    }
+
+    /* Footer */
     .footer {
       margin-top: 60px;
       text-align: center;
-      font-size: 0.8rem;
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
       color: var(--text-light);
-      border-top: 1px solid var(--border-soft);
+      border-top: 1px solid var(--border-light);
       padding-top: 25px;
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 1024px) {
       .dashboard-wrapper { grid-template-columns: 1fr; }
-      .sidebar { position: static; }
-      .main-content { padding: 30px 20px; }
-      .hero h1 { font-size: 2rem; }
+      .sidebar { position: static; margin-bottom: 25px; }
+    }
+
+    @media (max-width: 768px) {
+      .header { padding: 25px 15px; }
+      .header-content { flex-direction: column; align-items: flex-start; gap: 15px; }
+      .header h1 { font-size: 1.6em; }
+      .main-content { padding: 25px 20px; }
+      .editorial-process { padding-left: 18px; }
+      .step-number { left: -32px; width: 26px; height: 26px; font-size: 0.8rem; }
     }
   </style>
 </head>
 <body>
 
-  <header class="hero">
-    <div class="hero-content">
-      <div class="hero-icon">
-        <i class="fa-solid fa-user-shield"></i>
+  <!-- HEADER BLANCO -->
+  <header class="header">
+    <div class="header-content">
+      <img src="logo.png" alt="Logo Revista Nacional de las Ciencias para Estudiantes">
+      <div class="header-text">
+        <h1>Política de Revisión por Pares</h1>
+        <div class="document-meta">
+          <span>Marco Normativo de Evaluación</span>
+          <span class="badge">Versión 2.1</span>
+          <span>Julio 2026</span>
+          <span>San Felipe, Chile</span>
+        </div>
       </div>
-      <span class="tagline">Marco Normativo de Evaluación</span>
-      <h1>Política de Revisión por Pares</h1>
-      <p>Proceso de evaluación doble ciego, criterios de selección de revisores, flujo editorial completo y normas de confidencialidad que garantizan la integridad académica de cada manuscrito.</p>
     </div>
   </header>
 
   <div class="dashboard-wrapper">
-    
+
+    <!-- SIDEBAR CON TOC -->
     <aside class="sidebar">
-      <h3><i class="fa-solid fa-list-ul"></i> Índice</h3>
+      <h3><i class="fa-solid fa-list-ul"></i> Índice de Contenidos</h3>
       <ul class="sidebar-nav">
-        <li><a href="#principios">Principios Generales</a></li>
-        <li><a href="#modelo">Modelo de Revisión</a></li>
-        <li><a href="#seleccion">Selección de Revisores</a></li>
-        <li><a href="#criterios">Criterios de Evaluación</a></li>
-        <li><a href="#proceso">Proceso Editorial</a></li>
-        <li><a href="#confidencialidad">Confidencialidad</a></li>
-        <li><a href="#conflictos">Conflictos de Interés</a></li>
-        <li><a href="#etica">Ética del Revisor</a></li>
-        <li><a href="#comite">Promoción al Comité</a></li>
-        <li><a href="#apelaciones">Apelaciones</a></li>
+        <li><a href="#principios">01. Principios Generales</a></li>
+        <li><a href="#modelo">02. Modelo de Revisión</a></li>
+        <li><a href="#seleccion">03. Selección de Revisores</a></li>
+        <li><a href="#criterios">04. Criterios de Evaluación</a></li>
+        <li><a href="#proceso">05. Proceso Editorial</a></li>
+        <li><a href="#confidencialidad">06. Confidencialidad</a></li>
+        <li><a href="#conflictos">07. Conflictos de Interés</a></li>
+        <li><a href="#etica">08. Ética del Revisor</a></li>
+        <li><a href="#comite">09. Promoción al Comité</a></li>
+        <li><a href="#apelaciones">10. Apelaciones</a></li>
       </ul>
+
+      <div class="quick-tip">
+        <i class="fa-regular fa-lightbulb"></i>
+        <strong>Consejo del Editor</strong>
+        El proceso de revisión es la piedra angular de la calidad académica. Comprender estas políticas es esencial para autores y revisores.
+      </div>
     </aside>
 
+    <!-- CONTENIDO PRINCIPAL -->
     <main class="main-content">
 
       <!-- 01. PRINCIPIOS GENERALES -->
-      <div class="section-block" id="principios">
-        <h2><span class="section-number">01</span> Principios Generales</h2>
-        <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> establece la presente política de revisión por pares como instrumento normativo que regula el proceso de evaluación académica de los manuscritos sometidos a consideración. Este proceso constituye el mecanismo central de control de calidad científica y se rige por los siguientes principios fundamentales:</p>
-        <ul>
-          <li><strong>Imparcialidad:</strong> Las evaluaciones se basan exclusivamente en el mérito científico, la originalidad, el rigor metodológico y la adecuación al alcance temático de la Revista, sin consideración de género, filiación institucional, origen étnico, nacionalidad, orientación sexual, creencias religiosas o posturas políticas.</li>
-          <li><strong>Confidencialidad:</strong> Todo el proceso se desarrolla bajo estricta reserva. Los manuscritos sometidos a revisión son documentos confidenciales y no pueden ser compartidos, discutidos o divulgados con terceros no autorizados.</li>
-          <li><strong>Transparencia:</strong> Las políticas, criterios y procedimientos de evaluación se comunican de forma abierta y accesible a todos los participantes del proceso editorial.</li>
-          <li><strong>Integridad Académica:</strong> La Revista se adhiere a los más altos estándares éticos promovidos por el <em>Committee on Publication Ethics (COPE)</em> y rechaza cualquier forma de plagio, fabricación de datos, manipulación de resultados o conducta científica inapropiada.</li>
-          <li><strong>Carácter Formativo:</strong> Dado el enfoque estudiantil de la Revista, la revisión por pares cumple una función pedagógica fundamental: los informes de evaluación deben ser constructivos, específicos y orientados al desarrollo académico de los autores.</li>
-        </ul>
-      </div>
+      <h2 id="principios">01. Principios Generales</h2>
+      <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> establece la presente política de revisión por pares como instrumento normativo que regula el proceso de evaluación académica de los manuscritos sometidos a consideración. Este proceso constituye el mecanismo central de control de calidad científica y se rige por los siguientes principios fundamentales:</p>
+      <ul>
+        <li><strong>Imparcialidad:</strong> Las evaluaciones se basan exclusivamente en el mérito científico, la originalidad, el rigor metodológico y la adecuación al alcance temático de la Revista, sin consideración de género, filiación institucional, origen étnico, nacionalidad, orientación sexual, creencias religiosas o posturas políticas.</li>
+        <li><strong>Confidencialidad:</strong> Todo el proceso se desarrolla bajo estricta reserva. Los manuscritos sometidos a revisión son documentos confidenciales y no pueden ser compartidos, discutidos o divulgados con terceros no autorizados.</li>
+        <li><strong>Transparencia:</strong> Las políticas, criterios y procedimientos de evaluación se comunican de forma abierta y accesible a todos los participantes del proceso editorial.</li>
+        <li><strong>Integridad Académica:</strong> La Revista se adhiere a los más altos estándares éticos promovidos por el <em>Committee on Publication Ethics (COPE)</em> y rechaza cualquier forma de plagio, fabricación de datos, manipulación de resultados o conducta científica inapropiada.</li>
+        <li><strong>Carácter Formativo:</strong> Dado el enfoque estudiantil de la Revista, la revisión por pares cumple una función pedagógica fundamental: los informes de evaluación deben ser constructivos, específicos y orientados al desarrollo académico de los autores.</li>
+      </ul>
 
       <!-- 02. MODELO DE REVISIÓN -->
-      <div class="section-block" id="modelo">
-        <h2><span class="section-number">02</span> Modelo de Revisión: Doble Ciego Estricto</h2>
-        <p>La Revista opera bajo un sistema de <strong>revisión por pares doble ciego estricto</strong> (<em>double-blind peer review</em>). Este modelo garantiza que:</p>
-        <ul>
-          <li><strong>El revisor desconoce la identidad del autor:</strong> El manuscrito entregado al revisor ha sido completamente anonimizado. No contiene nombre, afiliación institucional, agradecimientos identificatorios, ni referencias que puedan revelar la autoría.</li>
-          <li><strong>El autor desconoce la identidad del revisor:</strong> El autor no recibe información alguna sobre quién evaluó su manuscrito. Los informes de revisión se entregan sin firma ni datos identificatorios.</li>
-        </ul>
-        <div class="info-box">
-          <i class="fa-solid fa-circle-info"></i> <strong>Anonimización del Manuscrito:</strong> El revisor recibe únicamente el texto anonimizado, el resumen (abstract) y las palabras clave. No tiene acceso a la carta de presentación, a los datos del autor, ni a la carpeta editorial completa. El documento que recibe es creado específicamente para su revisión individual.
-        </div>
-        <div class="warning-box">
-          <i class="fa-solid fa-triangle-exclamation"></i> <strong>Detección de Identidad:</strong> Si durante el proceso de revisión, el revisor identifica o sospecha razonablemente la identidad del autor, está obligado a notificarlo inmediatamente al editor mediante correo electrónico a <strong>editor@revistacienciasestudiantes.com</strong>. En tal caso, la revisión será anulada y se asignará un nuevo revisor.
-        </div>
+      <h2 id="modelo">02. Modelo de Revisión: Doble Ciego Estricto</h2>
+      <p>La Revista opera bajo un sistema de <strong>revisión por pares doble ciego estricto</strong> (<em>double-blind peer review</em>). Este modelo garantiza que:</p>
+      <ul>
+        <li><strong>El revisor desconoce la identidad del autor:</strong> El manuscrito entregado al revisor ha sido completamente anonimizado. No contiene nombre, afiliación institucional, agradecimientos identificatorios, ni referencias que puedan revelar la autoría.</li>
+        <li><strong>El autor desconoce la identidad del revisor:</strong> El autor no recibe información alguna sobre quién evaluó su manuscrito. Los informes de revisión se entregan sin firma ni datos identificatorios.</li>
+      </ul>
+      <div class="highlight-box">
+        <p><strong>Anonimización del Manuscrito:</strong> El revisor recibe únicamente el texto anonimizado, el resumen (abstract) y las palabras clave. No tiene acceso a la carta de presentación, a los datos del autor, ni a la carpeta editorial completa. El documento que recibe es creado específicamente para su revisión individual.</p>
+      </div>
+      <div class="warning-box">
+        <p><strong>Detección de Identidad:</strong> Si durante el proceso de revisión, el revisor identifica o sospecha razonablemente la identidad del autor, está obligado a notificarlo inmediatamente al editor mediante correo electrónico a <strong>editor@revistacienciasestudiantes.com</strong>. En tal caso, la revisión será anulada y se asignará un nuevo revisor.</p>
       </div>
 
       <!-- 03. SELECCIÓN DE REVISORES -->
-      <div class="section-block" id="seleccion">
-        <h2><span class="section-number">03</span> Selección y Asignación de Revisores</h2>
-        
-        <h3>3.1. Responsabilidad de Asignación</h3>
-        <p>La selección y asignación de revisores es responsabilidad del <strong>Editor de Sección</strong> asignado al manuscrito. El Editor de Sección puede consultar al Comité Editorial para identificar candidatos idóneos, pero la decisión final de asignación recae en su criterio editorial.</p>
+      <h2 id="seleccion">03. Selección y Asignación de Revisores</h2>
+      
+      <h3>3.1. Responsabilidad de Asignación</h3>
+      <p>La selección y asignación de revisores es responsabilidad del <strong>Editor de Sección</strong> asignado al manuscrito. El Editor de Sección puede consultar al Comité Editorial para identificar candidatos idóneos, pero la decisión final de asignación recae en su criterio editorial.</p>
 
-        <h3>3.2. Perfil de los Revisores</h3>
-        <p>La Revista reconoce su misión de fomentar la participación académica estudiantil. Por ello, el perfil de los revisores es flexible y se adapta al nivel del manuscrito evaluado:</p>
-        <ul>
-          <li><strong>Requisito fundamental:</strong> El revisor debe demostrar <strong>destacada competencia en el área temática</strong> del manuscrito. Esta competencia puede acreditarse mediante:
-            <ul>
-              <li>Trayectoria académica (profesores, investigadores, académicos)</li>
-              <li>Publicaciones previas en revistas o congresos relevantes</li>
-              <li>Reconocimientos externos en competencias académicas o científicas</li>
-              <li>Experiencia demostrable en investigación</li>
-            </ul>
-          </li>
-          <li><strong>Revisores universitarios y académicos:</strong> Se priorizan para manuscritos de autores universitarios, garantizando un nivel de evaluación correspondiente.</li>
-          <li><strong>Revisores escolares:</strong> Se permite la participación de estudiantes de educación secundaria como revisores, exclusivamente para manuscritos de autores escolares, y siempre que demuestren:
-            <ul>
-              <li>Reconocimiento externo en competencias relevantes (olimpiadas, ferias científicas, premios)</li>
-              <li>Experiencia en publicación o investigación</li>
-              <li>Dominio verificable del tema específico</li>
-            </ul>
-          </li>
-        </ul>
+      <h3>3.2. Perfil de los Revisores</h3>
+      <p>La Revista reconoce su misión de fomentar la participación académica estudiantil. Por ello, el perfil de los revisores es flexible y se adapta al nivel del manuscrito evaluado:</p>
+      <ul>
+        <li><strong>Requisito fundamental:</strong> El revisor debe demostrar <strong>destacada competencia en el área temática</strong> del manuscrito. Esta competencia puede acreditarse mediante:
+          <ul>
+            <li>Trayectoria académica (profesores, investigadores, académicos)</li>
+            <li>Publicaciones previas en revistas o congresos relevantes</li>
+            <li>Reconocimientos externos en competencias académicas o científicas</li>
+            <li>Experiencia demostrable en investigación</li>
+          </ul>
+        </li>
+        <li><strong>Revisores universitarios y académicos:</strong> Se priorizan para manuscritos de autores universitarios, garantizando un nivel de evaluación correspondiente.</li>
+        <li><strong>Revisores escolares:</strong> Se permite la participación de estudiantes de educación secundaria como revisores, exclusivamente para manuscritos de autores escolares, y siempre que demuestren:
+          <ul>
+            <li>Reconocimiento externo en competencias relevantes (olimpiadas, ferias científicas, premios)</li>
+            <li>Experiencia en publicación o investigación</li>
+            <li>Dominio verificable del tema específico</li>
+          </ul>
+        </li>
+      </ul>
 
-        <h3>3.3. Número de Revisores</h3>
-        <ul>
-          <li><strong>Regla general:</strong> Cada manuscrito es evaluado por <strong>dos (2) revisores</strong> independientes.</li>
-          <li><strong>Tercer revisor:</strong> El Editor de Sección puede solicitar la opinión de un <strong>tercer revisor</strong> cuando exista desacuerdo sustancial entre los dos primeros informes, o cuando considere pertinente una opinión adicional especializada.</li>
-        </ul>
+      <h3>3.3. Número de Revisores</h3>
+      <ul>
+        <li><strong>Regla general:</strong> Cada manuscrito es evaluado por <strong>dos (2) revisores</strong> independientes.</li>
+        <li><strong>Tercer revisor:</strong> El Editor de Sección puede solicitar la opinión de un <strong>tercer revisor</strong> cuando exista desacuerdo sustancial entre los dos primeros informes, o cuando considere pertinente una opinión adicional especializada.</li>
+      </ul>
 
-        <h3>3.4. Balance Interno/Externo</h3>
-        <ul>
-          <li>Los miembros del <strong>Comité Editorial</strong> pueden actuar como revisores.</li>
-          <li>Se procurará siempre un <strong>equilibrio</strong> entre revisores internos y externos.</li>
-          <li>Como mínimo, <strong>al menos un revisor debe ser externo</strong> a la Revista (sin afiliación al Comité Editorial).</li>
-        </ul>
+      <h3>3.4. Balance Interno/Externo</h3>
+      <ul>
+        <li>Los miembros del <strong>Comité Editorial</strong> pueden actuar como revisores.</li>
+        <li>Se procurará siempre un <strong>equilibrio</strong> entre revisores internos y externos.</li>
+        <li>Como mínimo, <strong>al menos un revisor debe ser externo</strong> a la Revista (sin afiliación al Comité Editorial).</li>
+      </ul>
 
-        <h3>3.5. Revisores para Manuscritos en Inglés</h3>
-        <p>Para manuscritos presentados en idioma inglés, se requiere invitar revisores que <strong>dominen el idioma inglés</strong> a nivel académico, garantizando una evaluación precisa de la calidad lingüística y técnica del texto.</p>
+      <h3>3.5. Revisores para Manuscritos en Inglés</h3>
+      <p>Para manuscritos presentados en idioma inglés, se requiere invitar revisores que <strong>dominen el idioma inglés</strong> a nivel académico, garantizando una evaluación precisa de la calidad lingüística y técnica del texto.</p>
 
-        <h3>3.6. Reemplazo de Revisores</h3>
-        <p>Si un revisor excede el plazo establecido para completar su evaluación, el Editor de Sección se comunicará con él mediante correo electrónico y, si lo considera pertinente, mediante contacto telefónico. Si el revisor no responde o manifiesta no poder completar la revisión, el Editor puede invitar a un <strong>revisor suplente</strong> para garantizar la continuidad del proceso.</p>
-      </div>
+      <h3>3.6. Reemplazo de Revisores</h3>
+      <p>Si un revisor excede el plazo establecido para completar su evaluación, el Editor de Sección se comunicará con él mediante correo electrónico y, si lo considera pertinente, mediante contacto telefónico. Si el revisor no responde o manifiesta no poder completar la revisión, el Editor puede invitar a un <strong>revisor suplente</strong> para garantizar la continuidad del proceso.</p>
 
       <!-- 04. CRITERIOS DE EVALUACIÓN -->
-      <div class="section-block" id="criterios">
-        <h2><span class="section-number">04</span> Criterios de Evaluación</h2>
-        <p>Los revisores evalúan cada manuscrito según los siguientes <strong>cuatro criterios fundamentales</strong>, asignando una puntuación de <strong>0 a 2</strong> por cada criterio:</p>
+      <h2 id="criterios">04. Criterios de Evaluación</h2>
+      <p>Los revisores evalúan cada manuscrito según los siguientes <strong>cuatro criterios fundamentales</strong>, asignando una puntuación de <strong>0 a 2</strong> por cada criterio:</p>
 
-        <div class="criterion-card">
-          <h4><i class="fa-solid fa-bullseye"></i> 4.1. Relevancia del Tema</h4>
-          <p>¿El tema es relevante para el área disciplinar y para el alcance de la Revista?</p>
-          <ul>
-            <li><strong>0 — Bajo:</strong> Tema poco relevante o fuera de alcance</li>
-            <li><strong>1 — Medio:</strong> Tema relevante pero con limitaciones significativas</li>
-            <li><strong>2 — Alto:</strong> Tema altamente relevante y de interés actual para la comunidad</li>
-          </ul>
-        </div>
-
-        <div class="criterion-card">
-          <h4><i class="fa-solid fa-flask-vial"></i> 4.2. Metodología / Rigor</h4>
-          <p>¿La metodología es sólida, apropiada y correctamente aplicada?</p>
-          <ul>
-            <li><strong>0 — Débil:</strong> Metodología inapropiada o mal aplicada</li>
-            <li><strong>1 — Aceptable:</strong> Metodología adecuada pero con debilidades identificables</li>
-            <li><strong>2 — Sólida:</strong> Metodología rigurosa, reproducible y bien fundamentada</li>
-          </ul>
-        </div>
-
-        <div class="criterion-card">
-          <h4><i class="fa-solid fa-align-left"></i> 4.3. Claridad y Organización</h4>
-          <p>¿El texto es claro, coherente y correctamente estructurado?</p>
-          <ul>
-            <li><strong>0 — Confuso:</strong> Difícil de seguir, desorganizado, requiere reestructuración profunda</li>
-            <li><strong>1 — Aceptable:</strong> Comprensible pero con aspectos mejorables en estructura o redacción</li>
-            <li><strong>2 — Excelente:</strong> Claro, bien estructurado, con fluidez argumentativa destacable</li>
-          </ul>
-        </div>
-
-        <div class="criterion-card">
-          <h4><i class="fa-solid fa-lightbulb"></i> 4.4. Originalidad / Aporte</h4>
-          <p>¿El artículo aporta ideas originales, novedosas o una contribución significativa al conocimiento?</p>
-          <ul>
-            <li><strong>0 — Bajo:</strong> Poco original, repetitivo, sin aporte identificable</li>
-            <li><strong>1 — Moderado:</strong> Presenta alguna originalidad con aporte limitado</li>
-            <li><strong>2 — Alto:</strong> Altamente original con contribución significativa al campo</li>
-          </ul>
-        </div>
-
-        <div class="danger-box">
-          <i class="fa-solid fa-circle-exclamation"></i> <strong>Puntuación Mínima:</strong> El sistema de evaluación no permite avanzar si un criterio fundamental presenta puntuación <strong>cero (0)</strong>. Esto garantiza que ningún manuscrito con debilidades críticas en metodología, originalidad o relevancia pase desapercibido. Un manuscrito con puntuación 0 en cualquier criterio será considerado <strong>no apto para publicación</strong>.
-        </div>
-
-        <h3>4.5. Recomendación Final</h3>
-        <p>Además de las puntuaciones por criterio, el revisor debe emitir una <strong>recomendación final</strong> al editor, seleccionando entre las siguientes opciones:</p>
-        <table class="score-table">
-          <thead>
-            <tr>
-              <th>Recomendación</th>
-              <th>Significado</th>
-              <th>Acción Editorial</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Aceptar</strong></td>
-              <td>El artículo es publicable en su forma actual</td>
-              <td>Pasa a producción editorial</td>
-            </tr>
-            <tr>
-              <td><strong>Revisiones Menores</strong></td>
-              <td>Requiere cambios puntuales no sustanciales</td>
-              <td>El autor corrige y reenvía sin nueva ronda de revisión externa</td>
-            </tr>
-            <tr>
-              <td><strong>Revisiones Mayores</strong></td>
-              <td>Requiere cambios sustanciales en contenido o metodología</td>
-              <td>El autor corrige y el manuscrito es evaluado nuevamente</td>
-            </tr>
-            <tr>
-              <td><strong>Rechazar</strong></td>
-              <td>No apto para publicación</td>
-              <td>Se notifican las debilidades insalvables</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="criterion-card">
+        <h4><i class="fa-solid fa-bullseye"></i> 4.1. Relevancia del Tema</h4>
+        <p>¿El tema es relevante para el área disciplinar y para el alcance de la Revista?</p>
+        <ul>
+          <li><strong>0 — Bajo:</strong> Tema poco relevante o fuera de alcance</li>
+          <li><strong>1 — Medio:</strong> Tema relevante pero con limitaciones significativas</li>
+          <li><strong>2 — Alto:</strong> Tema altamente relevante y de interés actual para la comunidad</li>
+        </ul>
       </div>
 
+      <div class="criterion-card">
+        <h4><i class="fa-solid fa-flask-vial"></i> 4.2. Metodología / Rigor</h4>
+        <p>¿La metodología es sólida, apropiada y correctamente aplicada?</p>
+        <ul>
+          <li><strong>0 — Débil:</strong> Metodología inapropiada o mal aplicada</li>
+          <li><strong>1 — Aceptable:</strong> Metodología adecuada pero con debilidades identificables</li>
+          <li><strong>2 — Sólida:</strong> Metodología rigurosa, reproducible y bien fundamentada</li>
+        </ul>
+      </div>
+
+      <div class="criterion-card">
+        <h4><i class="fa-solid fa-align-left"></i> 4.3. Claridad y Organización</h4>
+        <p>¿El texto es claro, coherente y correctamente estructurado?</p>
+        <ul>
+          <li><strong>0 — Confuso:</strong> Difícil de seguir, desorganizado, requiere reestructuración profunda</li>
+          <li><strong>1 — Aceptable:</strong> Comprensible pero con aspectos mejorables en estructura o redacción</li>
+          <li><strong>2 — Excelente:</strong> Claro, bien estructurado, con fluidez argumentativa destacable</li>
+        </ul>
+      </div>
+
+      <div class="criterion-card">
+        <h4><i class="fa-solid fa-lightbulb"></i> 4.4. Originalidad / Aporte</h4>
+        <p>¿El artículo aporta ideas originales, novedosas o una contribución significativa al conocimiento?</p>
+        <ul>
+          <li><strong>0 — Bajo:</strong> Poco original, repetitivo, sin aporte identificable</li>
+          <li><strong>1 — Moderado:</strong> Presenta alguna originalidad con aporte limitado</li>
+          <li><strong>2 — Alto:</strong> Altamente original con contribución significativa al campo</li>
+        </ul>
+      </div>
+
+      <div class="warning-box">
+        <p><strong>Puntuación Mínima:</strong> El sistema de evaluación no permite avanzar si un criterio fundamental presenta puntuación <strong>cero (0)</strong>. Esto garantiza que ningún manuscrito con debilidades críticas en metodología, originalidad o relevancia pase desapercibido. Un manuscrito con puntuación 0 en cualquier criterio será considerado <strong>no apto para publicación</strong>.</p>
+      </div>
+
+      <h3>4.5. Recomendación Final</h3>
+      <p>Además de las puntuaciones por criterio, el revisor debe emitir una <strong>recomendación final</strong> al editor, seleccionando entre las siguientes opciones:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Recomendación</th>
+            <th>Significado</th>
+            <th>Acción Editorial</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Aceptar</strong></td>
+            <td>El artículo es publicable en su forma actual</td>
+            <td>Pasa a producción editorial</td>
+          </tr>
+          <tr>
+            <td><strong>Revisiones Menores</strong></td>
+            <td>Requiere cambios puntuales no sustanciales</td>
+            <td>El autor corrige y reenvía sin nueva ronda de revisión externa</td>
+          </tr>
+          <tr>
+            <td><strong>Revisiones Mayores</strong></td>
+            <td>Requiere cambios sustanciales en contenido o metodología</td>
+            <td>El autor corrige y el manuscrito es evaluado nuevamente</td>
+          </tr>
+          <tr>
+            <td><strong>Rechazar</strong></td>
+            <td>No apto para publicación</td>
+            <td>Se notifican las debilidades insalvables</td>
+          </tr>
+        </tbody>
+      </table>
+
       <!-- 05. PROCESO EDITORIAL -->
-      <div class="section-block" id="proceso">
-        <h2><span class="section-number">05</span> Proceso Editorial Completo</h2>
-        
-        <div class="flow-step">
-          <div class="flow-number">1</div>
-          <div class="flow-content">
+      <h2 id="proceso">05. Proceso Editorial Completo</h2>
+      
+      <div class="editorial-process">
+        <div class="process-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
             <h4>Filtro Técnico (Desk Review)</h4>
             <p>El equipo de gestión verifica anonimato, formato, similitud (plagio) y enfoque temático. Si no cumple los requisitos básicos, es devuelto sin revisión externa.</p>
           </div>
         </div>
-
-        <div class="flow-step">
-          <div class="flow-number">2</div>
-          <div class="flow-content">
+        <div class="process-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
             <h4>Asignación de Editor y Revisores</h4>
             <p>El Editor en Jefe asigna un Editor de Sección. Este selecciona e invita a 2 (o 3) revisores con competencia en el área temática del manuscrito.</p>
           </div>
         </div>
-
-        <div class="flow-step">
-          <div class="flow-number">3</div>
-          <div class="flow-content">
+        <div class="process-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
             <h4>Evaluación Doble Ciego</h4>
             <p>Cada revisor accede a un documento anonimizado exclusivo para su revisión. Completan la evaluación con puntuaciones, comentarios para el autor y comentarios confidenciales para el editor.</p>
           </div>
         </div>
-
-        <div class="flow-step">
-          <div class="flow-number">4</div>
-          <div class="flow-content">
+        <div class="process-step">
+          <div class="step-number">4</div>
+          <div class="step-content">
             <h4>Decisión Editorial</h4>
             <p>El Editor de Sección analiza los informes de revisión y emite la decisión: Aceptar, Revisiones Menores, Revisiones Mayores o Rechazar. La decisión se comunica al autor mediante el portal de autores y notificación por correo electrónico.</p>
           </div>
         </div>
-
-        <div class="flow-step">
-          <div class="flow-number">5</div>
-          <div class="flow-content">
+        <div class="process-step">
+          <div class="step-number">5</div>
+          <div class="step-content">
             <h4>Segunda Ronda (si aplica)</h4>
             <p>Para revisiones mayores, el autor corrige el manuscrito y envía una carta de respuesta. El Editor evalúa las correcciones. <strong>Los revisores de segunda ronda no son necesariamente los mismos</strong> de la primera ronda.</p>
           </div>
         </div>
-
-        <div class="flow-step">
-          <div class="flow-number">6</div>
-          <div class="flow-content">
+        <div class="process-step">
+          <div class="step-number">6</div>
+          <div class="step-content">
             <h4>Producción y Publicación</h4>
             <p>El manuscrito aceptado es maquetado, se le asigna DOI y se publica bajo licencia Creative Commons (Acceso Abierto Diamante).</p>
           </div>
         </div>
+      </div>
 
-        <div class="info-box">
-          <i class="fa-solid fa-circle-info"></i> <strong>Carta de Respuesta (Response Letter):</strong> La carta de respuesta que el autor envía con sus correcciones es revisada <strong>exclusivamente por el Editor de Sección</strong>. No se comparte con los revisores para evitar la filtración de información confidencial y mantener la integridad del doble ciego.
-        </div>
+      <div class="highlight-box">
+        <p><strong>Carta de Respuesta (Response Letter):</strong> La carta de respuesta que el autor envía con sus correcciones es revisada <strong>exclusivamente por el Editor de Sección</strong>. No se comparte con los revisores para evitar la filtración de información confidencial y mantener la integridad del doble ciego.</p>
       </div>
 
       <!-- 06. CONFIDENCIALIDAD -->
-      <div class="section-block" id="confidencialidad">
-        <h2><span class="section-number">06</span> Confidencialidad y Manejo de Documentos</h2>
-        
-        <h3>6.1. Acuerdo de Confidencialidad</h3>
-        <p>Al aceptar la invitación de revisión, el revisor suscribe un <strong>acuerdo de confidencialidad</strong> mediante la plataforma digital de la Revista. Este acuerdo establece:</p>
-        <ul>
-          <li>El manuscrito es un documento confidencial y no puede ser compartido con terceros.</li>
-          <li>El contenido no puede ser utilizado para beneficio propio o de terceros antes de su publicación.</li>
-          <li>La identidad del autor no debe ser buscada ni divulgada.</li>
-          <li>Los comentarios y evaluaciones son propiedad editorial y no pueden hacerse públicos.</li>
-        </ul>
+      <h2 id="confidencialidad">06. Confidencialidad y Manejo de Documentos</h2>
+      
+      <h3>6.1. Acuerdo de Confidencialidad</h3>
+      <p>Al aceptar la invitación de revisión, el revisor suscribe un <strong>acuerdo de confidencialidad</strong> mediante la plataforma digital de la Revista. Este acuerdo establece:</p>
+      <ul>
+        <li>El manuscrito es un documento confidencial y no puede ser compartido con terceros.</li>
+        <li>El contenido no puede ser utilizado para beneficio propio o de terceros antes de su publicación.</li>
+        <li>La identidad del autor no debe ser buscada ni divulgada.</li>
+        <li>Los comentarios y evaluaciones son propiedad editorial y no pueden hacerse públicos.</li>
+      </ul>
 
-        <h3>6.2. Acceso al Documento</h3>
-        <ul>
-          <li>El revisor recibe <strong>únicamente un documento anonimizado</strong> creado específicamente para su revisión individual.</li>
-          <li>No tiene acceso a la carpeta editorial completa ni a información adicional del manuscrito.</li>
-          <li>Puede <strong>descargar</strong> el documento para lectura offline, pero la revisión formal se realiza mediante comentarios en Google Docs.</li>
-          <li>Los comentarios se realizan <strong>exclusivamente en la plataforma Google Docs</strong> (este procedimiento puede variar; cualquier cambio será notificado).</li>
-        </ul>
+      <h3>6.2. Acceso al Documento</h3>
+      <ul>
+        <li>El revisor recibe <strong>únicamente un documento anonimizado</strong> creado específicamente para su revisión individual.</li>
+        <li>No tiene acceso a la carpeta editorial completa ni a información adicional del manuscrito.</li>
+        <li>Puede <strong>descargar</strong> el documento para lectura offline, pero la revisión formal se realiza mediante comentarios en Google Docs.</li>
+        <li>Los comentarios se realizan <strong>exclusivamente en la plataforma Google Docs</strong> (este procedimiento puede variar; cualquier cambio será notificado).</li>
+      </ul>
 
-        <h3>6.3. Información Disponible para el Revisor</h3>
-        <p>El revisor tiene acceso exclusivamente a:</p>
-        <ul>
-          <li>El texto completo anonimizado del manuscrito</li>
-          <li>El resumen (abstract)</li>
-          <li>Las palabras clave</li>
-          <li>El área temática</li>
-          <li>El tipo de artículo</li>
-        </ul>
-        <p>El revisor <strong>no tiene acceso</strong> a: nombre del autor, filiación institucional, carta de presentación, carta de respuesta, datos de contacto, o historial editorial del manuscrito.</p>
-      </div>
+      <h3>6.3. Información Disponible para el Revisor</h3>
+      <p>El revisor tiene acceso exclusivamente a:</p>
+      <ul>
+        <li>El texto completo anonimizado del manuscrito</li>
+        <li>El resumen (abstract)</li>
+        <li>Las palabras clave</li>
+        <li>El área temática</li>
+        <li>El tipo de artículo</li>
+      </ul>
+      <p>El revisor <strong>no tiene acceso</strong> a: nombre del autor, filiación institucional, carta de presentación, carta de respuesta, datos de contacto, o historial editorial del manuscrito.</p>
 
       <!-- 07. CONFLICTOS DE INTERÉS -->
-      <div class="section-block" id="conflictos">
-        <h2><span class="section-number">07</span> Conflictos de Interés</h2>
-        <p>Se entiende por <strong>conflicto de interés</strong> cualquier situación en la que intereses personales, académicos, financieros, institucionales o profesionales puedan influir indebidamente en la evaluación de un manuscrito.</p>
-        
-        <h3>7.1. Declaración Obligatoria</h3>
-        <p>Al aceptar la invitación de revisión, el revisor debe <strong>declarar obligatoriamente</strong> cualquier conflicto de interés real, potencial o percibido, incluyendo:</p>
-        <ul>
-          <li>Relación personal o familiar con el autor</li>
-          <li>Colaboración académica reciente con el autor (últimos 3 años)</li>
-          <li>Pertenencia a la misma institución o grupo de investigación</li>
-          <li>Interés financiero o comercial en el resultado de la investigación</li>
-          <li>Competencia directa por recursos o publicaciones</li>
-          <li>Relación de tutoría, mentoría o supervisión académica</li>
-        </ul>
+      <h2 id="conflictos">07. Conflictos de Interés</h2>
+      <p>Se entiende por <strong>conflicto de interés</strong> cualquier situación en la que intereses personales, académicos, financieros, institucionales o profesionales puedan influir indebidamente en la evaluación de un manuscrito.</p>
+      
+      <h3>7.1. Declaración Obligatoria</h3>
+      <p>Al aceptar la invitación de revisión, el revisor debe <strong>declarar obligatoriamente</strong> cualquier conflicto de interés real, potencial o percibido, incluyendo:</p>
+      <ul>
+        <li>Relación personal o familiar con el autor</li>
+        <li>Colaboración académica reciente con el autor (últimos 3 años)</li>
+        <li>Pertenencia a la misma institución o grupo de investigación</li>
+        <li>Interés financiero o comercial en el resultado de la investigación</li>
+        <li>Competencia directa por recursos o publicaciones</li>
+        <li>Relación de tutoría, mentoría o supervisión académica</li>
+      </ul>
 
-        <h3>7.2. Procedimiento ante Conflicto</h3>
-        <p>Si el revisor declara un conflicto de interés, el Editor de Sección evaluará la situación y podrá:</p>
-        <ul>
-          <li>Aceptar la revisión si el conflicto es menor y no compromete la imparcialidad</li>
-          <li>Reasignar el manuscrito a otro revisor</li>
-          <li>Solicitar información adicional al revisor</li>
-        </ul>
-      </div>
+      <h3>7.2. Procedimiento ante Conflicto</h3>
+      <p>Si el revisor declara un conflicto de interés, el Editor de Sección evaluará la situación y podrá:</p>
+      <ul>
+        <li>Aceptar la revisión si el conflicto es menor y no compromete la imparcialidad</li>
+        <li>Reasignar el manuscrito a otro revisor</li>
+        <li>Solicitar información adicional al revisor</li>
+      </ul>
 
       <!-- 08. ÉTICA DEL REVISOR -->
-      <div class="section-block" id="etica">
-        <h2><span class="section-number">08</span> Ética y Responsabilidades del Revisor</h2>
-        
-        <h3>8.1. Uso de Inteligencia Artificial</h3>
-        <ul>
-          <li><strong>No se permite</strong> el uso de IA para la <strong>revisión íntegra</strong> del documento.</li>
-          <li>El revisor puede <strong>consultar información puntual</strong> que le sea de ayuda para fundamentar su criterio (ej: verificar un método estadístico, confirmar una referencia bibliográfica).</li>
-          <li>La evaluación, el juicio científico y las recomendaciones deben reflejar <strong>el criterio propio del revisor</strong>.</li>
-          <li>Está prohibido introducir el manuscrito, o partes sustanciales del mismo, en servicios de IA que puedan conservar o reutilizar la información.</li>
-        </ul>
+      <h2 id="etica">08. Ética y Responsabilidades del Revisor</h2>
+      
+      <h3>8.1. Uso de Inteligencia Artificial</h3>
+      <ul>
+        <li><strong>No se permite</strong> el uso de IA para la <strong>revisión íntegra</strong> del documento.</li>
+        <li>El revisor puede <strong>consultar información puntual</strong> que le sea de ayuda para fundamentar su criterio (ej: verificar un método estadístico, confirmar una referencia bibliográfica).</li>
+        <li>La evaluación, el juicio científico y las recomendaciones deben reflejar <strong>el criterio propio del revisor</strong>.</li>
+        <li>Está prohibido introducir el manuscrito, o partes sustanciales del mismo, en servicios de IA que puedan conservar o reutilizar la información.</li>
+      </ul>
 
-        <h3>8.2. Detección de Plagio o Mala Conducta</h3>
-        <p>Si el revisor detecta indicios de plagio, fabricación de datos, manipulación de imágenes u otra mala conducta científica, debe:</p>
-        <ol>
-          <li>Registrar la observación en los <strong>comentarios confidenciales para el editor</strong></li>
-          <li>Proporcionar detalles específicos (ubicación, tipo de irregularidad, evidencia)</li>
-          <li>No comunicar sus sospechas directamente al autor</li>
-        </ol>
+      <h3>8.2. Detección de Plagio o Mala Conducta</h3>
+      <p>Si el revisor detecta indicios de plagio, fabricación de datos, manipulación de imágenes u otra mala conducta científica, debe:</p>
+      <ol>
+        <li>Registrar la observación en los <strong>comentarios confidenciales para el editor</strong></li>
+        <li>Proporcionar detalles específicos (ubicación, tipo de irregularidad, evidencia)</li>
+        <li>No comunicar sus sospechas directamente al autor</li>
+      </ol>
 
-        <h3>8.3. Plazos de Revisión</h3>
-        <p>Se espera que el revisor complete su evaluación dentro del <strong>plazo establecido</strong> (generalmente 3-4 semanas). Si no puede cumplir con el plazo, debe notificarlo al editor con la mayor antelación posible.</p>
+      <h3>8.3. Plazos de Revisión</h3>
+      <p>Se espera que el revisor complete su evaluación dentro del <strong>plazo establecido</strong> (generalmente 3-4 semanas). Si no puede cumplir con el plazo, debe notificarlo al editor con la mayor antelación posible.</p>
 
-        <h3>8.4. Calidad de los Informes</h3>
-        <p>Los informes de revisión deben ser:</p>
-        <ul>
-          <li><strong>Constructivos:</strong> Orientados a mejorar el manuscrito, señalando fortalezas y áreas de mejora.</li>
-          <li><strong>Específicos:</strong> Con referencias concretas a secciones, párrafos o elementos del texto.</li>
-          <li><strong>Respetuosos:</strong> Con un tono académico profesional, libre de descalificaciones personales.</li>
-          <li><strong>Fundamentados:</strong> Respaldados por criterios científicos y metodológicos claros.</li>
-        </ul>
-      </div>
+      <h3>8.4. Calidad de los Informes</h3>
+      <p>Los informes de revisión deben ser:</p>
+      <ul>
+        <li><strong>Constructivos:</strong> Orientados a mejorar el manuscrito, señalando fortalezas y áreas de mejora.</li>
+        <li><strong>Específicos:</strong> Con referencias concretas a secciones, párrafos o elementos del texto.</li>
+        <li><strong>Respetuosos:</strong> Con un tono académico profesional, libre de descalificaciones personales.</li>
+        <li><strong>Fundamentados:</strong> Respaldados por criterios científicos y metodológicos claros.</li>
+      </ul>
 
       <!-- 09. PROMOCIÓN AL COMITÉ -->
-      <div class="section-block" id="comite">
-        <h2><span class="section-number">09</span> Promoción al Comité Editorial y Científico</h2>
-        
-        <h3>9.1. Proceso de Invitación</h3>
-        <p>Los revisores que demuestren excelencia sostenida en sus evaluaciones pueden ser invitados a formar parte del <strong>Comité Científico</strong> o <strong>Comité Editorial</strong> de la Revista. El proceso de promoción es el siguiente:</p>
-        <ul>
-          <li><strong>Paso 1 — Identificación:</strong> Los Editores de Sección identifican revisores con desempeño excepcional (calidad de informes, puntualidad, rigor metodológico).</li>
-          <li><strong>Paso 2 — Aprobación del Editor en Jefe:</strong> El Editor en Jefe debe <strong>aprobar previamente</strong> cualquier invitación de promoción. Esta aprobación es requisito ineludible antes de extender la invitación.</li>
-          <li><strong>Paso 3 — Invitación formal:</strong> Se extiende la invitación al revisor, detallando las responsabilidades y beneficios de la membresía.</li>
-        </ul>
+      <h2 id="comite">09. Promoción al Comité Editorial y Científico</h2>
+      
+      <h3>9.1. Proceso de Invitación</h3>
+      <p>Los revisores que demuestren excelencia sostenida en sus evaluaciones pueden ser invitados a formar parte del <strong>Comité Científico</strong> o <strong>Comité Editorial</strong> de la Revista. El proceso de promoción es el siguiente:</p>
+      <ul>
+        <li><strong>Paso 1 — Identificación:</strong> Los Editores de Sección identifican revisores con desempeño excepcional (calidad de informes, puntualidad, rigor metodológico).</li>
+        <li><strong>Paso 2 — Aprobación del Editor en Jefe:</strong> El Editor en Jefe debe <strong>aprobar previamente</strong> cualquier invitación de promoción. Esta aprobación es requisito ineludible antes de extender la invitación.</li>
+        <li><strong>Paso 3 — Invitación formal:</strong> Se extiende la invitación al revisor, detallando las responsabilidades y beneficios de la membresía.</li>
+      </ul>
 
-        <h3>9.2. Restricción de Participación</h3>
-        <p>Un miembro del Comité Editorial <strong>no puede actuar como editor de su propio manuscrito</strong> ni participar en el proceso de revisión de un trabajo del que sea autor o coautor. Se asignará un editor sin conflictos de interés, y se garantizará que el autor no sea seleccionado como revisor de su propio trabajo.</p>
+      <h3>9.2. Restricción de Participación</h3>
+      <p>Un miembro del Comité Editorial <strong>no puede actuar como editor de su propio manuscrito</strong> ni participar en el proceso de revisión de un trabajo del que sea autor o coautor. Se asignará un editor sin conflictos de interés, y se garantizará que el autor no sea seleccionado como revisor de su propio trabajo.</p>
 
-        <h3>9.3. Remoción del Panel de Revisores</h3>
-        <p>Un revisor puede ser removido del panel por las siguientes causas:</p>
-        <ul>
-          <li>Revisiones de calidad persistentemente baja o insuficiente</li>
-          <li>Violación de la confidencialidad</li>
-          <li>Conducta inapropiada hacia autores o editores</li>
-          <li>Conflictos de interés no declarados de forma reiterada</li>
-          <li>Incumplimiento de plazos es tratado de forma <strong>más permisiva</strong>, requiriendo un patrón sostenido de incumplimientos injustificados para considerar la remoción.</li>
-        </ul>
-      </div>
+      <h3>9.3. Remoción del Panel de Revisores</h3>
+      <p>Un revisor puede ser removido del panel por las siguientes causas:</p>
+      <ul>
+        <li>Revisiones de calidad persistentemente baja o insuficiente</li>
+        <li>Violación de la confidencialidad</li>
+        <li>Conducta inapropiada hacia autores o editores</li>
+        <li>Conflictos de interés no declarados de forma reiterada</li>
+        <li>Incumplimiento de plazos es tratado de forma <strong>más permisiva</strong>, requiriendo un patrón sostenido de incumplimientos injustificados para considerar la remoción.</li>
+      </ul>
 
       <!-- 10. APELACIONES -->
-      <div class="section-block" id="apelaciones">
-        <h2><span class="section-number">10</span> Apelaciones y Controversias</h2>
-        
-        <h3>10.1. Derecho de Apelación</h3>
-        <p>El autor tiene derecho a apelar una decisión editorial mediante comunicación escrita dirigida a <strong>editor@revistacienciasestudiantes.com</strong>. La apelación debe presentarse dentro de los <strong>30 días corridos</strong> siguientes a la notificación de la decisión.</p>
+      <h2 id="apelaciones">10. Apelaciones y Controversias</h2>
+      
+      <h3>10.1. Derecho de Apelación</h3>
+      <p>El autor tiene derecho a apelar una decisión editorial mediante comunicación escrita dirigida a <strong>editor@revistacienciasestudiantes.com</strong>. La apelación debe presentarse dentro de los <strong>30 días corridos</strong> siguientes a la notificación de la decisión.</p>
 
-        <h3>10.2. Procedimiento de Apelación</h3>
-        <ul>
-          <li>La apelación debe estar fundamentada en errores procesales, incumplimiento del procedimiento editorial o interpretación manifiestamente incorrecta del manuscrito.</li>
-          <li>No se aceptarán apelaciones basadas únicamente en desacuerdo con el criterio científico de los revisores.</li>
-          <li>El Editor de Sección revisará inicialmente la apelación.</li>
-          <li>Si la apelación es considerada válida, se elevará al <strong>Editor en Jefe</strong> para revisión del caso.</li>
-          <li>La decisión del Editor en Jefe es <strong>definitiva e inapelable</strong>.</li>
-        </ul>
+      <h3>10.2. Procedimiento de Apelación</h3>
+      <ul>
+        <li>La apelación debe estar fundamentada en errores procesales, incumplimiento del procedimiento editorial o interpretación manifiestamente incorrecta del manuscrito.</li>
+        <li>No se aceptarán apelaciones basadas únicamente en desacuerdo con el criterio científico de los revisores.</li>
+        <li>El Editor de Sección revisará inicialmente la apelación.</li>
+        <li>Si la apelación es considerada válida, se elevará al <strong>Editor en Jefe</strong> para revisión del caso.</li>
+        <li>La decisión del Editor en Jefe es <strong>definitiva e inapelable</strong>.</li>
+      </ul>
 
-        <h3>10.3. Anonimato de Revisores en Publicación</h3>
-        <ul>
-          <li>Los revisores permanecen <strong>anónimos en el manuscrito publicado</strong>.</li>
-          <li>Al final de cada número, se publica un <strong>agradecimiento general</strong> a todos los revisores que contribuyeron.</li>
-          <li><strong>No se indica</strong> qué revisor evaluó qué manuscrito específico.</li>
-        </ul>
+      <h3>10.3. Anonimato de Revisores en Publicación</h3>
+      <ul>
+        <li>Los revisores permanecen <strong>anónimos en el manuscrito publicado</strong>.</li>
+        <li>Al final de cada número, se publica un <strong>agradecimiento general</strong> a todos los revisores que contribuyeron.</li>
+        <li><strong>No se indica</strong> qué revisor evaluó qué manuscrito específico.</li>
+      </ul>
 
-        <h3>10.4. Contacto Autor-Revisor</h3>
-        <p>El autor <strong>no puede contactar directamente al revisor</strong>, ya que desconoce su identidad. Cualquier comunicación relacionada con la revisión debe canalizarse exclusivamente a través del Editor de Sección mediante el correo editorial.</p>
+      <h3>10.4. Contacto Autor-Revisor</h3>
+      <p>El autor <strong>no puede contactar directamente al revisor</strong>, ya que desconoce su identidad. Cualquier comunicación relacionada con la revisión debe canalizarse exclusivamente a través del Editor de Sección mediante el correo editorial.</p>
 
-        <div class="success-box">
-          <i class="fa-solid fa-circle-check"></i> <strong>Compromiso de la Revista:</strong> La Revista se adhiere a los principios del <em>Committee on Publication Ethics (COPE)</em> y se compromete a mantener un proceso de revisión por pares íntegro, transparente y formativo, que contribuya al desarrollo académico de la comunidad estudiantil y científica.
-        </div>
+      <div class="success-box">
+        <i class="fa-solid fa-circle-check"></i> <strong>Compromiso de la Revista:</strong> La Revista se adhiere a los principios del <em>Committee on Publication Ethics (COPE)</em> y se compromete a mantener un proceso de revisión por pares íntegro, transparente y formativo, que contribuya al desarrollo académico de la comunidad estudiantil y científica.
       </div>
 
-      <div class="footer">
+      <div class="footer" id="footer">
         Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839<br>
         San Felipe, Chile · Publicación Académica Independiente · © <span id="current-year"></span>
       </div>
