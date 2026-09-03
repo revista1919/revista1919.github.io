@@ -11,6 +11,7 @@ import { useLanguage } from './hooks/useLanguage';
 import ReviewerOnboarding from './components/ReviewerOnboarding';
 import ReviewerWorkspacePage from './components/ReviewerWorkspacePage';
 import Header from './components/Header';
+import AimsScopeSection from './components/AimsScopeSection';
 import CollectionView from './components/CollectionView';      // <--- NUEVO
 import SingleCollectionView from './components/SingleCollectionView';
 import SearchAndFilters from './components/SearchAndFilters';
@@ -623,6 +624,7 @@ function App() {
       path: '/submit',
       component: <SubmitSection className="py-12 max-w-[1280px] mx-auto" />,
     },
+    
     {
       name: 'team',
       label: 'Nuestro Equipo',
@@ -645,6 +647,12 @@ function App() {
       path: '/about',
       component: <AboutSection className="py-12 max-w-[1280px] mx-auto" />,
     },
+    {
+  name: 'aims-scope',                    // Nombre único para la ruta
+  label: 'Aims & Scope',                 // Texto que aparece en el menú
+  path: '/aims-scope',                   // URL de la ruta
+  component: <AimsScopeSection className="py-12 max-w-[1280px] mx-auto" />,
+},
     {
       name: 'guidelines',
       label: 'Guías',

@@ -12,6 +12,7 @@ import Header from './components/HeaderEN';
 import SearchAndFilters from './components/SearchAndFiltersEN';
 import ArticleCard from './components/ArticleCardEN';
 import VolumeCard from './components/VolumeCardEN';
+import AimsScopeSection from './components/AimsScopeSection';
 import NewsletterModal from './components/NewsletterModal';
 import CollectionViewEN from './components/CollectionViewEN';
 import SingleCollectionViewEN from './components/SingleCollectionViewEN';
@@ -634,6 +635,12 @@ function AppEN() {
       path: '/en/about',
       component: <AboutSection className="py-12 max-w-[1280px] mx-auto" />,
     },
+    {
+  name: 'aims-scope',
+  label: 'Aims & Scope',
+  path: '/en/aims-scope',
+  component: <AimsScopeSection className="py-12 max-w-[1280px] mx-auto" />,
+},
     {
       name: 'guidelines',
       label: 'Guidelines',
