@@ -1,5 +1,5 @@
 // src/components/AimsScopeSection.jsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   AcademicCapIcon, 
@@ -17,17 +17,56 @@ import {
   DocumentTextIcon,
   ScaleIcon,
   EyeIcon,
-  LockClosedIcon
+  LockClosedIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline';
 import { useLanguage } from '../hooks/useLanguage';
 
 function AimsScopeSection() {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
+  const [activeSection, setActiveSection] = useState('mission');
+
+  // Scroll spy para detectar sección activa
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = [
+        'mission',
+        'objectives',
+        'scope',
+        'types',
+        'exclusions',
+        'values',
+        'audience',
+      ];
+
+      let current = 'mission';
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= 120) {
+          current = id;
+        }
+      }
+      setActiveSection(current);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Al hacer click en un enlace, navegar con hash
+  const handleNavClick = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.history.pushState(null, '', `#${id}`);
+      setActiveSection(id);
+    }
+  };
 
   // ================= TEXTOS BILINGÜES =================
   const texts = {
-    // Header
     tagline: isSpanish ? 'Misión · Alcance · Objetivos' : 'Mission · Scope · Objectives',
     title: isSpanish ? (
       <>Un espacio para la <span className="italic text-[#e86125]">investigación temprana</span> con estándares profesionales.</>
@@ -38,7 +77,18 @@ function AimsScopeSection() {
       ? 'La Revista Nacional de las Ciencias para Estudiantes define claramente su propósito editorial, las disciplinas que abarca y los tipos de contribuciones que recibe.'
       : 'The National Review of Sciences for Students clearly defines its editorial purpose, the disciplines it covers, and the types of contributions it receives.',
 
-    // Mission section
+    // Sidebar navigation
+    sidebarTitle: isSpanish ? 'Índice' : 'Contents',
+    nav: [
+      { id: 'mission', label: isSpanish ? 'Propósito Editorial' : 'Editorial Purpose' },
+      { id: 'objectives', label: isSpanish ? 'Objetivos Editoriales' : 'Editorial Objectives' },
+      { id: 'scope', label: isSpanish ? 'Alcance Temático' : 'Thematic Scope' },
+      { id: 'types', label: isSpanish ? 'Tipos de Contribuciones' : 'Contribution Types' },
+      { id: 'exclusions', label: isSpanish ? 'Lo que NO Publicamos' : 'What We Do NOT Publish' },
+      { id: 'values', label: isSpanish ? 'Principios Rectores' : 'Guiding Principles' },
+      { id: 'audience', label: isSpanish ? 'Comunidad' : 'Community' },
+    ],
+
     missionTitle: isSpanish ? 'Propósito Editorial' : 'Editorial Purpose',
     missionText1: isSpanish 
       ? 'La Revista Nacional de las Ciencias para Estudiantes es una publicación académica arbitrada, de acceso abierto Diamante y sin fines de lucro. Nuestro propósito es proporcionar una plataforma de publicación rigurosa donde estudiantes de educación media y universitaria puedan comunicar sus investigaciones bajo los mismos estándares de calidad que una revista consolidada.'
@@ -52,7 +102,14 @@ function AimsScopeSection() {
       ? '"No publicamos por publicar: publicamos para formar, para visibilizar y para demostrar que la edad no es límite para el rigor."'
       : '"We do not publish for the sake of publishing: we publish to educate, to give visibility, and to demonstrate that age is no limit to rigor."',
 
-    // Objectives
+    // Diamond highlight
+    diamondTitle: isSpanish ? 'Modelo Diamante' : 'Diamond Model',
+    diamondText: isSpanish 
+      ? 'Acceso 100% gratuito para autores y lectores. Sin cargos por procesamiento (APC) ni suscripciones.'
+      : '100% free access for authors and readers. No Article Processing Charges (APCs) or subscriptions.',
+    diamondLink: isSpanish ? '/open-access.html' : '/open-accessEN.html',
+    diamondLinkText: isSpanish ? 'Ver Política de Acceso Abierto →' : 'View Open Access Policy →',
+
     objectivesTitle: isSpanish ? 'Objetivos Editoriales' : 'Editorial Objectives',
     objectives: [
       {
@@ -85,7 +142,6 @@ function AimsScopeSection() {
       }
     ],
 
-    // Scope
     scopeTitle: isSpanish ? 'Alcance Temático' : 'Thematic Scope',
     scopeSubtitle: isSpanish 
       ? 'La Revista es multidisciplinaria y acepta contribuciones en español e inglés de todas las áreas del conocimiento académico.'
@@ -136,7 +192,6 @@ function AimsScopeSection() {
       }
     ],
 
-    // Manuscript types
     typesTitle: isSpanish ? 'Tipos de Contribuciones Aceptadas' : 'Accepted Contribution Types',
     typesSubtitle: isSpanish 
       ? 'La Revista recibe seis formatos distintos, cada uno con requisitos específicos de estructura, contenido y extensión.'
@@ -186,7 +241,22 @@ function AimsScopeSection() {
       }
     ],
 
-    // Values
+    exclusionsTitle: isSpanish ? 'Lo que NO Publicamos' : 'What We Do NOT Publish',
+    exclusions: [
+      isSpanish 
+        ? 'Documentos de trabajo preliminares (working papers) sin proceso formal de investigación'
+        : 'Preliminary working papers without a formal research process',
+      isSpanish 
+        ? 'Preprints en estado no finalizado o informes técnicos no arbitrados'
+        : 'Unfinished preprints or non-peer-reviewed technical reports',
+      isSpanish 
+        ? 'Contenido que no cumpla con los estándares de originalidad (máximo 15% de similitud)'
+        : 'Content that does not meet originality standards (maximum 15% similarity)',
+      isSpanish 
+        ? 'Manuscritos que no se ajusten al estilo Chicago 17.ª edición (Autor-Fecha)'
+        : 'Manuscripts that do not conform to Chicago 17th ed. (Author-Date) style',
+    ],
+
     valuesTitle: isSpanish ? 'Principios Rectores' : 'Guiding Principles',
     values: [
       {
@@ -221,7 +291,6 @@ function AimsScopeSection() {
       }
     ],
 
-    // Audience
     audienceTitle: isSpanish ? 'Comunidad a la que Servimos' : 'Community We Serve',
     audience: [
       {
@@ -244,24 +313,6 @@ function AimsScopeSection() {
       }
     ],
 
-    // Exclusions
-    exclusionsTitle: isSpanish ? 'Lo que NO Publicamos' : 'What We Do NOT Publish',
-    exclusions: [
-      isSpanish 
-        ? 'Documentos de trabajo preliminares (working papers) sin proceso formal de investigación'
-        : 'Preliminary working papers without a formal research process',
-      isSpanish 
-        ? 'Preprints en estado no finalizado o informes técnicos no arbitrados'
-        : 'Unfinished preprints or non-peer-reviewed technical reports',
-      isSpanish 
-        ? 'Contenido que no cumpla con los estándares de originalidad (máximo 15% de similitud)'
-        : 'Content that does not meet originality standards (maximum 15% similarity)',
-      isSpanish 
-        ? 'Manuscritos que no se ajusten al estilo Chicago 17.ª edición (Autor-Fecha)'
-        : 'Manuscripts that do not conform to Chicago 17th ed. (Author-Date) style',
-    ],
-
-    // CTA
     ctaTitle: isSpanish ? '¿Quieres ser parte de este proyecto?' : 'Want to be part of this project?',
     ctaText: isSpanish 
       ? 'Consulta nuestra guía completa para autores y descubre los requisitos detallados para preparar tu manuscrito.'
@@ -292,8 +343,8 @@ function AimsScopeSection() {
   };
 
   return (
-    <section className="py-20 bg-white">
-      <div className="max-w-5xl mx-auto px-6">
+    <section className="py-16 bg-white">
+      <div className="max-w-6xl mx-auto px-6">
         
         {/* ENCABEZADO EDITORIAL */}
         <motion.div 
@@ -301,7 +352,7 @@ function AimsScopeSection() {
           whileInView="visible"
           viewport={{ once: true }}
           variants={fadeUp}
-          className="mb-16 text-center"
+          className="mb-12 text-center"
         >
           <span className="text-[#e86125] font-bold text-[10px] tracking-[0.25em] uppercase mb-3 block font-sans">
             {texts.tagline}
@@ -315,284 +366,327 @@ function AimsScopeSection() {
           <div className="h-[2px] w-16 bg-[#e86125] mx-auto mt-6"></div>
         </motion.div>
 
-        {/* PROPÓSITO EDITORIAL */}
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="mb-20"
-        >
-          <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-6 text-center">
-            {texts.missionTitle}
-          </h3>
+        {/* GRID CON SIDEBAR */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
-          <motion.div variants={staggerItem} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <div className="lg:col-span-7 space-y-6">
-              <p className="text-[16px] text-[#2b2b2b] leading-relaxed font-sans">
-                {texts.missionText1}
-              </p>
-              <p className="text-[14px] text-[#666666] leading-relaxed font-sans">
-                {texts.missionText2}
+          {/* SIDEBAR STICKY */}
+          <motion.aside 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="lg:col-span-3"
+          >
+            <div className="sticky top-28 bg-white border border-[#e6e8ea] border-t-4 border-t-[#004b87] rounded-sm shadow-lg">
+              <h3 className="text-[11px] font-bold font-sans uppercase tracking-[0.15em] text-[#004b87] px-5 pt-4 pb-3 border-b border-[#e6e8ea]">
+                {texts.sidebarTitle}
+              </h3>
+              <ul className="py-2">
+                {texts.nav.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => handleNavClick(item.id)}
+                      className={`w-full text-left px-5 py-2.5 text-[12px] font-sans transition-all border-l-3 ${
+                        activeSection === item.id
+                          ? 'border-l-[#e86125] bg-[#FFF0E6] text-[#004b87] font-semibold'
+                          : 'border-l-transparent text-[#666666] hover:bg-[#f8f9fa] hover:text-[#004b87]'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.aside>
+
+          {/* CONTENIDO PRINCIPAL */}
+          <div className="lg:col-span-9 space-y-16">
+
+            {/* PROPÓSITO EDITORIAL */}
+            <motion.div 
+              id="mission"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={staggerContainer}
+              className="scroll-mt-28"
+            >
+              <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                <div className="md:col-span-7 space-y-5">
+                  <h3 className="text-[16px] font-serif font-bold text-black tracking-tight">
+                    {texts.missionTitle}
+                  </h3>
+                  <p className="text-[14px] text-[#2b2b2b] leading-relaxed font-sans">
+                    {texts.missionText1}
+                  </p>
+                  <p className="text-[13px] text-[#666666] leading-relaxed font-sans">
+                    {texts.missionText2}
+                  </p>
+                  <blockquote className="border-l-4 border-[#e86125] pl-5 py-1">
+                    <p className="font-serif text-lg font-light text-black leading-snug italic">
+                      {texts.quote}
+                    </p>
+                  </blockquote>
+                </div>
+                
+                <div className="md:col-span-5">
+                  <div className="bg-[#f8f9fa] border border-[#e6e8ea] border-l-4 border-l-[#e86125] rounded-sm p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <LockClosedIcon className="w-6 h-6 text-[#002147]" />
+                      <h4 className="font-serif font-semibold text-black text-[15px]">
+                        {texts.diamondTitle}
+                      </h4>
+                    </div>
+                    <p className="text-[12px] text-[#666666] leading-relaxed font-sans mb-3">
+                      {texts.diamondText}
+                    </p>
+                    <a 
+                      href={texts.diamondLink}
+                      className="text-[11px] font-bold uppercase tracking-wider text-[#002147] hover:text-[#e86125] transition-colors font-sans"
+                    >
+                      {texts.diamondLinkText}
+                    </a>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* OBJETIVOS EDITORIALES */}
+            <motion.div 
+              id="objectives"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={staggerContainer}
+              className="scroll-mt-28"
+            >
+              <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-6">
+                {texts.objectivesTitle}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {texts.objectives.map((obj, i) => (
+                  <motion.div 
+                    key={i}
+                    variants={staggerItem}
+                    className="bg-white border border-[#e6e8ea] rounded-sm p-5 hover:border-[#e86125] transition-colors shadow-sm hover:shadow-md group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-[#f4f5f7] rounded-sm flex items-center justify-center flex-shrink-0 group-hover:bg-[#e86125]/5 transition-colors">
+                        <obj.icon className="w-5 h-5 text-[#002147] group-hover:text-[#e86125] transition-colors" />
+                      </div>
+                      <div>
+                        <h4 className="font-serif font-semibold text-black mb-1 text-[14px] tracking-tight">
+                          {obj.title}
+                        </h4>
+                        <p className="text-[12px] text-[#666666] leading-relaxed font-sans">
+                          {obj.desc}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* ALCANCE TEMÁTICO */}
+            <motion.div 
+              id="scope"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={staggerContainer}
+              className="scroll-mt-28"
+            >
+              <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-3">
+                {texts.scopeTitle}
+              </h3>
+              <p className="text-[13px] text-[#666666] mb-6 font-sans">
+                {texts.scopeSubtitle}
               </p>
               
-              <blockquote className="border-l-4 border-[#e86125] pl-6 py-2">
-                <p className="font-serif text-xl md:text-2xl font-light text-black leading-snug italic">
-                  {texts.quote}
-                </p>
-              </blockquote>
-            </div>
-            
-            <div className="lg:col-span-5">
-              <div className="bg-[#f8f9fa] border border-[#e6e8ea] rounded-sm p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <DocumentTextIcon className="w-8 h-8 text-[#002147]" />
-                  <h4 className="font-serif font-semibold text-black text-lg">
-                    {isSpanish ? 'Definición Formal' : 'Formal Definition'}
-                  </h4>
-                </div>
-                <p className="text-[13px] text-[#666666] leading-relaxed font-sans">
-                  {isSpanish 
-                    ? 'Publicación académica arbitrada, de acceso abierto Diamante y sin fines de lucro, adherida a los principios del Committee on Publication Ethics (COPE) y la Budapest Open Access Initiative (BOAI).'
-                    : 'Peer-reviewed academic publication, Diamond Open Access and non-profit, adhering to the principles of the Committee on Publication Ethics (COPE) and the Budapest Open Access Initiative (BOAI).'
-                  }
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* OBJETIVOS EDITORIALES */}
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="mb-20"
-        >
-          <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-8 text-center">
-            {texts.objectivesTitle}
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {texts.objectives.map((obj, i) => (
-              <motion.div 
-                key={i}
-                variants={staggerItem}
-                className="bg-white border border-[#e6e8ea] rounded-sm p-6 hover:border-[#e86125] transition-colors shadow-sm hover:shadow-md group"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-[#f4f5f7] rounded-sm flex items-center justify-center flex-shrink-0 group-hover:bg-[#e86125]/5 transition-colors">
-                    <obj.icon className="w-6 h-6 text-[#002147] group-hover:text-[#e86125] transition-colors" />
-                  </div>
-                  <div>
-                    <h4 className="font-serif font-semibold text-black mb-2 text-[15px] tracking-tight">
-                      {obj.title}
-                    </h4>
-                    <p className="text-[13px] text-[#666666] leading-relaxed font-sans">
-                      {obj.desc}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {texts.areas.map((area, i) => (
+                  <motion.div 
+                    key={i}
+                    variants={staggerItem}
+                    className="bg-[#f8f9fa] border border-[#e6e8ea] rounded-sm p-4 hover:border-[#002147] transition-all hover:shadow-md group"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <area.icon className="w-4 h-4 text-[#e86125] flex-shrink-0" />
+                      <h4 className="font-serif font-semibold text-black text-[13px] tracking-tight">
+                        {area.title}
+                      </h4>
+                    </div>
+                    <p className="text-[11px] text-[#666666] leading-relaxed font-sans">
+                      {area.disciplines}
                     </p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
 
-        {/* ALCANCE TEMÁTICO */}
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="mb-20"
-        >
-          <div className="text-center mb-8">
-            <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-3">
-              {texts.scopeTitle}
-            </h3>
-            <p className="text-[14px] text-[#666666] max-w-2xl mx-auto font-sans">
-              {texts.scopeSubtitle}
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {texts.areas.map((area, i) => (
-              <motion.div 
-                key={i}
-                variants={staggerItem}
-                className="bg-[#f8f9fa] border border-[#e6e8ea] rounded-sm p-5 hover:border-[#002147] transition-all hover:shadow-md group"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <area.icon className="w-5 h-5 text-[#e86125] flex-shrink-0" />
-                  <h4 className="font-serif font-semibold text-black text-[14px] tracking-tight">
-                    {area.title}
-                  </h4>
-                </div>
-                <p className="text-[12px] text-[#666666] leading-relaxed font-sans">
-                  {area.disciplines}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+            {/* TIPOS DE CONTRIBUCIONES */}
+            <motion.div 
+              id="types"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={staggerContainer}
+              className="scroll-mt-28"
+            >
+              <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-3">
+                {texts.typesTitle}
+              </h3>
+              <p className="text-[13px] text-[#666666] mb-6 font-sans">
+                {texts.typesSubtitle}
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {texts.types.map((type, i) => (
+                  <motion.div 
+                    key={i}
+                    variants={staggerItem}
+                    className="flex items-start gap-3 bg-white border border-[#e6e8ea] rounded-sm p-4 hover:border-[#e86125] transition-colors"
+                  >
+                    <div className="flex-shrink-0 mt-1">
+                      <div className="w-2 h-2 bg-[#e86125] rounded-full"></div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h4 className="font-serif font-semibold text-black text-[13px] tracking-tight">
+                          {type.name}
+                        </h4>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#a0a0a0] bg-[#f4f5f7] px-2 py-0.5 rounded-sm flex-shrink-0 font-sans">
+                          {type.length}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#666666] leading-relaxed font-sans">
+                        {type.desc}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
 
-        {/* TIPOS DE CONTRIBUCIONES */}
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="mb-20"
-        >
-          <div className="text-center mb-8">
-            <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-3">
-              {texts.typesTitle}
-            </h3>
-            <p className="text-[14px] text-[#666666] max-w-2xl mx-auto font-sans">
-              {texts.typesSubtitle}
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {texts.types.map((type, i) => (
+            {/* LO QUE NO PUBLICAMOS */}
+            <motion.div 
+              id="exclusions"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={staggerContainer}
+              className="scroll-mt-28"
+            >
+              <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-6">
+                {texts.exclusionsTitle}
+              </h3>
+              
               <motion.div 
-                key={i}
                 variants={staggerItem}
-                className="flex items-start gap-4 bg-white border border-[#e6e8ea] rounded-sm p-5 hover:border-[#e86125] transition-colors"
+                className="bg-[#f8f9fa] border border-[#e6e8ea] rounded-sm p-5"
               >
-                <div className="flex-shrink-0 mt-1">
-                  <div className="w-2 h-2 bg-[#e86125] rounded-full"></div>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-3 mb-1">
-                    <h4 className="font-serif font-semibold text-black text-[14px] tracking-tight">
-                      {type.name}
+                <ul className="space-y-2">
+                  {texts.exclusions.map((exclusion, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[12px] text-[#666666] font-sans">
+                      <XCircleIcon className="w-4 h-4 text-[#e86125] flex-shrink-0 mt-0.5" />
+                      <span>{exclusion}</span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            </motion.div>
+
+            {/* PRINCIPIOS RECTORES */}
+            <motion.div 
+              id="values"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={staggerContainer}
+              className="scroll-mt-28"
+            >
+              <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-6">
+                {texts.valuesTitle}
+              </h3>
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {texts.values.map((val, i) => (
+                  <motion.div 
+                    key={i}
+                    variants={staggerItem}
+                    className="text-center p-4 bg-[#f8f9fa] border border-[#e6e8ea] rounded-sm hover:border-[#e86125] transition-all"
+                  >
+                    <val.icon className="w-6 h-6 text-[#002147] mx-auto mb-2" />
+                    <h4 className="font-serif font-semibold text-black text-[12px] mb-1">
+                      {val.title}
                     </h4>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#a0a0a0] bg-[#f4f5f7] px-2 py-1 rounded-sm flex-shrink-0 font-sans">
-                      {type.length}
-                    </span>
-                  </div>
-                  <p className="text-[12px] text-[#666666] leading-relaxed font-sans">
-                    {type.desc}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+                    <p className="text-[10px] text-[#a0a0a0] font-sans">
+                      {val.desc}
+                    </p>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
 
-        {/* LO QUE NO PUBLICAMOS */}
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="mb-20"
-        >
-          <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-8 text-center">
-            {texts.exclusionsTitle}
-          </h3>
-          
-          <motion.div 
-            variants={staggerItem}
-            className="bg-[#f8f9fa] border border-[#e6e8ea] rounded-sm p-6 max-w-3xl mx-auto"
-          >
-            <ul className="space-y-3">
-              {texts.exclusions.map((exclusion, i) => (
-                <li key={i} className="flex items-start gap-3 text-[13px] text-[#666666] font-sans">
-                  <XCircleIcon className="w-4 h-4 text-[#e86125] flex-shrink-0 mt-0.5" />
-                  <span>{exclusion}</span>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        </motion.div>
+            {/* COMUNIDAD */}
+            <motion.div 
+              id="audience"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={staggerContainer}
+              className="scroll-mt-28"
+            >
+              <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-6">
+                {texts.audienceTitle}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {texts.audience.map((aud, i) => (
+                  <motion.div 
+                    key={i}
+                    variants={staggerItem}
+                    className="bg-white border border-[#e6e8ea] rounded-sm p-5 text-center hover:shadow-md transition-all"
+                  >
+                    <h4 className="font-serif font-bold text-black text-[15px] mb-2">
+                      {aud.title}
+                    </h4>
+                    <p className="text-[12px] text-[#666666] leading-relaxed font-sans">
+                      {aud.desc}
+                    </p>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
 
-        {/* PRINCIPIOS RECTORES */}
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="mb-20"
-        >
-          <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-8 text-center">
-            {texts.valuesTitle}
-          </h3>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {texts.values.map((val, i) => (
-              <motion.div 
-                key={i}
-                variants={staggerItem}
-                className="text-center p-5 bg-[#f8f9fa] border border-[#e6e8ea] rounded-sm hover:border-[#e86125] transition-all"
+            {/* CTA FINAL */}
+            <motion.div 
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="text-center border-t border-[#e6e8ea] pt-10"
+            >
+              <h3 className="font-serif text-xl text-black mb-2 tracking-tight">
+                {texts.ctaTitle}
+              </h3>
+              <p className="text-[13px] text-[#666666] mb-5 font-sans">
+                {texts.ctaText}
+              </p>
+              <a 
+                href={texts.ctaLink}
+                className="inline-flex items-center gap-2 bg-[#002147] hover:bg-[#e86125] text-white px-7 py-3 text-xs font-bold uppercase tracking-widest transition-colors font-sans rounded-sm"
               >
-                <val.icon className="w-7 h-7 text-[#002147] mx-auto mb-3" />
-                <h4 className="font-serif font-semibold text-black text-[13px] mb-1">
-                  {val.title}
-                </h4>
-                <p className="text-[11px] text-[#a0a0a0] font-sans">
-                  {val.desc}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+                {texts.ctaButton}
+                <ArrowRightIcon className="w-4 h-4" />
+              </a>
+            </motion.div>
 
-        {/* COMUNIDAD */}
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="mb-20"
-        >
-          <h3 className="text-[13px] font-bold font-sans uppercase tracking-[0.2em] text-[#a0a0a0] mb-8 text-center">
-            {texts.audienceTitle}
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {texts.audience.map((aud, i) => (
-              <motion.div 
-                key={i}
-                variants={staggerItem}
-                className="bg-white border border-[#e6e8ea] rounded-sm p-6 text-center hover:shadow-md transition-all"
-              >
-                <h4 className="font-serif font-bold text-black text-[16px] mb-2">
-                  {aud.title}
-                </h4>
-                <p className="text-[13px] text-[#666666] leading-relaxed font-sans">
-                  {aud.desc}
-                </p>
-              </motion.div>
-            ))}
           </div>
-        </motion.div>
-
-        {/* CTA FINAL */}
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeUp}
-          className="text-center border-t-2 border-[#e6e8ea] pt-12"
-        >
-          <h3 className="font-serif text-2xl text-black mb-3 tracking-tight">
-            {texts.ctaTitle}
-          </h3>
-          <p className="text-[14px] text-[#666666] mb-6 font-sans">
-            {texts.ctaText}
-          </p>
-          <a 
-            href={texts.ctaLink}
-            className="inline-flex items-center gap-2 bg-[#002147] hover:bg-[#e86125] text-white px-8 py-3.5 text-xs font-bold uppercase tracking-widest transition-colors font-sans rounded-sm"
-          >
-            {texts.ctaButton}
-            <ArrowRightIcon className="w-4 h-4" />
-          </a>
-        </motion.div>
-        
+        </div>
       </div>
     </section>
   );
