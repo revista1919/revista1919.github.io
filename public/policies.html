@@ -4,822 +4,1018 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Políticas Editoriales · Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+    :root {
+      --primary: #004b87;
+      --secondary: #006dae;
+      --accent: #e86125;
+      --text-main: #2b2b2b;
+      --text-muted: #666666;
+      --text-light: #a0a0a0;
+      --border-light: #e6e8ea;
+      --border-dark: #cbd0d5;
+      --bg-out: #f4f5f7;
+      --bg-paper: #ffffff;
+      --bg-highlight: #f8f9fa;
+      --bg-warning: #fdf6f3;
+      --link: #006dae;
+      --success: #10B981;
+      --success-bg: #ECFDF5;
+      --shadow-sm: 0 1px 3px rgba(11, 25, 44, 0.05);
+      --shadow-md: 0 4px 15px rgba(11, 25, 44, 0.08);
+      --shadow-lg: 0 10px 25px rgba(11, 25, 44, 0.12);
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --font-serif: 'Lora', Georgia, Times, serif;
+      --font-sans: 'Inter', sans-serif;
+    }
 
-:root {
-  /* Paleta inspirada en Elsevier / Taylor & Francis */
-  --primary: #004b87;       /* Azul académico profundo */
-  --secondary: #006dae;     /* Azul interactivo */
-  --accent: #e86125;        /* Naranja Elsevier para acentos y advertencias */
-  --text-main: #2b2b2b;     /* Negro suave para lectura prolongada */
-  --text-muted: #666666;    /* Gris para metadatos */
-  --border-light: #e6e8ea;  /* Bordes sutiles */
-  --border-dark: #cbd0d5;   /* Bordes estructurales (tablas) */
-  --bg-out: #f4f5f7;        /* Fondo exterior de la página */
-  --bg-paper: #ffffff;      /* Fondo del documento */
-  --bg-highlight: #f8f9fa;  /* Fondo de cajas de texto */
-  --link: #006dae;
-}
+    * { box-sizing: border-box; }
 
-body {
-  font-family: 'Lora', 'Georgia', Times, serif;
-  font-size: 16px;
-  line-height: 1.75;
-  margin: 0;
-  padding: 0;
-  background-color: var(--bg-out);
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+    body {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      line-height: 1.75;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-out);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
-.page-wrapper {
-  max-width: 850px;
-  margin: 60px auto;
-  background-color: var(--bg-paper);
-  padding: 70px 90px;
-  border: 1px solid var(--border-light);
-  border-top: 5px solid var(--primary); /* Cinta superior de identidad editorial */
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-}
+    /* ================= HEADER BLANCO ================= */
+    .header {
+      background-color: var(--bg-paper);
+      border-bottom: 4px solid var(--primary);
+      padding: 40px 20px;
+      box-shadow: var(--shadow-sm);
+    }
 
-.header {
-  border-bottom: 1px solid var(--border-light);
-  padding-bottom: 30px;
-  margin-bottom: 50px;
-}
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
 
-.header img {
-  max-width: 180px;
-  margin-bottom: 25px;
-  display: block;
-}
+    .header img {
+      max-width: 180px;
+      height: auto;
+      display: block;
+    }
 
-.header h1 {
-  font-family: 'Inter', sans-serif;
-  font-size: 2.2em;
-  font-weight: 700;
-  line-height: 1.2;
-  margin: 0;
-  letter-spacing: -0.02em;
-  color: var(--text-main);
-}
+    .header-text {
+      flex: 1;
+      min-width: 280px;
+    }
 
-.document-meta {
-  font-family: 'Inter', sans-serif;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-top: 15px;
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
+    .header h1 {
+      font-family: var(--font-sans);
+      font-size: 2.2em;
+      font-weight: 700;
+      line-height: 1.2;
+      margin: 0;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
 
-/* Tipografía de Encabezados (Estilo Moderno Sans-Serif) */
-h2, h3, h4 {
-  font-family: 'Inter', sans-serif;
-  color: var(--primary);
-  margin-top: 2.5em;
-  font-weight: 600;
-}
+    .document-meta {
+      font-family: var(--font-sans);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 10px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
-h2 {
-  font-size: 1.25em;
-  border-bottom: 1px solid var(--border-light);
-  padding-bottom: 8px;
-  margin-bottom: 1em;
-}
+    .document-meta .badge {
+      background: var(--primary);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+    }
 
-h3 {
-  font-size: 1.1em;
-  color: var(--text-main);
-  margin-bottom: 0.8em;
-}
+    /* ================= LAYOUT PRINCIPAL ================= */
+    .dashboard-wrapper {
+      max-width: 1200px;
+      margin: 40px auto 60px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 35px;
+      align-items: start;
+    }
 
-h4 {
-  font-size: 0.95em;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.5em;
-}
+    /* ================= SIDEBAR (TOC) ================= */
+    .sidebar {
+      background-color: var(--bg-paper);
+      border-radius: var(--radius-md);
+      padding: 25px;
+      position: sticky;
+      top: 30px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-light);
+      border-top: 4px solid var(--primary);
+    }
 
-p {
-  margin-top: 0;
-  margin-bottom: 1.5em;
-  color: var(--text-main);
-}
+    .sidebar h3 {
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--primary);
+      margin-top: 0;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border-light);
+      font-weight: 700;
+    }
 
-ul, ol {
-  margin-top: 0;
-  margin-bottom: 1.5em;
-  padding-left: 1.5em;
-}
+    .sidebar-nav {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
 
-li {
-  margin-bottom: 0.5em;
-}
+    .sidebar-nav li {
+      margin-bottom: 5px;
+    }
 
-/* Listas de Políticas específicas */
-.policy-list {
-  list-style: none;
-  padding: 0;
-}
+    .sidebar-nav a {
+      display: block;
+      padding: 10px 14px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      transition: all 0.3s;
+      border-left: 3px solid transparent;
+      line-height: 1.4;
+    }
 
-.policy-item {
-  margin-bottom: 1.5em;
-  padding-left: 20px;
-  border-left: 3px solid var(--border-light);
-  transition: border-color 0.2s;
-}
+    .sidebar-nav a:hover,
+    .sidebar-nav a.active {
+      background: #FFF0E6;
+      color: var(--primary);
+      border-left-color: var(--accent);
+      font-weight: 600;
+    }
 
-.policy-item:hover {
-  border-left-color: var(--accent);
-}
+    .quick-tip {
+      margin-top: 25px;
+      padding: 18px;
+      background: linear-gradient(135deg, var(--primary), #1A365D);
+      color: #ffffff;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
 
-.policy-item strong {
-  display: block;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9em;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: var(--primary);
-}
+    .quick-tip i {
+      color: var(--accent);
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+      display: block;
+    }
 
-.policy-section {
-  margin-bottom: 40px;
-}
+    .quick-tip strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #ffffff;
+    }
 
-/* Tablas con formato de revista científica (APA Style) */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 2em 0;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9em;
-}
+    .quick-tip p {
+      color: #ffffff;
+    }
 
-table th, table td {
-  padding: 12px 16px;
-  text-align: left;
-  vertical-align: top;
-  color: var(--text-main);
-}
+    .quick-tip a {
+      color: #FFD700;
+    }
 
-table th {
-  font-weight: 600;
-  border-top: 2px solid var(--border-dark);
-  border-bottom: 1px solid var(--border-dark);
-  color: var(--primary);
-}
+    .quick-tip span {
+      color: #ffffff;
+    }
+    /* ================= CONTENIDO PRINCIPAL ================= */
+    .main-content {
+      background-color: var(--bg-paper);
+      border-radius: var(--radius-md);
+      padding: 45px 50px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-light);
+    }
 
-table tr:last-child td {
-  border-bottom: 2px solid var(--border-dark);
-}
+    h2 {
+      font-family: var(--font-sans);
+      font-size: 1.3em;
+      color: var(--primary);
+      margin-top: 2.5em;
+      margin-bottom: 1em;
+      font-weight: 700;
+      border-bottom: 2px solid var(--border-light);
+      padding-bottom: 10px;
+      scroll-margin-top: 30px;
+    }
 
-table td {
-  border-bottom: 1px solid var(--border-light);
-}
+    h2:first-child { margin-top: 0; }
 
-/* Enlaces limpios */
-a {
-  color: var(--link);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: all 0.2s ease;
-}
+    h3 {
+      font-family: var(--font-sans);
+      font-size: 1.05em;
+      color: var(--text-main);
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      font-weight: 600;
+    }
 
-a:hover {
-  color: var(--primary);
-  border-bottom: 1px solid var(--primary);
-}
+    h4 {
+      font-family: var(--font-sans);
+      font-size: 0.85em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5em;
+      font-weight: 600;
+    }
 
-/* =========================================
-   ÍNDICE (TABLE OF CONTENTS - EDITORIAL STYLE)
-   ========================================= */
+    p {
+      margin-top: 0;
+      margin-bottom: 1.3em;
+      color: var(--text-main);
+    }
 
-.toc {
-  margin: 3.5em 0;
-  padding: 35px 45px;
-  background-color: var(--bg-paper); /* Fondo blanco puro */
-  border: 1px solid var(--border-light);
-  border-top: 4px solid var(--primary); /* Línea de anclaje visual superior */
-  box-shadow: 0 10px 30px rgba(0, 75, 135, 0.04); /* Sombra elegante azulada */
-  border-radius: 0 0 4px 4px;
-}
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 1.5em;
+    }
 
-/* Título del Índice */
-.toc .toc-title {
-  font-family: 'Inter', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  font-size: 0.85em;
-  font-weight: 700;
-  color: var(--primary);
-  margin-top: 0;
-  margin-bottom: 25px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid var(--border-light);
-}
+    li {
+      margin-bottom: 0.5em;
+      line-height: 1.7;
+    }
 
-/* Estructura de la lista: 2 columnas para elegancia y ahorro de espacio */
-.toc ol {
-  margin: 0;
-  padding: 0;
-  list-style: none; /* Quitamos los números por defecto */
-  column-count: 2;  /* Dividimos en dos columnas */
-  column-gap: 50px;
-  counter-reset: toc-counter; /* Iniciamos un contador personalizado */
-}
+    strong { color: #1a1a1a; }
 
-/* Elementos de la lista */
-.toc li {
-  position: relative;
-  padding-left: 28px;
-  margin-bottom: 14px;
-  break-inside: avoid; /* Evita que un item se parta entre columnas */
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9em;
-  line-height: 1.4;
-}
+    a {
+      color: var(--link);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
 
-/* Numeración personalizada (Color de acento) */
-.toc li::before {
-  counter-increment: toc-counter;
-  content: counter(toc-counter) ".";
-  position: absolute;
-  left: 0;
-  top: 0;
-  color: var(--accent); /* Naranja Elsevier / Highlight */
-  font-weight: 700;
-  font-size: 0.95em;
-}
+    a:hover {
+      color: var(--primary);
+      border-bottom: 1px solid var(--primary);
+    }
 
-/* Enlaces del índice */
-.toc a {
-  color: var(--text-main);
-  text-decoration: none;
-  border-bottom: none;
-  display: inline-block;
-  transition: color 0.2s ease, transform 0.2s ease;
-}
+    code {
+      background-color: #F1F5F9;
+      color: #0F172A;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.85em;
+      border: 1px solid #E2E8F0;
+    }
 
-/* Efecto hover: Cambio de color y sutil desplazamiento a la derecha */
-.toc a:hover {
-  color: var(--link);
-  transform: translateX(4px);
-  border-bottom: none;
-}
+    /* Cajas */
+    .highlight-box {
+      background-color: var(--bg-highlight);
+      border-left: 4px solid var(--primary);
+      padding: 20px 25px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
 
-/* Responsividad para el Índice */
-@media (max-width: 768px) {
-  .toc { 
-    padding: 25px 20px; 
-  }
-  .toc ol { 
-    column-count: 1; /* Pasa a 1 sola columna en móviles */
-  }
-}
+    .warning-box {
+      background-color: var(--bg-warning);
+      border-left: 4px solid var(--accent);
+      padding: 20px 25px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
 
-/* Cajas de texto destacadas (Abstracts, Notas clave) */
-.highlight-box {
-  background-color: var(--bg-highlight);
-  border-left: 4px solid var(--accent);
-  padding: 20px 25px;
-  margin: 2em 0;
-  font-size: 0.95em;
-  color: var(--text-main);
-}
+    .success-box {
+      background-color: var(--success-bg);
+      border-left: 4px solid var(--success);
+      padding: 18px 22px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
 
-.highlight-box p:last-child {
-  margin-bottom: 0;
-}
+    .tip-box {
+      background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--accent);
+      padding: 18px 22px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9em;
+      color: var(--text-main);
+    }
 
-.footer {
-  margin-top: 80px;
-  padding-top: 30px;
-  border-top: 1px solid var(--border-light);
-  text-align: center;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
+    .tip-box strong { color: var(--primary); }
 
-/* Diseño Responsivo para móviles */
-@media (max-width: 768px) {
-  .page-wrapper { 
-    margin: 0; 
-    padding: 30px 20px; 
-    border: none;
-    border-top: 4px solid var(--primary);
-  }
-  .header h1 { font-size: 1.7em; }
-  .document-meta { flex-direction: column; align-items: flex-start; gap: 5px; }
-}
+    .example-box {
+      background-color: white;
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--primary);
+      padding: 18px 20px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9em;
+      color: var(--text-muted);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .example-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      font-family: var(--font-sans);
+    }
+
+    /* Tarjetas de políticas */
+    .policy-list {
+      list-style: none;
+      padding: 0;
+      margin: 1.5em 0;
+    }
+
+    .policy-item {
+      margin-bottom: 1.2em;
+      padding: 18px 20px;
+      background: var(--bg-highlight);
+      border: 1px solid var(--border-light);
+      border-left: 3px solid var(--border-dark);
+      border-radius: var(--radius-sm);
+      transition: all 0.3s;
+    }
+
+    .policy-item:hover {
+      border-left-color: var(--accent);
+      box-shadow: var(--shadow-md);
+      transform: translateX(4px);
+    }
+
+    .policy-item strong {
+      display: block;
+      font-family: var(--font-sans);
+      font-size: 0.9em;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--primary);
+    }
+
+    /* Tablas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2em 0;
+      font-family: var(--font-sans);
+      font-size: 0.85em;
+    }
+
+    table th, table td {
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+      color: var(--text-main);
+    }
+
+    table th {
+      font-weight: 600;
+      border-top: 2px solid var(--border-dark);
+      border-bottom: 1px solid var(--border-dark);
+      color: var(--primary);
+      background-color: var(--bg-highlight);
+    }
+
+    table tr:last-child td {
+      border-bottom: 2px solid var(--border-dark);
+    }
+
+    table td {
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 60px;
+      text-align: center;
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      color: var(--text-light);
+      border-top: 1px solid var(--border-light);
+      padding-top: 25px;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-wrapper { grid-template-columns: 1fr; }
+      .sidebar { position: static; margin-bottom: 25px; }
+    }
+
+    @media (max-width: 768px) {
+      .header { padding: 25px 15px; }
+      .header-content { flex-direction: column; align-items: flex-start; gap: 15px; }
+      .header h1 { font-size: 1.6em; }
+      .main-content { padding: 25px 20px; }
+    }
   </style>
 </head>
 <body>
-  <div class="page-wrapper">
-    <!-- Encabezado -->
-    <div class="header">
+
+  <!-- HEADER BLANCO -->
+  <header class="header">
+    <div class="header-content">
       <img src="logo.png" alt="Logo Revista Nacional de las Ciencias para Estudiantes">
-      <h1>Políticas Editoriales</h1>
-      <div class="document-meta">Manual Institucional · Versión 2.0, Julio 2026 · San Felipe, Chile</div>
-    </div>
-
-    <!-- Índice -->
-    <div class="toc">
-      <p class="toc-title">Índice</p>
-      <ol>
-        <li><a href="#principios">Principios Editoriales</a></li>
-        <li><a href="#preambulo">Preámbulo y Fundamentos Normativos</a></li>
-        <li><a href="#alcance">Alcance, Misión y Tipos de Manuscritos</a></li>
-        <li><a href="#originalidad">Originalidad, Publicación Previa y Exclusividad</a></li>
-        <li><a href="#autoria">Autoría, Contribuciones y CRediT</a></li>
-        <li><a href="#etica">Ética en la Investigación</a></li>
-        <li><a href="#conflictos">Conflictos de Interés y Financiamiento</a></li>
-        <li><a href="#ia">Uso de Inteligencia Artificial</a></li>
-        <li><a href="#datos">Datos Abiertos, Código y Reproducibilidad</a></li>
-        <li><a href="#figuras">Directrices para Figuras e Imágenes</a></li>
-        <li><a href="#revision">Proceso de Revisión por Pares</a></li>
-        <li><a href="#decisiones">Decisiones Editoriales y Apelaciones</a></li>
-        <li><a href="#postpub">Correcciones, Retractaciones y Preservación Digital</a></li>
-        <li><a href="#derechos">Derechos de Autor y Licencias</a></li>
-        <li><a href="#disposiciones">Disposiciones Finales</a></li>
-      </ol>
-    </div>
-
-    <!-- 01. Principios Editoriales -->
-    <h2 id="principios">01. Principios Editoriales</h2>
-    <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> declara, como fundamento de su quehacer, su adhesión irrestricta a los siguientes principios, que guían e inspiran la totalidad de sus políticas y procesos editoriales. Estos principios constituyen la base sobre la que se asienta la confianza de autores, revisores y lectores en la integridad de esta publicación.</p>
-    
-    <ul>
-      <li><strong>Independencia Editorial:</strong> Las decisiones de publicación se basan exclusivamente en el mérito científico, la originalidad, la calidad metodológica y la adecuación al alcance de la Revista. Ningún interés comercial, institucional, político o personal interfiere en el proceso de evaluación y selección de manuscritos.</li>
-      <li><strong>Imparcialidad y Equidad:</strong> Todo manuscrito es evaluado sin sesgos relacionados con la filiación institucional, el género, el origen étnico, la nacionalidad, la orientación sexual, las creencias religiosas, las posturas políticas o cualquier otra característica personal de sus autores. La Revista promueve activamente la diversidad y la inclusión en todas las esferas de su actividad.</li>
-      <li><strong>Integridad Científica:</strong> La Revista se adhiere a los más altos estándares éticos y promueve las buenas prácticas en todas las fases de la investigación y la publicación. Se espera que los autores presenten trabajos honestos, rigurosos y transparentes, libres de fabricación, falsificación, plagio o manipulación indebida de datos.</li>
-      <li><strong>Transparencia:</strong> Las políticas, los procesos y las decisiones editoriales se comunican de forma abierta y accesible a todos los participantes. Se exige la declaración completa y oportuna de conflictos de interés, fuentes de financiamiento y uso de herramientas de inteligencia artificial.</li>
-      <li><strong>Confidencialidad:</strong> La Revista protege la confidencialidad de los manuscritos sometidos y de su proceso de revisión. El acceso a los documentos se limita exclusivamente a los editores, revisores y personal administrativo que lo requieran para el desempeño de sus funciones, y está prohibida su divulgación o uso para beneficio propio o de terceros.</li>
-      <li><strong>Corrección del Registro Académico:</strong> La Revista asume la responsabilidad de mantener la integridad del registro científico. Cuando se detectan errores, omisiones o conductas que comprometan la confiabilidad de un trabajo publicado, se adoptan las medidas necesarias —corrección, expresión de preocupación o retractación— siguiendo las directrices del Committee on Publication Ethics (COPE).</li>
-      <li><strong>Acceso Abierto:</strong> Todo el contenido de la Revista se publica bajo el principio de acceso abierto, sin barreras económicas ni técnicas para su lectura, descarga y reutilización. Este principio maximiza la difusión del conocimiento y garantiza su disponibilidad para la comunidad científica y el público en general. Para más detalles, consulte nuestras <a href="open-access.html">Políticas de Acceso Abierto</a>.</li>
-      <li><strong>Decisiones Basadas en el Mérito Científico:</strong> La originalidad, la solidez metodológica, la claridad expositiva y la contribución al conocimiento son los únicos criterios que determinan la aceptación o el rechazo de un manuscrito. La Revista no aplica cuotas de publicación por institución, país o temática.</li>
-    </ul>
-
-    <!-- 02. Preámbulo y Fundamentos Normativos -->
-    <h2 id="preambulo">02. Preámbulo y Fundamentos Normativos</h2>
-    <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> (en adelante, «la Revista»), con ISSN 3087-2839 y sede en San Felipe, Chile, es una publicación académica arbitrada, de acceso abierto y sin fines de lucro. Su propósito fundacional es incentivar, fortalecer y visibilizar la producción científica de estudiantes de nivel escolar y universitario, constituyendo un primer peldaño riguroso, formativo y ético en la trayectoria de publicación académica de las y los jóvenes investigadores.</p>
-    <p>La Revista no persigue erigirse como un espacio de especialización erudita inaccesible, sino ofrecer una plataforma de aprendizaje y proyección donde el rigor metodológico y la integridad ética sean los pilares fundamentales. La ciencia se construye aprendiendo y compartiendo.</p>
-    <p>El presente documento establece el marco normativo e institucional que regula la totalidad de los procesos editoriales. Su observancia es vinculante para editores, autores, revisores y personal administrativo. Las políticas aquí contenidas se alinean, en espíritu y praxis, con las directrices del <strong>Committee on Publication Ethics (COPE)</strong>, la taxonomía de roles de colaborador <strong>CRediT (Contributor Roles Taxonomy)</strong>, los criterios del <strong>International Committee of Medical Journal Editors (ICMJE)</strong> en lo que resulte aplicable, y los principios del acceso abierto conforme a la licencia <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong>.</p>
-    <p>La Revista se rige por los valores de transparencia, rigor metodológico, equidad, confidencialidad, diversidad e inclusión, y respeto irrestricto por la integridad académica. Todo manuscrito sometido a consideración será tratado con imparcialidad, con independencia de la filiación institucional, género, origen étnico, orientación sexual, creencias religiosas o posturas políticas de sus autores.</p>
-
-    <!-- 03. Alcance, Misión y Tipos de Manuscritos -->
-    <h2 id="alcance">03. Alcance, Misión y Tipos de Manuscritos</h2>
-    
-    <h3>3.1. Misión y Público Objetivo</h3>
-    <p>La Revista tiene como misión primordial proporcionar una experiencia académica integral, ofreciendo un espacio de publicación riguroso que opere bajo los mismos estándares de integridad que una revista consolidada, pero adaptando su enfoque al nivel de desarrollo formativo de sus autores. Se dirige principalmente a estudiantes de educación media y superior que deseen iniciarse en la comunicación científica, brindándoles la oportunidad de participar en un proceso editorial completo, formativo y profesionalizante.</p>
-    
-    <h3>3.2. Tipos de Manuscritos Aceptados</h3>
-    <p>La Revista acepta contribuciones en español e inglés. Los manuscritos se clasifican en las siguientes tipologías, organizadas por secciones temáticas en la plataforma de publicación. El Comité Editorial asigna revisores y editores en función de su experiencia en el área disciplinar correspondiente.</p>
-    
-    <div class="policy-list">
-      <div class="policy-item">
-        <strong>Artículos de Investigación Original</strong>
-        Trabajos que presentan resultados inéditos de investigaciones científicas empíricas o teóricas, estructurados bajo el formato IMRyD (Introducción, Métodos, Resultados y Discusión) o su equivalente disciplinar. Se aceptan contribuciones tanto de las ciencias naturales y exactas como de las humanidades y ciencias sociales.
-      </div>
-      <div class="policy-item">
-        <strong>Ensayos Académicos y Reflexivos</strong>
-        Textos de corte argumentativo que desarrollan una tesis original sobre un tema científico, filosófico o humanístico, sustentada en una revisión crítica de la literatura existente. No requieren estructura IMRyD, pero sí un aparato crítico riguroso.
-      </div>
-      <div class="policy-item">
-        <strong>Revisiones Sistemáticas</strong>
-        Manuscritos que sintetizan críticamente la evidencia disponible sobre una pregunta de investigación específica, siguiendo una metodología explícita, reproducible y documentada de búsqueda, selección, evaluación de calidad y síntesis.
-      </div>
-      <div class="policy-item">
-        <strong>Reportes de Caso</strong>
-        Presentaciones detalladas de uno o varios casos particulares —clínicos, experimentales, de estudio de campo, intervención educativa, etc.— cuyo interés radique en su singularidad, valor formativo o potencial para generar hipótesis.
-      </div>
-      <div class="policy-item">
-        <strong>Reseñas de Libros (Book Reviews)</strong>
-        Análisis crítico de una obra académica o de divulgación científica de publicación reciente y de relevancia demostrable para el campo de estudio.
+      <div class="header-text">
+        <h1>Políticas Editoriales</h1>
+        <div class="document-meta">
+          <span>Manual Institucional</span>
+          <span class="badge">Versión 2.0</span>
+          <span>Julio 2026</span>
+          <span>San Felipe, Chile</span>
+        </div>
       </div>
     </div>
+  </header>
 
-    <h3>3.3. Manuscritos Derivados de Trabajos Previos</h3>
-    <p>Se aceptan manuscritos derivados de tesis de grado o posgrado, así como de ponencias presentadas en congresos o simposios, siempre que cumplan estrictamente con los criterios de originalidad establecidos en el Capítulo 4 del presente manual.</p>
+  <div class="dashboard-wrapper">
 
-    <h3>3.4. Exclusiones Expresas</h3>
-    <p>La Revista no acepta documentos de trabajo preliminares (<em>working papers</em>), preprints en estado no finalizado, ni informes técnicos no sometidos a un proceso formal de investigación. La Revista es un espacio de publicación con revisión por pares, no un repositorio de documentos no arbitrados.</p>
+    <!-- SIDEBAR CON TOC -->
+    <aside class="sidebar">
+      <h3><i class="fa-solid fa-list-ul"></i> Índice de Contenidos</h3>
+      <ul class="sidebar-nav">
+        <li><a href="#principios">01. Principios Editoriales</a></li>
+        <li><a href="#preambulo">02. Preámbulo y Fundamentos</a></li>
+        <li><a href="#alcance">03. Alcance, Misión y Tipos</a></li>
+        <li><a href="#originalidad">04. Originalidad y Exclusividad</a></li>
+        <li><a href="#autoria">05. Autoría y CRediT</a></li>
+        <li><a href="#etica">06. Ética en la Investigación</a></li>
+        <li><a href="#conflictos">07. Conflictos de Interés</a></li>
+        <li><a href="#ia">08. Uso de Inteligencia Artificial</a></li>
+        <li><a href="#datos">09. Datos Abiertos y Código</a></li>
+        <li><a href="#figuras">10. Figuras e Imágenes</a></li>
+        <li><a href="#revision">11. Revisión por Pares</a></li>
+        <li><a href="#decisiones">12. Decisiones y Apelaciones</a></li>
+        <li><a href="#postpub">13. Correcciones y Retractaciones</a></li>
+        <li><a href="#preservacion">14. Preservación Digital</a></li>
+        <li><a href="#derechos">15. Derechos de Autor y Licencias</a></li>
+        <li><a href="#disposiciones">16. Disposiciones Finales</a></li>
+      </ul>
 
-        <h3>3.5. Clasificación Temática, Palabras Clave y Códigos Especializados</h3>
-    <p>Todos los manuscritos enviados a partir del <strong>Volumen 2, Número 2</strong> deberán incluir, en campos separados del formulario de envío, los siguientes elementos de indexación:</p>
-    
-    <p><strong>a) Palabras clave (español e inglés):</strong> Se requiere un mínimo de <strong>dos (2)</strong> y un máximo de <strong>seis (6) palabras clave</strong> en español, y el mismo número en inglés. Estas palabras clave son términos libres que describen el contenido del artículo (por ejemplo: <em>marxismo, economía política, plusvalía</em>). No deben incluir códigos ni prefijos. El formulario de envío cuenta con campos independientes para las palabras clave en español y en inglés.</p>
-    
-    <p><strong>b) Códigos especializados del vocabulario controlado:</strong> Adicionalmente, y de forma separada, se requiere un mínimo de <strong>dos (2)</strong> y un máximo de <strong>cuatro (4) códigos</strong> del vocabulario controlado correspondiente al área temática del artículo. <strong>Solo debe ingresarse el código, sin el término o descriptor asociado.</strong> Por ejemplo: <code>B14</code> (no "B14: Marxismo"), <code>D009369</code> (no "D009369: Neoplasms"), <code>CCS2012.10010179</code> (no "CCS2012.10010179: Machine learning"), <code>6.25</code> (no "6.25: Historia").</p>
-    
-    <p>El formulario de envío detectará automáticamente el vocabulario correspondiente según el área temática seleccionada y proporcionará las instrucciones específicas y el enlace al buscador oficial. Los códigos especializados son universales: no existe una versión "en español" o "en inglés" de los mismos; un código JEL, MeSH o ACM es idéntico en cualquier idioma. El Comité Editorial se reserva la facultad de revisar y, en su caso, normalizar tanto las palabras clave como los códigos durante el proceso de revisión para garantizar una indexación precisa y coherente.</p>
+      <div class="quick-tip">
+        <i class="fa-regular fa-lightbulb"></i>
+        <strong>Consejo del Editor</strong>
+        Este manual es el marco normativo fundamental. Consulte la <a href="author.html">Guía para Autores</a> y la <a href="peer-review.html">Política de Revisión por Pares</a> para detalles operativos complementarios.
+      </div>
+    </aside>
 
-    <div class="highlight-box">
-      <p><strong>Ejemplo concreto para un artículo de Economía (vocabulario JEL):</strong></p>
-      <p><strong>Palabras clave (español):</strong> marxismo, economía política, plusvalía, teoría del valor<br>
-      <strong>Keywords (English):</strong> marxism, political economy, surplus value, theory of value<br>
-      <strong>Códigos especializados (JEL):</strong> B14, B51, D46, P16</p>
-      <p><em>Nótese que en los códigos especializados solo se ingresa el código JEL (ej: B14), sin el descriptor asociado.</em></p>
-    </div>
-    <h4>3.5.1. Mapeo Exhaustivo de Disciplinas a Vocabularios Controlados</h4>
-    <p>La siguiente tabla detalla el vocabulario controlado específico para cada una de las disciplinas aceptadas por la Revista, junto con el enlace de consulta oficial.</p>
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-content">
 
-<table id="tabla-vocabularios">
-  <thead>
-    <tr>
-      <th>Disciplina</th>
-      <th>Vocabulario Controlado</th>
-      <th>Enlace de Consulta</th>
-    </tr>
-  </thead>
-  <tbody>
-    <!-- Ciencias Exactas y Naturales -->
-    <tr><td>Matemáticas</td><td>MSC (Mathematics Subject Classification 2020)</td><td><a href="https://mathscinet.ams.org/mathscinet/msc/msc2020.html" target="_blank">mathscinet.ams.org</a></td></tr>
-    <tr><td>Física</td><td>PhySH (Physics Subject Headings, APS)</td><td><a href="https://physh.aps.org/" target="_blank">physh.aps.org</a></td></tr>
-    <tr><td>Química</td><td>CAS Sections + CAS Registry Numbers</td><td><a href="https://commonchemistry.cas.org/" target="_blank">commonchemistry.cas.org</a></td></tr>
-    <tr><td>Biología</td><td>MeSH + NCBI Taxonomy</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
-    <tr><td>Geología</td><td>GeoRef Thesaurus + Subject Categories (AGI)</td><td><a href="https://www.americangeosciences.org/georef/georef-thesaurus" target="_blank">americangeosciences.org</a></td></tr>
-    <tr><td>Astronomía y Astrofísica</td><td>UAT (Unified Astronomy Thesaurus)</td><td><a href="https://astrothesaurus.org/" target="_blank">astrothesaurus.org</a></td></tr>
-    <tr><td>Ciencias Ambientales y Ecología</td><td>GEMET / EnvThes</td><td><a href="https://www.eionet.europa.eu/gemet/es/" target="_blank">eionet.europa.eu/gemet</a></td></tr>
-    <tr><td>Oceanografía</td><td>BODC/NERC (NERC Vocabulary Server)</td><td><a href="https://vocab.nerc.ac.uk/" target="_blank">vocab.nerc.ac.uk</a></td></tr>
-    <tr><td>Meteorología y Ciencias Atmosféricas</td><td>AMS Terms / WMO Codes (datos)</td><td><a href="https://www.ametsoc.org/" target="_blank">ametsoc.org</a></td></tr>
-    <tr><td>Paleontología</td><td>GeoRef Subject Categories (08-11)</td><td><a href="https://www.americangeosciences.org/georef/georef-thesaurus" target="_blank">americangeosciences.org</a></td></tr>
+      <!-- 01. Principios Editoriales -->
+      <h2 id="principios">01. Principios Editoriales</h2>
+      <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> declara, como fundamento de su quehacer, su adhesión irrestricta a los siguientes principios, que guían e inspiran la totalidad de sus políticas y procesos editoriales. Estos principios constituyen la base sobre la que se asienta la confianza de autores, revisores y lectores en la integridad de esta publicación.</p>
+      
+      <ul>
+        <li><strong>Independencia Editorial:</strong> Las decisiones de publicación se basan exclusivamente en el mérito científico, la originalidad, la calidad metodológica y la adecuación al alcance de la Revista. Ningún interés comercial, institucional, político o personal interfiere en el proceso de evaluación y selección de manuscritos.</li>
+        <li><strong>Imparcialidad y Equidad:</strong> Todo manuscrito es evaluado sin sesgos relacionados con la filiación institucional, el género, el origen étnico, la nacionalidad, la orientación sexual, las creencias religiosas, las posturas políticas o cualquier otra característica personal de sus autores. La Revista promueve activamente la diversidad y la inclusión en todas las esferas de su actividad.</li>
+        <li><strong>Integridad Científica:</strong> La Revista se adhiere a los más altos estándares éticos y promueve las buenas prácticas en todas las fases de la investigación y la publicación. Se espera que los autores presenten trabajos honestos, rigurosos y transparentes, libres de fabricación, falsificación, plagio o manipulación indebida de datos.</li>
+        <li><strong>Transparencia:</strong> Las políticas, los procesos y las decisiones editoriales se comunican de forma abierta y accesible a todos los participantes. Se exige la declaración completa y oportuna de conflictos de interés, fuentes de financiamiento y uso de herramientas de inteligencia artificial.</li>
+        <li><strong>Confidencialidad:</strong> La Revista protege la confidencialidad de los manuscritos sometidos y de su proceso de revisión. El acceso a los documentos se limita exclusivamente a los editores, revisores y personal administrativo que lo requieran para el desempeño de sus funciones, y está prohibida su divulgación o uso para beneficio propio o de terceros.</li>
+        <li><strong>Corrección del Registro Académico:</strong> La Revista asume la responsabilidad de mantener la integridad del registro científico. Cuando se detectan errores, omisiones o conductas que comprometan la confiabilidad de un trabajo publicado, se adoptan las medidas necesarias —corrección, expresión de preocupación o retractación— siguiendo las directrices del Committee on Publication Ethics (COPE).</li>
+        <li><strong>Acceso Abierto:</strong> Todo el contenido de la Revista se publica bajo el principio de acceso abierto, sin barreras económicas ni técnicas para su lectura, descarga y reutilización. Este principio maximiza la difusión del conocimiento y garantiza su disponibilidad para la comunidad científica y el público en general. Para más detalles, consulte nuestras <a href="open-access.html">Políticas de Acceso Abierto</a>.</li>
+        <li><strong>Decisiones Basadas en el Mérito Científico:</strong> La originalidad, la solidez metodológica, la claridad expositiva y la contribución al conocimiento son los únicos criterios que determinan la aceptación o el rechazo de un manuscrito. La Revista no aplica cuotas de publicación por institución, país o temática.</li>
+      </ul>
 
-    <!-- Ciencias de la Salud -->
-    <tr><td>Medicina General e Interna</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
-    <tr><td>Salud Pública y Epidemiología</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
-    <tr><td>Enfermería</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
-    <tr><td>Nutrición y Dietética</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
-    <tr><td>Farmacología y Farmacia</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
-    <tr><td>Odontología</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
-    <tr><td>Kinesiología y Fisioterapia</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
-    <tr><td>Tecnología Médica y Bioanálisis</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
-    <tr><td>Veterinaria</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+      <!-- 02. Preámbulo y Fundamentos Normativos -->
+      <h2 id="preambulo">02. Preámbulo y Fundamentos Normativos</h2>
+      <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> (en adelante, «la Revista»), con ISSN 3087-2839 y sede en San Felipe, Chile, es una publicación académica arbitrada, de acceso abierto y sin fines de lucro. Su propósito fundacional es incentivar, fortalecer y visibilizar la producción científica de estudiantes de nivel escolar y universitario, constituyendo un primer peldaño riguroso, formativo y ético en la trayectoria de publicación académica de las y los jóvenes investigadores.</p>
+      <p>La Revista no persigue erigirse como un espacio de especialización erudita inaccesible, sino ofrecer una plataforma de aprendizaje y proyección donde el rigor metodológico y la integridad ética sean los pilares fundamentales. La ciencia se construye aprendiendo y compartiendo.</p>
+      <p>El presente documento establece el marco normativo e institucional que regula la totalidad de los procesos editoriales. Su observancia es vinculante para editores, autores, revisores y personal administrativo. Las políticas aquí contenidas se alinean, en espíritu y praxis, con las directrices del <strong>Committee on Publication Ethics (COPE)</strong>, la taxonomía de roles de colaborador <strong>CRediT (Contributor Roles Taxonomy)</strong>, los criterios del <strong>International Committee of Medical Journal Editors (ICMJE)</strong> en lo que resulte aplicable, y los principios del acceso abierto conforme a la licencia <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong>.</p>
+      <p>La Revista se rige por los valores de transparencia, rigor metodológico, equidad, confidencialidad, diversidad e inclusión, y respeto irrestricto por la integridad académica. Todo manuscrito sometido a consideración será tratado con imparcialidad, con independencia de la filiación institucional, género, origen étnico, orientación sexual, creencias religiosas o posturas políticas de sus autores.</p>
 
-    <!-- Ingeniería y Tecnología -->
-    <tr><td>Ingeniería Civil</td><td>Ei Thesaurus / Compendex Classification</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
-    <tr><td>Ingeniería Industrial y de Sistemas</td><td>Ei Thesaurus / Compendex Classification</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
-    <tr><td>Ingeniería Mecánica</td><td>Ei Thesaurus / Compendex + ASME Categories</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
-    <tr><td>Ingeniería Eléctrica y Electrónica</td><td>IEEE Thesaurus / IEEE Taxonomy</td><td><a href="https://www.ieee.org/publications/services/thesaurus-access-page.html" target="_blank">ieee.org/thesaurus</a></td></tr>
-    <tr><td>Ingeniería Química y Biotecnología</td><td>Ei Thesaurus / Compendex Classification</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
-    <tr><td>Ingeniería en Computación e Informática</td><td>ACM CCS (Computing Classification System 2012)</td><td><a href="https://dl.acm.org/ccs" target="_blank">dl.acm.org/ccs</a></td></tr>
-    <tr><td>Ciencia de Datos e Inteligencia Artificial</td><td>ACM CCS (Computing Classification System 2012)</td><td><a href="https://dl.acm.org/ccs" target="_blank">dl.acm.org/ccs</a></td></tr>
-    <tr><td>Robótica y Automatización</td><td>ACM CCS + IEEE Thesaurus</td><td><a href="https://dl.acm.org/ccs" target="_blank">dl.acm.org/ccs</a></td></tr>
-    <tr><td>Ingeniería de Materiales y Nanotecnología</td><td>Ei Thesaurus + ASM International Terms</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
-    <tr><td>Ingeniería Aeroespacial</td><td>NASA Thesaurus</td><td><a href="https://sti.nasa.gov/nasa-thesaurus/" target="_blank">sti.nasa.gov/nasa-thesaurus</a></td></tr>
-    <tr><td>Energías Renovables y Sostenibilidad</td><td>Ei Thesaurus / ETDE (histórico)</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
+      <!-- 03. Alcance, Misión y Tipos de Manuscritos -->
+      <h2 id="alcance">03. Alcance, Misión y Tipos de Manuscritos</h2>
+      
+      <h3>3.1. Misión y Público Objetivo</h3>
+      <p>La Revista tiene como misión primordial proporcionar una experiencia académica integral, ofreciendo un espacio de publicación riguroso que opere bajo los mismos estándares de integridad que una revista consolidada, pero adaptando su enfoque al nivel de desarrollo formativo de sus autores. Se dirige principalmente a estudiantes de educación media y superior que deseen iniciarse en la comunicación científica, brindándoles la oportunidad de participar en un proceso editorial completo, formativo y profesionalizante.</p>
+      
+      <h3>3.2. Tipos de Manuscritos Aceptados</h3>
+      <p>La Revista acepta contribuciones en español e inglés. Los manuscritos se clasifican en las siguientes tipologías, organizadas por secciones temáticas en la plataforma de publicación. El Comité Editorial asigna revisores y editores en función de su experiencia en el área disciplinar correspondiente.</p>
+      
+      <ul class="policy-list">
+        <li class="policy-item">
+          <strong>Artículos de Investigación Original</strong>
+          Trabajos que presentan resultados inéditos de investigaciones científicas empíricas o teóricas, estructurados bajo el formato IMRyD (Introducción, Métodos, Resultados y Discusión) o su equivalente disciplinar. Se aceptan contribuciones tanto de las ciencias naturales y exactas como de las humanidades y ciencias sociales.
+        </li>
+        <li class="policy-item">
+          <strong>Ensayos Académicos y Reflexivos</strong>
+          Textos de corte argumentativo que desarrollan una tesis original sobre un tema científico, filosófico o humanístico, sustentada en una revisión crítica de la literatura existente. No requieren estructura IMRyD, pero sí un aparato crítico riguroso.
+        </li>
+        <li class="policy-item">
+          <strong>Revisiones Sistemáticas</strong>
+          Manuscritos que sintetizan críticamente la evidencia disponible sobre una pregunta de investigación específica, siguiendo una metodología explícita, reproducible y documentada de búsqueda, selección, evaluación de calidad y síntesis.
+        </li>
+        <li class="policy-item">
+          <strong>Reportes de Caso</strong>
+          Presentaciones detalladas de uno o varios casos particulares —clínicos, experimentales, de estudio de campo, intervención educativa, etc.— cuyo interés radique en su singularidad, valor formativo o potencial para generar hipótesis.
+        </li>
+        <li class="policy-item">
+          <strong>Reseñas de Libros (Book Reviews)</strong>
+          Análisis crítico de una obra académica o de divulgación científica de publicación reciente y de relevancia demostrable para el campo de estudio.
+        </li>
+      </ul>
 
-    <!-- Ciencias Sociales -->
-    <tr><td>Sociología</td><td>LCSH + UNESCO Thesaurus</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
-    <tr><td>Antropología y Arqueología</td><td>LCSH + UNESCO Thesaurus</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
-    <tr><td>Psicología</td><td>APA Thesaurus (PsycINFO)</td><td><a href="https://psycnet.apa.org/thesaurus/" target="_blank">psycnet.apa.org/thesaurus</a></td></tr>
-    <tr><td>Economía y Negocios</td><td>JEL Classification System</td><td><a href="https://www.aeaweb.org/econlit/jelCodes.php" target="_blank">aeaweb.org/econlit</a></td></tr>
-    <tr><td>Ciencias Políticas y RR. II.</td><td>LCSH + UNESCO Thesaurus</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
-    <tr><td>Derecho</td><td>LCSH + LCC (Library of Congress Classification K)</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
-    <tr><td>Geografía Humana y Ord. Territorial</td><td>LCSH + UNESCO Thesaurus</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
-    <tr><td>Estudios de Género</td><td>LCSH + UNESCO Thesaurus</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
-    <tr><td>Comunicación Social y Periodismo</td><td>LCSH (Library of Congress Subject Headings)</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
-    <tr><td>Educación y Pedagogía</td><td>ERIC Thesaurus</td><td><a href="https://eric.ed.gov/" target="_blank">eric.ed.gov</a></td></tr>
-    <tr><td>Trabajo Social</td><td>LCSH + MeSH (aspectos sanitarios)</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
+      <h3>3.3. Manuscritos Derivados de Trabajos Previos</h3>
+      <p>Se aceptan manuscritos derivados de tesis de grado o posgrado, así como de ponencias presentadas en congresos o simposios, siempre que cumplan estrictamente con los criterios de originalidad establecidos en el Capítulo 4 del presente manual.</p>
 
-    <!-- Humanidades -->
-    <tr><td>Historia</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
-    <tr><td>Filosofía</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
-    <tr><td>Lingüística y Filología</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
-    <tr><td>Literatura</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
-    <tr><td>Estudios Clásicos</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
-    <tr><td>Teología y CC. de la Religión</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
-    <tr><td>Estudios Culturales</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
-    <tr><td>Arte, Música y Cine</td><td>AAT (Art & Architecture Thesaurus, Getty)</td><td><a href="https://www.getty.edu/research/tools/vocabularies/aat/" target="_blank">getty.edu/research/tools/vocabularies/aat</a></td></tr>
-    <tr><td>Arquitectura y Urbanismo</td><td>AAT (Art & Architecture Thesaurus, Getty)</td><td><a href="https://www.getty.edu/research/tools/vocabularies/aat/" target="_blank">getty.edu/research/tools/vocabularies/aat</a></td></tr>
+      <h3>3.4. Exclusiones Expresas</h3>
+      <p>La Revista no acepta documentos de trabajo preliminares (<em>working papers</em>), preprints en estado no finalizado, ni informes técnicos no sometidos a un proceso formal de investigación. La Revista es un espacio de publicación con revisión por pares, no un repositorio de documentos no arbitrados.</p>
 
-    <!-- Ciencias Agropecuarias -->
-    <tr><td>Agronomía y Producción Agrícola</td><td>AGROVOC (FAO Thesaurus)</td><td><a href="https://agrovoc.fao.org/browse/agrovoc/es/" target="_blank">agrovoc.fao.org</a></td></tr>
-    <tr><td>Ciencias Forestales</td><td>AGROVOC (FAO Thesaurus)</td><td><a href="https://agrovoc.fao.org/browse/agrovoc/es/" target="_blank">agrovoc.fao.org</a></td></tr>
-    <tr><td>Acuicultura y Pesca</td><td>ASFA Thesaurus + AGROVOC (FAO)</td><td><a href="https://www.fao.org/fishery/asfa/es" target="_blank">fao.org/fishery/asfa</a></td></tr>
-    <tr><td>Zootecnia y Producción Animal</td><td>AGROVOC (FAO Thesaurus)</td><td><a href="https://agrovoc.fao.org/browse/agrovoc/es/" target="_blank">agrovoc.fao.org</a></td></tr>
-    <tr><td>Ingeniería de Alimentos</td><td>FSTA Thesaurus (IFIS)</td><td><a href="https://www.ifis.org/fsta" target="_blank">ifis.org/fsta</a></td></tr>
-  </tbody>
-</table>
+      <h3>3.5. Clasificación Temática, Palabras Clave y Códigos Especializados</h3>
+      <p>Todos los manuscritos enviados a partir del <strong>Volumen 2, Número 2</strong> deberán incluir, en campos separados del formulario de envío, los siguientes elementos de indexación:</p>
+      
+      <p><strong>a) Palabras clave (español e inglés):</strong> Se requiere un mínimo de <strong>dos (2)</strong> y un máximo de <strong>seis (6) palabras clave</strong> en español, y el mismo número en inglés. Estas palabras clave son términos libres que describen el contenido del artículo (por ejemplo: <em>marxismo, economía política, plusvalía</em>). No deben incluir códigos ni prefijos. El formulario de envío cuenta con campos independientes para las palabras clave en español y en inglés.</p>
+      
+      <p><strong>b) Códigos especializados del vocabulario controlado:</strong> Adicionalmente, y de forma separada, se requiere un mínimo de <strong>dos (2)</strong> y un máximo de <strong>cuatro (4) códigos</strong> del vocabulario controlado correspondiente al área temática del artículo. <strong>Solo debe ingresarse el código, sin el término o descriptor asociado.</strong> Por ejemplo: <code>B14</code> (no "B14: Marxismo"), <code>D009369</code> (no "D009369: Neoplasms"), <code>CCS2012.10010179</code> (no "CCS2012.10010179: Machine learning"), <code>6.25</code> (no "6.25: Historia").</p>
+      
+      <p>El formulario de envío detectará automáticamente el vocabulario correspondiente según el área temática seleccionada y proporcionará las instrucciones específicas y el enlace al buscador oficial. Los códigos especializados son universales: no existe una versión "en español" o "en inglés" de los mismos; un código JEL, MeSH o ACM es idéntico en cualquier idioma. El Comité Editorial se reserva la facultad de revisar y, en su caso, normalizar tanto las palabras clave como los códigos durante el proceso de revisión para garantizar una indexación precisa y coherente.</p>
 
-    <p><strong>Disposición transitoria.</strong> Los manuscritos correspondientes a números anteriores al Volumen 2, Número 2, así como aquellos que se encuentren en proceso de revisión o producción al momento de la entrada en vigor de la presente política, quedarán exentos de este requisito, sin perjuicio de que el Comité Editorial pueda invitar a sus autores a incorporar palabras clave conforme a este sistema de manera voluntaria.</p>
+      <div class="highlight-box">
+        <p><strong>Ejemplo concreto para un artículo de Economía (vocabulario JEL):</strong></p>
+        <p><strong>Palabras clave (español):</strong> marxismo, economía política, plusvalía, teoría del valor<br>
+        <strong>Keywords (English):</strong> marxism, political economy, surplus value, theory of value<br>
+        <strong>Códigos especializados (JEL):</strong> B14, B51, D46, P16</p>
+        <p><em>Nótese que en los códigos especializados solo se ingresa el código JEL (ej: B14), sin el descriptor asociado.</em></p>
+      </div>
 
-    <h3>3.6. Estilo de Citas y Referencias Bibliográficas</h3>
-    <p>Todos los manuscritos deberán ajustar su aparato crítico al estilo <strong>Chicago 17.ª edición</strong>, en su modalidad <strong>autor-fecha</strong> (author-date). Esta modalidad exige que las citas en el cuerpo del texto se realicen entre paréntesis, indicando el apellido del autor y el año de publicación —por ejemplo: (González 2020)—, y que las referencias completas se listen al final del documento, ordenadas alfabéticamente, bajo el título «Referencias».</p>
-    <p>Para casos específicos —documentos históricos, fuentes de archivo, materiales legales o situaciones no contempladas en la norma—, los autores deberán consultar el manual oficial: <em>The Chicago Manual of Style</em>, 17.ª edición (University of Chicago Press, 2017), disponible en <a href="https://www.chicagomanualofstyle.org" target="_blank">chicagomanualofstyle.org</a>. La Revista podrá solicitar ajustes en el formato de citas y referencias durante el proceso de revisión para garantizar la uniformidad editorial. Para una guía más detallada, consulte nuestra <a href="author.html">Guía para Autores</a>.</p>
+      <h4>3.5.1. Mapeo Exhaustivo de Disciplinas a Vocabularios Controlados</h4>
+      <p>La siguiente tabla detalla el vocabulario controlado específico para cada una de las disciplinas aceptadas por la Revista, junto con el enlace de consulta oficial.</p>
 
-    <!-- 04. Originalidad, Publicación Previa y Exclusividad -->
-    <h2 id="originalidad">04. Originalidad, Publicación Previa y Exclusividad</h2>
-    
-    <h3>4.1. Condición de Inédito</h3>
-    <p>Todo manuscrito presentado debe constituir una obra original. Se considera que un trabajo es inédito cuando no ha sido previamente publicado en su totalidad o en partes sustanciales en otro medio, ya sea impreso o electrónico, dotado de número de identificación persistente (ISSN/ISBN). La publicación en repositorios institucionales o de preprints no se considera publicación previa a estos efectos, siempre que se declare en el momento del envío.</p>
+      <table id="tabla-vocabularios">
+        <thead>
+          <tr>
+            <th>Disciplina</th>
+            <th>Vocabulario Controlado</th>
+            <th>Enlace de Consulta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Matemáticas</td><td>MSC (Mathematics Subject Classification 2020)</td><td><a href="https://mathscinet.ams.org/mathscinet/msc/msc2020.html" target="_blank">mathscinet.ams.org</a></td></tr>
+          <tr><td>Física</td><td>PhySH (Physics Subject Headings, APS)</td><td><a href="https://physh.aps.org/" target="_blank">physh.aps.org</a></td></tr>
+          <tr><td>Química</td><td>CAS Sections + CAS Registry Numbers</td><td><a href="https://commonchemistry.cas.org/" target="_blank">commonchemistry.cas.org</a></td></tr>
+          <tr><td>Biología</td><td>MeSH + NCBI Taxonomy</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+          <tr><td>Geología</td><td>GeoRef Thesaurus + Subject Categories (AGI)</td><td><a href="https://www.americangeosciences.org/georef/georef-thesaurus" target="_blank">americangeosciences.org</a></td></tr>
+          <tr><td>Astronomía y Astrofísica</td><td>UAT (Unified Astronomy Thesaurus)</td><td><a href="https://astrothesaurus.org/" target="_blank">astrothesaurus.org</a></td></tr>
+          <tr><td>Ciencias Ambientales y Ecología</td><td>GEMET / EnvThes</td><td><a href="https://www.eionet.europa.eu/gemet/es/" target="_blank">eionet.europa.eu/gemet</a></td></tr>
+          <tr><td>Oceanografía</td><td>BODC/NERC (NERC Vocabulary Server)</td><td><a href="https://vocab.nerc.ac.uk/" target="_blank">vocab.nerc.ac.uk</a></td></tr>
+          <tr><td>Meteorología y Ciencias Atmosféricas</td><td>AMS Terms / WMO Codes (datos)</td><td><a href="https://www.ametsoc.org/" target="_blank">ametsoc.org</a></td></tr>
+          <tr><td>Paleontología</td><td>GeoRef Subject Categories (08-11)</td><td><a href="https://www.americangeosciences.org/georef/georef-thesaurus" target="_blank">americangeosciences.org</a></td></tr>
+          <tr><td>Medicina General e Interna</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+          <tr><td>Salud Pública y Epidemiología</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+          <tr><td>Enfermería</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+          <tr><td>Nutrición y Dietética</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+          <tr><td>Farmacología y Farmacia</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+          <tr><td>Odontología</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+          <tr><td>Kinesiología y Fisioterapia</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+          <tr><td>Tecnología Médica y Bioanálisis</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+          <tr><td>Veterinaria</td><td>MeSH (Medical Subject Headings)</td><td><a href="https://meshb.nlm.nih.gov/search" target="_blank">meshb.nlm.nih.gov</a></td></tr>
+          <tr><td>Ingeniería Civil</td><td>Ei Thesaurus / Compendex Classification</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
+          <tr><td>Ingeniería Industrial y de Sistemas</td><td>Ei Thesaurus / Compendex Classification</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
+          <tr><td>Ingeniería Mecánica</td><td>Ei Thesaurus / Compendex + ASME Categories</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
+          <tr><td>Ingeniería Eléctrica y Electrónica</td><td>IEEE Thesaurus / IEEE Taxonomy</td><td><a href="https://www.ieee.org/publications/services/thesaurus-access-page.html" target="_blank">ieee.org/thesaurus</a></td></tr>
+          <tr><td>Ingeniería Química y Biotecnología</td><td>Ei Thesaurus / Compendex Classification</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
+          <tr><td>Ingeniería en Computación e Informática</td><td>ACM CCS (Computing Classification System 2012)</td><td><a href="https://dl.acm.org/ccs" target="_blank">dl.acm.org/ccs</a></td></tr>
+          <tr><td>Ciencia de Datos e Inteligencia Artificial</td><td>ACM CCS (Computing Classification System 2012)</td><td><a href="https://dl.acm.org/ccs" target="_blank">dl.acm.org/ccs</a></td></tr>
+          <tr><td>Robótica y Automatización</td><td>ACM CCS + IEEE Thesaurus</td><td><a href="https://dl.acm.org/ccs" target="_blank">dl.acm.org/ccs</a></td></tr>
+          <tr><td>Ingeniería de Materiales y Nanotecnología</td><td>Ei Thesaurus + ASM International Terms</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
+          <tr><td>Ingeniería Aeroespacial</td><td>NASA Thesaurus</td><td><a href="https://sti.nasa.gov/nasa-thesaurus/" target="_blank">sti.nasa.gov/nasa-thesaurus</a></td></tr>
+          <tr><td>Energías Renovables y Sostenibilidad</td><td>Ei Thesaurus / ETDE (histórico)</td><td><a href="https://www.engineeringvillage.com/" target="_blank">engineeringvillage.com</a></td></tr>
+          <tr><td>Sociología</td><td>LCSH + UNESCO Thesaurus</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
+          <tr><td>Antropología y Arqueología</td><td>LCSH + UNESCO Thesaurus</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
+          <tr><td>Psicología</td><td>APA Thesaurus (PsycINFO)</td><td><a href="https://psycnet.apa.org/thesaurus/" target="_blank">psycnet.apa.org/thesaurus</a></td></tr>
+          <tr><td>Economía y Negocios</td><td>JEL Classification System</td><td><a href="https://www.aeaweb.org/econlit/jelCodes.php" target="_blank">aeaweb.org/econlit</a></td></tr>
+          <tr><td>Ciencias Políticas y RR. II.</td><td>LCSH + UNESCO Thesaurus</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
+          <tr><td>Derecho</td><td>LCSH + LCC (Library of Congress Classification K)</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
+          <tr><td>Geografía Humana y Ord. Territorial</td><td>LCSH + UNESCO Thesaurus</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
+          <tr><td>Estudios de Género</td><td>LCSH + UNESCO Thesaurus</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
+          <tr><td>Comunicación Social y Periodismo</td><td>LCSH (Library of Congress Subject Headings)</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
+          <tr><td>Educación y Pedagogía</td><td>ERIC Thesaurus</td><td><a href="https://eric.ed.gov/" target="_blank">eric.ed.gov</a></td></tr>
+          <tr><td>Trabajo Social</td><td>LCSH + MeSH (aspectos sanitarios)</td><td><a href="https://id.loc.gov/authorities/subjects.html" target="_blank">id.loc.gov</a></td></tr>
+          <tr><td>Historia</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
+          <tr><td>Filosofía</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
+          <tr><td>Lingüística y Filología</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
+          <tr><td>Literatura</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
+          <tr><td>Estudios Clásicos</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
+          <tr><td>Teología y CC. de la Religión</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
+          <tr><td>Estudios Culturales</td><td>UNESCO Thesaurus</td><td><a href="https://vocabularies.unesco.org/browser/thesaurus/es/" target="_blank">vocabularies.unesco.org</a></td></tr>
+          <tr><td>Arte, Música y Cine</td><td>AAT (Art & Architecture Thesaurus, Getty)</td><td><a href="https://www.getty.edu/research/tools/vocabularies/aat/" target="_blank">getty.edu/research/tools/vocabularies/aat</a></td></tr>
+          <tr><td>Arquitectura y Urbanismo</td><td>AAT (Art & Architecture Thesaurus, Getty)</td><td><a href="https://www.getty.edu/research/tools/vocabularies/aat/" target="_blank">getty.edu/research/tools/vocabularies/aat</a></td></tr>
+          <tr><td>Agronomía y Producción Agrícola</td><td>AGROVOC (FAO Thesaurus)</td><td><a href="https://agrovoc.fao.org/browse/agrovoc/es/" target="_blank">agrovoc.fao.org</a></td></tr>
+          <tr><td>Ciencias Forestales</td><td>AGROVOC (FAO Thesaurus)</td><td><a href="https://agrovoc.fao.org/browse/agrovoc/es/" target="_blank">agrovoc.fao.org</a></td></tr>
+          <tr><td>Acuicultura y Pesca</td><td>ASFA Thesaurus + AGROVOC (FAO)</td><td><a href="https://www.fao.org/fishery/asfa/es" target="_blank">fao.org/fishery/asfa</a></td></tr>
+          <tr><td>Zootecnia y Producción Animal</td><td>AGROVOC (FAO Thesaurus)</td><td><a href="https://agrovoc.fao.org/browse/agrovoc/es/" target="_blank">agrovoc.fao.org</a></td></tr>
+          <tr><td>Ingeniería de Alimentos</td><td>FSTA Thesaurus (IFIS)</td><td><a href="https://www.ifis.org/fsta" target="_blank">ifis.org/fsta</a></td></tr>
+        </tbody>
+      </table>
 
-    <h3>4.2. Contenido Derivado y Evaluación de Similitud</h3>
-    <p>Para manuscritos que extienden o se derivan de trabajos previos (tesis, ponencias, informes), la superposición textual con la versión original no deberá exceder el <strong>15%</strong>. En consecuencia, al menos el <strong>85% del contenido debe ser completamente nuevo y estar redactado de manera original</strong>. La autoduplicación no justificada de fragmentos extensos —incluso con citación— podrá ser considerada autoplagio.</p>
-    
-    <div class="highlight-box">
-      <p><strong>Sobre las herramientas de detección de similitud:</strong> La Revista podrá emplear software especializado para la detección de similitud textual como una herramienta de apoyo para la evaluación editorial. Los informes de similitud constituyen un insumo para la toma de decisiones, y no un criterio automático de aceptación o rechazo. La Revista evaluará tanto el porcentaje global de similitud como la naturaleza, localización y contexto de las coincidencias detectadas.</p>
-      <p>Actualmente, la herramienta utilizada es <strong>PlagiarismGuard</strong>, un software gratuito y de código abierto (licencia MIT) que procesa los documentos en el lado del cliente, sin almacenar ni transmitir los textos a servidores externos, y consulta dieciséis bases de datos abiertas (OpenAlex, Semantic Scholar, arXiv, GitHub, entre otras). <strong>No obstante, la Revista se reserva el derecho de modificar, complementar o sustituir las herramientas de software utilizadas para este fin. Cualquier cambio será debidamente notificado en esta sección.</strong></p>
-    </div>
-    
-    <p>Los umbrales de decisión editorial son los siguientes:</p>
-    
-    <table>
-      <thead>
-        <tr>
-          <th>Porcentaje de Similitud</th>
-          <th>Acción Editorial</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Menor al 15 %</td>
-          <td>Inicio normal del proceso de revisión por pares.</td>
-        </tr>
-        <tr>
-          <td>15 % – 25 %</td>
-          <td>Revisión por parte del Comité Editorial para identificar la naturaleza y distribución del solapamiento.</td>
-        </tr>
-        <tr>
-          <td>25 % – 40 %</td>
-          <td>Revisión editorial detallada. Se podrá solicitar justificación por escrito a los autores antes de decidir sobre el envío a arbitraje.</td>
-        </tr>
-        <tr>
-          <td>Mayor al 40 %</td>
-          <td>El manuscrito podrá ser devuelto para aclaraciones mayores o rechazado editorialmente sin revisión externa (<em>desk reject</em>).</td>
-        </tr>
-      </tbody>
-    </table>
+      <p><strong>Disposición transitoria.</strong> Los manuscritos correspondientes a números anteriores al Volumen 2, Número 2, así como aquellos que se encuentren en proceso de revisión o producción al momento de la entrada en vigor de la presente política, quedarán exentos de este requisito, sin perjuicio de que el Comité Editorial pueda invitar a sus autores a incorporar palabras clave conforme a este sistema de manera voluntaria.</p>
 
-    <h3>4.3. Política de Envíos Simultáneos y Exclusividad</h3>
-    <p>Está terminantemente prohibido el envío simultáneo del mismo manuscrito a otra revista mientras se encuentre en proceso de evaluación en la Revista. Si se detecta un envío simultáneo en cualquier etapa del proceso editorial, el manuscrito será retirado de inmediato, se notificará a la otra publicación involucrada y el trabajo no será considerado en el futuro. No obstante, los autores conservan el derecho de enviar otros trabajos inéditos posteriormente.</p>
+      <h3>3.6. Estilo de Citas y Referencias Bibliográficas</h3>
+      <p>Todos los manuscritos deberán ajustar su aparato crítico al estilo <strong>Chicago 17.ª edición</strong>, en su modalidad <strong>autor-fecha</strong> (author-date). Esta modalidad exige que las citas en el cuerpo del texto se realicen entre paréntesis, indicando el apellido del autor y el año de publicación —por ejemplo: (González 2020)—, y que las referencias completas se listen al final del documento, ordenadas alfabéticamente, bajo el título «Referencias».</p>
+      <p>Para casos específicos —documentos históricos, fuentes de archivo, materiales legales o situaciones no contempladas en la norma—, los autores deberán consultar el manual oficial: <em>The Chicago Manual of Style</em>, 17.ª edición (University of Chicago Press, 2017), disponible en <a href="https://www.chicagomanualofstyle.org" target="_blank">chicagomanualofstyle.org</a>. La Revista podrá solicitar ajustes en el formato de citas y referencias durante el proceso de revisión para garantizar la uniformidad editorial. Para una guía más detallada, consulte nuestra <a href="author.html">Guía para Autores</a>.</p>
 
-    <h3>4.4. Publicación Secundaria y Reediciones</h3>
-    <p>Los autores son libres de publicar su artículo en otro medio con posterioridad a su aparición en la Revista, siempre que la publicación secundaria: (a) cumpla con la licencia CC BY 4.0; (b) cite de forma completa la fuente original, incluyendo el DOI; y (c) se realice en un medio que acepte explícitamente la reproducción de trabajos ya publicados. La Revista se encuentra desarrollando una sección editorial futura, «Clásicos de la Ciencia», que se regirá por políticas específicas complementarias y en la que se publicarán traducciones autorizadas de artículos históricos de alto impacto.</p>
+      <!-- 04. Originalidad, Publicación Previa y Exclusividad -->
+      <h2 id="originalidad">04. Originalidad, Publicación Previa y Exclusividad</h2>
+      
+      <h3>4.1. Condición de Inédito</h3>
+      <p>Todo manuscrito presentado debe constituir una obra original. Se considera que un trabajo es inédito cuando no ha sido previamente publicado en su totalidad o en partes sustanciales en otro medio, ya sea impreso o electrónico, dotado de número de identificación persistente (ISSN/ISBN). La publicación en repositorios institucionales o de preprints no se considera publicación previa a estos efectos, siempre que se declare en el momento del envío.</p>
 
-    <!-- 05. Autoría, Contribuciones y CRediT -->
-    <h2 id="autoria">05. Autoría, Contribuciones y CRediT</h2>
-    
-    <h3>5.1. Criterios de Autoría</h3>
-    <p>La Revista adopta los criterios de autoría del <strong>International Committee of Medical Journal Editors (ICMJE)</strong>, refrendados por el <strong>Committee on Publication Ethics (COPE)</strong>. La condición de autor exige la concurrencia simultánea de los cuatro requisitos siguientes:</p>
-    <p>(1) Contribuciones sustanciales a la concepción o el diseño del trabajo, o a la adquisición, análisis o interpretación de los datos.<br>
-    (2) Redacción del borrador del artículo o revisión crítica de su contenido intelectual esencial.<br>
-    (3) Aprobación final de la versión que se va a publicar.<br>
-    (4) Aceptación de la responsabilidad por todos los aspectos del trabajo, garantizando que las cuestiones relacionadas con la exactitud o integridad de cualquier parte del mismo han sido adecuadamente investigadas y resueltas.</p>
-    <p>Todos los individuos que cumplan los cuatro criterios deben figurar como autores. Las contribuciones que no alcancen este umbral —por ejemplo, ayudas técnicas puntuales, recolección rutinaria de datos, financiamiento o supervisión general— deben ser reconocidas en la sección de «Agradecimientos», con el consentimiento expreso de la persona mencionada.</p>
+      <h3>4.2. Contenido Derivado y Evaluación de Similitud</h3>
+      <p>Para manuscritos que extienden o se derivan de trabajos previos (tesis, ponencias, informes), la superposición textual con la versión original no deberá exceder el <strong>15%</strong>. En consecuencia, al menos el <strong>85% del contenido debe ser completamente nuevo y estar redactado de manera original</strong>. La autoduplicación no justificada de fragmentos extensos —incluso con citación— podrá ser considerada autoplagio.</p>
+      
+      <div class="highlight-box">
+        <p><strong>Sobre las herramientas de detección de similitud:</strong> La Revista podrá emplear software especializado para la detección de similitud textual como una herramienta de apoyo para la evaluación editorial. Los informes de similitud constituyen un insumo para la toma de decisiones, y no un criterio automático de aceptación o rechazo. La Revista evaluará tanto el porcentaje global de similitud como la naturaleza, localización y contexto de las coincidencias detectadas.</p>
+        <p>Actualmente, la herramienta utilizada es <strong>PlagiarismGuard</strong>, un software gratuito y de código abierto (licencia MIT) que procesa los documentos en el lado del cliente, sin almacenar ni transmitir los textos a servidores externos, y consulta dieciséis bases de datos abiertas (OpenAlex, Semantic Scholar, arXiv, GitHub, entre otras). <strong>No obstante, la Revista se reserva el derecho de modificar, complementar o sustituir las herramientas de software utilizadas para este fin. Cualquier cambio será debidamente notificado en esta sección.</strong></p>
+      </div>
+      
+      <p>Los umbrales de decisión editorial son los siguientes:</p>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Porcentaje de Similitud</th>
+            <th>Acción Editorial</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Menor al 15 %</td>
+            <td>Inicio normal del proceso de revisión por pares.</td>
+          </tr>
+          <tr>
+            <td>15 % – 25 %</td>
+            <td>Revisión por parte del Comité Editorial para identificar la naturaleza y distribución del solapamiento.</td>
+          </tr>
+          <tr>
+            <td>25 % – 40 %</td>
+            <td>Revisión editorial detallada. Se podrá solicitar justificación por escrito a los autores antes de decidir sobre el envío a arbitraje.</td>
+          </tr>
+          <tr>
+            <td>Mayor al 40 %</td>
+            <td>El manuscrito podrá ser devuelto para aclaraciones mayores o rechazado editorialmente sin revisión externa (<em>desk reject</em>).</td>
+          </tr>
+        </tbody>
+      </table>
 
-    <h3>5.2. Taxonomía de Roles de Colaborador (CRediT)</h3>
-    <p>En el formulario de envío, los autores deberán especificar su contribución individual utilizando la taxonomía <strong>CRediT</strong>, indicando roles como: Conceptualización, Curación de datos, Análisis formal, Adquisición de fondos, Investigación, Metodología, Administración del proyecto, Recursos, Software, Supervisión, Validación, Visualización, Redacción – borrador original, y Redacción – revisión y edición. Esta declaración se publicará como parte del artículo.</p>
+      <h3>4.3. Política de Envíos Simultáneos y Exclusividad</h3>
+      <p>Está terminantemente prohibido el envío simultáneo del mismo manuscrito a otra revista mientras se encuentre en proceso de evaluación en la Revista. Si se detecta un envío simultáneo en cualquier etapa del proceso editorial, el manuscrito será retirado de inmediato, se notificará a la otra publicación involucrada y el trabajo no será considerado en el futuro. No obstante, los autores conservan el derecho de enviar otros trabajos inéditos posteriormente.</p>
 
-    <h3>5.3. Autor de Correspondencia</h3>
-    <p>En los manuscritos con múltiples autores, se designará a una persona como <strong>autor de correspondencia</strong>. Sus responsabilidades incluyen: gestionar toda la comunicación con la Revista durante el proceso editorial y de publicación; firmar el acuerdo de publicación en nombre de todos los coautores; garantizar que los datos de contacto y afiliaciones de todos los autores sean correctos y estén actualizados; y asegurar el consenso unánime sobre el orden de aparición y la versión final del manuscrito.</p>
+      <h3>4.4. Publicación Secundaria y Reediciones</h3>
+      <p>Los autores son libres de publicar su artículo en otro medio con posterioridad a su aparición en la Revista, siempre que la publicación secundaria: (a) cumpla con la licencia CC BY 4.0; (b) cite de forma completa la fuente original, incluyendo el DOI; y (c) se realice en un medio que acepte explícitamente la reproducción de trabajos ya publicados. La Revista se encuentra desarrollando una sección editorial futura, «Clásicos de la Ciencia», que se regirá por políticas específicas complementarias y en la que se publicarán traducciones autorizadas de artículos históricos de alto impacto.</p>
 
-    <h3>5.4. Cambios en la Autoría Durante el Proceso Editorial</h3>
-    <p>Cualquier modificación en la lista de autores —adición, eliminación o reordenamiento— posterior al envío inicial requerirá, de forma acumulativa:</p>
-    <p>(a) Una <strong>justificación sólida y por escrito</strong> dirigida al editor, explicando el motivo científico o técnico del cambio.<br>
-    (b) El <strong>consentimiento unánime por escrito</strong> de todos los autores originales y de los nuevos, mediante el formulario oficial de la Revista.<br>
-    (c) La <strong>demostración de que el autor añadido cumple plenamente</strong> los cuatro criterios de autoría del ICMJE detallados en la Sección 5.1.</p>
-    <p>Para la adición de un autor en la etapa de reenvío tras revisión, se deberá acreditar, además, que su contribución fue sustancial y directamente vinculada a la respuesta a los comentarios de los revisores, detallando dicha aportación en la carta de presentación.</p>
+      <!-- 05. Autoría, Contribuciones y CRediT -->
+      <h2 id="autoria">05. Autoría, Contribuciones y CRediT</h2>
+      
+      <h3>5.1. Criterios de Autoría</h3>
+      <p>La Revista adopta los criterios de autoría del <strong>International Committee of Medical Journal Editors (ICMJE)</strong>, refrendados por el <strong>Committee on Publication Ethics (COPE)</strong>. La condición de autor exige la concurrencia simultánea de los cuatro requisitos siguientes:</p>
+      <p>(1) Contribuciones sustanciales a la concepción o el diseño del trabajo, o a la adquisición, análisis o interpretación de los datos.<br>
+      (2) Redacción del borrador del artículo o revisión crítica de su contenido intelectual esencial.<br>
+      (3) Aprobación final de la versión que se va a publicar.<br>
+      (4) Aceptación de la responsabilidad por todos los aspectos del trabajo, garantizando que las cuestiones relacionadas con la exactitud o integridad de cualquier parte del mismo han sido adecuadamente investigadas y resueltas.</p>
+      <p>Todos los individuos que cumplan los cuatro criterios deben figurar como autores. Las contribuciones que no alcancen este umbral —por ejemplo, ayudas técnicas puntuales, recolección rutinaria de datos, financiamiento o supervisión general— deben ser reconocidas en la sección de «Agradecimientos», con el consentimiento expreso de la persona mencionada.</p>
 
-    <h3>5.5. Disputas de Autoría</h3>
-    <p>Si surge una disputa de autoría en cualquier etapa, el editor detendrá el proceso editorial (<em>on hold</em>) de conformidad con los diagramas de flujo de COPE. Se solicitará a la institución de afiliación de los autores que investigue y emita un dictamen oficial. La publicación no se reanudará hasta que la controversia sea resuelta satisfactoriamente. Si la disputa acaece tras la publicación, se publicará una Fe de Erratas (Correction) o, en casos de fraude o ausencia de consenso insalvable, una Retractación formal del artículo.</p>
+      <h3>5.2. Taxonomía de Roles de Colaborador (CRediT)</h3>
+      <p>En el formulario de envío, los autores deberán especificar su contribución individual utilizando la taxonomía <strong>CRediT</strong>, indicando roles como: Conceptualización, Curación de datos, Análisis formal, Adquisición de fondos, Investigación, Metodología, Administración del proyecto, Recursos, Software, Supervisión, Validación, Visualización, Redacción – borrador original, y Redacción – revisión y edición. Esta declaración se publicará como parte del artículo.</p>
 
-    <!-- 06. Ética en la Investigación -->
-    <h2 id="etica">06. Ética en la Investigación</h2>
-    
-    <h3>6.1. Principios Generales</h3>
-    <p>Toda investigación publicada en la Revista debe haberse realizado conforme a los más altos estándares éticos y respetando la legislación nacional e internacional aplicable. La Revista se adhiere a los principios de la <strong>Declaración de Helsinki</strong> (y sus enmiendas posteriores) para investigación en seres humanos, y a las guías internacionales de bienestar animal reconocidas por la comunidad científica.</p>
+      <h3>5.3. Autor de Correspondencia</h3>
+      <p>En los manuscritos con múltiples autores, se designará a una persona como <strong>autor de correspondencia</strong>. Sus responsabilidades incluyen: gestionar toda la comunicación con la Revista durante el proceso editorial y de publicación; firmar el acuerdo de publicación en nombre de todos los coautores; garantizar que los datos de contacto y afiliaciones de todos los autores sean correctos y estén actualizados; y asegurar el consenso unánime sobre el orden de aparición y la versión final del manuscrito.</p>
 
-    <h3>6.2. Investigación con Seres Humanos y Datos Personales</h3>
-    <p><strong>Aprobación ética.</strong> Se requerirá la aprobación de un comité de ética en investigación (IRB) únicamente cuando el estudio involucre interacción directa con seres humanos, intervenciones, recolección de datos personales identificables, muestras biológicas humanas, o cuando la normativa local o institucional la exija explícitamente.</p>
-    <p><strong>Exenciones.</strong> Estarán exentos de aprobación ética: las revisiones bibliográficas, los ensayos teóricos, las investigaciones históricas, los análisis de bases de datos públicas y completamente anonimizadas, y otros estudios sin interacción directa con sujetos humanos.</p>
-    <p><strong>Consentimiento informado.</strong> Cuando sea exigible, los autores deberán declarar en el manuscrito que se obtuvo el consentimiento informado, libre y esclarecido de todos los participantes. En el caso de menores de edad o personas que carezcan de capacidad para consentir, se requerirá el consentimiento del representante legal y, cuando la edad y madurez lo permitan, el asentimiento del participante.</p>
-    <p><strong>Pueblos indígenas y comunidades originarias.</strong> La investigación que involucre pueblos indígenas o comunidades tradicionales deberá respetar la legislación nacional, las normas comunitarias aplicables, y procurar procesos de consulta y consentimiento previo, libre e informado, culturalmente apropiados.</p>
-    <p><strong>Demostración documental.</strong> Bastará con indicar en el manuscrito el nombre del comité que otorgó la aprobación, el número o código de aprobación y la fecha. La Revista podrá solicitar el certificado oficial durante el proceso de revisión, pero no exigirá su carga obligatoria en el envío inicial.</p>
+      <h3>5.4. Cambios en la Autoría Durante el Proceso Editorial</h3>
+      <p>Cualquier modificación en la lista de autores —adición, eliminación o reordenamiento— posterior al envío inicial requerirá, de forma acumulativa:</p>
+      <p>(a) Una <strong>justificación sólida y por escrito</strong> dirigida al editor, explicando el motivo científico o técnico del cambio.<br>
+      (b) El <strong>consentimiento unánime por escrito</strong> de todos los autores originales y de los nuevos, mediante el formulario oficial de la Revista.<br>
+      (c) La <strong>demostración de que el autor añadido cumple plenamente</strong> los cuatro criterios de autoría del ICMJE detallados en la Sección 5.1.</p>
+      <p>Para la adición de un autor en la etapa de reenvío tras revisión, se deberá acreditar, además, que su contribución fue sustancial y directamente vinculada a la respuesta a los comentarios de los revisores, detallando dicha aportación en la carta de presentación.</p>
 
-    <h3>6.3. Investigación con Animales</h3>
-    <p>Los estudios realizados con animales vertebrados o cefalópodos deben haber sido aprobados por el comité institucional de ética y bienestar animal correspondiente. Los autores deberán declarar el cumplimiento de la legislación nacional vigente sobre protección animal y del principio de las <strong>3R</strong> (Reemplazo, Reducción y Refinamiento).</p>
+      <h3>5.5. Disputas de Autoría</h3>
+      <p>Si surge una disputa de autoría en cualquier etapa, el editor detendrá el proceso editorial (<em>on hold</em>) de conformidad con los diagramas de flujo de COPE. Se solicitará a la institución de afiliación de los autores que investigue y emita un dictamen oficial. La publicación no se reanudará hasta que la controversia sea resuelta satisfactoriamente. Si la disputa acaece tras la publicación, se publicará una Fe de Erratas (Correction) o, en casos de fraude o ausencia de consenso insalvable, una Retractación formal del artículo.</p>
 
-    <h3>6.4. Declaración Obligatoria</h3>
-    <p>Todos los manuscritos que requieran aprobación ética deberán incluir, al final del texto y antes de las referencias, una declaración que contenga: nombre del comité, número de aprobación, fecha y, cuando corresponda, constancia de obtención del consentimiento informado.</p>
+      <!-- 06. Ética en la Investigación -->
+      <h2 id="etica">06. Ética en la Investigación</h2>
+      
+      <h3>6.1. Principios Generales</h3>
+      <p>Toda investigación publicada en la Revista debe haberse realizado conforme a los más altos estándares éticos y respetando la legislación nacional e internacional aplicable. La Revista se adhiere a los principios de la <strong>Declaración de Helsinki</strong> (y sus enmiendas posteriores) para investigación en seres humanos, y a las guías internacionales de bienestar animal reconocidas por la comunidad científica.</p>
 
-    <!-- 07. Conflictos de Interés y Financiamiento -->
-    <h2 id="conflictos">07. Conflictos de Interés y Financiamiento</h2>
-    
-    <h3>7.1. Definición y Alcance</h3>
-    <p>De conformidad con COPE, se entiende por <strong>conflicto de interés</strong> cualquier situación en la que intereses personales, académicos, comerciales, financieros, institucionales o políticos puedan influir —o puedan ser razonablemente percibidos como capaces de influir— de manera indebida en el proceso de evaluación, juicio y publicación de un manuscrito científico. Los conflictos pueden ser reales, potenciales o aparentes, y todos deben ser declarados.</p>
-    
-    <h3>7.2. Categorías de Conflicto</h3>
-    <p><strong>Financieros y comerciales:</strong> honorarios, salarios, becas, pagos por consultoría, tenencia de acciones o patentes, o financiamiento directo de entidades con interés en el objeto del estudio.<br>
-    <strong>Personales:</strong> relaciones familiares, de parentesco o de amistad íntima con otros autores, editores o revisores; aceptación de regalos, viajes u hospitalidad de organizaciones interesadas.<br>
-    <strong>Académicos y profesionales:</strong> colaboraciones recientes, disputas profesionales, relaciones de competencia directa, o pertenencia a la misma institución en el momento de la evaluación.<br>
-    <strong>Ideológicos o políticos:</strong> convicciones personales que impidan un juicio objetivo e imparcial sobre el trabajo.</p>
+      <h3>6.2. Investigación con Seres Humanos y Datos Personales</h3>
+      <p><strong>Aprobación ética.</strong> Se requerirá la aprobación de un comité de ética en investigación (IRB) únicamente cuando el estudio involucre interacción directa con seres humanos, intervenciones, recolección de datos personales identificables, muestras biológicas humanas, o cuando la normativa local o institucional la exija explícitamente.</p>
+      <p><strong>Exenciones.</strong> Estarán exentos de aprobación ética: las revisiones bibliográficas, los ensayos teóricos, las investigaciones históricas, los análisis de bases de datos públicas y completamente anonimizadas, y otros estudios sin interacción directa con sujetos humanos.</p>
+      <p><strong>Consentimiento informado.</strong> Cuando sea exigible, los autores deberán declarar en el manuscrito que se obtuvo el consentimiento informado, libre y esclarecido de todos los participantes. En el caso de menores de edad o personas que carezcan de capacidad para consentir, se requerirá el consentimiento del representante legal y, cuando la edad y madurez lo permitan, el asentimiento del participante.</p>
+      <p><strong>Pueblos indígenas y comunidades originarias.</strong> La investigación que involucre pueblos indígenas o comunidades tradicionales deberá respetar la legislación nacional, las normas comunitarias aplicables, y procurar procesos de consulta y consentimiento previo, libre e informado, culturalmente apropiados.</p>
+      <p><strong>Demostración documental.</strong> Bastará con indicar en el manuscrito el nombre del comité que otorgó la aprobación, el número o código de aprobación y la fecha. La Revista podrá solicitar el certificado oficial durante el proceso de revisión, pero no exigirá su carga obligatoria en el envío inicial.</p>
 
-    <h3>7.3. Obligatoriedad de la Declaración</h3>
-    <p>La declaración completa de conflictos de interés es <strong>obligatoria</strong> para todos los autores, revisores y editores. Los autores deberán incluir una declaración en el manuscrito; los revisores, al aceptar la invitación de revisión; y los editores, absteniéndose de gestionar manuscritos en los que concurra un conflicto.</p>
+      <h3>6.3. Investigación con Animales</h3>
+      <p>Los estudios realizados con animales vertebrados o cefalópodos deben haber sido aprobados por el comité institucional de ética y bienestar animal correspondiente. Los autores deberán declarar el cumplimiento de la legislación nacional vigente sobre protección animal y del principio de las <strong>3R</strong> (Reemplazo, Reducción y Refinamiento).</p>
 
-    <h3>7.4. Procedimiento ante Conflictos No Declarados</h3>
-    <p>Si durante el proceso editorial se detecta un conflicto de interés no declarado, la Revista iniciará una investigación conforme a las recomendaciones de COPE. El proceso editorial se suspenderá de inmediato y se solicitarán explicaciones formales a los autores. Si se concluye que la omisión fue involuntaria y no afecta las conclusiones del estudio, se publicará una corrección formal (<em>Corrigendum</em>). Si el conflicto comprometió la validez del estudio o la omisión fue deliberada, se procederá a la <strong>retractación</strong> del artículo conforme al Capítulo 12.</p>
+      <h3>6.4. Declaración Obligatoria</h3>
+      <p>Todos los manuscritos que requieran aprobación ética deberán incluir, al final del texto y antes de las referencias, una declaración que contenga: nombre del comité, número de aprobación, fecha y, cuando corresponda, constancia de obtención del consentimiento informado.</p>
 
-    <h3>7.5. Declaración de Financiamiento</h3>
-    <p>Los autores deben declarar obligatoriamente todas las fuentes de financiamiento que apoyaron la realización de la investigación, incluyendo apoyo institucional. Se debe citar el nombre oficial de la agencia financiadora y el código o número de identificación de la subvención. De no existir financiamiento alguno, se hará constar explícitamente mediante la frase: «La presente investigación no recibió financiamiento externo».</p>
+      <!-- 07. Conflictos de Interés y Financiamiento -->
+      <h2 id="conflictos">07. Conflictos de Interés y Financiamiento</h2>
+      
+      <h3>7.1. Definición y Alcance</h3>
+      <p>De conformidad con COPE, se entiende por <strong>conflicto de interés</strong> cualquier situación en la que intereses personales, académicos, comerciales, financieros, institucionales o políticos puedan influir —o puedan ser razonablemente percibidos como capaces de influir— de manera indebida en el proceso de evaluación, juicio y publicación de un manuscrito científico. Los conflictos pueden ser reales, potenciales o aparentes, y todos deben ser declarados.</p>
+      
+      <h3>7.2. Categorías de Conflicto</h3>
+      <p><strong>Financieros y comerciales:</strong> honorarios, salarios, becas, pagos por consultoría, tenencia de acciones o patentes, o financiamiento directo de entidades con interés en el objeto del estudio.<br>
+      <strong>Personales:</strong> relaciones familiares, de parentesco o de amistad íntima con otros autores, editores o revisores; aceptación de regalos, viajes u hospitalidad de organizaciones interesadas.<br>
+      <strong>Académicos y profesionales:</strong> colaboraciones recientes, disputas profesionales, relaciones de competencia directa, o pertenencia a la misma institución en el momento de la evaluación.<br>
+      <strong>Ideológicos o políticos:</strong> convicciones personales que impidan un juicio objetivo e imparcial sobre el trabajo.</p>
 
-    <!-- 08. Uso de Inteligencia Artificial -->
-    <h2 id="ia">08. Uso de Inteligencia Artificial</h2>
-    
-    <h3>8.1. Principio General</h3>
-    <p>La Revista reconoce la utilidad de las herramientas de inteligencia artificial (IA) como asistentes técnicos en el proceso de investigación y escritura. Sin embargo, sostiene de manera inequívoca que la responsabilidad intelectual, ética y legal del contenido de un manuscrito recae exclusivamente en los autores humanos. Las herramientas de IA no pueden ser autoras ni coautoras, ni pueden ser citadas como fuente de conocimiento.</p>
+      <h3>7.3. Obligatoriedad de la Declaración</h3>
+      <p>La declaración completa de conflictos de interés es <strong>obligatoria</strong> para todos los autores, revisores y editores. Los autores deberán incluir una declaración en el manuscrito; los revisores, al aceptar la invitación de revisión; y los editores, absteniéndose de gestionar manuscritos en los que concurra un conflicto.</p>
 
-    <h3>8.2. Usos Permitidos y No Permitidos</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Uso</th>
-          <th>Política</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Corrección de gramática, ortografía y estilo</td>
-          <td><strong>Permitido.</strong> No requiere declaración expresa.</td>
-        </tr>
-        <tr>
-          <td>Traducción</td>
-          <td><strong>Permitido,</strong> siempre que el resultado final sea sometido a una rigurosa revisión y validación humana. Debe declararse.</td>
-        </tr>
-        <tr>
-          <td>Resumir literatura o analizar datos</td>
-          <td><strong>Permitido,</strong> pero la veracidad, integridad e interpretación de los resultados son responsabilidad exclusiva de los autores. Debe declararse.</td>
-        </tr>
-        <tr>
-          <td>Generación de figuras, imágenes o ilustraciones</td>
-          <td><strong>Permitido como elemento ilustrativo,</strong> pero <strong>estrictamente prohibido</strong> para generar, alterar o simular evidencia científica (micrografías, fotografías de muestras, imágenes clínicas, registros observacionales). Debe declararse.</td>
-        </tr>
-        <tr>
-          <td>Redacción de párrafos sustanciales del manuscrito</td>
-          <td><strong>Generalmente no permitido.</strong> Solo se acepta para refinar o parafrasear texto previamente redactado por los autores. Si se detecta un porcentaje de IA excesivo mediante diversas plataformas de verificación, y el Comité Editorial estima que ello compromete la originalidad intelectual de la obra, el manuscrito podrá ser rechazado.</td>
-        </tr>
-        <tr>
-          <td>Ser citada como fuente o figurar como autora</td>
-          <td><strong>Prohibido.</strong> Una IA no puede asumir responsabilidad por la integridad de un trabajo académico.</td>
-        </tr>
-      </tbody>
-    </table>
+      <h3>7.4. Procedimiento ante Conflictos No Declarados</h3>
+      <p>Si durante el proceso editorial se detecta un conflicto de interés no declarado, la Revista iniciará una investigación conforme a las recomendaciones de COPE. El proceso editorial se suspenderá de inmediato y se solicitarán explicaciones formales a los autores. Si se concluye que la omisión fue involuntaria y no afecta las conclusiones del estudio, se publicará una corrección formal (<em>Corrigendum</em>). Si el conflicto comprometió la validez del estudio o la omisión fue deliberada, se procederá a la <strong>retractación</strong> del artículo conforme al Capítulo 12.</p>
 
-    <h3>8.3. Declaración Obligatoria</h3>
-    <p>Los autores deberán declarar en el formulario de envío el uso de cualquier herramienta de IA (por ejemplo, ChatGPT, Gemini, Claude, Copilot) especificando: nombre y versión de la herramienta, propósito concreto de su uso y las secciones del manuscrito en las que fue empleada. La omisión deliberada de esta declaración se considerará una falta ética y podrá dar lugar al rechazo del manuscrito o a su retractación si ya hubiera sido publicado.</p>
+      <h3>7.5. Declaración de Financiamiento</h3>
+      <p>Los autores deben declarar obligatoriamente todas las fuentes de financiamiento que apoyaron la realización de la investigación, incluyendo apoyo institucional. Se debe citar el nombre oficial de la agencia financiadora y el código o número de identificación de la subvención. De no existir financiamiento alguno, se hará constar explícitamente mediante la frase: «La presente investigación no recibió financiamiento externo».</p>
 
-    <!-- 09. Datos Abiertos, Código y Reproducibilidad -->
-    <h2 id="datos">09. Datos Abiertos, Código y Reproducibilidad</h2>
-    
-    <h3>9.1. Declaración de Disponibilidad de Datos</h3>
-    <p>Todos los manuscritos deberán incluir obligatoriamente una <strong>Declaración de Disponibilidad de Datos</strong> (<em>Data Availability Statement</em>), incluso en aquellos casos en que no existan datos que compartir o estos no puedan hacerse públicos. La Revista favorece el acceso abierto a los datos subyacentes como garantía de reproducibilidad y transparencia.</p>
-    
-    <h3>9.2. Depósito de Datos</h3>
-    <p>Se recomienda el depósito de los conjuntos de datos en repositorios públicos, reconocidos y permanentes, preferentemente temáticos (por ejemplo, GenBank, Protein Data Bank) o, en su defecto, generalistas. <strong>Actualmente, la Revista sugiere Zenodo, Figshare, Open Science Framework (OSF) o Dryad como opciones viables, pero se reserva el derecho de modificar o ampliar esta lista de repositorios recomendados. Cualquier cambio será notificado oportunamente.</strong> Los datos deberán depositarse, a más tardar, en la fecha de publicación del artículo, y se recomienda hacerlo antes de la aceptación para facilitar la revisión.</p>
-    
-    <h3>9.3. Excepciones</h3>
-    <p>La modalidad «datos disponibles previa solicitud razonable» se aceptará solo de forma excepcional y estará sujeta a justificación expresa por parte de los autores. Procederá únicamente cuando existan restricciones legales, éticas (confidencialidad de participantes, datos sensibles), contractuales o de propiedad intelectual que impidan la difusión pública, o cuando la divulgación pueda afectar a especies amenazadas, patrimonio arqueológico, seguridad pública o derechos de terceros.</p>
+      <!-- 08. Uso de Inteligencia Artificial -->
+      <h2 id="ia">08. Uso de Inteligencia Artificial</h2>
+      
+      <h3>8.1. Principio General</h3>
+      <p>La Revista reconoce la utilidad de las herramientas de inteligencia artificial (IA) como asistentes técnicos en el proceso de investigación y escritura. Sin embargo, sostiene de manera inequívoca que la responsabilidad intelectual, ética y legal del contenido de un manuscrito recae exclusivamente en los autores humanos. Las herramientas de IA no pueden ser autoras ni coautoras, ni pueden ser citadas como fuente de conocimiento.</p>
 
-    <h3>9.4. Compartición de Código</h3>
-    <p>Se recomienda firmemente el depósito del código computacional desarrollado o utilizado para la generación, procesamiento o análisis de los resultados, siempre que ello sea necesario para la reproducibilidad de la investigación. El código podrá depositarse en repositorios públicos. <strong>Actualmente, la Revista sugiere GitHub (preferentemente archivado mediante Zenodo para la obtención de un DOI), GitLab u OSF, pero se reserva el derecho de modificar o ampliar esta lista de repositorios recomendados.</strong> Se recomienda el uso de licencias abiertas estándar (MIT, BSD 3-Clause, Apache 2.0, GNU GPL v3.0) según la naturaleza del proyecto y las preferencias de los autores.</p>
+      <h3>8.2. Usos Permitidos y No Permitidos</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Uso</th>
+            <th>Política</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Corrección de gramática, ortografía y estilo</td>
+            <td><strong>Permitido.</strong> No requiere declaración expresa.</td>
+          </tr>
+          <tr>
+            <td>Traducción</td>
+            <td><strong>Permitido,</strong> siempre que el resultado final sea sometido a una rigurosa revisión y validación humana. Debe declararse.</td>
+          </tr>
+          <tr>
+            <td>Resumir literatura o analizar datos</td>
+            <td><strong>Permitido,</strong> pero la veracidad, integridad e interpretación de los resultados son responsabilidad exclusiva de los autores. Debe declararse.</td>
+          </tr>
+          <tr>
+            <td>Generación de figuras, imágenes o ilustraciones</td>
+            <td><strong>Permitido como elemento ilustrativo,</strong> pero <strong>estrictamente prohibido</strong> para generar, alterar o simular evidencia científica (micrografías, fotografías de muestras, imágenes clínicas, registros observacionales). Debe declararse.</td>
+          </tr>
+          <tr>
+            <td>Redacción de párrafos sustanciales del manuscrito</td>
+            <td><strong>Generalmente no permitido.</strong> Solo se acepta para refinar o parafrasear texto previamente redactado por los autores. Si se detecta un porcentaje de IA excesivo mediante diversas plataformas de verificación, y el Comité Editorial estima que ello compromete la originalidad intelectual de la obra, el manuscrito podrá ser rechazado.</td>
+          </tr>
+          <tr>
+            <td>Ser citada como fuente o figurar como autora</td>
+            <td><strong>Prohibido.</strong> Una IA no puede asumir responsabilidad por la integridad de un trabajo académico.</td>
+          </tr>
+        </tbody>
+      </table>
 
-    <!-- 10. Directrices para Figuras e Imágenes -->
-    <h2 id="figuras">10. Directrices para Figuras e Imágenes</h2>
-    
-    <h3>10.1. Requisitos Técnicos</h3>
-    <p>Las figuras deberán presentarse con una resolución mínima de <strong>300 dpi</strong> para fotografías e imágenes de mapa de bits, y de <strong>600 dpi</strong> —o, preferentemente, en formato vectorial— para gráficos lineales, esquemas y diagramas. Los formatos aceptados son: PNG, TIFF, JPG/JPEG, PDF y <strong>SVG</strong> (este último, el preferido para gráficos vectoriales por conservar la calidad al escalar).</p>
+      <h3>8.3. Declaración Obligatoria</h3>
+      <p>Los autores deberán declarar en el formulario de envío el uso de cualquier herramienta de IA (por ejemplo, ChatGPT, Gemini, Claude, Copilot) especificando: nombre y versión de la herramienta, propósito concreto de su uso y las secciones del manuscrito en las que fue empleada. La omisión deliberada de esta declaración se considerará una falta ética y podrá dar lugar al rechazo del manuscrito o a su retractación si ya hubiera sido publicado.</p>
 
-    <h3>10.2. Integridad Científica de las Imágenes</h3>
-    <p>Solo se permiten ajustes globales, lineales y uniformes de brillo, contraste, balance de color, recorte o nitidez, siempre que no alteren, oculten o distorsionen el contenido científico original. Constituye <strong>falsificación</strong> cualquier manipulación que suponga añadir, eliminar, mover, clonar o modificar selectivamente elementos de una imagen que constituya evidencia científica (geles de electroforesis, radiografías, micrografías, etc.). Dichas prácticas serán motivo de rechazo inmediato y de potencial comunicación a la institución de afiliación del autor.</p>
+      <!-- 09. Datos Abiertos, Código y Reproducibilidad -->
+      <h2 id="datos">09. Datos Abiertos, Código y Reproducibilidad</h2>
+      
+      <h3>9.1. Declaración de Disponibilidad de Datos</h3>
+      <p>Todos los manuscritos deberán incluir obligatoriamente una <strong>Declaración de Disponibilidad de Datos</strong> (<em>Data Availability Statement</em>), incluso en aquellos casos en que no existan datos que compartir o estos no puedan hacerse públicos. La Revista favorece el acceso abierto a los datos subyacentes como garantía de reproducibilidad y transparencia.</p>
+      
+      <h3>9.2. Depósito de Datos</h3>
+      <p>Se recomienda el depósito de los conjuntos de datos en repositorios públicos, reconocidos y permanentes, preferentemente temáticos (por ejemplo, GenBank, Protein Data Bank) o, en su defecto, generalistas. <strong>Actualmente, la Revista sugiere Zenodo, Figshare, Open Science Framework (OSF) o Dryad como opciones viables, pero se reserva el derecho de modificar o ampliar esta lista de repositorios recomendados. Cualquier cambio será notificado oportunamente.</strong> Los datos deberán depositarse, a más tardar, en la fecha de publicación del artículo, y se recomienda hacerlo antes de la aceptación para facilitar la revisión.</p>
+      
+      <h3>9.3. Excepciones</h3>
+      <p>La modalidad «datos disponibles previa solicitud razonable» se aceptará solo de forma excepcional y estará sujeta a justificación expresa por parte de los autores. Procederá únicamente cuando existan restricciones legales, éticas (confidencialidad de participantes, datos sensibles), contractuales o de propiedad intelectual que impidan la difusión pública, o cuando la divulgación pueda afectar a especies amenazadas, patrimonio arqueológico, seguridad pública o derechos de terceros.</p>
 
-    <h3>10.3. Imágenes Generadas por IA</h3>
-    <p>Su uso se regula por lo dispuesto en el Capítulo 8. Deberán ser declaradas expresamente y no podrán, en ningún caso, reemplazar fotografías o registros de observación científica. La leyenda de la figura deberá explicitar que fue generada mediante IA y con qué propósito.</p>
+      <h3>9.4. Compartición de Código</h3>
+      <p>Se recomienda firmemente el depósito del código computacional desarrollado o utilizado para la generación, procesamiento o análisis de los resultados, siempre que ello sea necesario para la reproducibilidad de la investigación. El código podrá depositarse en repositorios públicos. <strong>Actualmente, la Revista sugiere GitHub (preferentemente archivado mediante Zenodo para la obtención de un DOI), GitLab u OSF, pero se reserva el derecho de modificar o ampliar esta lista de repositorios recomendados.</strong> Se recomienda el uso de licencias abiertas estándar (MIT, BSD 3-Clause, Apache 2.0, GNU GPL v3.0) según la naturaleza del proyecto y las preferencias de los autores.</p>
 
-    <h3>10.4. Copyright de Material de Terceros y Accesibilidad</h3>
-    <p>Los autores son responsables de obtener los permisos o licencias necesarios para reproducir figuras, imágenes o cualquier material gráfico del que no posean la titularidad. La Revista podrá solicitar evidencia documental de dichas autorizaciones. Asimismo, se solicitará un texto alternativo (<em>alt-text</em>) breve para cada figura destinada a la versión digital, con el fin de garantizar la accesibilidad para lectores que emplean tecnologías de asistencia.</p>
+      <!-- 10. Directrices para Figuras e Imágenes -->
+      <h2 id="figuras">10. Directrices para Figuras e Imágenes</h2>
+      
+      <h3>10.1. Requisitos Técnicos</h3>
+      <p>Las figuras deberán presentarse con una resolución mínima de <strong>300 dpi</strong> para fotografías e imágenes de mapa de bits, y de <strong>600 dpi</strong> —o, preferentemente, en formato vectorial— para gráficos lineales, esquemas y diagramas. Los formatos aceptados son: PNG, TIFF, JPG/JPEG, PDF y <strong>SVG</strong> (este último, el preferido para gráficos vectoriales por conservar la calidad al escalar).</p>
 
-    <!-- 11. Proceso de Revisión por Pares -->
-    <h2 id="revision">11. Proceso de Revisión por Pares</h2>
-    
-    <h3>11.1. Modelo de Revisión</h3>
-    <p>La Revista opera un sistema de revisión por pares <strong>doble ciego</strong>, en el que tanto los autores como los revisores desconocen sus identidades recíprocas. El proceso es gestionado íntegramente por el Comité Editorial a través de la plataforma oficial.</p>
+      <h3>10.2. Integridad Científica de las Imágenes</h3>
+      <p>Solo se permiten ajustes globales, lineales y uniformes de brillo, contraste, balance de color, recorte o nitidez, siempre que no alteren, oculten o distorsionen el contenido científico original. Constituye <strong>falsificación</strong> cualquier manipulación que suponga añadir, eliminar, mover, clonar o modificar selectivamente elementos de una imagen que constituya evidencia científica (geles de electroforesis, radiografías, micrografías, etc.). Dichas prácticas serán motivo de rechazo inmediato y de potencial comunicación a la institución de afiliación del autor.</p>
 
-    <h3>11.2. Selección y Rol de los Revisores</h3>
-    <p>El editor responsable del manuscrito seleccionará e invitará a un mínimo de <strong>dos revisores externos</strong> con experiencia o conocimiento pertinente al tema del artículo. Los revisores deberán:</p>
-    <p>(a) Declarar cualquier conflicto de interés real, potencial o percibido que pueda comprometer su imparcialidad.<br>
-    (b) Comprometerse a mantener la <strong>confidencialidad absoluta</strong> del manuscrito, no pudiendo compartirlo, distribuirlo ni utilizarlo para beneficio propio o de terceros antes de su publicación.<br>
-    (c) Emitir un informe objetivo, constructivo y fundamentado, en el que se evalúe la originalidad, rigor metodológico, claridad expositiva y relevancia del trabajo.</p>
+      <h3>10.3. Imágenes Generadas por IA</h3>
+      <p>Su uso se regula por lo dispuesto en el Capítulo 8. Deberán ser declaradas expresamente y no podrán, en ningún caso, reemplazar fotografías o registros de observación científica. La leyenda de la figura deberá explicitar que fue generada mediante IA y con qué propósito.</p>
 
-    <h3>11.3. Uso de Inteligencia Artificial por los Revisores</h3>
-    <p>Los revisores podrán emplear herramientas de IA como apoyo para mejorar la redacción u organización de sus informes. Sin embargo, <strong>no podrán, bajo ninguna circunstancia, delegar en ellas la lectura crítica del manuscrito, el juicio científico ni la elaboración sustancial de la evaluación</strong>. El revisor sigue siendo plenamente responsable del contenido de su dictamen. Está prohibido introducir el manuscrito, o partes sustanciales del mismo, en servicios de IA que puedan conservar, reutilizar o entrenar sus modelos con dicha información, salvo que medie autorización expresa de la Revista y se disponga de garantías adecuadas de confidencialidad.</p>
+      <h3>10.4. Copyright de Material de Terceros y Accesibilidad</h3>
+      <p>Los autores son responsables de obtener los permisos o licencias necesarios para reproducir figuras, imágenes o cualquier material gráfico del que no posean la titularidad. La Revista podrá solicitar evidencia documental de dichas autorizaciones. Asimismo, se solicitará un texto alternativo (<em>alt-text</em>) breve para cada figura destinada a la versión digital, con el fin de garantizar la accesibilidad para lectores que emplean tecnologías de asistencia.</p>
 
-    <h3>11.4. Plazos y Compromisos</h3>
-    <p>Los revisores se comprometen a emitir su dictamen dentro de los plazos establecidos por la Revista. Si un revisor no puede cumplir con el plazo o carece de la experiencia necesaria, deberá rechazar la invitación a la mayor brevedad posible. La obligación de confidencialidad subsistirá incluso después de finalizado el proceso editorial.</p>
+      <!-- 11. Proceso de Revisión por Pares -->
+      <h2 id="revision">11. Proceso de Revisión por Pares</h2>
+      
+      <h3>11.1. Modelo de Revisión</h3>
+      <p>La Revista opera un sistema de revisión por pares <strong>doble ciego</strong>, en el que tanto los autores como los revisores desconocen sus identidades recíprocas. El proceso es gestionado íntegramente por el Comité Editorial a través de la plataforma oficial.</p>
 
-    <!-- 12. Decisiones Editoriales y Apelaciones -->
-    <h2 id="decisiones">12. Decisiones Editoriales y Apelaciones</h2>
-    
-    <h3>12.1. Tipos de Decisión</h3>
-    <p>Al concluir el proceso de revisión, el editor emitirá una de las siguientes decisiones fundamentadas:</p>
-    <table>
-      <thead>
-        <tr>
-          <th>Decisión</th>
-          <th>Significado</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>Accept</strong></td>
-          <td>El manuscrito es aceptado para publicación sin cambios adicionales sustantivos.</td>
-        </tr>
-        <tr>
-          <td><strong>Revise and Resubmit (Minor Revision)</strong></td>
-          <td>Se requieren modificaciones menores que no precisan una nueva ronda de revisión externa.</td>
-        </tr>
-        <tr>
-          <td><strong>Revise and Resubmit (Major Revision)</strong></td>
-          <td>Se requieren cambios sustanciales. El manuscrito revisado será evaluado nuevamente por los revisores.</td>
-        </tr>
-        <tr>
-          <td><strong>Reject</strong></td>
-          <td>El manuscrito no alcanza los estándares requeridos para su publicación en la Revista.</td>
-        </tr>
-        <tr>
-          <td><strong>Desk Reject</strong></td>
-          <td>Rechazo inicial por parte del Comité Editorial, sin revisión externa, por razones de alcance, formato, originalidad o incumplimiento de requisitos básicos.</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>Los cambios editoriales finales —corrección de estilo, maquetación, adecuación a la plantilla— serán comunicados a los autores con transparencia y dentro de plazos razonables, requiriéndose su aprobación antes de la publicación definitiva.</p>
+      <h3>11.2. Selección y Rol de los Revisores</h3>
+      <p>El editor responsable del manuscrito seleccionará e invitará a un mínimo de <strong>dos revisores externos</strong> con experiencia o conocimiento pertinente al tema del artículo. Los revisores deberán:</p>
+      <p>(a) Declarar cualquier conflicto de interés real, potencial o percibido que pueda comprometer su imparcialidad.<br>
+      (b) Comprometerse a mantener la <strong>confidencialidad absoluta</strong> del manuscrito, no pudiendo compartirlo, distribuirlo ni utilizarlo para beneficio propio o de terceros antes de su publicación.<br>
+      (c) Emitir un informe objetivo, constructivo y fundamentado, en el que se evalúe la originalidad, rigor metodológico, claridad expositiva y relevancia del trabajo.</p>
 
-    <h3>12.2. Apelaciones a Decisiones Editoriales</h3>
-    <p>Los autores podrán apelar una decisión editorial de rechazo mediante una carta dirigida al Editor en Jefe, dentro de los <strong>treinta (30) días corridos</strong> siguientes a la notificación de la decisión. La apelación deberá:</p>
-    <p>(a) Estar debidamente fundamentada, señalando de manera concreta el presunto error procesal, el incumplimiento del procedimiento editorial o la interpretación manifiestamente incorrecta del manuscrito.<br>
-    (b) No constituir una mera manifestación de desacuerdo con el criterio científico de los revisores.<br>
-    (c) No ir acompañada de una versión sustancialmente modificada del manuscrito.</p>
-    <p>La apelación será resuelta por el Editor en Jefe, quien podrá designar a otro editor si él mismo participó en la decisión impugnada. La decisión sobre la apelación será <strong>definitiva e inapelable</strong>. El nombramiento de un nuevo revisor será excepcional y solo procederá cuando existan razones fundadas para estimar que la revisión anterior fue manifiestamente deficiente, sesgada o insuficiente.</p>
+      <h3>11.3. Uso de Inteligencia Artificial por los Revisores</h3>
+      <p>Los revisores podrán emplear herramientas de IA como apoyo para mejorar la redacción u organización de sus informes. Sin embargo, <strong>no podrán, bajo ninguna circunstancia, delegar en ellas la lectura crítica del manuscrito, el juicio científico ni la elaboración sustancial de la evaluación</strong>. El revisor sigue siendo plenamente responsable del contenido de su dictamen. Está prohibido introducir el manuscrito, o partes sustanciales del mismo, en servicios de IA que puedan conservar, reutilizar o entrenar sus modelos con dicha información, salvo que medie autorización expresa de la Revista y se disponga de garantías adecuadas de confidencialidad.</p>
 
-    <!-- 13. Correcciones, Retractaciones y Preservación Digital -->
-    <h2 id="postpub">13. Correcciones, Retractaciones y Preservación Digital</h2>
-    
-    <h3>13.1. Correcciones Post-Publicación</h3>
-    <p>La Revista publicará una corrección vinculada al artículo original mediante un enlace recíproco cuando se detecten errores que no invaliden las conclusiones del trabajo. Se distinguirá entre:</p>
-    <p><strong>Corrigendum:</strong> error atribuible a los autores.<br>
-    <strong>Erratum:</strong> error introducido por la Revista durante el proceso de producción editorial.</p>
+      <h3>11.4. Plazos y Compromisos</h3>
+      <p>Los revisores se comprometen a emitir su dictamen dentro de los plazos establecidos por la Revista. Si un revisor no puede cumplir con el plazo o carece de la experiencia necesaria, deberá rechazar la invitación a la mayor brevedad posible. La obligación de confidencialidad subsistirá incluso después de finalizado el proceso editorial.</p>
 
-    <h3>13.2. Retractaciones</h3>
-    <p>La Revista retractará un artículo, siguiendo los flujogramas de COPE, cuando existan pruebas de fabricación o falsificación de datos, manipulación indebida de imágenes, plagio, publicación duplicada no justificada, violaciones éticas graves o cualquier otra conducta que comprometa de manera sustancial e irreparable la confiabilidad del trabajo. El artículo retractado permanecerá accesible, pero estará claramente identificado con una marca de agua «RETRACTED» y acompañado de un aviso detallado que explique las razones de la retractación.</p>
+      <!-- 12. Decisiones Editoriales y Apelaciones -->
+      <h2 id="decisiones">12. Decisiones Editoriales y Apelaciones</h2>
+      
+      <h3>12.1. Tipos de Decisión</h3>
+      <p>Al concluir el proceso de revisión, el editor emitirá una de las siguientes decisiones fundamentadas:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Decisión</th>
+            <th>Significado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Accept</strong></td>
+            <td>El manuscrito es aceptado para publicación sin cambios adicionales sustantivos.</td>
+          </tr>
+          <tr>
+            <td><strong>Revise and Resubmit (Minor Revision)</strong></td>
+            <td>Se requieren modificaciones menores que no precisan una nueva ronda de revisión externa.</td>
+          </tr>
+          <tr>
+            <td><strong>Revise and Resubmit (Major Revision)</strong></td>
+            <td>Se requieren cambios sustanciales. El manuscrito revisado será evaluado nuevamente por los revisores.</td>
+          </tr>
+          <tr>
+            <td><strong>Reject</strong></td>
+            <td>El manuscrito no alcanza los estándares requeridos para su publicación en la Revista.</td>
+          </tr>
+          <tr>
+            <td><strong>Desk Reject</strong></td>
+            <td>Rechazo inicial por parte del Comité Editorial, sin revisión externa, por razones de alcance, formato, originalidad o incumplimiento de requisitos básicos.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Los cambios editoriales finales —corrección de estilo, maquetación, adecuación a la plantilla— serán comunicados a los autores con transparencia y dentro de plazos razonables, requiriéndose su aprobación antes de la publicación definitiva.</p>
 
-    <h3>13.3. Expresiones de Preocupación</h3>
-    <p>Cuando existan indicios razonables de problemas graves pero la investigación correspondiente no haya concluido, la Revista emitirá una <strong>Expresión de Preocupación</strong>, que será retirada o reemplazada por una corrección o retractación una vez finalizado el análisis.</p>
+      <h3>12.2. Apelaciones a Decisiones Editoriales</h3>
+      <p>Los autores podrán apelar una decisión editorial de rechazo mediante una carta dirigida al Editor en Jefe, dentro de los <strong>treinta (30) días corridos</strong> siguientes a la notificación de la decisión. La apelación deberá:</p>
+      <p>(a) Estar debidamente fundamentada, señalando de manera concreta el presunto error procesal, el incumplimiento del procedimiento editorial o la interpretación manifiestamente incorrecta del manuscrito.<br>
+      (b) No constituir una mera manifestación de desacuerdo con el criterio científico de los revisores.<br>
+      (c) No ir acompañada de una versión sustancialmente modificada del manuscrito.</p>
+      <p>La apelación será resuelta por el Editor en Jefe, quien podrá designar a otro editor si él mismo participó en la decisión impugnada. La decisión sobre la apelación será <strong>definitiva e inapelable</strong>. El nombramiento de un nuevo revisor será excepcional y solo procederá cuando existan razones fundadas para estimar que la revisión anterior fue manifiestamente deficiente, sesgada o insuficiente.</p>
 
-    <h3>13.4. Preservación Digital y Archivo</h3>
-    <p>La Revista garantiza la preservación digital a largo plazo mediante una estrategia de redundancia que asegura la persistencia y accesibilidad de los contenidos publicados. Los artículos se conservan en el sitio web oficial y en repositorios externos que garanticen la permanencia del registro académico.</p>
-    
-    <div class="highlight-box">
-      <p><strong>Sobre los repositorios y sistemas de preservación:</strong> Actualmente, la Revista utiliza un repositorio público de <strong>GitHub</strong> para el control de versiones de los archivos publicados, y <strong>Zenodo</strong> para el archivo permanente y la gestión del <strong>Digital Object Identifier (DOI)</strong>. En caso de cese de las actividades editoriales, los artículos continuarán siendo accesibles a través de Zenodo y de cualquier otro repositorio donde hayan sido depositados.</p>
-      <p><strong>No obstante, la Revista se reserva el derecho de modificar, complementar o sustituir los repositorios o plataformas de preservación digital utilizados. Cualquier cambio será debidamente comunicado a la comunidad académica y se aplicará garantizando siempre la persistencia y accesibilidad de los contenidos ya publicados.</strong></p>
-    </div>
+      <!-- 13. Correcciones, Retractaciones y Preservación Digital -->
+      <h2 id="postpub">13. Correcciones, Retractaciones y Preservación Digital</h2>
+      
+      <h3>13.1. Correcciones Post-Publicación</h3>
+      <p>La Revista publicará una corrección vinculada al artículo original mediante un enlace recíproco cuando se detecten errores que no invaliden las conclusiones del trabajo. Se distinguirá entre:</p>
+      <p><strong>Corrigendum:</strong> error atribuible a los autores.<br>
+      <strong>Erratum:</strong> error introducido por la Revista durante el proceso de producción editorial.</p>
 
-    <!-- 14. Derechos de Autor y Licencias -->
-    <h2 id="derechos">14. Derechos de Autor y Licencias</h2>
-    
-    <h3>14.1. Titularidad de los Derechos</h3>
-    <p>Los <strong>autores conservan íntegramente los derechos de autor</strong> sobre sus obras. Al aceptar la publicación, otorgan a la Revista una <strong>licencia no exclusiva</strong>, gratuita, perpetua y de ámbito mundial para editar, publicar, comunicar públicamente, preservar, difundir y asignar un DOI al artículo, así como para mantenerlo disponible de forma permanente.</p>
+      <h3>13.2. Retractaciones</h3>
+      <p>La Revista retractará un artículo, siguiendo los flujogramas de COPE, cuando existan pruebas de fabricación o falsificación de datos, manipulación indebida de imágenes, plagio, publicación duplicada no justificada, violaciones éticas graves o cualquier otra conducta que comprometa de manera sustancial e irreparable la confiabilidad del trabajo. El artículo retractado permanecerá accesible, pero estará claramente identificado con una marca de agua «RETRACTED» y acompañado de un aviso detallado que explique las razones de la retractación.</p>
 
-    <h3>14.2. Licencia de Publicación</h3>
-    <p>Todos los artículos se publican bajo la licencia <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong>, salvo indicación expresa en contrario cuando exista una obligación legal o contractual que lo impida. Esta licencia permite a cualquier persona compartir (copiar y redistribuir el material en cualquier medio o formato) y adaptar (remezclar, transformar y construir a partir del material) para cualquier propósito, incluso comercial, siempre que se otorgue la atribución adecuada a los autores y a la fuente original de publicación, se indique si se realizaron cambios y se proporcione un enlace a la licencia. Para más detalles, consulte nuestras <a href="open-access.html">Políticas de Acceso Abierto</a>.</p>
+      <h3>13.3. Expresiones de Preocupación</h3>
+      <p>Cuando existan indicios razonables de problemas graves pero la investigación correspondiente no haya concluido, la Revista emitirá una <strong>Expresión de Preocupación</strong>, que será retirada o reemplazada por una corrección o retractación una vez finalizado el análisis.</p>
 
-    <h3>14.3. Autoarchivo</h3>
-    <p>Los autores podrán depositar la versión publicada final del artículo (<em>version of record</em>) en repositorios institucionales, temáticos, páginas web personales, redes académicas o cualquier otro medio, inmediatamente después de su publicación y <strong>sin período de embargo</strong>, siempre que mantengan la referencia bibliográfica completa y el DOI de la publicación original.</p>
+      <!-- 14. PRESERVACIÓN DIGITAL (NUEVA SECCIÓN) -->
+      <h2 id="preservacion">14. Preservación Digital y Archivo a Largo Plazo</h2>
+      
+      <h3>14.1. Compromiso de Preservación</h3>
+      <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> promueve activamente la preservación a largo plazo de todos sus contenidos publicados. El registro académico es un bien permanente de la comunidad científica, y la Revista asume la responsabilidad de garantizar su accesibilidad, integridad y disponibilidad futura, incluso ante eventualidades tecnológicas, cambios institucionales o cese de actividades editoriales.</p>
+      
+      <p>Para ello, la Revista implementa una <strong>estrategia de redundancia de archivo</strong>, depositando cada número publicado en múltiples repositorios y sistemas de preservación independientes. Esta estrategia asegura que los artículos permanezcan disponibles para lectores, investigadores y el público general, con independencia de la continuidad operativa de la plataforma web oficial.</p>
 
-    <h3>14.4. Identificación Permanente</h3>
-    <p>Cada artículo aceptado recibirá un <strong>DOI</strong> gestionado y preservado, que lo identificará de forma única y persistente. El DOI permanecerá asociado al registro académico del artículo incluso cuando este sea corregido, retractado o trasladado a una nueva infraestructura tecnológica.</p>
+      <h3>14.2. Repositorios de Archivo Oficial</h3>
+      <p>La Revista deposita la totalidad de sus contenidos publicados en los siguientes repositorios y sistemas de preservación digital:</p>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Repositorio</th>
+            <th>Tipo</th>
+            <th>Propósito Específico</th>
+            <th>Enlace</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Zenodo</strong></td>
+            <td>Repositorio generalista (CERN / OpenAIRE)</td>
+            <td>Archivo permanente de cada número completo y de artículos individuales, con asignación de DOI para versiones archivadas.</td>
+            <td><a href="https://zenodo.org/" target="_blank">zenodo.org</a></td>
+          </tr>
+          <tr>
+            <td><strong>Internet Archive</strong></td>
+            <td>Biblioteca digital sin fines de lucro</td>
+            <td>Preservación de la versión pública del sitio web de la Revista (capturas completas) y de archivos PDF de artículos.</td>
+            <td><a href="https://archive.org/" target="_blank">archive.org</a></td>
+          </tr>
+          <tr>
+            <td><strong>Biblioteca Nacional de Chile</strong></td>
+            <td>Depósito legal nacional</td>
+            <td>Cumplimiento del depósito legal chileno y preservación patrimonial de la producción académica nacional.</td>
+            <td><a href="https://www.bibliotecanacional.gob.cl/" target="_blank">bibliotecanacional.gob.cl</a></td>
+          </tr>
+          <tr>
+            <td><strong>GitHub (Repositorio de respaldo)</strong></td>
+            <td>Control de versiones</td>
+            <td>Mantenimiento de archivos fuente, metadatos y control de versiones de todos los documentos publicados.</td>
+            <td><a href="https://github.com/" target="_blank">github.com</a></td>
+          </tr>
+        </tbody>
+      </table>
 
-    <!-- 15. Disposiciones Finales -->
-    <h2 id="disposiciones">15. Disposiciones Finales</h2>
-    
-    <p>El Comité Editorial se reserva la facultad de interpretar, actualizar y modificar las presentes políticas editoriales para adaptarlas a nuevos estándares académicos, desarrollos normativos o requerimientos sobrevenidos. Cualquier modificación sustancial será comunicada a la comunidad académica y publicada de forma transparente en el sitio web oficial de la Revista, indicando la versión y la fecha de entrada en vigor.</p>
+      <h3>14.3. Identificadores Persistentes y Metadatos de Preservación</h3>
+      <p>Cada artículo publicado recibe un <strong>Digital Object Identifier (DOI)</strong> gestionado y preservado a través de Zenodo. El DOI garantiza la identificación única y persistente del artículo, y permanece asociado al registro académico incluso cuando el artículo sea corregido, retractado o trasladado a una nueva infraestructura tecnológica.</p>
+      <p>Además del DOI, cada artículo incorpora <strong>metadatos de preservación</strong> completos, incluyendo: título, autores, resumen, palabras clave, fecha de publicación, licencia de uso, ISSN de la Revista y referencia bibliográfica completa. Estos metadatos son cosechados por los repositorios para garantizar la correcta indexación y descubrimiento de los contenidos.</p>
 
-    <p>La participación en cualquiera de los procesos de la Revista —como autor, revisor, editor o colaborador— implica la aceptación íntegra, sin reservas, de la totalidad de las políticas contenidas en el presente manual. La ignorancia de estas normas no exime de su cumplimiento.</p>
+      <h3>14.4. Formatos de Archivo</h3>
+      <p>Para maximizar la durabilidad de los archivos, la Revista preserva cada artículo en los siguientes formatos:</p>
+      <ul>
+        <li><strong>PDF/A:</strong> formato de archivo PDF estandarizado para preservación a largo plazo, que garantiza la visualización fiel del documento con independencia del software utilizado.</li>
+        <li><strong>HTML:</strong> versión digital accesible en el sitio web oficial, con metadatos embebidos para cosechamiento por parte de recolectores OAI-PMH.</li>
+        <li><strong>XML (JATS):</strong> estructura de contenido en formato estándar para publicaciones académicas, que facilita la interoperabilidad y el archivo en sistemas de preservación especializados.</li>
+        <li><strong>Archivos fuente (DOCX):</strong> versiones editables originales conservadas para futuras re-ediciones, migraciones de formato o recuperación de contenido.</li>
+      </ul>
 
-    <p>Para cualesquiera cuestiones no previstas en este documento, se aplicarán supletoriamente las directrices del <strong>Committee on Publication Ethics (COPE)</strong>, los usos y costumbres editoriales internacionalmente aceptados y, en última instancia, la legislación de la República de Chile.</p>
+      <h3>14.5. Continuidad ante Cese de Actividades</h3>
+      <p>En el supuesto de cese definitivo de las actividades editoriales de la Revista, los contenidos publicados continuarán siendo accesibles a través de <strong>Zenodo</strong>, <strong>Internet Archive</strong> y la <strong>Biblioteca Nacional de Chile</strong>, garantizando que el conocimiento difundido no se pierda. Los autores conservan siempre sus derechos de autor y podrán redistribuir sus artículos libremente conforme a la licencia CC BY 4.0.</p>
 
-    <!-- Pie de página -->
-    <div class="footer" id="footer">
-      Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839 <br>
-      San Felipe, Chile · Publicación Académica Independiente · © <span id="current-year"></span>
-    </div>
+      <h3>14.6. Modificación de la Estrategia de Preservación</h3>
+      <div class="highlight-box">
+        <p><strong>Actualizaciones a esta política:</strong> La Revista se reserva el derecho de modificar, complementar o sustituir los repositorios o plataformas de preservación digital utilizados, así como los formatos de archivo empleados. Cualquier cambio en esta estrategia será debidamente comunicado a la comunidad académica a través de esta sección y se aplicará garantizando siempre la persistencia y accesibilidad de los contenidos ya publicados. La inclusión de nuevos repositorios no implicará en ningún caso la retirada de los depósitos ya realizados en los sistemas existentes.</p>
+      </div>
+
+      <!-- 15. Derechos de Autor y Licencias -->
+      <h2 id="derechos">15. Derechos de Autor y Licencias</h2>
+      
+      <h3>15.1. Titularidad de los Derechos</h3>
+      <p>Los <strong>autores conservan íntegramente los derechos de autor</strong> sobre sus obras. Al aceptar la publicación, otorgan a la Revista una <strong>licencia no exclusiva</strong>, gratuita, perpetua y de ámbito mundial para editar, publicar, comunicar públicamente, preservar, difundir y asignar un DOI al artículo, así como para mantenerlo disponible de forma permanente.</p>
+
+      <h3>15.2. Licencia de Publicación</h3>
+      <p>Todos los artículos se publican bajo la licencia <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong>, salvo indicación expresa en contrario cuando exista una obligación legal o contractual que lo impida. Esta licencia permite a cualquier persona compartir (copiar y redistribuir el material en cualquier medio o formato) y adaptar (remezclar, transformar y construir a partir del material) para cualquier propósito, incluso comercial, siempre que se otorgue la atribución adecuada a los autores y a la fuente original de publicación, se indique si se realizaron cambios y se proporcione un enlace a la licencia. Para más detalles, consulte nuestras <a href="open-access.html">Políticas de Acceso Abierto</a>.</p>
+
+      <h3>15.3. Autoarchivo</h3>
+      <p>Los autores podrán depositar la versión publicada final del artículo (<em>version of record</em>) en repositorios institucionales, temáticos, páginas web personales, redes académicas o cualquier otro medio, inmediatamente después de su publicación y <strong>sin período de embargo</strong>, siempre que mantengan la referencia bibliográfica completa y el DOI de la publicación original.</p>
+
+      <h3>15.4. Identificación Permanente</h3>
+      <p>Cada artículo aceptado recibirá un <strong>DOI</strong> gestionado y preservado, que lo identificará de forma única y persistente. El DOI permanecerá asociado al registro académico del artículo incluso cuando este sea corregido, retractado o trasladado a una nueva infraestructura tecnológica.</p>
+
+      <!-- 16. Disposiciones Finales -->
+      <h2 id="disposiciones">16. Disposiciones Finales</h2>
+      
+      <p>El Comité Editorial se reserva la facultad de interpretar, actualizar y modificar las presentes políticas editoriales para adaptarlas a nuevos estándares académicos, desarrollos normativos o requerimientos sobrevenidos. Cualquier modificación sustancial será comunicada a la comunidad académica y publicada de forma transparente en el sitio web oficial de la Revista, indicando la versión y la fecha de entrada en vigor.</p>
+
+      <p>La participación en cualquiera de los procesos de la Revista —como autor, revisor, editor o colaborador— implica la aceptación íntegra, sin reservas, de la totalidad de las políticas contenidas en el presente manual. La ignorancia de estas normas no exime de su cumplimiento.</p>
+
+      <p>Para cualesquiera cuestiones no previstas en este documento, se aplicarán supletoriamente las directrices del <strong>Committee on Publication Ethics (COPE)</strong>, los usos y costumbres editoriales internacionalmente aceptados y, en última instancia, la legislación de la República de Chile.</p>
+
+      <div class="footer" id="footer">
+        Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839<br>
+        San Felipe, Chile · Publicación Académica Independiente · © <span id="current-year"></span>
+      </div>
+
+    </main>
   </div>
 
   <script>
