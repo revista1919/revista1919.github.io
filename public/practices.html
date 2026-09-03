@@ -4,223 +4,456 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Buenas Prácticas · Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+    :root {
+      --primary: #004b87;
+      --secondary: #006dae;
+      --accent: #e86125;
+      --text-main: #2b2b2b;
+      --text-muted: #666666;
+      --text-light: #a0a0a0;
+      --border-light: #e6e8ea;
+      --border-dark: #cbd0d5;
+      --bg-out: #f4f5f7;
+      --bg-paper: #ffffff;
+      --bg-highlight: #f8f9fa;
+      --bg-warning: #fdf6f3;
+      --link: #006dae;
+      --success: #10B981;
+      --success-bg: #ECFDF5;
+      --shadow-sm: 0 1px 3px rgba(11, 25, 44, 0.05);
+      --shadow-md: 0 4px 15px rgba(11, 25, 44, 0.08);
+      --shadow-lg: 0 10px 25px rgba(11, 25, 44, 0.12);
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --font-serif: 'Lora', Georgia, Times, serif;
+      --font-sans: 'Inter', sans-serif;
+    }
 
-:root {
-  /* Paleta inspirada en Elsevier / Taylor & Francis - Aplicada desde la referencia */
-  --primary: #004b87;       /* Azul académico profundo */
-  --secondary: #006dae;     /* Azul interactivo */
-  --accent: #e86125;        /* Naranja para acentos y advertencias */
-  --text-main: #2b2b2b;     /* Negro suave para lectura prolongada */
-  --text-muted: #666666;    /* Gris para metadatos */
-  --border-light: #e6e8ea;  /* Bordes sutiles */
-  --border-dark: #cbd0d5;   /* Bordes estructurales */
-  --bg-out: #f4f5f7;        /* Fondo exterior de la página */
-  --bg-paper: #ffffff;      /* Fondo del documento */
-  --bg-highlight: #f8f9fa;  /* Fondo de cajas de texto */
-  --link: #006dae;
-}
+    * { box-sizing: border-box; }
 
-body {
-  font-family: 'Lora', 'Georgia', Times, serif;
-  font-size: 16px;
-  line-height: 1.75;
-  margin: 0;
-  padding: 0;
-  background-color: var(--bg-out);
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+    body {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      line-height: 1.75;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-out);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
-.page-wrapper {
-  max-width: 850px;
-  margin: 60px auto;
-  background-color: var(--bg-paper);
-  padding: 70px 90px;
-  border: 1px solid var(--border-light);
-  border-top: 5px solid var(--primary); /* Cinta superior de identidad editorial */
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-}
+    /* ================= HEADER BLANCO ================= */
+    .header {
+      background-color: var(--bg-paper);
+      border-bottom: 4px solid var(--primary);
+      padding: 40px 20px;
+      box-shadow: var(--shadow-sm);
+    }
 
-/* --- HEADER RENOVADO --- */
-.header {
-  border-bottom: 1px solid var(--border-light);
-  padding-bottom: 30px;
-  margin-bottom: 50px;
-  text-align: left;
-}
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
 
-.header img {
-  max-width: 180px;
-  margin-bottom: 25px;
-  display: block;
-  filter: none;
-}
+    .header img {
+      max-width: 180px;
+      height: auto;
+      display: block;
+    }
 
-.header h1 {
-  font-family: 'Inter', sans-serif;
-  font-size: 2.2em;
-  font-weight: 700;
-  line-height: 1.2;
-  margin: 0;
-  letter-spacing: -0.02em;
-  color: var(--text-main);
-}
+    .header-text {
+      flex: 1;
+      min-width: 280px;
+    }
 
-.document-meta {
-  font-family: 'Inter', sans-serif;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-top: 15px;
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
+    .header h1 {
+      font-family: var(--font-sans);
+      font-size: 2.2em;
+      font-weight: 700;
+      line-height: 1.2;
+      margin: 0;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
 
-/* --- TIPOGRAFÍA Y ENCABEZADOS --- */
-h2, h3, h4 {
-  font-family: 'Inter', sans-serif;
-  color: var(--primary);
-  margin-top: 2.5em;
-  font-weight: 600;
-}
+    .document-meta {
+      font-family: var(--font-sans);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 10px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
-h2 {
-  font-size: 1.25em;
-  text-transform: none;
-  letter-spacing: normal;
-  border-bottom: 1px solid var(--border-light);
-  padding-bottom: 8px;
-  margin-bottom: 1em;
-}
+    .document-meta .badge {
+      background: var(--primary);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+    }
 
-h3 {
-  font-size: 1.1em;
-  color: var(--text-main);
-  text-transform: none;
-  letter-spacing: normal;
-  margin-bottom: 0.8em;
-}
+    /* ================= LAYOUT PRINCIPAL ================= */
+    .dashboard-wrapper {
+      max-width: 1200px;
+      margin: 40px auto 60px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 35px;
+      align-items: start;
+    }
 
-h4 {
-  font-size: 0.95em;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.5em;
-}
+    /* ================= SIDEBAR (TOC) ================= */
+    .sidebar {
+      background-color: var(--bg-paper);
+      border-radius: var(--radius-md);
+      padding: 25px;
+      position: sticky;
+      top: 30px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-light);
+      border-top: 4px solid var(--primary);
+    }
 
-p {
-  margin-top: 0;
-  margin-bottom: 1.5em;
-  color: var(--text-main);
-}
+    .sidebar h3 {
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--primary);
+      margin-top: 0;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border-light);
+      font-weight: 700;
+    }
 
-ul, ol {
-  margin-top: 0;
-  margin-bottom: 1.5em;
-  padding-left: 1.5em;
-}
+    .sidebar-nav {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
 
-li {
-  margin-bottom: 0.5em;
-  color: var(--text-main);
-}
+    .sidebar-nav li {
+      margin-bottom: 5px;
+    }
 
-/* --- ENLACES --- */
-a {
-  color: var(--link);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: all 0.2s ease;
-}
+    .sidebar-nav a {
+      display: block;
+      padding: 10px 14px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      transition: all 0.3s;
+      border-left: 3px solid transparent;
+      line-height: 1.4;
+    }
 
-a:hover {
-  color: var(--primary);
-  border-bottom: 1px solid var(--primary);
-  background-color: transparent;
-}
+    .sidebar-nav a:hover,
+    .sidebar-nav a.active {
+      background: #FFF0E6;
+      color: var(--primary);
+      border-left-color: var(--accent);
+      font-weight: 600;
+    }
 
-/* --- TARJETAS DE PRINCIPIOS (Mejoradas) --- */
-/* Se reemplaza el estilo genérico por tarjetas con borde izquierdo de acento y efecto hover sutil */
-.principle-card {
-  background-color: var(--bg-highlight);
-  border-left: 4px solid var(--secondary); /* Borde de acento azul */
-  padding: 20px 25px;
-  margin-bottom: 20px;
-  border-radius: 0 4px 4px 0;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
+    .quick-tip {
+      margin-top: 25px;
+      padding: 18px;
+      background: linear-gradient(135deg, var(--primary), #1A365D);
+      color: #ffffff;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
 
-.principle-card:hover {
-  border-left-color: var(--accent); /* Cambia a naranja al pasar el cursor */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-}
+    .quick-tip i {
+      color: var(--accent);
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+      display: block;
+    }
 
-.principle-card h4 {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.8em;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--primary);
-  margin-top: 0;
-  margin-bottom: 0.5em;
-}
+    .quick-tip strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #ffffff;
+    }
 
-.principle-card p {
-  margin-bottom: 0;
-}
+    .quick-tip p {
+      color: #ffffff;
+    }
 
-/* --- SECCIONES DE ROLES --- */
-.role-section {
-  margin-bottom: 40px;
-}
+    .quick-tip a {
+      color: #FFD700;
+    }
 
-/* --- PIE DE PÁGINA --- */
-.footer {
-  margin-top: 80px;
-  padding-top: 30px;
-  border-top: 1px solid var(--border-light);
-  text-align: center;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-transform: none;
-  letter-spacing: normal;
-}
+    .quick-tip span {
+      color: #ffffff;
+    }
+    /* ================= CONTENIDO PRINCIPAL ================= */
+    .main-content {
+      background-color: var(--bg-paper);
+      border-radius: var(--radius-md);
+      padding: 45px 50px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-light);
+    }
 
-/* --- RESPONSIVE --- */
-@media (max-width: 768px) {
-  .page-wrapper { 
-    margin: 0; 
-    padding: 30px 20px; 
-    border: none;
-    border-top: 4px solid var(--primary);
-  }
-  .header h1 { font-size: 1.7em; }
-  .document-meta { flex-direction: column; align-items: flex-start; gap: 5px; }
-}
+    h2 {
+      font-family: var(--font-sans);
+      font-size: 1.3em;
+      color: var(--primary);
+      margin-top: 2.5em;
+      margin-bottom: 1em;
+      font-weight: 700;
+      border-bottom: 2px solid var(--border-light);
+      padding-bottom: 10px;
+      scroll-margin-top: 30px;
+    }
+
+    h2:first-child { margin-top: 0; }
+
+    h3 {
+      font-family: var(--font-sans);
+      font-size: 1.05em;
+      color: var(--text-main);
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      font-weight: 600;
+    }
+
+    h4 {
+      font-family: var(--font-sans);
+      font-size: 0.85em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5em;
+      font-weight: 600;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.3em;
+      color: var(--text-main);
+    }
+
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 1.5em;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      line-height: 1.7;
+    }
+
+    strong { color: #1a1a1a; }
+
+    a {
+      color: var(--link);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--primary);
+      border-bottom: 1px solid var(--primary);
+    }
+
+    code {
+      background-color: #F1F5F9;
+      color: #0F172A;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.85em;
+      border: 1px solid #E2E8F0;
+    }
+
+    /* Cajas */
+    .highlight-box {
+      background-color: var(--bg-highlight);
+      border-left: 4px solid var(--primary);
+      padding: 20px 25px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .warning-box {
+      background-color: var(--bg-warning);
+      border-left: 4px solid var(--accent);
+      padding: 20px 25px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .success-box {
+      background-color: var(--success-bg);
+      border-left: 4px solid var(--success);
+      padding: 18px 22px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .tip-box {
+      background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--accent);
+      padding: 18px 22px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9em;
+      color: var(--text-main);
+    }
+
+    .tip-box strong { color: var(--primary); }
+
+    .example-box {
+      background-color: white;
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--primary);
+      padding: 18px 20px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9em;
+      color: var(--text-muted);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .example-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      font-family: var(--font-sans);
+    }
+
+    /* Tarjetas de principios */
+    .principle-card {
+      background-color: var(--bg-highlight);
+      border-left: 4px solid var(--secondary);
+      padding: 20px 25px;
+      margin-bottom: 20px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      transition: all 0.3s;
+    }
+
+    .principle-card:hover {
+      border-left-color: var(--accent);
+      box-shadow: var(--shadow-md);
+      transform: translateX(4px);
+    }
+
+    .principle-card h4 {
+      font-family: var(--font-sans);
+      font-size: 0.8em;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--primary);
+      margin-top: 0;
+      margin-bottom: 0.5em;
+    }
+
+    .principle-card p {
+      margin-bottom: 0;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 60px;
+      text-align: center;
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      color: var(--text-light);
+      border-top: 1px solid var(--border-light);
+      padding-top: 25px;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-wrapper { grid-template-columns: 1fr; }
+      .sidebar { position: static; margin-bottom: 25px; }
+    }
+
+    @media (max-width: 768px) {
+      .header { padding: 25px 15px; }
+      .header-content { flex-direction: column; align-items: flex-start; gap: 15px; }
+      .header h1 { font-size: 1.6em; }
+      .main-content { padding: 25px 20px; }
+    }
   </style>
 </head>
 <body>
-  <div class="page-wrapper">
-    <!-- Encabezado -->
-    <div class="header">
+
+  <!-- HEADER BLANCO -->
+  <header class="header">
+    <div class="header-content">
       <img src="logo.png" alt="Logo Revista Nacional de las Ciencias para Estudiantes">
-      <h1>Buenas Prácticas</h1>
-      <div class="document-meta">Estándares para Autores, Revisores y Editores · Versión 2.0, Julio 2026 · San Felipe, Chile</div>
+      <div class="header-text">
+        <h1>Buenas Prácticas</h1>
+        <div class="document-meta">
+          <span>Estándares para Autores, Revisores y Editores</span>
+          <span class="badge">Versión 2.0</span>
+          <span>Julio 2026</span>
+          <span>San Felipe, Chile</span>
+        </div>
+      </div>
     </div>
+  </header>
 
-    <p>La integridad de la literatura científica depende de la conducta ética y profesional de todos los actores involucrados en el proceso de publicación. La <strong>Revista Nacional de las Ciencias para Estudiantes</strong>, comprometida con los más altos estándares de calidad y transparencia, ha establecido el siguiente código de buenas prácticas, basado en las directrices del <strong>Committee on Publication Ethics (COPE)</strong>, el <strong>International Committee of Medical Journal Editors (ICMJE)</strong> y otras organizaciones internacionales de referencia.</p>
-    <p>Este código es de observancia obligatoria para todos los participantes en nuestros procesos editoriales y complementa nuestras <a href="policies.html">Políticas Editoriales</a>.</p>
+  <div class="dashboard-wrapper">
 
-    <!-- 01. Buenas Prácticas para Autores -->
-    <div class="role-section">
+    <!-- SIDEBAR CON TOC -->
+    <aside class="sidebar">
+      <h3><i class="fa-solid fa-list-ul"></i> Índice de Contenidos</h3>
+      <ul class="sidebar-nav">
+        <li><a href="#autores">01. Buenas Prácticas para Autores</a></li>
+        <li><a href="#revisores">02. Buenas Prácticas para Revisores</a></li>
+        <li><a href="#editores">03. Buenas Prácticas para Editores</a></li>
+      </ul>
+
+      <div class="quick-tip">
+        <i class="fa-regular fa-lightbulb"></i>
+        <strong>Consejo del Editor</strong>
+        La integridad científica es responsabilidad compartida. Este código complementa las <a href="policies.html">Políticas Editoriales</a> y la <a href="peer-review.html">Política de Revisión por Pares</a>.
+      </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-content">
+
+      <p>La integridad de la literatura científica depende de la conducta ética y profesional de todos los actores involucrados en el proceso de publicación. La <strong>Revista Nacional de las Ciencias para Estudiantes</strong>, comprometida con los más altos estándares de calidad y transparencia, ha establecido el siguiente código de buenas prácticas, basado en las directrices del <strong>Committee on Publication Ethics (COPE)</strong>, el <strong>International Committee of Medical Journal Editors (ICMJE)</strong> y otras organizaciones internacionales de referencia.</p>
+      <p>Este código es de observancia obligatoria para todos los participantes en nuestros procesos editoriales y complementa nuestras <a href="policies.html">Políticas Editoriales</a>.</p>
+
+      <!-- 01. Buenas Prácticas para Autores -->
       <h2 id="autores">01. Buenas Prácticas para Autores</h2>
       
       <h3>1.1. Originalidad y Exclusividad</h3>
@@ -258,10 +491,8 @@ a:hover {
         <h4>Respuesta y Corrección</h4>
         <p>El autor de correspondencia se compromete a gestionar la comunicación con la Revista de manera ágil y profesional, respondiendo a las solicitudes de los editores dentro de los plazos establecidos. Si se detecta un error significativo en un trabajo publicado, los autores están obligados a notificarlo de inmediato a la Revista y a colaborar en la publicación de una corrección (Corrigendum) o, en casos graves, en la retractación del artículo.</p>
       </div>
-    </div>
 
-    <!-- 02. Buenas Prácticas para Revisores -->
-    <div class="role-section">
+      <!-- 02. Buenas Prácticas para Revisores -->
       <h2 id="revisores">02. Buenas Prácticas para Revisores</h2>
       
       <h3>2.1. Confidencialidad</h3>
@@ -293,10 +524,8 @@ a:hover {
         <h4>El Juicio Humano es Insustituible</h4>
         <p>El revisor puede utilizar herramientas de IA como apoyo para mejorar la redacción u organización de su informe, pero <strong>no puede delegar en ellas la lectura crítica ni el juicio científico del manuscrito</strong>. Está prohibido introducir el manuscrito o fragmentos sustanciales del mismo en servicios de IA que no ofrezcan garantías de confidencialidad, salvo autorización expresa de la Revista. La responsabilidad última del dictamen recae exclusivamente en el revisor.</p>
       </div>
-    </div>
 
-    <!-- 03. Buenas Prácticas para Editores -->
-    <div class="role-section">
+      <!-- 03. Buenas Prácticas para Editores -->
       <h2 id="editores">03. Buenas Prácticas para Editores</h2>
       
       <h3>3.1. Independencia Editorial</h3>
@@ -328,15 +557,15 @@ a:hover {
         <h4>Equidad en Todas las Etapas</h4>
         <p>El Comité Editorial trabaja activamente para promover la diversidad y la inclusión en la conformación del equipo editorial, la selección de revisores y la evaluación de los manuscritos. Se evita cualquier sesgo o discriminación por motivos de género, origen étnico, nacionalidad, orientación sexual, creencias religiosas o posturas políticas.</p>
       </div>
-    </div>
 
-    <p style="margin-top: 40px;">Para cualquier consulta sobre este código o para reportar una posible infracción, contacte al Editor en Jefe a través de <a href="mailto:editor@revistacienciasestudiantes.com">editor@revistacienciasestudiantes.com</a>.</p>
+      <p style="margin-top: 40px;">Para cualquier consulta sobre este código o para reportar una posible infracción, contacte al Editor en Jefe a través de <a href="mailto:editor@revistacienciasestudiantes.com">editor@revistacienciasestudiantes.com</a>.</p>
 
-    <!-- Pie de página -->
-    <div class="footer" id="footer">
-      Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839 <br>
-      San Felipe, Chile · Publicación Académica Independiente · © <span id="current-year"></span>
-    </div>
+      <div class="footer" id="footer">
+        Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839<br>
+        San Felipe, Chile · Publicación Académica Independiente · © <span id="current-year"></span>
+      </div>
+
+    </main>
   </div>
 
   <script>
