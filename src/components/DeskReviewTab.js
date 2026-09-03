@@ -577,7 +577,82 @@ export const DeskReviewTab = ({
                   </div>
                 </div>
               </div>
+{/* ===== BLOQUE DE VERIFICACIÓN DE PLAGIO ===== */}
+<InfoBlock 
+  icon={Icons.Shield} 
+  title={isSpanish ? 'Verificación de Plagio' : 'Plagiarism Check'}
+  className="border-l-4 border-l-[#FF6C0C]"
+>
+  <div className="space-y-4">
+    <div className="flex items-start gap-3">
+      <div className="w-10 h-10 bg-[#003b5c] rounded-sm flex items-center justify-center flex-shrink-0">
+        <Icons.Shield />
+      </div>
+      <div>
+        <p className="text-sm font-sans font-bold text-[#003b5c] uppercase tracking-wider mb-1">
+          {isSpanish ? 'Verificador Externo de Originalidad' : 'External Originality Checker'}
+        </p>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          {isSpanish 
+            ? 'Utilice la herramienta externa para verificar la originalidad del manuscrito. Si el porcentaje de originalidad es menor al 85%, se recomienda desconfiar del documento.'
+            : 'Use the external tool to verify manuscript originality. If the originality score is below 85%, the document should be treated with suspicion.'}
+        </p>
+      </div>
+    </div>
 
+    <div className="bg-slate-50 border border-slate-200 rounded-sm p-4 sm:p-5">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+        <a
+          href="https://plagiarismguardpro.netlify.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 bg-[#003b5c] hover:bg-[#002b42] text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-sm transition-colors text-xs sm:text-sm font-sans font-bold uppercase tracking-wider shadow-sm"
+        >
+          <Icons.ExternalLink />
+          {isSpanish ? 'Abrir Verificador de Plagio' : 'Open Plagiarism Checker'}
+        </a>
+        
+        <div className="flex items-center gap-2 text-slate-600">
+          <Icons.Clock />
+          <span className="text-xs font-sans">
+            {isSpanish 
+              ? 'Descargue el documento y súbalo a la herramienta. Espere el análisis.'
+              : 'Download the document and upload it to the tool. Wait for analysis.'}
+          </span>
+        </div>
+      </div>
+
+      {/* Umbral de originalidad */}
+      <div className="mt-4 flex items-center gap-3 bg-white border border-slate-200 rounded-sm p-3">
+        <div className="w-1.5 h-12 bg-[#FF6C0C] rounded-full flex-shrink-0"></div>
+        <div>
+          <p className="text-xs font-sans font-bold text-slate-700 uppercase tracking-wider mb-0.5">
+            {isSpanish ? 'Umbral de Confianza' : 'Trust Threshold'}
+          </p>
+          <p className="text-sm font-sans text-slate-600">
+            <span className="font-bold text-[#003b5c]">85%</span> {isSpanish ? 'de originalidad mínima requerida' : 'minimum originality required'}
+          </p>
+        </div>
+        <StatusBadge 
+          condition={true}
+          trueLabel={isSpanish ? 'Desconfiar si < 85%' : 'Distrust if < 85%'}
+          trueColor="bg-amber-50 text-amber-700 border-amber-200"
+          falseLabel=""
+          falseColor=""
+        />
+      </div>
+    </div>
+
+    <div className="flex items-center gap-2 text-xs text-slate-400">
+      <Icons.Info />
+      <span>
+        {isSpanish 
+          ? 'Una implementación nativa de verificación de plagio estará disponible próximamente.'
+          : 'A native plagiarism checking implementation will be available soon.'}
+      </span>
+    </div>
+  </div>
+</InfoBlock>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Columna izquierda - información del autor y resumen */}
                 <div className="space-y-6">
