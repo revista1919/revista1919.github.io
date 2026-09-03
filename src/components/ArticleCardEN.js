@@ -189,7 +189,11 @@ function ArticleCard({ article }) {
   const [copiedFormat, setCopiedFormat] = useState(null);
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
-  const articleSlug = article?.permalink || `${generateSlug(article?.titulo || '')}-${article?.numeroArticulo || ''}`;
+  
+  // Determinar el título principal (inglés si existe, sino español)
+  const mainTitle = article?.tituloEnglish || article?.titulo || 'Untitled';
+  
+  const articleSlug = article?.permalink || `${generateSlug(mainTitle)}-${article?.numeroArticulo || ''}`;
   
   const pdfUrl = article?.pdfUrl || article?.pdf || '';
   const doiUrl = formatDOI(article?.doi);
@@ -203,12 +207,11 @@ function ArticleCard({ article }) {
   /* --------------------------- FULL CITATIONS WITH DOI ---------------------------- */
   const getChicago = () => {
     const authorsRaw = article?.autores || '';
-    const title = article?.titulo || 'Untitled';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    let plain = `${chicagoAuthors(authorsRaw)}. "${title}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
-    let html = `${chicagoAuthors(authorsRaw)}. "${title}." <i>${journal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
+    let plain = `${chicagoAuthors(authorsRaw)}. "${mainTitle}." ${journal} ${volume}, no. ${number} (${year}): ${pages}.`;
+    let html = `${chicagoAuthors(authorsRaw)}. "${mainTitle}." <i>${journal}</i> ${volume}, no. ${number} (${year}): ${pages}.`;
     
     if (doiUrl) {
       plain += ` ${doiUrl}`;
@@ -220,12 +223,11 @@ function ArticleCard({ article }) {
 
   const getApa = () => {
     const authorsRaw = article?.autores || '';
-    const title = article?.titulo || 'Untitled';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    let plain = `${apaAuthors(authorsRaw)} (${year}). ${title}. ${journal}, ${volume}(${number}), ${pages}.`;
-    let html = `${apaAuthors(authorsRaw)} (${year}). ${title}. <i>${journal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
+    let plain = `${apaAuthors(authorsRaw)} (${year}). ${mainTitle}. ${journal}, ${volume}(${number}), ${pages}.`;
+    let html = `${apaAuthors(authorsRaw)} (${year}). ${mainTitle}. <i>${journal}</i>, <i>${volume}</i>(${number}), ${pages}.`;
     
     if (doiUrl) {
       plain += ` ${doiUrl}`;
@@ -237,12 +239,11 @@ function ArticleCard({ article }) {
 
   const getMla = () => {
     const authorsRaw = article?.autores || '';
-    const title = article?.titulo || 'Untitled';
     const volume = article?.volumen || '';
     const number = article?.numero || '';
     const year = getYear(article?.fecha);
-    let plain = `${mlaAuthors(authorsRaw)}. "${title}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
-    let html = `${mlaAuthors(authorsRaw)}. "${title}." <i>${journal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    let plain = `${mlaAuthors(authorsRaw)}. "${mainTitle}." ${journal}, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
+    let html = `${mlaAuthors(authorsRaw)}. "${mainTitle}." <i>${journal}</i>, vol. ${volume}, no. ${number}, ${year}, pp. ${pages}.`;
     
     if (doiUrl) {
       plain += ` ${doiUrl}`;
@@ -329,7 +330,7 @@ function ArticleCard({ article }) {
           <span>{getYear(article.fecha)}</span>
         </div>
 
-        {/* Title: Elegant, Serif, Large Size */}
+        {/* Title: Elegant, Serif, Large Size - Now showing English title as primary */}
         <a 
           href={htmlUrlEn} 
           target="_blank" 
@@ -338,7 +339,7 @@ function ArticleCard({ article }) {
           onClick={(e) => e.stopPropagation()}
         >
           <h3 className="font-serif text-xl md:text-3xl text-gray-900 leading-snug font-medium transition-colors hover:text-[#007398]">
-            {article.titulo}
+            {mainTitle}
           </h3>
         </a>
 
@@ -372,22 +373,43 @@ function ArticleCard({ article }) {
         {/* Inline action buttons (T&F Style) */}
         <div className="flex flex-wrap items-center gap-6 mt-4 pt-2" onClick={(e) => e.stopPropagation()}>
           {pdfUrl && (
-  <a href={`/viewerEN.html?url=${encodeURIComponent(pdfUrl)}&doi=${article.doi || ''}&title=${encodeURIComponent(article.tituloEnglish || article.titulo || '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-[#007398] hover:text-[#005a77] transition-colors">
-    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-    Open PDF
-  </a>
-)}
-          <a href={htmlUrlEn} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-[#007398] transition-colors">
+            <a 
+              href={`/viewerEN.html?url=${encodeURIComponent(pdfUrl)}&doi=${article.doi || ''}&title=${encodeURIComponent(mainTitle)}`} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex items-center gap-2 text-sm font-semibold text-[#007398] hover:text-[#005a77] transition-colors"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+              Open PDF
+            </a>
+          )}
+          
+          <a 
+            href={htmlUrlEn} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-[#007398] transition-colors"
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
             View Full Text
           </a>
-          {article.tituloEnglish && (
-            <a href={htmlUrlEs} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#007398] transition-colors">
+          
+          {article.titulo && article.titulo !== mainTitle && (
+            <a 
+              href={htmlUrlEs} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#007398] transition-colors"
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m0 4v2" /></svg>
               Spanish Version
             </a>
           )}
-          <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors ml-auto">
+          
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)} 
+            className="flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors ml-auto"
+          >
             {isExpanded ? 'Less details' : 'More details'}
             <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </button>

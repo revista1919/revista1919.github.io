@@ -4,25 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Licencia y Derechos de Autor · Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
-
     :root {
-      --primary: #004b87;       
-      --secondary: #006dae;     
-      --accent: #e86125;        
-      --text-main: #2b2b2b;     
-      --text-muted: #666666;    
-      --border-light: #e6e8ea;  
-      --border-dark: #cbd0d5;   
-      --bg-out: #f4f5f7;        
-      --bg-paper: #ffffff;      
-      --bg-highlight: #f8f9fa;  
+      --primary: #004b87;
+      --secondary: #006dae;
+      --accent: #e86125;
+      --text-main: #2b2b2b;
+      --text-muted: #666666;
+      --text-light: #a0a0a0;
+      --border-light: #e6e8ea;
+      --border-dark: #cbd0d5;
+      --bg-out: #f4f5f7;
+      --bg-paper: #ffffff;
+      --bg-highlight: #f8f9fa;
+      --bg-warning: #fdf6f3;
       --link: #006dae;
+      --success: #10B981;
+      --success-bg: #ECFDF5;
+      --shadow-sm: 0 1px 3px rgba(11, 25, 44, 0.05);
+      --shadow-md: 0 4px 15px rgba(11, 25, 44, 0.08);
+      --shadow-lg: 0 10px 25px rgba(11, 25, 44, 0.12);
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --font-serif: 'Lora', Georgia, Times, serif;
+      --font-sans: 'Inter', sans-serif;
     }
 
+    * { box-sizing: border-box; }
+
     body {
-      font-family: 'Lora', 'Georgia', Times, serif;
+      font-family: var(--font-serif);
       font-size: 16px;
       line-height: 1.75;
       margin: 0;
@@ -33,31 +48,36 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
-    .page-wrapper {
-      max-width: 850px;
-      margin: 60px auto;
+    /* ================= HEADER BLANCO ================= */
+    .header {
       background-color: var(--bg-paper);
-      padding: 70px 90px;
-      border: 1px solid var(--border-light);
-      border-top: 5px solid var(--primary);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+      border-bottom: 4px solid var(--primary);
+      padding: 40px 20px;
+      box-shadow: var(--shadow-sm);
     }
 
-    .header {
-      border-bottom: 1px solid var(--border-light);
-      padding-bottom: 30px;
-      margin-bottom: 50px;
-      text-align: left;
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      flex-wrap: wrap;
     }
 
     .header img {
       max-width: 180px;
-      margin-bottom: 25px;
+      height: auto;
       display: block;
     }
 
+    .header-text {
+      flex: 1;
+      min-width: 280px;
+    }
+
     .header h1 {
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font-sans);
       font-size: 2.2em;
       font-weight: 700;
       line-height: 1.2;
@@ -67,49 +87,175 @@
     }
 
     .document-meta {
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font-sans);
       text-transform: uppercase;
       font-size: 0.75rem;
       letter-spacing: 0.08em;
       color: var(--text-muted);
       font-weight: 600;
-      margin-top: 15px;
+      margin-top: 10px;
       display: flex;
       gap: 15px;
       align-items: center;
+      flex-wrap: wrap;
     }
 
-    h2, h3, h4 {
-      font-family: 'Inter', sans-serif;
+    .document-meta .badge {
+      background: var(--primary);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+    }
+
+    /* ================= LAYOUT PRINCIPAL ================= */
+    .dashboard-wrapper {
+      max-width: 1200px;
+      margin: 40px auto 60px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 35px;
+      align-items: start;
+    }
+
+    /* ================= SIDEBAR (TOC) ================= */
+    .sidebar {
+      background-color: var(--bg-paper);
+      border-radius: var(--radius-md);
+      padding: 25px;
+      position: sticky;
+      top: 30px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-light);
+      border-top: 4px solid var(--primary);
+    }
+
+    .sidebar h3 {
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
       color: var(--primary);
-      margin-top: 2.5em;
+      margin-top: 0;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border-light);
+      font-weight: 700;
+    }
+
+    .sidebar-nav {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .sidebar-nav li {
+      margin-bottom: 5px;
+    }
+
+    .sidebar-nav a {
+      display: block;
+      padding: 10px 14px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      transition: all 0.3s;
+      border-left: 3px solid transparent;
+      line-height: 1.4;
+    }
+
+    .sidebar-nav a:hover,
+    .sidebar-nav a.active {
+      background: #FFF0E6;
+      color: var(--primary);
+      border-left-color: var(--accent);
       font-weight: 600;
     }
 
-    h2 {
-      font-size: 1.25em;
-      border-bottom: 1px solid var(--border-light);
-      padding-bottom: 8px;
-      margin-bottom: 1em;
+    .quick-tip {
+      margin-top: 25px;
+      padding: 18px;
+      background: linear-gradient(135deg, var(--primary), #1A365D);
+      color: #ffffff;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      line-height: 1.5;
     }
 
+    .quick-tip i {
+      color: var(--accent);
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .quick-tip strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #ffffff;
+    }
+
+    .quick-tip p {
+      color: #ffffff;
+    }
+
+    .quick-tip a {
+      color: #FFD700;
+    }
+
+    .quick-tip span {
+      color: #ffffff;
+    }
+    /* ================= CONTENIDO PRINCIPAL ================= */
+    .main-content {
+      background-color: var(--bg-paper);
+      border-radius: var(--radius-md);
+      padding: 45px 50px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-light);
+    }
+
+    h2 {
+      font-family: var(--font-sans);
+      font-size: 1.3em;
+      color: var(--primary);
+      margin-top: 2.5em;
+      margin-bottom: 1em;
+      font-weight: 700;
+      border-bottom: 2px solid var(--border-light);
+      padding-bottom: 10px;
+      scroll-margin-top: 30px;
+    }
+
+    h2:first-child { margin-top: 0; }
+
     h3 {
-      font-size: 1.1em;
+      font-family: var(--font-sans);
+      font-size: 1.05em;
       color: var(--text-main);
+      margin-top: 1.8em;
       margin-bottom: 0.8em;
+      font-weight: 600;
     }
 
     h4 {
-      font-size: 0.95em;
+      font-family: var(--font-sans);
+      font-size: 0.85em;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
       margin-bottom: 0.5em;
+      font-weight: 600;
     }
 
     p {
       margin-top: 0;
-      margin-bottom: 1.5em;
+      margin-bottom: 1.3em;
       color: var(--text-main);
     }
 
@@ -121,8 +267,10 @@
 
     li {
       margin-bottom: 0.5em;
-      color: var(--text-main);
+      line-height: 1.7;
     }
+
+    strong { color: #1a1a1a; }
 
     a {
       color: var(--link);
@@ -134,44 +282,105 @@
     a:hover {
       color: var(--primary);
       border-bottom: 1px solid var(--primary);
-      background-color: transparent;
     }
 
+    code {
+      background-color: #F1F5F9;
+      color: #0F172A;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.85em;
+      border: 1px solid #E2E8F0;
+    }
+
+    /* Cajas */
     .highlight-box {
       background-color: var(--bg-highlight);
       border-left: 4px solid var(--accent);
       padding: 20px 25px;
       margin: 2em 0;
-      font-size: 0.95em;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .warning-box {
+      background-color: var(--bg-warning);
+      border-left: 4px solid var(--accent);
+      padding: 20px 25px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .success-box {
+      background-color: var(--success-bg);
+      border-left: 4px solid var(--success);
+      padding: 18px 22px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .tip-box {
+      background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--accent);
+      padding: 18px 22px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9em;
       color: var(--text-main);
-      border-radius: 0 4px 4px 0;
     }
 
-    .highlight-box p:last-child {
-      margin-bottom: 0;
+    .tip-box strong { color: var(--primary); }
+
+    .example-box {
+      background-color: white;
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--primary);
+      padding: 18px 20px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9em;
+      color: var(--text-muted);
+      box-shadow: var(--shadow-sm);
     }
 
+    .example-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      font-family: var(--font-sans);
+    }
+
+    /* Licencias */
     .license-summary {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 24px;
-      margin: 2.5em 0;
+      margin: 2em 0;
     }
 
     .license-summary div {
       background-color: var(--bg-highlight);
       padding: 24px;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       border: 1px solid var(--border-light);
-      transition: box-shadow 0.2s ease;
+      transition: all 0.3s;
     }
 
     .license-summary div:hover {
-      box-shadow: 0 4px 15px rgba(0, 75, 135, 0.08);
+      box-shadow: var(--shadow-md);
+      border-color: var(--accent);
+      transform: translateX(4px);
     }
 
     .license-summary h4 {
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font-sans);
       text-transform: uppercase;
       letter-spacing: 0.1em;
       font-size: 0.75em;
@@ -179,191 +388,262 @@
       margin-top: 0;
     }
 
+    /* Tablas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2em 0;
+      font-family: var(--font-sans);
+      font-size: 0.85em;
+    }
+
+    table th, table td {
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+      color: var(--text-main);
+    }
+
+    table th {
+      font-weight: 600;
+      border-top: 2px solid var(--border-dark);
+      border-bottom: 1px solid var(--border-dark);
+      color: var(--primary);
+      background-color: var(--bg-highlight);
+    }
+
+    table tr:last-child td {
+      border-bottom: 2px solid var(--border-dark);
+    }
+
+    table td {
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    /* Footer */
     .footer {
-      margin-top: 80px;
-      padding-top: 30px;
-      border-top: 1px solid var(--border-light);
+      margin-top: 60px;
       text-align: center;
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font-sans);
       font-size: 0.75rem;
-      color: var(--text-muted);
-      text-transform: none;
-      letter-spacing: normal;
+      color: var(--text-light);
+      border-top: 1px solid var(--border-light);
+      padding-top: 25px;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-wrapper { grid-template-columns: 1fr; }
+      .sidebar { position: static; margin-bottom: 25px; }
     }
 
     @media (max-width: 768px) {
-      .page-wrapper { 
-        margin: 0; 
-        padding: 30px 20px; 
-        border: none;
-        border-top: 4px solid var(--primary);
-      }
-      .header h1 { font-size: 1.7em; }
-      .document-meta { flex-direction: column; align-items: flex-start; gap: 5px; }
+      .header { padding: 25px 15px; }
+      .header-content { flex-direction: column; align-items: flex-start; gap: 15px; }
+      .header h1 { font-size: 1.6em; }
+      .main-content { padding: 25px 20px; }
       .license-summary { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <div class="page-wrapper">
-    <!-- Encabezado -->
-    <div class="header">
+
+  <!-- HEADER BLANCO -->
+  <header class="header">
+    <div class="header-content">
       <img src="logo.png" alt="Logo Revista Nacional de las Ciencias para Estudiantes">
-      <h1>Licencia y Derechos de Autor</h1>
-      <div class="document-meta">Ruta Diamante · Marco Normativo de Propiedad Intelectual · Versión 1.0, Julio 2026 · San Felipe, Chile</div>
-    </div>
-
-    <!-- 01. Fundamentos y Principios Rectores -->
-    <h2 id="fundamentos">01. Fundamentos, Objeto y Principios Rectores de la Propiedad Intelectual</h2>
-    <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> (en adelante, «la Revista»), en su condición de publicación académica comprometida con la difusión del conocimiento y el fomento de la investigación estudiantil, establece la presente política de licenciamiento y derechos de autor (copyright) como instrumento jurídico-normativo vinculante para autores, editores, revisores y terceros usuarios del contenido publicado.</p>
-    <p>El presente documento se articula en estricta consonancia con los principios de la <strong>Iniciativa de Budapest para el Acceso Abierto (BOAI)</strong>, las recomendaciones del <strong>Directorio de Revistas de Acceso Abierto (DOAJ)</strong>, y las políticas de ciencia abierta promovidas por <strong>Plan S</strong> y las directrices del <strong>Committee on Publication Ethics (COPE)</strong>. Su finalidad primordial es garantizar la máxima circulación y reutilización legal de las obras científicas, preservando simultáneamente la integridad moral y patrimonial de los derechos de los creadores.</p>
-    <p>El espíritu de esta normativa se cimenta en una premisa fundamental: <strong>la titularidad de la obra pertenece inviolablemente a sus autores</strong>. La Revista no reivindica, en ningún caso, la transferencia o cesión exclusiva de los derechos de explotación sobre los manuscritos. La única contraprestación exigida, esencial para la viabilidad del proceso editorial, es la concesión de un permiso limitado y específico de primera publicación.</p>
-
-    <!-- 02. Titularidad de los Derechos de Autor -->
-    <h2 id="titularidad">02. Titularidad, Alcance y Reserva de los Derechos de Autor (Copyright)</h2>
-    
-    <h3>2.1. Conservación Plena de los Derechos Morales y Patrimoniales</h3>
-    <p>Conforme a la legislación internacional sobre propiedad intelectual y, supletoriamente, a la normativa chilena aplicable (Ley N.º 17.336 sobre Propiedad Intelectual), los autores del manuscrito (denominados en adelante «el Autor» o «los Autores») <strong>conservan de manera íntegra, perpetua e irrenunciable</strong> todos los derechos morales y patrimoniales derivados de su obra científica.</p>
-    <p>Los derechos morales, que incluyen el derecho de paternidad, el derecho a la integridad de la obra, el derecho de divulgación y el derecho de retirada del comercio, permanecen bajo la titularidad exclusiva del Autor. La Revista se obliga a velar por la correcta atribución de la autoría en toda reproducción, distribución o comunicación pública del artículo, citando de forma inequívoca el nombre de los creadores.</p>
-    
-    <h3>2.2. Inexistencia de Transferencia de Copyright</h3>
-    <p>Queda expresamente estipulado que <strong>no se produce transferencia alguna de la titularidad de los derechos de autor (copyright transfer)</strong>. El Autor no cede, enajena ni limita su capacidad de disposición sobre la obra. Cualquier cláusula contractual ajena a la presente política que pretendiera operar una transferencia de derechos a favor de la Revista se tendrá por no escrita y carente de todo valor jurídico.</p>
-    <p>La única facultad otorgada a la Revista, en virtud del acto de envío y posterior aceptación del manuscrito, es la de <strong>licenciataria no exclusiva</strong> para la realización de la primera publicación académica, en los términos y con los límites estrictos que se detallan en el Capítulo 3 del presente documento.</p>
-
-    <!-- 03. Permiso de Primera Publicación y Derechos Concedidos -->
-    <h2 id="permiso">03. Permiso de Primera Publicación: Naturaleza Jurídica y Derechos Concedidos</h2>
-    
-    <h3>3.1. Definición de la Licencia No Exclusiva</h3>
-    <p>Al someter su manuscrito a consideración de la Revista y, en su caso, aceptar la publicación del mismo, el Autor otorga a la Revista un <strong>derecho no exclusivo, gratuito, perpetuo y de ámbito mundial</strong> para la explotación editorial de la obra en su condición de <strong>primera publicación</strong>. Esta licencia se entiende limitada en su objeto y finalidad: habilitar a la Revista para cumplir con su misión fundacional de divulgación académica.</p>
-    <p>Este permiso comprende, de manera enunciativa mas no limitativa, los siguientes actos de explotación:</p>
-    <ul>
-      <li><strong>Reproducción:</strong> Fijación de la obra en cualquier soporte o formato, ya sea impreso, electrónico, óptico o digital, incluyendo la realización de copias técnicas necesarias para la preservación y archivado.</li>
-      <li><strong>Comunicación Pública:</strong> Puesta a disposición del público del artículo a través del sitio web de la Revista, repositorios digitales institucionales, bases de datos bibliográficas, redes académicas y demás plataformas de difusión seleccionadas por el Comité Editorial.</li>
-      <li><strong>Transformación Técnica:</strong> Adaptación del formato del manuscrito (maquetación, conversión a PDF, XML, HTML, ePub u otros estándares digitales) con fines exclusivamente editoriales y de preservación, sin alterar en modo alguno la sustancia científica ni la integridad del contenido intelectual.</li>
-      <li><strong>Asignación de Identificadores Persistentes:</strong> Registro del artículo y asignación de un Identificador de Objeto Digital (<strong>DOI</strong>) y otros metadatos bibliográficos normalizados (ISSN, ISBN), con el fin de garantizar la citabilidad y trazabilidad del documento.</li>
-      <li><strong>Distribución y Difusión:</strong> Intercambio de metadatos y textos completos con índices, agregadores y directorios académicos nacionales e internacionales (tales como DOAJ, Latindex, Redalyc, SciELO u OpenAlex), siempre que se respete la atribución de la autoría.</li>
-    </ul>
-
-    <h3>3.2. Cláusula de Exclusividad Temporal para Primera Publicación</h3>
-    <p>La única limitación temporal que se impone al Autor radica en la <strong>primicia de la publicación</strong>. El Autor se obliga a no publicar el manuscrito, en su versión final aceptada por la Revista, en otro medio académico o comercial, hasta que la Revista haya procedido a su publicación formal en línea. Una vez materializada la primera publicación, la exclusividad cesa de pleno derecho y el Autor recupera la plena capacidad de disponer de la obra en los términos ampliamente permisivos de la licencia <strong>CC BY 4.0</strong>, descrita en el Capítulo 4.</p>
-    <p>Se excluye expresamente de esta limitación el depósito de preprints o versiones preliminares del manuscrito en repositorios de acceso abierto, siempre que se declare esta circunstancia en el momento del envío y se respeten las políticas de similitud y originalidad establecidas en el manual de políticas editoriales.</p>
-
-    <!-- 04. Licencia de Publicación: Creative Commons CC BY 4.0 -->
-    <h2 id="licencia-cc">04. Licencia de Publicación: Permisividad Total (Creative Commons CC BY 4.0)</h2>
-    <p>La Revista publica todos sus artículos bajo la licencia <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong>. Esta licencia constituye el estándar de oro del acceso abierto y es la recomendada explícitamente por el <strong>DOAJ</strong> para revistas que deseen maximizar la visibilidad y el impacto de su contenido.</p>
-    
-    <div class="highlight-box">
-      <p><strong>Declaración de compatibilidad con DOAJ:</strong> La presente licencia cumple con los requisitos de derechos de autor establecidos por el <em>Directory of Open Access Journals</em>, que exige que los derechos de explotación permanezcan en manos de los autores y que se garantice la reutilización sin restricciones económicas ni técnicas, exceptuando la obligación de atribución.</p>
-    </div>
-
-    <h3>4.1. Alcance de los Derechos Otorgados a Terceros (Usuarios)</h3>
-    <p>Bajo la licencia CC BY 4.0, cualquier persona natural o jurídica (en adelante, «el Usuario») puede ejercer libremente los siguientes actos sobre el artículo publicado, sin necesidad de autorización adicional del Autor ni de la Revista:</p>
-    
-    <div class="license-summary">
-      <div>
-        <h4>Compartir</h4>
-        <p>Copiar, distribuir y comunicar públicamente el artículo en cualquier medio, soporte o formato, con total libertad, incluso con fines comerciales o lucrativos.</p>
-      </div>
-      <div>
-        <h4>Adaptar</h4>
-        <p>Remezclar, transformar, traducir, crear obras derivadas y construir a partir del artículo para cualquier propósito, incluyendo el uso comercial explícito.</p>
-      </div>
-      <div>
-        <h4>Sin Permisos Adicionales</h4>
-        <p>No se pueden aplicar términos legales ni medidas tecnológicas (DRM) que restrinjan legalmente a otras personas a hacer cualquier cosa que la licencia permita.</p>
-      </div>
-      <div>
-        <h4>No Exclusividad</h4>
-        <p>La licencia no es exclusiva. El Autor conserva el derecho de explotar la obra en cualquier otro medio, simultáneamente o con posterioridad a la publicación en la Revista.</p>
+      <div class="header-text">
+        <h1>Licencia y Derechos de Autor</h1>
+        <div class="document-meta">
+          <span>Ruta Diamante</span>
+          <span class="badge">Marco Normativo</span>
+          <span>Versión 1.0</span>
+          <span>Julio 2026</span>
+          <span>San Felipe, Chile</span>
+        </div>
       </div>
     </div>
+  </header>
 
-    <h3>4.2. Obligación Única del Usuario: Atribución (BY)</h3>
-    <p>La única condición <em>sine qua non</em> para el ejercicio de los derechos anteriormente descritos es el cumplimiento estricto de la <strong>atribución</strong>. El Usuario deberá otorgar el crédito adecuado de la siguiente manera:</p>
-    <ul>
-      <li><strong>Identificación de los Autores:</strong> Indicar claramente el nombre o nombres de los autores originales de la obra, tal y como figuran en la publicación.</li>
-      <li><strong>Identificación de la Fuente:</strong> Citar la fuente original de publicación, incluyendo el nombre completo de la Revista, el volumen, el número (si aplica) y el año de publicación.</li>
-      <li><strong>Proporcionar el DOI:</strong> Incluir el enlace persistente o DOI del artículo que redirija a la versión oficial publicada en el sitio web de la Revista.</li>
-      <li><strong>Indicar si se realizaron cambios:</strong> En caso de haberse generado una obra derivada, señalar de manera razonable las modificaciones realizadas sobre el material original.</li>
-      <li><strong>Enlace a la Licencia:</strong> Facilitar un enlace a la licencia CC BY 4.0 o al código legal correspondiente.</li>
-    </ul>
-    <p>La atribución no deberá sugerir de ninguna manera que los autores o la Revista respaldan al Usuario o el uso particular que este hace de la obra, salvo autorización expresa.</p>
+  <div class="dashboard-wrapper">
 
-    <!-- 05. Autoarchivo y Depósito -->
-    <h2 id="autoarchivo">05. Política de Autoarchivo y Distribución por el Autor (Sin Embargo)</h2>
-    
-    <h3>5.1. Derecho Irrestricto de Depósito</h3>
-    <p>En virtud de la conservación de los derechos patrimoniales y de la licencia CC BY 4.0, el Autor tiene el derecho legal e irrevocable de depositar la <strong>versión final publicada del artículo (Version of Record, VoR)</strong> —es decir, el archivo PDF generado por la Revista con su maquetación editorial— en cualquier repositorio o plataforma de acceso abierto, <strong>inmediatamente después de la publicación, sin ningún período de embargo (periodo de espera)</strong>.</p>
-    <p>Los destinos autorizados para el autoarchivo incluyen, de forma enunciativa y no exhaustiva:</p>
-    <ul>
-      <li>Repositorios institucionales de la universidad o centro de investigación del Autor.</li>
-      <li>Repositorios temáticos o disciplinares (por ejemplo, arXiv, SocArXiv, RePEc, bioRxiv, entre otros).</li>
-      <li>Redes sociales académicas y gestores de referencias (ResearchGate, Academia.edu, Mendeley, Zotero).</li>
-      <li>Páginas web personales, blogs, portafolios académicos o plataformas de auto-publicación.</li>
-    </ul>
+    <!-- SIDEBAR CON TOC -->
+    <aside class="sidebar">
+      <h3><i class="fa-solid fa-list-ul"></i> Índice de Contenidos</h3>
+      <ul class="sidebar-nav">
+        <li><a href="#fundamentos">01. Fundamentos y Principios</a></li>
+        <li><a href="#titularidad">02. Titularidad de Derechos</a></li>
+        <li><a href="#permiso">03. Permiso de Publicación</a></li>
+        <li><a href="#licencia-cc">04. Licencia CC BY 4.0</a></li>
+        <li><a href="#autoarchivo">05. Autoarchivo y Depósito</a></li>
+        <li><a href="#reutilizacion">06. Reutilización y Derivadas</a></li>
+        <li><a href="#derechos-revista">07. Derechos de la Revista</a></li>
+        <li><a href="#garantias">08. Garantías del Autor</a></li>
+        <li><a href="#reclamaciones">09. Reclamaciones de Terceros</a></li>
+        <li><a href="#vigencia">10. Vigencia y Modificaciones</a></li>
+      </ul>
 
-    <h3>5.2. Condiciones del Depósito</h3>
-    <p>La única exigencia para la validez del depósito es la <strong>preservación de la integridad de la referencia bibliográfica original</strong>. El Autor se compromete a que, en cualquier reproducción de la versión publicada en un repositorio externo, conste de forma visible y completa la siguiente información: Autores, Título del artículo, Nombre de la Revista, Volumen, Número, Año de publicación y el DOI correspondiente.</p>
+      <div class="quick-tip">
+        <i class="fa-regular fa-lightbulb"></i>
+        <strong>Consejo del Editor</strong>
+        Los autores conservan todos sus derechos. La Revista solo recibe un permiso no exclusivo para la primera publicación bajo licencia CC BY 4.0.
+      </div>
+    </aside>
 
-    <!-- 06. Derechos de Reutilización y Obras Derivadas -->
-    <h2 id="reutilizacion">06. Derechos de Reutilización, Traducciones y Obras Derivadas</h2>
-    <p>El presente marco normativo reconoce y ampara explícitamente el derecho del Autor a <strong>reutilizar el contenido íntegro o parcial</strong> de su artículo en futuras publicaciones, ya sean propias o de terceros, bajo las siguientes modalidades:</p>
-    <ul>
-      <li><strong>Compendios y Libros:</strong> El Autor puede incluir el artículo, sin modificación o adaptado, como capítulo de un libro, antología o compendio de su autoría, siempre que se cite la publicación original en la Revista.</li>
-      <li><strong>Traducciones:</strong> El Autor puede autorizar o realizar personalmente la traducción del artículo a cualquier idioma y publicarla en cualquier medio, citando la versión original en español o inglés.</li>
-      <li><strong>Docencia e Investigación:</strong> El Autor puede utilizar el artículo como material de estudio, docencia o investigación, reproduciéndolo en repositorios de asignaturas o plataformas de aprendizaje, sin restricción alguna.</li>
-      <li><strong>Publicación Secundaria (Reedición):</strong> El Autor puede someter el artículo a una segunda revista o medio, siempre que este acepte explícitamente la naturaleza de reedición y se respete la atribución a la fuente original.</li>
-    </ul>
-    <p>En todos los casos anteriores, la libertad de acción del Autor es total. La Revista no ejerce ningún derecho de veto ni solicita autorización previa, en consonancia con los principios de la <em>cultura libre</em> y la <em>ciencia abierta</em>.</p>
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-content">
 
-    <!-- 07. Derechos de la Revista como Editora -->
-    <h2 id="derechos-revista">07. Derechos y Obligaciones de la Revista en su Condición de Editora</h2>
-    <p>Si bien los autores conservan la titularidad plena de la obra, la Revista, como gestora del proceso editorial, adquiere una serie de <strong>derechos conexos sobre el producto editorial</strong>, es decir, sobre la maquetación, el diseño, la compilación del número y la plataforma de difusión. Estos derechos son de naturaleza técnica y no limitan en absoluto los derechos de explotación del Autor sobre su texto.</p>
-    <p>La Revista se reserva el derecho de:</p>
-    <ul>
-      <li><strong>Compilación:</strong> Reunir los artículos en números, volúmenes o ediciones especiales, formando una obra colectiva cuya titularidad editorial corresponde a la Revista.</li>
-      <li><strong>Corrección Formal:</strong> Realizar correcciones ortográficas, tipográficas, de estilo y de formato, sin alterar el contenido científico ni el sentido del manuscrito.</li>
-      <li><strong>Gestión de la Integridad del Registro:</strong> Aplicar marcas de agua, avisos de retractación, correcciones o expresiones de preocupación sobre los archivos publicados, conforme a las políticas éticas de la Revista, para salvaguardar la fiabilidad del registro académico.</li>
-      <li><strong>Preservación Digital:</strong> Almacenar y preservar los archivos en repositorios de conservación a largo plazo (actualmente Zenodo y sistemas asociados), garantizando la accesibilidad perpetua de la obra.</li>
-    </ul>
-    <p>La Revista se obliga a <strong>mantener el acceso abierto</strong> y gratuito a los artículos publicados a perpetuidad, sin imponer barreras económicas, técnicas o legales a los lectores.</p>
+      <!-- 01. Fundamentos y Principios Rectores -->
+      <h2 id="fundamentos">01. Fundamentos, Objeto y Principios Rectores de la Propiedad Intelectual</h2>
+      <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> (en adelante, «la Revista»), en su condición de publicación académica comprometida con la difusión del conocimiento y el fomento de la investigación estudiantil, establece la presente política de licenciamiento y derechos de autor (copyright) como instrumento jurídico-normativo vinculante para autores, editores, revisores y terceros usuarios del contenido publicado.</p>
+      <p>El presente documento se articula en estricta consonancia con los principios de la <strong>Iniciativa de Budapest para el Acceso Abierto (BOAI)</strong>, las recomendaciones del <strong>Directorio de Revistas de Acceso Abierto (DOAJ)</strong>, y las políticas de ciencia abierta promovidas por <strong>Plan S</strong> y las directrices del <strong>Committee on Publication Ethics (COPE)</strong>. Su finalidad primordial es garantizar la máxima circulación y reutilización legal de las obras científicas, preservando simultáneamente la integridad moral y patrimonial de los derechos de los creadores.</p>
+      <p>El espíritu de esta normativa se cimenta en una premisa fundamental: <strong>la titularidad de la obra pertenece inviolablemente a sus autores</strong>. La Revista no reivindica, en ningún caso, la transferencia o cesión exclusiva de los derechos de explotación sobre los manuscritos. La única contraprestación exigida, esencial para la viabilidad del proceso editorial, es la concesión de un permiso limitado y específico de primera publicación.</p>
 
-    <!-- 08. Garantías y Responsabilidades del Autor -->
-    <h2 id="garantias">08. Garantías, Declaraciones y Responsabilidades del Autor</h2>
-    <p>Mediante el acto de envío del manuscrito y la aceptación de la presente política, el Autor <strong>declara, garantiza y se hace responsable</strong> de lo siguiente:</p>
-    <ul>
-      <li><strong>Originalidad:</strong> La obra es original y de su creación intelectual, no habiendo sido copiada, plagiada o reproducida ilegítimamente de fuentes de terceros.</li>
-      <li><strong>Titularidad Legal:</strong> Posee la titularidad legítima y exclusiva de todos los derechos de autor sobre el manuscrito, o cuenta con las autorizaciones, licencias o cesiones necesarias de todos los coautores y/o terceros para otorgar el permiso de publicación aquí descrito.</li>
-      <li><strong>Inexistencia de Conflictos:</strong> El contenido del manuscrito no viola derechos de propiedad intelectual, industrial, privacidad, honor, imagen o confidencialidad de terceras personas.</li>
-      <li><strong>Autorización de Material de Terceros:</strong> En caso de incluir figuras, tablas, extractos o cualquier material protegido por derechos de autor perteneciente a terceros, ha obtenido previamente los permisos escritos correspondientes y puede acreditarlos a solicitud de la Revista.</li>
-      <li><strong>Consentimiento de Coautores:</strong> Todos los coautores han leído, entendido y aceptado plenamente la presente política de licencia y derechos de autor, y consienten en la publicación del trabajo bajo la licencia CC BY 4.0.</li>
-    </ul>
-    <p>El Autor exime a la Revista de cualquier responsabilidad derivada de reclamaciones, demandas o litigios interpuestos por terceros en relación con la autoría, originalidad o contenido del manuscrito. Cualquier incumplimiento de estas garantías podrá dar lugar a la retractación del artículo conforme a los flujogramas de COPE.</p>
+      <!-- 02. Titularidad de los Derechos de Autor -->
+      <h2 id="titularidad">02. Titularidad, Alcance y Reserva de los Derechos de Autor (Copyright)</h2>
+      
+      <h3>2.1. Conservación Plena de los Derechos Morales y Patrimoniales</h3>
+      <p>Conforme a la legislación internacional sobre propiedad intelectual y, supletoriamente, a la normativa chilena aplicable (Ley N.º 17.336 sobre Propiedad Intelectual), los autores del manuscrito (denominados en adelante «el Autor» o «los Autores») <strong>conservan de manera íntegra, perpetua e irrenunciable</strong> todos los derechos morales y patrimoniales derivados de su obra científica.</p>
+      <p>Los derechos morales, que incluyen el derecho de paternidad, el derecho a la integridad de la obra, el derecho de divulgación y el derecho de retirada del comercio, permanecen bajo la titularidad exclusiva del Autor. La Revista se obliga a velar por la correcta atribución de la autoría en toda reproducción, distribución o comunicación pública del artículo, citando de forma inequívoca el nombre de los creadores.</p>
+      
+      <h3>2.2. Inexistencia de Transferencia de Copyright</h3>
+      <p>Queda expresamente estipulado que <strong>no se produce transferencia alguna de la titularidad de los derechos de autor (copyright transfer)</strong>. El Autor no cede, enajena ni limita su capacidad de disposición sobre la obra. Cualquier cláusula contractual ajena a la presente política que pretendiera operar una transferencia de derechos a favor de la Revista se tendrá por no escrita y carente de todo valor jurídico.</p>
+      <p>La única facultad otorgada a la Revista, en virtud del acto de envío y posterior aceptación del manuscrito, es la de <strong>licenciataria no exclusiva</strong> para la realización de la primera publicación académica, en los términos y con los límites estrictos que se detallan en el Capítulo 3 del presente documento.</p>
 
-    <!-- 09. Reclamaciones de Terceros y Procedimiento -->
-    <h2 id="reclamaciones">09. Reclamaciones de Terceros y Procedimiento de Infracción</h2>
-    <p>Si un tercero considera que un artículo publicado en la Revista infringe sus derechos de autor, deberá notificar formalmente su reclamación al equipo editorial a través del correo electrónico de contacto, aportando:</p>
-    <ol>
-      <li>La identificación precisa de la obra supuestamente infringida.</li>
-      <li>La identificación del artículo en cuestión (incluyendo DOI o URL).</li>
-      <li>Los datos de contacto del reclamante.</li>
-      <li>Una declaración jurada de buena fe que acredite la titularidad de los derechos.</li>
-    </ol>
-    <p>La Revista se compromete a acusar recibo de la reclamación en un plazo máximo de cinco días hábiles y a iniciar una investigación preliminar, siguiendo las directrices del <strong>Committee on Publication Ethics (COPE)</strong>. Mientras dure la investigación, el artículo podrá ser marcado con una <em>Expresión de Preocupación</em>. Si la reclamación prospera, se procederá a la retractación o corrección del artículo.</p>
+      <!-- 03. Permiso de Primera Publicación y Derechos Concedidos -->
+      <h2 id="permiso">03. Permiso de Primera Publicación: Naturaleza Jurídica y Derechos Concedidos</h2>
+      
+      <h3>3.1. Definición de la Licencia No Exclusiva</h3>
+      <p>Al someter su manuscrito a consideración de la Revista y, en su caso, aceptar la publicación del mismo, el Autor otorga a la Revista un <strong>derecho no exclusivo, gratuito, perpetuo y de ámbito mundial</strong> para la explotación editorial de la obra en su condición de <strong>primera publicación</strong>. Esta licencia se entiende limitada en su objeto y finalidad: habilitar a la Revista para cumplir con su misión fundacional de divulgación académica.</p>
+      <p>Este permiso comprende, de manera enunciativa mas no limitativa, los siguientes actos de explotación:</p>
+      <ul>
+        <li><strong>Reproducción:</strong> Fijación de la obra en cualquier soporte o formato, ya sea impreso, electrónico, óptico o digital, incluyendo la realización de copias técnicas necesarias para la preservación y archivado.</li>
+        <li><strong>Comunicación Pública:</strong> Puesta a disposición del público del artículo a través del sitio web de la Revista, repositorios digitales institucionales, bases de datos bibliográficas, redes académicas y demás plataformas de difusión seleccionadas por el Comité Editorial.</li>
+        <li><strong>Transformación Técnica:</strong> Adaptación del formato del manuscrito (maquetación, conversión a PDF, XML, HTML, ePub u otros estándares digitales) con fines exclusivamente editoriales y de preservación, sin alterar en modo alguno la sustancia científica ni la integridad del contenido intelectual.</li>
+        <li><strong>Asignación de Identificadores Persistentes:</strong> Registro del artículo y asignación de un Identificador de Objeto Digital (<strong>DOI</strong>) y otros metadatos bibliográficos normalizados (ISSN, ISBN), con el fin de garantizar la citabilidad y trazabilidad del documento.</li>
+        <li><strong>Distribución y Difusión:</strong> Intercambio de metadatos y textos completos con índices, agregadores y directorios académicos nacionales e internacionales (tales como DOAJ, Latindex, Redalyc, SciELO u OpenAlex), siempre que se respete la atribución de la autoría.</li>
+      </ul>
 
-    <!-- 10. Vigencia y Modificaciones -->
-    <h2 id="vigencia">10. Vigencia, Interpretación y Modificación de la Presente Política</h2>
-    <p>La presente política de licencia y derechos de autor entra en vigor a partir de la fecha de publicación indicada en el encabezado del documento y se aplica a todos los manuscritos enviados y publicados a partir de dicha fecha. Para los manuscritos publicados con anterioridad, se aplicará la política vigente en el momento de su publicación, salvo que el Autor consienta expresamente la adhesión a la presente normativa.</p>
-    <p>El Comité Editorial se reserva la facultad de interpretar, actualizar o modificar el presente documento para adaptarlo a cambios en la legislación, estándares internacionales de acceso abierto (como DOAJ o COPE) o requerimientos técnicos sobrevenidos. Cualquier modificación será notificada en el sitio web de la Revista y no tendrá carácter retroactivo sobre los artículos ya publicados.</p>
-    <p>Para todo lo no previsto en este instrumento, se estará a lo dispuesto en la legislación chilena sobre propiedad intelectual (Ley N.º 17.336) y, supletoriamente, a los tratados internacionales suscritos por la República de Chile en materia de derechos de autor, como el Convenio de Berna.</p>
+      <h3>3.2. Cláusula de Exclusividad Temporal para Primera Publicación</h3>
+      <p>La única limitación temporal que se impone al Autor radica en la <strong>primicia de la publicación</strong>. El Autor se obliga a no publicar el manuscrito, en su versión final aceptada por la Revista, en otro medio académico o comercial, hasta que la Revista haya procedido a su publicación formal en línea. Una vez materializada la primera publicación, la exclusividad cesa de pleno derecho y el Autor recupera la plena capacidad de disponer de la obra en los términos ampliamente permisivos de la licencia <strong>CC BY 4.0</strong>, descrita en el Capítulo 4.</p>
+      <p>Se excluye expresamente de esta limitación el depósito de preprints o versiones preliminares del manuscrito en repositorios de acceso abierto, siempre que se declare esta circunstancia en el momento del envío y se respeten las políticas de similitud y originalidad establecidas en el manual de políticas editoriales.</p>
 
-    <p style="margin-top: 40px;">Para cualquier consulta jurídica o académica sobre la presente política, no dude en <a href="mailto:editor@revistacienciasestudiantes.com">contactar al equipo editorial</a>.</p>
+      <!-- 04. Licencia de Publicación: Creative Commons CC BY 4.0 -->
+      <h2 id="licencia-cc">04. Licencia de Publicación: Permisividad Total (Creative Commons CC BY 4.0)</h2>
+      <p>La Revista publica todos sus artículos bajo la licencia <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong>. Esta licencia constituye el estándar de oro del acceso abierto y es la recomendada explícitamente por el <strong>DOAJ</strong> para revistas que deseen maximizar la visibilidad y el impacto de su contenido.</p>
+      
+      <div class="highlight-box">
+        <p><strong>Declaración de compatibilidad con DOAJ:</strong> La presente licencia cumple con los requisitos de derechos de autor establecidos por el <em>Directory of Open Access Journals</em>, que exige que los derechos de explotación permanezcan en manos de los autores y que se garantice la reutilización sin restricciones económicas ni técnicas, exceptuando la obligación de atribución.</p>
+      </div>
 
-    <!-- Pie de página -->
-    <div class="footer" id="footer">
-      Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839 <br>
-      San Felipe, Chile · Publicación Académica Independiente · Acceso Abierto Diamante · © <span id="current-year"></span>
-    </div>
+      <h3>4.1. Alcance de los Derechos Otorgados a Terceros (Usuarios)</h3>
+      <p>Bajo la licencia CC BY 4.0, cualquier persona natural o jurídica (en adelante, «el Usuario») puede ejercer libremente los siguientes actos sobre el artículo publicado, sin necesidad de autorización adicional del Autor ni de la Revista:</p>
+      
+      <div class="license-summary">
+        <div>
+          <h4><i class="fa-solid fa-share-nodes"></i> Compartir</h4>
+          <p>Copiar, distribuir y comunicar públicamente el artículo en cualquier medio, soporte o formato, con total libertad, incluso con fines comerciales o lucrativos.</p>
+        </div>
+        <div>
+          <h4><i class="fa-solid fa-pen-ruler"></i> Adaptar</h4>
+          <p>Remezclar, transformar, traducir, crear obras derivadas y construir a partir del artículo para cualquier propósito, incluyendo el uso comercial explícito.</p>
+        </div>
+        <div>
+          <h4><i class="fa-solid fa-ban"></i> Sin Permisos Adicionales</h4>
+          <p>No se pueden aplicar términos legales ni medidas tecnológicas (DRM) que restrinjan legalmente a otras personas a hacer cualquier cosa que la licencia permita.</p>
+        </div>
+        <div>
+          <h4><i class="fa-solid fa-circle-check"></i> No Exclusividad</h4>
+          <p>La licencia no es exclusiva. El Autor conserva el derecho de explotar la obra en cualquier otro medio, simultáneamente o con posterioridad a la publicación en la Revista.</p>
+        </div>
+      </div>
+
+      <h3>4.2. Obligación Única del Usuario: Atribución (BY)</h3>
+      <p>La única condición <em>sine qua non</em> para el ejercicio de los derechos anteriormente descritos es el cumplimiento estricto de la <strong>atribución</strong>. El Usuario deberá otorgar el crédito adecuado de la siguiente manera:</p>
+      <ul>
+        <li><strong>Identificación de los Autores:</strong> Indicar claramente el nombre o nombres de los autores originales de la obra, tal y como figuran en la publicación.</li>
+        <li><strong>Identificación de la Fuente:</strong> Citar la fuente original de publicación, incluyendo el nombre completo de la Revista, el volumen, el número (si aplica) y el año de publicación.</li>
+        <li><strong>Proporcionar el DOI:</strong> Incluir el enlace persistente o DOI del artículo que redirija a la versión oficial publicada en el sitio web de la Revista.</li>
+        <li><strong>Indicar si se realizaron cambios:</strong> En caso de haberse generado una obra derivada, señalar de manera razonable las modificaciones realizadas sobre el material original.</li>
+        <li><strong>Enlace a la Licencia:</strong> Facilitar un enlace a la licencia CC BY 4.0 o al código legal correspondiente.</li>
+      </ul>
+      <p>La atribución no deberá sugerir de ninguna manera que los autores o la Revista respaldan al Usuario o el uso particular que este hace de la obra, salvo autorización expresa.</p>
+
+      <!-- 05. Autoarchivo y Depósito -->
+      <h2 id="autoarchivo">05. Política de Autoarchivo y Distribución por el Autor (Sin Embargo)</h2>
+      
+      <h3>5.1. Derecho Irrestricto de Depósito</h3>
+      <p>En virtud de la conservación de los derechos patrimoniales y de la licencia CC BY 4.0, el Autor tiene el derecho legal e irrevocable de depositar la <strong>versión final publicada del artículo (Version of Record, VoR)</strong> —es decir, el archivo PDF generado por la Revista con su maquetación editorial— en cualquier repositorio o plataforma de acceso abierto, <strong>inmediatamente después de la publicación, sin ningún período de embargo (periodo de espera)</strong>.</p>
+      <p>Los destinos autorizados para el autoarchivo incluyen, de forma enunciativa y no exhaustiva:</p>
+      <ul>
+        <li>Repositorios institucionales de la universidad o centro de investigación del Autor.</li>
+        <li>Repositorios temáticos o disciplinares (por ejemplo, arXiv, SocArXiv, RePEc, bioRxiv, entre otros).</li>
+        <li>Redes sociales académicas y gestores de referencias (ResearchGate, Academia.edu, Mendeley, Zotero).</li>
+        <li>Páginas web personales, blogs, portafolios académicos o plataformas de auto-publicación.</li>
+      </ul>
+
+      <h3>5.2. Condiciones del Depósito</h3>
+      <p>La única exigencia para la validez del depósito es la <strong>preservación de la integridad de la referencia bibliográfica original</strong>. El Autor se compromete a que, en cualquier reproducción de la versión publicada en un repositorio externo, conste de forma visible y completa la siguiente información: Autores, Título del artículo, Nombre de la Revista, Volumen, Número, Año de publicación y el DOI correspondiente.</p>
+
+      <!-- 06. Derechos de Reutilización y Obras Derivadas -->
+      <h2 id="reutilizacion">06. Derechos de Reutilización, Traducciones y Obras Derivadas</h2>
+      <p>El presente marco normativo reconoce y ampara explícitamente el derecho del Autor a <strong>reutilizar el contenido íntegro o parcial</strong> de su artículo en futuras publicaciones, ya sean propias o de terceros, bajo las siguientes modalidades:</p>
+      <ul>
+        <li><strong>Compendios y Libros:</strong> El Autor puede incluir el artículo, sin modificación o adaptado, como capítulo de un libro, antología o compendio de su autoría, siempre que se cite la publicación original en la Revista.</li>
+        <li><strong>Traducciones:</strong> El Autor puede autorizar o realizar personalmente la traducción del artículo a cualquier idioma y publicarla en cualquier medio, citando la versión original en español o inglés.</li>
+        <li><strong>Docencia e Investigación:</strong> El Autor puede utilizar el artículo como material de estudio, docencia o investigación, reproduciéndolo en repositorios de asignaturas o plataformas de aprendizaje, sin restricción alguna.</li>
+        <li><strong>Publicación Secundaria (Reedición):</strong> El Autor puede someter el artículo a una segunda revista o medio, siempre que este acepte explícitamente la naturaleza de reedición y se respete la atribución a la fuente original.</li>
+      </ul>
+      <p>En todos los casos anteriores, la libertad de acción del Autor es total. La Revista no ejerce ningún derecho de veto ni solicita autorización previa, en consonancia con los principios de la <em>cultura libre</em> y la <em>ciencia abierta</em>.</p>
+
+      <!-- 07. Derechos de la Revista como Editora -->
+      <h2 id="derechos-revista">07. Derechos y Obligaciones de la Revista en su Condición de Editora</h2>
+      <p>Si bien los autores conservan la titularidad plena de la obra, la Revista, como gestora del proceso editorial, adquiere una serie de <strong>derechos conexos sobre el producto editorial</strong>, es decir, sobre la maquetación, el diseño, la compilación del número y la plataforma de difusión. Estos derechos son de naturaleza técnica y no limitan en absoluto los derechos de explotación del Autor sobre su texto.</p>
+      <p>La Revista se reserva el derecho de:</p>
+      <ul>
+        <li><strong>Compilación:</strong> Reunir los artículos en números, volúmenes o ediciones especiales, formando una obra colectiva cuya titularidad editorial corresponde a la Revista.</li>
+        <li><strong>Corrección Formal:</strong> Realizar correcciones ortográficas, tipográficas, de estilo y de formato, sin alterar el contenido científico ni el sentido del manuscrito.</li>
+        <li><strong>Gestión de la Integridad del Registro:</strong> Aplicar marcas de agua, avisos de retractación, correcciones o expresiones de preocupación sobre los archivos publicados, conforme a las políticas éticas de la Revista, para salvaguardar la fiabilidad del registro académico.</li>
+        <li><strong>Preservación Digital:</strong> Almacenar y preservar los archivos en repositorios de conservación a largo plazo (actualmente Zenodo, Internet Archive, Biblioteca Nacional de Chile y sistemas asociados), garantizando la accesibilidad perpetua de la obra.</li>
+      </ul>
+      <p>La Revista se obliga a <strong>mantener el acceso abierto</strong> y gratuito a los artículos publicados a perpetuidad, sin imponer barreras económicas, técnicas o legales a los lectores.</p>
+
+      <!-- 08. Garantías y Responsabilidades del Autor -->
+      <h2 id="garantias">08. Garantías, Declaraciones y Responsabilidades del Autor</h2>
+      <p>Mediante el acto de envío del manuscrito y la aceptación de la presente política, el Autor <strong>declara, garantiza y se hace responsable</strong> de lo siguiente:</p>
+      <ul>
+        <li><strong>Originalidad:</strong> La obra es original y de su creación intelectual, no habiendo sido copiada, plagiada o reproducida ilegítimamente de fuentes de terceros.</li>
+        <li><strong>Titularidad Legal:</strong> Posee la titularidad legítima y exclusiva de todos los derechos de autor sobre el manuscrito, o cuenta con las autorizaciones, licencias o cesiones necesarias de todos los coautores y/o terceros para otorgar el permiso de publicación aquí descrito.</li>
+        <li><strong>Inexistencia de Conflictos:</strong> El contenido del manuscrito no viola derechos de propiedad intelectual, industrial, privacidad, honor, imagen o confidencialidad de terceras personas.</li>
+        <li><strong>Autorización de Material de Terceros:</strong> En caso de incluir figuras, tablas, extractos o cualquier material protegido por derechos de autor perteneciente a terceros, ha obtenido previamente los permisos escritos correspondientes y puede acreditarlos a solicitud de la Revista.</li>
+        <li><strong>Consentimiento de Coautores:</strong> Todos los coautores han leído, entendido y aceptado plenamente la presente política de licencia y derechos de autor, y consienten en la publicación del trabajo bajo la licencia CC BY 4.0.</li>
+      </ul>
+      <p>El Autor exime a la Revista de cualquier responsabilidad derivada de reclamaciones, demandas o litigios interpuestos por terceros en relación con la autoría, originalidad o contenido del manuscrito. Cualquier incumplimiento de estas garantías podrá dar lugar a la retractación del artículo conforme a los flujogramas de COPE.</p>
+
+      <!-- 09. Reclamaciones de Terceros y Procedimiento -->
+      <h2 id="reclamaciones">09. Reclamaciones de Terceros y Procedimiento de Infracción</h2>
+      <p>Si un tercero considera que un artículo publicado en la Revista infringe sus derechos de autor, deberá notificar formalmente su reclamación al equipo editorial a través del correo electrónico de contacto, aportando:</p>
+      <ol>
+        <li>La identificación precisa de la obra supuestamente infringida.</li>
+        <li>La identificación del artículo en cuestión (incluyendo DOI o URL).</li>
+        <li>Los datos de contacto del reclamante.</li>
+        <li>Una declaración jurada de buena fe que acredite la titularidad de los derechos.</li>
+      </ol>
+      <p>La Revista se compromete a acusar recibo de la reclamación en un plazo máximo de cinco días hábiles y a iniciar una investigación preliminar, siguiendo las directrices del <strong>Committee on Publication Ethics (COPE)</strong>. Mientras dure la investigación, el artículo podrá ser marcado con una <em>Expresión de Preocupación</em>. Si la reclamación prospera, se procederá a la retractación o corrección del artículo.</p>
+
+      <!-- 10. Vigencia y Modificaciones -->
+      <h2 id="vigencia">10. Vigencia, Interpretación y Modificación de la Presente Política</h2>
+      <p>La presente política de licencia y derechos de autor entra en vigor a partir de la fecha de publicación indicada en el encabezado del documento y se aplica a todos los manuscritos enviados y publicados a partir de dicha fecha. Para los manuscritos publicados con anterioridad, se aplicará la política vigente en el momento de su publicación, salvo que el Autor consienta expresamente la adhesión a la presente normativa.</p>
+      <p>El Comité Editorial se reserva la facultad de interpretar, actualizar o modificar el presente documento para adaptarlo a cambios en la legislación, estándares internacionales de acceso abierto (como DOAJ o COPE) o requerimientos técnicos sobrevenidos. Cualquier modificación será notificada en el sitio web de la Revista y no tendrá carácter retroactivo sobre los artículos ya publicados.</p>
+      <p>Para todo lo no previsto en este instrumento, se estará a lo dispuesto en la legislación chilena sobre propiedad intelectual (Ley N.º 17.336) y, supletoriamente, a los tratados internacionales suscritos por la República de Chile en materia de derechos de autor, como el Convenio de Berna.</p>
+
+      <p style="margin-top: 40px;">Para cualquier consulta jurídica o académica sobre la presente política, no dude en <a href="mailto:editor@revistacienciasestudiantes.com">contactar al equipo editorial</a>.</p>
+
+      <div class="footer" id="footer">
+        Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839<br>
+        San Felipe, Chile · Publicación Académica Independiente · Acceso Abierto Diamante · © <span id="current-year"></span>
+      </div>
+
+    </main>
   </div>
 
   <script>

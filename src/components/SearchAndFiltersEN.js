@@ -21,31 +21,40 @@ function SearchAndFiltersEN({
   // Estado para mostrar/ocultar filtros en móvil
   const [showFilters, setShowFilters] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchTerm);
+  
+  // Estados locales para los filtros (no se aplican inmediatamente)
+  const [localArea, setLocalArea] = useState(selectedArea);
+  const [localVolume, setLocalVolume] = useState(selectedVolume);
+  const [localNumber, setLocalNumber] = useState(selectedNumber);
 
-  // Sincronizar el término de búsqueda local con el global
+  // Sincronizar estados locales con los globales
   useEffect(() => {
     setLocalSearch(searchTerm);
-  }, [searchTerm]);
+    setLocalArea(selectedArea);
+    setLocalVolume(selectedVolume);
+    setLocalNumber(selectedNumber);
+  }, [searchTerm, selectedArea, selectedVolume, selectedNumber]);
 
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setLocalSearch(value);
-    // Actualizar el término de búsqueda en tiempo real
-    setSearchTerm(value);
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      onSearch(localSearch, selectedArea, selectedVolume, selectedNumber);
-      if (window.innerWidth < 768) {
-        setShowFilters(false);
-      }
+      handleApplyFilters();
     }
   };
 
   const handleApplyFilters = () => {
-    onSearch(localSearch, selectedArea, selectedVolume, selectedNumber);
+    // Aplicar todos los filtros al mismo tiempo
+    setSearchTerm(localSearch);
+    setSelectedArea(localArea);
+    setSelectedVolume(localVolume);
+    setSelectedNumber(localNumber);
+    onSearch(localSearch, localArea, localVolume, localNumber);
+    
     if (window.innerWidth < 768) {
       setShowFilters(false);
     }
@@ -53,11 +62,17 @@ function SearchAndFiltersEN({
 
   const handleClearAll = () => {
     setLocalSearch('');
+    setLocalArea('');
+    setLocalVolume('');
+    setLocalNumber('');
     clearFilters();
+    
     if (window.innerWidth < 768) {
       setShowFilters(false);
     }
   };
+
+  const hasActiveFilters = selectedArea || selectedVolume || selectedNumber || searchTerm;
 
   return (
     <div className="bg-white border border-gray-200 rounded-sm shadow-sm mb-6 md:mb-8 overflow-hidden">
@@ -67,7 +82,7 @@ function SearchAndFiltersEN({
           Archive Search
         </span>
         {/* Quick clear button on mobile */}
-        {(localSearch || selectedArea || selectedVolume || selectedNumber) && (
+        {(localSearch || localArea || localVolume || localNumber) && (
           <button 
             onClick={handleClearAll}
             className="text-[9px] font-bold text-red-500 uppercase md:hidden hover:text-red-700 transition-colors"
@@ -101,8 +116,6 @@ function SearchAndFiltersEN({
                 <button
                   onClick={() => {
                     setLocalSearch('');
-                    setSearchTerm('');
-                    onSearch('', selectedArea, selectedVolume, selectedNumber);
                   }}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   aria-label="Clear search"
@@ -139,14 +152,8 @@ function SearchAndFiltersEN({
                 {volumeLabel}
               </label>
               <select
-                value={selectedVolume}
-                onChange={(e) => {
-                  setSelectedVolume(e.target.value);
-                  // Apply filters automatically on desktop
-                  if (window.innerWidth >= 768) {
-                    onSearch(localSearch, selectedArea, e.target.value, selectedNumber);
-                  }
-                }}
+                value={localVolume}
+                onChange={(e) => setLocalVolume(e.target.value)}
                 className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-sm text-sm text-gray-600 outline-none focus:ring-1 focus:ring-[#007398] focus:border-[#007398]"
                 aria-label={`Filter by ${volumeLabel.toLowerCase()}`}
               >
@@ -165,14 +172,8 @@ function SearchAndFiltersEN({
                 {numberLabel}
               </label>
               <select
-                value={selectedNumber}
-                onChange={(e) => {
-                  setSelectedNumber(e.target.value);
-                  // Apply filters automatically on desktop
-                  if (window.innerWidth >= 768) {
-                    onSearch(localSearch, selectedArea, selectedVolume, e.target.value);
-                  }
-                }}
+                value={localNumber}
+                onChange={(e) => setLocalNumber(e.target.value)}
                 className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-sm text-sm text-gray-600 outline-none focus:ring-1 focus:ring-[#007398] focus:border-[#007398]"
                 aria-label={`Filter by ${numberLabel.toLowerCase()}`}
               >
@@ -191,14 +192,8 @@ function SearchAndFiltersEN({
                 Discipline
               </label>
               <select
-                value={selectedArea}
-                onChange={(e) => {
-                  setSelectedArea(e.target.value);
-                  // Apply filters automatically on desktop
-                  if (window.innerWidth >= 768) {
-                    onSearch(localSearch, e.target.value, selectedVolume, selectedNumber);
-                  }
-                }}
+                value={localArea}
+                onChange={(e) => setLocalArea(e.target.value)}
                 className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-sm text-sm text-gray-600 outline-none focus:ring-1 focus:ring-[#007398] focus:border-[#007398]"
                 aria-label="Filter by discipline"
               >
@@ -237,8 +232,8 @@ function SearchAndFiltersEN({
                   {volumeLabel} {selectedVolume}
                   <button
                     onClick={() => {
+                      setLocalVolume('');
                       setSelectedVolume('');
-                      onSearch(localSearch, selectedArea, '', selectedNumber);
                     }}
                     className="ml-1 hover:text-blue-900"
                   >
@@ -253,8 +248,8 @@ function SearchAndFiltersEN({
                   {numberLabel} {selectedNumber}
                   <button
                     onClick={() => {
+                      setLocalNumber('');
                       setSelectedNumber('');
-                      onSearch(localSearch, selectedArea, selectedVolume, '');
                     }}
                     className="ml-1 hover:text-green-900"
                   >
@@ -266,11 +261,11 @@ function SearchAndFiltersEN({
               )}
               {selectedArea && (
                 <span className="inline-flex items-center px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-sm">
-                  {selectedArea.substring(0, 20)}...
+                  {selectedArea.length > 20 ? selectedArea.substring(0, 20) + '...' : selectedArea}
                   <button
                     onClick={() => {
+                      setLocalArea('');
                       setSelectedArea('');
-                      onSearch(localSearch, '', selectedVolume, selectedNumber);
                     }}
                     className="ml-1 hover:text-purple-900"
                   >

@@ -21,31 +21,40 @@ function SearchAndFilters({
   // Estado para mostrar/ocultar filtros en móvil
   const [showFilters, setShowFilters] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchTerm);
+  
+  // Estados locales para los filtros (no se aplican inmediatamente)
+  const [localArea, setLocalArea] = useState(selectedArea);
+  const [localVolume, setLocalVolume] = useState(selectedVolume);
+  const [localNumber, setLocalNumber] = useState(selectedNumber);
 
-  // Sincronizar el término de búsqueda local con el global
+  // Sincronizar estados locales con los globales
   useEffect(() => {
     setLocalSearch(searchTerm);
-  }, [searchTerm]);
+    setLocalArea(selectedArea);
+    setLocalVolume(selectedVolume);
+    setLocalNumber(selectedNumber);
+  }, [searchTerm, selectedArea, selectedVolume, selectedNumber]);
 
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setLocalSearch(value);
-    // Actualizar el término de búsqueda en tiempo real
-    setSearchTerm(value);
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      onSearch(localSearch, selectedArea, selectedVolume, selectedNumber);
-      if (window.innerWidth < 768) {
-        setShowFilters(false);
-      }
+      handleApplyFilters();
     }
   };
 
   const handleApplyFilters = () => {
-    onSearch(localSearch, selectedArea, selectedVolume, selectedNumber);
+    // Aplicar todos los filtros al mismo tiempo
+    setSearchTerm(localSearch);
+    setSelectedArea(localArea);
+    setSelectedVolume(localVolume);
+    setSelectedNumber(localNumber);
+    onSearch(localSearch, localArea, localVolume, localNumber);
+    
     if (window.innerWidth < 768) {
       setShowFilters(false);
     }
@@ -53,13 +62,17 @@ function SearchAndFilters({
 
   const handleClearAll = () => {
     setLocalSearch('');
+    setLocalArea('');
+    setLocalVolume('');
+    setLocalNumber('');
     clearFilters();
+    
     if (window.innerWidth < 768) {
       setShowFilters(false);
     }
   };
 
-  const hasActiveFilters = selectedArea || selectedVolume || selectedNumber || localSearch;
+  const hasActiveFilters = selectedArea || selectedVolume || selectedNumber || searchTerm;
 
   return (
     <div className="bg-white border border-gray-300 rounded-sm shadow-sm overflow-hidden mb-8">
@@ -87,8 +100,6 @@ function SearchAndFilters({
                 <button
                   onClick={() => {
                     setLocalSearch('');
-                    setSearchTerm('');
-                    onSearch('', selectedArea, selectedVolume, selectedNumber);
                   }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
                   aria-label="Limpiar búsqueda"
@@ -130,14 +141,8 @@ function SearchAndFilters({
                 Disciplina
               </label>
               <select
-                value={selectedArea}
-                onChange={(e) => {
-                  setSelectedArea(e.target.value);
-                  // Aplicar filtros automáticamente en desktop
-                  if (window.innerWidth >= 768) {
-                    onSearch(localSearch, e.target.value, selectedVolume, selectedNumber);
-                  }
-                }}
+                value={localArea}
+                onChange={(e) => setLocalArea(e.target.value)}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-sm text-sm text-gray-700 outline-none focus:border-[#007398] hover:border-gray-400 cursor-pointer appearance-none"
                 style={{ 
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, 
@@ -159,14 +164,8 @@ function SearchAndFilters({
                 {volumeLabel}
               </label>
               <select
-                value={selectedVolume}
-                onChange={(e) => {
-                  setSelectedVolume(e.target.value);
-                  // Aplicar filtros automáticamente en desktop
-                  if (window.innerWidth >= 768) {
-                    onSearch(localSearch, selectedArea, e.target.value, selectedNumber);
-                  }
-                }}
+                value={localVolume}
+                onChange={(e) => setLocalVolume(e.target.value)}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-sm text-sm text-gray-700 outline-none focus:border-[#007398] hover:border-gray-400 cursor-pointer appearance-none"
                 style={{ 
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, 
@@ -191,14 +190,8 @@ function SearchAndFilters({
                   {numberLabel}
                 </label>
                 <select
-                  value={selectedNumber}
-                  onChange={(e) => {
-                    setSelectedNumber(e.target.value);
-                    // Aplicar filtros automáticamente en desktop
-                    if (window.innerWidth >= 768) {
-                      onSearch(localSearch, selectedArea, selectedVolume, e.target.value);
-                    }
-                  }}
+                  value={localNumber}
+                  onChange={(e) => setLocalNumber(e.target.value)}
                   className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-sm text-sm text-gray-700 outline-none focus:border-[#007398] hover:border-gray-400 cursor-pointer appearance-none"
                   style={{ 
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, 
@@ -240,8 +233,8 @@ function SearchAndFilters({
                   {volumeLabel} {selectedVolume}
                   <button
                     onClick={() => {
+                      setLocalVolume('');
                       setSelectedVolume('');
-                      onSearch(localSearch, selectedArea, '', selectedNumber);
                     }}
                     className="ml-1 hover:text-blue-900"
                   >
@@ -256,8 +249,8 @@ function SearchAndFilters({
                   {numberLabel} {selectedNumber}
                   <button
                     onClick={() => {
+                      setLocalNumber('');
                       setSelectedNumber('');
-                      onSearch(localSearch, selectedArea, selectedVolume, '');
                     }}
                     className="ml-1 hover:text-green-900"
                   >
@@ -272,8 +265,8 @@ function SearchAndFilters({
                   {selectedArea.length > 20 ? selectedArea.substring(0, 20) + '...' : selectedArea}
                   <button
                     onClick={() => {
+                      setLocalArea('');
                       setSelectedArea('');
-                      onSearch(localSearch, '', selectedVolume, selectedNumber);
                     }}
                     className="ml-1 hover:text-purple-900"
                   >
