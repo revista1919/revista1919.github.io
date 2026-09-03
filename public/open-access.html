@@ -4,323 +4,634 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Políticas de Acceso Abierto · Revista Nacional de las Ciencias para Estudiantes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+    :root {
+      --primary: #004b87;
+      --secondary: #006dae;
+      --accent: #e86125;
+      --text-main: #2b2b2b;
+      --text-muted: #666666;
+      --text-light: #a0a0a0;
+      --border-light: #e6e8ea;
+      --border-dark: #cbd0d5;
+      --bg-out: #f4f5f7;
+      --bg-paper: #ffffff;
+      --bg-highlight: #f8f9fa;
+      --bg-warning: #fdf6f3;
+      --link: #006dae;
+      --success: #10B981;
+      --success-bg: #ECFDF5;
+      --shadow-sm: 0 1px 3px rgba(11, 25, 44, 0.05);
+      --shadow-md: 0 4px 15px rgba(11, 25, 44, 0.08);
+      --shadow-lg: 0 10px 25px rgba(11, 25, 44, 0.12);
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --font-serif: 'Lora', Georgia, Times, serif;
+      --font-sans: 'Inter', sans-serif;
+    }
 
-:root {
-  /* Paleta inspirada en Elsevier / Taylor & Francis - Aplicada desde la referencia */
-  --primary: #004b87;       /* Azul académico profundo */
-  --secondary: #006dae;     /* Azul interactivo */
-  --accent: #e86125;        /* Naranja para acentos y advertencias */
-  --text-main: #2b2b2b;     /* Negro suave para lectura prolongada */
-  --text-muted: #666666;    /* Gris para metadatos */
-  --border-light: #e6e8ea;  /* Bordes sutiles */
-  --border-dark: #cbd0d5;   /* Bordes estructurales */
-  --bg-out: #f4f5f7;        /* Fondo exterior de la página */
-  --bg-paper: #ffffff;      /* Fondo del documento */
-  --bg-highlight: #f8f9fa;  /* Fondo de cajas de texto */
-  --link: #006dae;
-}
+    * { box-sizing: border-box; }
 
-body {
-  font-family: 'Lora', 'Georgia', Times, serif;
-  font-size: 16px;
-  line-height: 1.75;
-  margin: 0;
-  padding: 0;
-  background-color: var(--bg-out);
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+    body {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      line-height: 1.75;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-out);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
-.page-wrapper {
-  max-width: 850px;
-  margin: 60px auto;
-  background-color: var(--bg-paper);
-  padding: 70px 90px;
-  border: 1px solid var(--border-light);
-  border-top: 5px solid var(--primary); /* Cinta superior de identidad editorial */
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-}
+    /* ================= HEADER BLANCO ================= */
+    .header {
+      background-color: var(--bg-paper);
+      border-bottom: 4px solid var(--primary);
+      padding: 40px 20px;
+      box-shadow: var(--shadow-sm);
+    }
 
-/* --- HEADER RENOVADO --- */
-/* Se elimina el estilo de borde doble y texto centrado con Playfair Display */
-.header {
-  border-bottom: 1px solid var(--border-light);
-  padding-bottom: 30px;
-  margin-bottom: 50px;
-  text-align: left; /* Alineación estándar editorial */
-}
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
 
-.header img {
-  max-width: 180px;
-  margin-bottom: 25px;
-  display: block;
-  filter: none; /* Se elimina el filtro de escala de grises */
-}
+    .header img {
+      max-width: 180px;
+      height: auto;
+      display: block;
+    }
 
-.header h1 {
-  font-family: 'Inter', sans-serif; /* Cambio a Inter */
-  font-size: 2.2em;
-  font-weight: 700;
-  line-height: 1.2;
-  margin: 0;
-  letter-spacing: -0.02em;
-  color: var(--text-main); /* Color de texto principal, más suave */
-}
+    .header-text {
+      flex: 1;
+      min-width: 280px;
+    }
 
-.document-meta {
-  font-family: 'Inter', sans-serif;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-top: 15px;
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
+    .header h1 {
+      font-family: var(--font-sans);
+      font-size: 2.2em;
+      font-weight: 700;
+      line-height: 1.2;
+      margin: 0;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
 
-/* --- TIPOGRAFÍA Y ENCABEZADOS --- */
-h2, h3, h4 {
-  font-family: 'Inter', sans-serif;
-  color: var(--primary);
-  margin-top: 2.5em;
-  font-weight: 600;
-}
+    .document-meta {
+      font-family: var(--font-sans);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 10px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
-h2 {
-  font-size: 1.25em;
-  text-transform: none; /* Se elimina el uppercase forzado */
-  letter-spacing: normal;
-  border-bottom: 1px solid var(--border-light);
-  padding-bottom: 8px;
-  margin-bottom: 1em;
-}
+    .document-meta .badge {
+      background: var(--primary);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+    }
 
-h3 {
-  font-size: 1.1em;
-  color: var(--text-main);
-  text-transform: none;
-  letter-spacing: normal;
-  margin-bottom: 0.8em;
-}
+    /* ================= LAYOUT PRINCIPAL ================= */
+    .dashboard-wrapper {
+      max-width: 1200px;
+      margin: 40px auto 60px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 35px;
+      align-items: start;
+    }
 
-h4 {
-  font-size: 0.95em;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.5em;
-}
+    /* ================= SIDEBAR (TOC) ================= */
+    .sidebar {
+      background-color: var(--bg-paper);
+      border-radius: var(--radius-md);
+      padding: 25px;
+      position: sticky;
+      top: 30px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-light);
+      border-top: 4px solid var(--primary);
+    }
 
-p {
-  margin-top: 0;
-  margin-bottom: 1.5em;
-  color: var(--text-main);
-}
+    .sidebar h3 {
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--primary);
+      margin-top: 0;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border-light);
+      font-weight: 700;
+    }
 
-ul, ol {
-  margin-top: 0;
-  margin-bottom: 1.5em;
-  padding-left: 1.5em;
-}
+    .sidebar-nav {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
 
-li {
-  margin-bottom: 0.5em;
-  color: var(--text-main);
-}
+    .sidebar-nav li {
+      margin-bottom: 5px;
+    }
 
-/* --- ENLACES --- */
-a {
-  color: var(--link);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: all 0.2s ease;
-}
+    .sidebar-nav a {
+      display: block;
+      padding: 10px 14px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      transition: all 0.3s;
+      border-left: 3px solid transparent;
+      line-height: 1.4;
+    }
 
-a:hover {
-  color: var(--primary);
-  border-bottom: 1px solid var(--primary);
-  background-color: transparent; /* Se elimina el fondo de resalte */
-}
+    .sidebar-nav a:hover,
+    .sidebar-nav a.active {
+      background: #FFF0E6;
+      color: var(--primary);
+      border-left-color: var(--accent);
+      font-weight: 600;
+    }
 
-/* --- CAJAS DESTACADAS --- */
-.highlight-box {
-  background-color: var(--bg-highlight);
-  border-left: 4px solid var(--accent); /* Usa el naranja de advertencia/acento */
-  padding: 20px 25px;
-  margin: 2em 0;
-  font-size: 0.95em;
-  color: var(--text-main);
-  border-radius: 0 4px 4px 0;
-}
+    .quick-tip {
+      margin-top: 25px;
+      padding: 18px;
+      background: linear-gradient(135deg, var(--primary), #1A365D);
+      color: #ffffff;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
 
-.highlight-box p:last-child {
-  margin-bottom: 0;
-}
+    .quick-tip i {
+      color: var(--accent);
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+      display: block;
+    }
 
-/* --- LICENCIAS (Rejilla de resumen) --- */
-/* Se mejora la tarjeta con sombras y bordes más sutiles */
-.license-summary {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin: 2.5em 0;
-}
+    .quick-tip strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #ffffff;
+    }
 
-.license-summary div {
-  background-color: var(--bg-highlight);
-  padding: 24px;
-  border-radius: 4px;
-  border: 1px solid var(--border-light);
-  transition: box-shadow 0.2s ease;
-}
+    .quick-tip p {
+      color: #ffffff;
+    }
 
-.license-summary div:hover {
-  box-shadow: 0 4px 15px rgba(0, 75, 135, 0.08);
-}
+    .quick-tip a {
+      color: #FFD700;
+    }
 
-.license-summary h4 {
-  font-family: 'Inter', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.75em;
-  color: var(--primary);
-  margin-top: 0;
-}
+    .quick-tip span {
+      color: #ffffff;
+    }
+    /* ================= CONTENIDO PRINCIPAL ================= */
+    .main-content {
+      background-color: var(--bg-paper);
+      border-radius: var(--radius-md);
+      padding: 45px 50px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-light);
+    }
 
-/* --- PIE DE PÁGINA --- */
-.footer {
-  margin-top: 80px;
-  padding-top: 30px;
-  border-top: 1px solid var(--border-light);
-  text-align: center;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-transform: none;
-  letter-spacing: normal;
-}
+    h2 {
+      font-family: var(--font-sans);
+      font-size: 1.3em;
+      color: var(--primary);
+      margin-top: 2.5em;
+      margin-bottom: 1em;
+      font-weight: 700;
+      border-bottom: 2px solid var(--border-light);
+      padding-bottom: 10px;
+      scroll-margin-top: 30px;
+    }
 
-/* --- RESPONSIVE --- */
-@media (max-width: 768px) {
-  .page-wrapper { 
-    margin: 0; 
-    padding: 30px 20px; 
-    border: none;
-    border-top: 4px solid var(--primary);
-  }
-  .header h1 { font-size: 1.7em; }
-  .document-meta { flex-direction: column; align-items: flex-start; gap: 5px; }
-  .license-summary { grid-template-columns: 1fr; }
-}
+    h2:first-child { margin-top: 0; }
+
+    h3 {
+      font-family: var(--font-sans);
+      font-size: 1.05em;
+      color: var(--text-main);
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      font-weight: 600;
+    }
+
+    h4 {
+      font-family: var(--font-sans);
+      font-size: 0.85em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5em;
+      font-weight: 600;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.3em;
+      color: var(--text-main);
+    }
+
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 1.5em;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      line-height: 1.7;
+    }
+
+    strong { color: #1a1a1a; }
+
+    a {
+      color: var(--link);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--primary);
+      border-bottom: 1px solid var(--primary);
+    }
+
+    code {
+      background-color: #F1F5F9;
+      color: #0F172A;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.85em;
+      border: 1px solid #E2E8F0;
+    }
+
+    /* Cajas */
+    .highlight-box {
+      background-color: var(--bg-highlight);
+      border-left: 4px solid var(--primary);
+      padding: 20px 25px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .warning-box {
+      background-color: var(--bg-warning);
+      border-left: 4px solid var(--accent);
+      padding: 20px 25px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .success-box {
+      background-color: var(--success-bg);
+      border-left: 4px solid var(--success);
+      padding: 18px 22px;
+      margin: 2em 0;
+      font-size: 0.92em;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .tip-box {
+      background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--accent);
+      padding: 18px 22px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9em;
+      color: var(--text-main);
+    }
+
+    .tip-box strong { color: var(--primary); }
+
+    .example-box {
+      background-color: white;
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--primary);
+      padding: 18px 20px;
+      margin: 20px 0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9em;
+      color: var(--text-muted);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .example-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      font-family: var(--font-sans);
+    }
+
+    /* Licencias */
+    .license-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin: 2em 0;
+    }
+
+    .license-summary div {
+      background-color: var(--bg-highlight);
+      padding: 24px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-light);
+      transition: box-shadow 0.2s ease;
+    }
+
+    .license-summary div:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--accent);
+    }
+
+    .license-summary h4 {
+      font-family: var(--font-sans);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 0.75em;
+      color: var(--primary);
+      margin-top: 0;
+    }
+
+    /* Tablas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2em 0;
+      font-family: var(--font-sans);
+      font-size: 0.85em;
+    }
+
+    table th, table td {
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+      color: var(--text-main);
+    }
+
+    table th {
+      font-weight: 600;
+      border-top: 2px solid var(--border-dark);
+      border-bottom: 1px solid var(--border-dark);
+      color: var(--primary);
+      background-color: var(--bg-highlight);
+    }
+
+    table tr:last-child td {
+      border-bottom: 2px solid var(--border-dark);
+    }
+
+    table td {
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 60px;
+      text-align: center;
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      color: var(--text-light);
+      border-top: 1px solid var(--border-light);
+      padding-top: 25px;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-wrapper { grid-template-columns: 1fr; }
+      .sidebar { position: static; margin-bottom: 25px; }
+    }
+
+    @media (max-width: 768px) {
+      .header { padding: 25px 15px; }
+      .header-content { flex-direction: column; align-items: flex-start; gap: 15px; }
+      .header h1 { font-size: 1.6em; }
+      .main-content { padding: 25px 20px; }
+      .license-summary { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <div class="page-wrapper">
-    <!-- Encabezado -->
-    <div class="header">
+
+  <!-- HEADER BLANCO -->
+  <header class="header">
+    <div class="header-content">
       <img src="logo.png" alt="Logo Revista Nacional de las Ciencias para Estudiantes">
-      <h1>Políticas de Acceso Abierto</h1>
-      <div class="document-meta">Ruta Diamante · Versión 1.0, Julio 2026 · San Felipe, Chile</div>
-    </div>
-
-    <!-- 01. Declaración de Acceso Abierto -->
-    <h2 id="declaracion">01. Declaración de Principios de Acceso Abierto</h2>
-    <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> se adhiere plenamente al movimiento global de <strong>Acceso Abierto (Open Access)</strong>. Creemos firmemente que el conocimiento científico, especialmente aquel generado por jóvenes investigadores, debe circular libremente, sin barreras económicas, técnicas o legales, para maximizar su impacto social y académico.</p>
-    <p>Nuestro compromiso con el acceso abierto se rige por la definición fundacional de la <strong>Declaración de Budapest (Budapest Open Access Initiative, BOAI)</strong>, la cual entiende el acceso abierto como la disponibilidad gratuita en la Internet pública, permitiendo a cualquier persona leer, descargar, copiar, distribuir, imprimir, buscar o enlazar los textos completos de los artículos, sin otras barreras que las propias de la conexión a la red.</p>
-
-    <!-- 02. Modelo de Financiamiento: Ruta Diamante / Sin APC -->
-    <h2 id="modelo-diamante">02. Modelo de Financiamiento: Acceso Abierto Diamante</h2>
-    <p>La Revista opera bajo el modelo de <strong>Acceso Abierto Diamante (Diamond Open Access)</strong>. Esto significa que:</p>
-    <ul>
-      <li><strong>No se cobran Cargos por Procesamiento de Artículos (APC):</strong> Los autores no deben pagar absolutamente ninguna tasa, cuota o cargo por el envío, la revisión, la edición, la maquetación o la publicación de sus artículos. Publicar en la Revista es completamente gratuito para los autores.</li>
-      <li><strong>No hay barreras de suscripción para los lectores:</strong> Todo el contenido publicado está disponible de forma inmediata y gratuita para cualquier lector en el mundo, sin necesidad de registro, suscripción o pago alguno. El acceso es universal e irrestricto desde el momento de la publicación.</li>
-      <li><strong>Financiamiento interno e institucional:</strong> Los costos operativos de la Revista son cubiertos en su totalidad por el apoyo institucional de sus entidades patrocinadoras y por el trabajo voluntario de su equipo editorial y revisores. No se persigue ningún fin de lucro.</li>
-    </ul>
-    <p>Este modelo garantiza que la capacidad económica de los autores o de sus instituciones no sea un factor que determine la posibilidad de publicar, en plena consonancia con nuestro principio de equidad.</p>
-
-    <!-- 03. Licencia de Publicación: CC BY 4.0 -->
-    <h2 id="licencia">03. Licencia de Publicación: Creative Commons CC BY 4.0</h2>
-    <p>Todos los artículos publicados en la Revista, salvo que exista una obligación legal o contractual que lo impida y se indique expresamente en el artículo, se publican bajo la licencia <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong>.</p>
-    
-    <div class="highlight-box">
-      <p><strong>Esta es la licencia de acceso abierto más amplia y permisiva</strong>, recomendada por las principales iniciativas de ciencia abierta, como el Plan S y la guía de licencias de la Budapest Open Access Initiative. Maximiza la difusión y reutilización del conocimiento.</p>
-    </div>
-
-    <h3>3.1. Lo que la Licencia CC BY 4.0 Permite:</h3>
-    <div class="license-summary">
-      <div>
-        <h4>Compartir</h4>
-        <p>Copiar y redistribuir el material en cualquier medio o formato para cualquier propósito, incluso comercial.</p>
-      </div>
-      <div>
-        <h4>Adaptar</h4>
-        <p>Remezclar, transformar y construir a partir del material para cualquier propósito, incluso comercial.</p>
+      <div class="header-text">
+        <h1>Políticas de Acceso Abierto</h1>
+        <div class="document-meta">
+          <span>Ruta Diamante</span>
+          <span class="badge">Versión 1.0</span>
+          <span>Julio 2026</span>
+          <span>San Felipe, Chile</span>
+        </div>
       </div>
     </div>
+  </header>
 
-    <h3>3.2. Lo que la Licencia CC BY 4.0 Exige (Atribución):</h3>
-    <div class="license-summary">
-      <div>
-        <h4>Atribución (BY)</h4>
-        <p>Se debe otorgar el crédito adecuado a los autores y a la fuente original de publicación (nombre de la Revista, volumen, número, DOI).</p>
+  <div class="dashboard-wrapper">
+
+    <!-- SIDEBAR CON TOC -->
+    <aside class="sidebar">
+      <h3><i class="fa-solid fa-list-ul"></i> Índice de Contenidos</h3>
+      <ul class="sidebar-nav">
+        <li><a href="#declaracion">01. Declaración de Principios</a></li>
+        <li><a href="#modelo-diamante">02. Modelo de Financiamiento</a></li>
+        <li><a href="#licencia">03. Licencia CC BY 4.0</a></li>
+        <li><a href="#derechos-autoarchivo">04. Derechos y Autoarchivo</a></li>
+        <li><a href="#preservacion">05. Preservación Digital</a></li>
+        <li><a href="#repositorios">06. Repositorios Oficiales</a></li>
+      </ul>
+
+      <div class="quick-tip">
+        <i class="fa-regular fa-lightbulb"></i>
+        <strong>Consejo del Editor</strong>
+        El Acceso Abierto Diamante garantiza que publicar y leer en la Revista sea completamente gratuito para todos, sin excepciones.
       </div>
-      <div>
-        <h4>Indicar Cambios</h4>
-        <p>Se debe indicar si se realizaron cambios sobre el material original.</p>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-content">
+
+      <!-- 01. Declaración de Acceso Abierto -->
+      <h2 id="declaracion">01. Declaración de Principios de Acceso Abierto</h2>
+      <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> se adhiere plenamente al movimiento global de <strong>Acceso Abierto (Open Access)</strong>. Creemos firmemente que el conocimiento científico, especialmente aquel generado por jóvenes investigadores, debe circular libremente, sin barreras económicas, técnicas o legales, para maximizar su impacto social y académico.</p>
+      <p>Nuestro compromiso con el acceso abierto se rige por la definición fundacional de la <strong>Declaración de Budapest (Budapest Open Access Initiative, BOAI)</strong>, la cual entiende el acceso abierto como la disponibilidad gratuita en la Internet pública, permitiendo a cualquier persona leer, descargar, copiar, distribuir, imprimir, buscar o enlazar los textos completos de los artículos, sin otras barreras que las propias de la conexión a la red.</p>
+
+      <!-- 02. Modelo de Financiamiento: Ruta Diamante / Sin APC -->
+      <h2 id="modelo-diamante">02. Modelo de Financiamiento: Acceso Abierto Diamante</h2>
+      <p>La Revista opera bajo el modelo de <strong>Acceso Abierto Diamante (Diamond Open Access)</strong>. Esto significa que:</p>
+      <ul>
+        <li><strong>No se cobran Cargos por Procesamiento de Artículos (APC):</strong> Los autores no deben pagar absolutamente ninguna tasa, cuota o cargo por el envío, la revisión, la edición, la maquetación o la publicación de sus artículos. Publicar en la Revista es completamente gratuito para los autores.</li>
+        <li><strong>No hay barreras de suscripción para los lectores:</strong> Todo el contenido publicado está disponible de forma inmediata y gratuita para cualquier lector en el mundo, sin necesidad de registro, suscripción o pago alguno. El acceso es universal e irrestricto desde el momento de la publicación.</li>
+        <li><strong>Financiamiento interno e institucional:</strong> Los costos operativos de la Revista son cubiertos en su totalidad por el apoyo institucional de sus entidades patrocinadoras y por el trabajo voluntario de su equipo editorial y revisores. No se persigue ningún fin de lucro.</li>
+      </ul>
+      <p>Este modelo garantiza que la capacidad económica de los autores o de sus instituciones no sea un factor que determine la posibilidad de publicar, en plena consonancia con nuestro principio de equidad.</p>
+
+      <!-- 03. Licencia de Publicación: CC BY 4.0 -->
+      <h2 id="licencia">03. Licencia de Publicación: Creative Commons CC BY 4.0</h2>
+      <p>Todos los artículos publicados en la Revista, salvo que exista una obligación legal o contractual que lo impida y se indique expresamente en el artículo, se publican bajo la licencia <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong>.</p>
+      
+      <div class="highlight-box">
+        <p><strong>Esta es la licencia de acceso abierto más amplia y permisiva</strong>, recomendada por las principales iniciativas de ciencia abierta, como el Plan S y la guía de licencias de la Budapest Open Access Initiative. Maximiza la difusión y reutilización del conocimiento.</p>
       </div>
-      <div>
-        <h4>Sin Restricciones Adicionales</h4>
-        <p>No se pueden aplicar términos legales ni medidas tecnológicas que restrinjan legalmente a otras personas a hacer cualquier cosa que la licencia permita.</p>
+
+      <h3>3.1. Lo que la Licencia CC BY 4.0 Permite:</h3>
+      <div class="license-summary">
+        <div>
+          <h4><i class="fa-solid fa-share-nodes"></i> Compartir</h4>
+          <p>Copiar y redistribuir el material en cualquier medio o formato para cualquier propósito, incluso comercial.</p>
+        </div>
+        <div>
+          <h4><i class="fa-solid fa-pen-ruler"></i> Adaptar</h4>
+          <p>Remezclar, transformar y construir a partir del material para cualquier propósito, incluso comercial.</p>
+        </div>
       </div>
-    </div>
 
-    <p>Para más detalles sobre la licencia, visite el <a href="https://creativecommons.org/licenses/by/4.0/deed.es" target="_blank">resumen de la licencia CC BY 4.0</a> o el <a href="https://creativecommons.org/licenses/by/4.0/legalcode.es" target="_blank">código legal completo</a>.</p>
+      <h3>3.2. Lo que la Licencia CC BY 4.0 Exige (Atribución):</h3>
+      <div class="license-summary">
+        <div>
+          <h4><i class="fa-solid fa-user-check"></i> Atribución (BY)</h4>
+          <p>Se debe otorgar el crédito adecuado a los autores y a la fuente original de publicación (nombre de la Revista, volumen, número, DOI).</p>
+        </div>
+        <div>
+          <h4><i class="fa-solid fa-pen"></i> Indicar Cambios</h4>
+          <p>Se debe indicar si se realizaron cambios sobre el material original.</p>
+        </div>
+        <div>
+          <h4><i class="fa-solid fa-ban"></i> Sin Restricciones Adicionales</h4>
+          <p>No se pueden aplicar términos legales ni medidas tecnológicas que restrinjan legalmente a otras personas a hacer cualquier cosa que la licencia permita.</p>
+        </div>
+      </div>
 
-    <!-- 04. Derechos de Autor y Autoarchivo -->
-    <h2 id="derechos-autoarchivo">04. Derechos de Autor y Política de Autoarchivo</h2>
-    
-    <h3>4.1. Titularidad de los Derechos de Autor</h3>
-    <p>Los <strong>autores conservan íntegramente los derechos de autor (copyright)</strong> sobre sus obras, sin restricción alguna. Al enviar su manuscrito y aceptar su publicación, los autores otorgan a la Revista únicamente una <strong>licencia no exclusiva</strong> para realizar la primera publicación del trabajo. Esta licencia es gratuita, perpetua y de ámbito mundial, y faculta a la Revista para editar, maquetar, publicar, comunicar públicamente, preservar y difundir el artículo, así como para asignarle un Identificador de Objeto Digital (DOI).</p>
+      <p>Para más detalles sobre la licencia, visite el <a href="https://creativecommons.org/licenses/by/4.0/deed.es" target="_blank">resumen de la licencia CC BY 4.0</a> o el <a href="https://creativecommons.org/licenses/by/4.0/legalcode.es" target="_blank">código legal completo</a>.</p>
 
-    <h3>4.2. Política de Autoarchivo (Sin Embargo)</h3>
-    <p>En consonancia con nuestro modelo Diamante y la licencia CC BY 4.0, los autores tienen el derecho de depositar la <strong>versión final publicada del artículo (Version of Record)</strong> en cualquier repositorio o plataforma, inmediatamente después de la publicación, <strong>sin ningún período de embargo</strong>. Esto incluye, pero no se limita a:</p>
-    <ul>
-      <li>Repositorios institucionales de su universidad o centro de investigación.</li>
-      <li>Repositorios temáticos (como arXiv, SocArXiv, RePEc, etc.).</li>
-      <li>Redes sociales académicas (como ResearchGate, Academia.edu).</li>
-      <li>Páginas web personales o blogs.</li>
-    </ul>
-    <p>La única condición es que en el depósito se incluya la <strong>referencia bibliográfica completa</strong> de la publicación original (autores, título, Revista, volumen, número, año) y el <strong>DOI del artículo</strong>, como enlace permanente a la versión de la Revista.</p>
+      <!-- 04. Derechos de Autor y Autoarchivo -->
+      <h2 id="derechos-autoarchivo">04. Derechos de Autor y Política de Autoarchivo</h2>
+      
+      <h3>4.1. Titularidad de los Derechos de Autor</h3>
+      <p>Los <strong>autores conservan íntegramente los derechos de autor (copyright)</strong> sobre sus obras, sin restricción alguna. Al enviar su manuscrito y aceptar su publicación, los autores otorgan a la Revista únicamente una <strong>licencia no exclusiva</strong> para realizar la primera publicación del trabajo. Esta licencia es gratuita, perpetua y de ámbito mundial, y faculta a la Revista para editar, maquetar, publicar, comunicar públicamente, preservar y difundir el artículo, así como para asignarle un Identificador de Objeto Digital (DOI).</p>
 
-    <!-- 05. Preservación Digital e Identificación Persistente -->
-    <h2 id="preservacion">05. Preservación Digital e Identificación Persistente</h2>
-    
-    <h3>5.1. Identificación Persistente (DOI)</h3>
-    <p>Cada artículo aceptado y publicado recibe un <strong>Identificador de Objeto Digital (DOI)</strong> único y persistente, gestionado a través de <strong>Zenodo</strong>. El DOI garantiza la localización permanente del artículo en la red, incluso si la infraestructura tecnológica de la Revista cambia en el futuro. El DOI se asigna al artículo y se registra en los sistemas de resolución internacionales (CrossRef/DataCite).</p>
+      <h3>4.2. Política de Autoarchivo (Sin Embargo)</h3>
+      <p>En consonancia con nuestro modelo Diamante y la licencia CC BY 4.0, los autores tienen el derecho de depositar la <strong>versión final publicada del artículo (Version of Record)</strong> en cualquier repositorio o plataforma, inmediatamente después de la publicación, <strong>sin ningún período de embargo</strong>. Esto incluye, pero no se limita a:</p>
+      <ul>
+        <li>Repositorios institucionales de su universidad o centro de investigación.</li>
+        <li>Repositorios temáticos (como arXiv, SocArXiv, RePEc, etc.).</li>
+        <li>Redes sociales académicas (como ResearchGate, Academia.edu).</li>
+        <li>Páginas web personales o blogs.</li>
+      </ul>
+      <p>La única condición es que en el depósito se incluya la <strong>referencia bibliográfica completa</strong> de la publicación original (autores, título, Revista, volumen, número, año) y el <strong>DOI del artículo</strong>, como enlace permanente a la versión de la Revista.</p>
 
-    <h3>5.2. Estrategia de Preservación Digital</h3>
-    <p>La Revista garantiza la preservación a largo plazo de todos sus contenidos publicados mediante una estrategia de archivo redundante:</p>
-    <ul>
-      <li>Los artículos se almacenan y sirven desde el sitio web oficial de la Revista.</li>
-      <li>Se realiza un depósito de preservación en <strong>Zenodo</strong>, un repositorio de propósito general mantenido por el CERN y la Unión Europea, que garantiza la integridad y disponibilidad de los archivos a perpetuidad.</li>
-      <li>Se mantiene un control de versiones y respaldo en un repositorio público de <strong>GitHub</strong>.</li>
-    </ul>
-    <div class="highlight-box">
-      <p><strong>Compromiso de permanencia:</strong> En el improbable caso de que la Revista cese sus actividades editoriales, el acceso a todos los artículos publicados hasta la fecha continuará estando garantizado a través de los repositorios de preservación mencionados. La Revista se reserva el derecho de modificar o ampliar los repositorios utilizados, siempre con el objetivo de mejorar la seguridad y la accesibilidad del registro académico.</p>
-    </div>
+      <!-- 05. Preservación Digital e Identificación Persistente -->
+      <h2 id="preservacion">05. Preservación Digital e Identificación Persistente</h2>
+      
+      <h3>5.1. Identificación Persistente (DOI)</h3>
+      <p>Cada artículo aceptado y publicado recibe un <strong>Identificador de Objeto Digital (DOI)</strong> único y persistente, gestionado a través de <strong>Zenodo</strong>. El DOI garantiza la localización permanente del artículo en la red, incluso si la infraestructura tecnológica de la Revista cambia en el futuro. El DOI se asigna al artículo y se registra en los sistemas de resolución internacionales (CrossRef/DataCite).</p>
 
-    <p style="margin-top: 40px;">Para cualquier consulta sobre estas políticas, no dude en <a href="mailto:editor@revistacienciasestudiantes.com">contactar al equipo editorial</a>.</p>
+      <h3>5.2. Compromiso de Preservación a Largo Plazo</h3>
+      <p>La <strong>Revista Nacional de las Ciencias para Estudiantes</strong> promueve activamente la preservación a largo plazo de todos sus contenidos publicados. El registro académico es un bien permanente de la comunidad científica, y la Revista asume la responsabilidad de garantizar su accesibilidad, integridad y disponibilidad futura, incluso ante eventualidades tecnológicas, cambios institucionales o cese de actividades editoriales.</p>
+      
+      <p>Para ello, la Revista implementa una <strong>estrategia de redundancia de archivo</strong>, depositando cada número publicado en múltiples repositorios y sistemas de preservación independientes. Esta estrategia asegura que los artículos permanezcan disponibles para lectores, investigadores y el público general, con independencia de la continuidad operativa de la plataforma web oficial.</p>
 
-    <!-- Pie de página -->
-    <div class="footer" id="footer">
-      Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839 <br>
-      San Felipe, Chile · Publicación Académica Independiente · Acceso Abierto Diamante · © <span id="current-year"></span>
-    </div>
+      <h3>5.3. Formatos de Archivo</h3>
+      <p>Para maximizar la durabilidad de los archivos, la Revista preserva cada artículo en los siguientes formatos:</p>
+      <ul>
+        <li><strong>PDF/A:</strong> formato de archivo PDF estandarizado para preservación a largo plazo, que garantiza la visualización fiel del documento con independencia del software utilizado.</li>
+        <li><strong>HTML:</strong> versión digital accesible en el sitio web oficial, con metadatos embebidos para cosechamiento por parte de recolectores OAI-PMH.</li>
+        <li><strong>XML (JATS):</strong> estructura de contenido en formato estándar para publicaciones académicas, que facilita la interoperabilidad y el archivo en sistemas de preservación especializados.</li>
+        <li><strong>Archivos fuente (DOCX):</strong> versiones editables originales conservadas para futuras re-ediciones, migraciones de formato o recuperación de contenido.</li>
+      </ul>
+
+      <h3>5.4. Continuidad ante Cese de Actividades</h3>
+      <p>En el supuesto de cese definitivo de las actividades editoriales de la Revista, los contenidos publicados continuarán siendo accesibles a través de los repositorios de preservación oficiales detallados en la siguiente sección, garantizando que el conocimiento difundido no se pierda. Los autores conservan siempre sus derechos de autor y podrán redistribuir sus artículos libremente conforme a la licencia CC BY 4.0.</p>
+
+      <!-- 06. Repositorios Oficiales de Preservación -->
+      <h2 id="repositorios">06. Repositorios Oficiales de Preservación</h2>
+      
+      <p>La Revista deposita la totalidad de sus contenidos publicados en los siguientes repositorios y sistemas de preservación digital:</p>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Repositorio</th>
+            <th>Tipo</th>
+            <th>Propósito Específico</th>
+            <th>Enlace</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Zenodo</strong></td>
+            <td>Repositorio generalista (CERN / OpenAIRE)</td>
+            <td>Archivo permanente de cada número completo y de artículos individuales, con asignación de DOI para versiones archivadas.</td>
+            <td><a href="https://zenodo.org/" target="_blank">zenodo.org</a></td>
+          </tr>
+          <tr>
+            <td><strong>Internet Archive</strong></td>
+            <td>Biblioteca digital sin fines de lucro</td>
+            <td>Preservación de la versión pública del sitio web de la Revista (capturas completas) y de archivos PDF de artículos.</td>
+            <td><a href="https://archive.org/" target="_blank">archive.org</a></td>
+          </tr>
+          <tr>
+            <td><strong>Biblioteca Nacional de Chile</strong></td>
+            <td>Depósito legal nacional</td>
+            <td>Cumplimiento del depósito legal chileno y preservación patrimonial de la producción académica nacional.</td>
+            <td><a href="https://www.bibliotecanacional.gob.cl/" target="_blank">bibliotecanacional.gob.cl</a></td>
+          </tr>
+          <tr>
+            <td><strong>GitHub (Repositorio de respaldo)</strong></td>
+            <td>Control de versiones</td>
+            <td>Mantenimiento de archivos fuente, metadatos y control de versiones de todos los documentos publicados.</td>
+            <td><a href="https://github.com/" target="_blank">github.com</a></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="highlight-box">
+        <p><strong>Actualizaciones a esta política:</strong> La Revista se reserva el derecho de modificar, complementar o sustituir los repositorios o plataformas de preservación digital utilizados, así como los formatos de archivo empleados. Cualquier cambio en esta estrategia será debidamente comunicado a la comunidad académica a través de esta sección y se aplicará garantizando siempre la persistencia y accesibilidad de los contenidos ya publicados. La inclusión de nuevos repositorios no implicará en ningún caso la retirada de los depósitos ya realizados en los sistemas existentes.</p>
+      </div>
+
+      <p style="margin-top: 40px;">Para cualquier consulta sobre estas políticas, no dude en <a href="mailto:editor@revistacienciasestudiantes.com">contactar al equipo editorial</a>.</p>
+
+      <div class="footer" id="footer">
+        Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839<br>
+        San Felipe, Chile · Publicación Académica Independiente · Acceso Abierto Diamante · © <span id="current-year"></span>
+      </div>
+
+    </main>
   </div>
 
   <script>
