@@ -1,6 +1,6 @@
-// src/hooks/useArticleAssignment.js (CORREGIDO Y ACTUALIZADO)
+// src/hooks/useArticleAssignment.js (ACTUALIZADO CON ESTADO PENDIENTE)
 import { useState, useCallback } from 'react';
-import { db, functions } from '../firebase';
+import { db } from '../firebase';
 import { 
   collection, 
   addDoc, 
@@ -12,7 +12,6 @@ import {
   getDocs, 
   getDoc 
 } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
 import { useLanguage } from './useLanguage';
 
 export const useArticleAssignment = (user) => {
@@ -34,13 +33,11 @@ export const useArticleAssignment = (user) => {
     setError(null);
 
     try {
-      // Verificar que el usuario actual es el Encargado de Asignación
       const userRoles = user.roles || [];
       if (!userRoles.includes('Encargado de Asignación de Artículos') && !userRoles.includes('Director General')) {
         throw new Error(isSpanish ? 'No tienes permiso para asignar artículos' : 'You do not have permission to assign articles');
       }
 
-      // Obtener datos del submission para el email
       const submissionRef = doc(db, 'submissions', submissionId);
       const submissionSnap = await getDoc(submissionRef);
       if (!submissionSnap.exists()) {
@@ -48,7 +45,6 @@ export const useArticleAssignment = (user) => {
       }
       const submissionData = submissionSnap.data();
 
-      // Obtener datos del editor de sección para el email
       const sectionEditorRef = doc(db, 'users', sectionEditorUid);
       const sectionEditorSnap = await getDoc(sectionEditorRef);
       if (!sectionEditorSnap.exists()) {
@@ -56,7 +52,6 @@ export const useArticleAssignment = (user) => {
       }
       const sectionEditorData = sectionEditorSnap.data();
 
-      // 1. Crear la tarea editorial (editorialTask) para el Editor de Sección
       const taskData = {
         submissionId,
         submissionTitle: submissionData.title,
@@ -73,14 +68,12 @@ export const useArticleAssignment = (user) => {
 
       const taskRef = await addDoc(collection(db, 'editorialTasks'), taskData);
 
-      // 2. Actualizar el estado del submission
       await updateDoc(submissionRef, {
         status: 'desk-review',
         currentEditorialTaskId: taskRef.id,
         updatedAt: serverTimestamp(),
       });
 
-      // 3. Crear un registro de auditoría
       await addDoc(collection(db, 'submissions', submissionId, 'auditLogs'), {
         action: 'assigned_to_section_editor',
         by: user.uid,
@@ -108,7 +101,8 @@ export const useArticleAssignment = (user) => {
 
   /**
    * Devuelve un artículo al autor para correcciones.
-   * Actualiza el estado del submission y envía notificaciones por correo.
+   * El artículo pasa a estado 'returned_pending_confirmation'
+   * y permanece en el panel hasta que el autor confirme.
    */
   const returnArticleToAuthor = useCallback(async (submissionId, reasons) => {
     if (!user) {
@@ -125,13 +119,11 @@ export const useArticleAssignment = (user) => {
     setError(null);
 
     try {
-      // Verificar que el usuario actual es el Encargado de Asignación
       const userRoles = user.roles || [];
       if (!userRoles.includes('Encargado de Asignación de Artículos') && !userRoles.includes('Director General')) {
         throw new Error(isSpanish ? 'No tienes permiso para devolver artículos' : 'You do not have permission to return articles');
       }
 
-      // Obtener datos del submission
       const submissionRef = doc(db, 'submissions', submissionId);
       const submissionSnap = await getDoc(submissionRef);
       if (!submissionSnap.exists()) {
@@ -139,42 +131,41 @@ export const useArticleAssignment = (user) => {
       }
       const submissionData = submissionSnap.data();
 
-      // Verificar que el artículo esté en estado 'submitted'
       if (submissionData.status !== 'submitted') {
         throw new Error(isSpanish 
           ? 'El artículo no está en estado de envío inicial' 
           : 'The article is not in the initial submission state');
       }
 
-      // 1. Actualizar el estado del submission
+      // Actualizar el estado a 'returned_pending_confirmation'
+      // El artículo PERMANECE en el panel
       await updateDoc(submissionRef, {
-        status: 'returned_to_author',
+        status: 'returned_pending_confirmation',
         returnReasons: reasons,
         returnedAt: serverTimestamp(),
         returnedBy: user.uid,
         returnedByEmail: user.email,
         returnCount: (submissionData.returnCount || 0) + 1,
+        authorConfirmedReceipt: false,
         updatedAt: serverTimestamp(),
       });
 
-      // 2. Crear un registro de auditoría
       await addDoc(collection(db, 'submissions', submissionId, 'auditLogs'), {
-        action: 'returned_to_author',
+        action: 'returned_to_author_pending_confirmation',
         by: user.uid,
         byEmail: user.email,
         reasons: reasons,
         timestamp: serverTimestamp(),
       });
 
-      // 3. Enviar notificaciones por correo
       await sendReturnNotifications(submissionId, submissionData, reasons);
 
       setLoading(false);
       return {
         success: true,
         message: isSpanish 
-          ? 'Artículo devuelto al autor correctamente. Se han enviado notificaciones por correo.' 
-          : 'Article returned to author successfully. Email notifications have been sent.',
+          ? 'Artículo devuelto. Esperando confirmación del autor.' 
+          : 'Article returned. Waiting for author confirmation.',
       };
 
     } catch (err) {
@@ -186,15 +177,134 @@ export const useArticleAssignment = (user) => {
   }, [user, isSpanish]);
 
   /**
+   * Confirma que el autor recibió la notificación de devolución.
+   * Solo después de esto, el artículo sale del panel de asignaciones.
+   */
+  const confirmAuthorReceivedReturn = useCallback(async (submissionId) => {
+    if (!user) {
+      setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
+      return { success: false, error: 'Usuario no autenticado' };
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const userRoles = user.roles || [];
+      if (!userRoles.includes('Encargado de Asignación de Artículos') && !userRoles.includes('Director General')) {
+        throw new Error(isSpanish ? 'No tienes permiso para confirmar devoluciones' : 'You do not have permission to confirm returns');
+      }
+
+      const submissionRef = doc(db, 'submissions', submissionId);
+      const submissionSnap = await getDoc(submissionRef);
+      if (!submissionSnap.exists()) {
+        throw new Error(isSpanish ? 'Envío no encontrado' : 'Submission not found');
+      }
+      const submissionData = submissionSnap.data();
+
+      if (submissionData.status !== 'returned_pending_confirmation') {
+        throw new Error(isSpanish 
+          ? 'El artículo no está en estado de devolución pendiente' 
+          : 'The article is not in pending return state');
+      }
+
+      // Actualizar el estado a 'returned_to_author'
+      // AHORA el artículo sale del panel
+      await updateDoc(submissionRef, {
+        status: 'returned_to_author',
+        authorConfirmedReceipt: true,
+        authorConfirmedAt: serverTimestamp(),
+        authorConfirmedBy: user.uid,
+        updatedAt: serverTimestamp(),
+      });
+
+      await addDoc(collection(db, 'submissions', submissionId, 'auditLogs'), {
+        action: 'author_receipt_confirmed',
+        by: user.uid,
+        byEmail: user.email,
+        timestamp: serverTimestamp(),
+        details: {
+          message: isSpanish 
+            ? 'El asignador confirmó que el autor recibió la notificación' 
+            : 'The assignment manager confirmed the author received the notification'
+        }
+      });
+
+      setLoading(false);
+      return {
+        success: true,
+        message: isSpanish 
+          ? 'Recepción confirmada. El artículo ha salido del panel de asignaciones.' 
+          : 'Receipt confirmed. The article has been removed from the assignment panel.',
+      };
+
+    } catch (err) {
+      console.error('Error in confirmAuthorReceivedReturn:', err);
+      setError(err.message);
+      setLoading(false);
+      return { success: false, error: err.message };
+    }
+  }, [user, isSpanish]);
+
+  /**
+   * Reenvía la notificación de devolución al autor.
+   * Útil si el autor no ha respondido al primer intento.
+   */
+  const resendReturnNotification = useCallback(async (submissionId) => {
+    if (!user) {
+      setError(isSpanish ? 'Usuario no autenticado' : 'User not authenticated');
+      return { success: false, error: 'Usuario no autenticado' };
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const submissionRef = doc(db, 'submissions', submissionId);
+      const submissionSnap = await getDoc(submissionRef);
+      if (!submissionSnap.exists()) {
+        throw new Error(isSpanish ? 'Envío no encontrado' : 'Submission not found');
+      }
+      const submissionData = submissionSnap.data();
+
+      if (submissionData.status !== 'returned_pending_confirmation') {
+        throw new Error(isSpanish 
+          ? 'El artículo no está en estado de devolución pendiente' 
+          : 'The article is not in pending return state');
+      }
+
+      await sendReturnNotifications(submissionId, submissionData, submissionData.returnReasons || []);
+
+      await addDoc(collection(db, 'submissions', submissionId, 'auditLogs'), {
+        action: 'return_notification_resent',
+        by: user.uid,
+        byEmail: user.email,
+        timestamp: serverTimestamp(),
+      });
+
+      setLoading(false);
+      return {
+        success: true,
+        message: isSpanish 
+          ? 'Notificación reenviada al autor correctamente.' 
+          : 'Notification resent to author successfully.',
+      };
+
+    } catch (err) {
+      console.error('Error in resendReturnNotification:', err);
+      setError(err.message);
+      setLoading(false);
+      return { success: false, error: err.message };
+    }
+  }, [user, isSpanish]);
+
+  /**
    * Función auxiliar para enviar notificaciones de devolución por correo.
-   * (Esta función se ejecuta en el cliente y prepara los datos)
    */
   const sendReturnNotifications = async (submissionId, submissionData, reasons) => {
     try {
-      // Determinar idioma del manuscrito
       const manuscriptLang = submissionData.paperLanguage || 'es';
       
-      // Obtener correos de autores
       const authorEmails = [];
       const correspondingEmail = submissionData.authorEmail || 
         submissionData.correspondingAuthor?.email;
@@ -203,7 +313,6 @@ export const useArticleAssignment = (user) => {
         authorEmails.push(correspondingEmail);
       }
       
-      // Agregar correos de coautores
       if (submissionData.authors && Array.isArray(submissionData.authors)) {
         submissionData.authors.forEach(author => {
           if (author.email && author.email !== correspondingEmail) {
@@ -212,25 +321,6 @@ export const useArticleAssignment = (user) => {
         });
       }
       
-      // Preparar datos para la notificación
-      const notificationData = {
-        submissionId,
-        title: submissionData.title,
-        titleEn: submissionData.titleEn,
-        authorName: submissionData.authorName,
-        authorEmail: correspondingEmail,
-        allAuthorEmails: authorEmails,
-        reasons,
-        manuscriptLang,
-        returnedBy: user?.displayName || user?.email,
-        returnedByEmail: user?.email,
-        timestamp: new Date().toISOString(),
-      };
-      
-      // Aquí se podría llamar a una Cloud Function para enviar los correos
-      // o directamente usar la colección 'mail' para encolar los correos
-      
-      // Encolar correo para el autor de correspondencia
       if (correspondingEmail) {
         await addDoc(collection(db, 'mail'), {
           to: [correspondingEmail],
@@ -245,7 +335,6 @@ export const useArticleAssignment = (user) => {
         });
       }
       
-      // Encolar correos para coautores (solo notificación informativa)
       const coauthorEmails = authorEmails.filter(email => email !== correspondingEmail);
       for (const coauthorEmail of coauthorEmails) {
         await addDoc(collection(db, 'mail'), {
@@ -263,8 +352,6 @@ export const useArticleAssignment = (user) => {
       
     } catch (error) {
       console.error('Error sending return notifications:', error);
-      // No lanzamos el error para que la devolución del artículo no falle
-      // si hay problemas con las notificaciones
     }
   };
 
@@ -420,7 +507,8 @@ export const useArticleAssignment = (user) => {
   };
 
   /**
-   * Obtiene la lista de artículos que están esperando ser asignados (status 'submitted').
+   * Obtiene la lista de artículos que están esperando ser asignados.
+   * Incluye tanto 'submitted' como 'returned_pending_confirmation'
    */
   const getUnassignedSubmissions = useCallback(async () => {
     setLoading(true);
@@ -428,7 +516,7 @@ export const useArticleAssignment = (user) => {
     try {
       const q = query(
         collection(db, 'submissions'),
-        where('status', '==', 'submitted'),
+        where('status', 'in', ['submitted', 'returned_pending_confirmation']),
       );
       const snapshot = await getDocs(q);
       const submissions = snapshot.docs.map(doc => ({
@@ -502,6 +590,8 @@ export const useArticleAssignment = (user) => {
     error,
     assignToSectionEditor,
     returnArticleToAuthor,
+    confirmAuthorReceivedReturn,
+    resendReturnNotification,
     getUnassignedSubmissions,
     getSectionEditors,
     getAuthorPhone,
