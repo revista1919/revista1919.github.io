@@ -19747,3 +19747,279 @@ exports.checkSubscription = onRequest(
     }
   }
 );
+/* ===================== DEVOLVER ARTÍCULO AL AUTOR ===================== */
+exports.returnArticleToAuthor = onCall(
+  {
+    secrets: [],
+    cors: true,
+    timeoutSeconds: 300,
+    memory: '512MiB',
+    minInstances: 0,
+    maxInstances: 10
+  },
+  async (request) => {
+    console.log('🔄 Devolviendo artículo al autor...');
+    
+    try {
+      // Verificar autenticación
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Usuario no autenticado');
+      }
+      
+      const uid = request.auth.uid;
+      const { submissionId, reasons } = request.data;
+      
+      if (!submissionId || !reasons || reasons.length === 0) {
+        throw new HttpsError('invalid-argument', 'Se requiere submissionId y razones de devolución');
+      }
+      
+      // Verificar rol del usuario
+      const userRecord = await admin.auth().getUser(uid);
+      const userRoles = userRecord.customClaims?.roles || [];
+      
+      if (!userRoles.includes('Encargado de Asignación de Artículos') && !userRoles.includes('Director General')) {
+        throw new HttpsError('permission-denied', 'No tienes permisos para devolver artículos');
+      }
+      
+      const db = admin.firestore();
+      const submissionRef = db.collection('submissions').doc(submissionId);
+      const submissionDoc = await submissionRef.get();
+      
+      if (!submissionDoc.exists) {
+        throw new HttpsError('not-found', 'Artículo no encontrado');
+      }
+      
+      const submissionData = submissionDoc.data();
+      
+      // Verificar que el artículo esté en estado 'submitted'
+      if (submissionData.status !== 'submitted') {
+        throw new HttpsError('failed-precondition', 'El artículo no está en estado de envío inicial');
+      }
+      
+      // Actualizar estado del artículo
+      await submissionRef.update({
+        status: 'returned_to_author',
+        returnReasons: reasons,
+        returnedAt: admin.firestore.FieldValue.serverTimestamp(),
+        returnedBy: uid,
+        returnedByEmail: request.auth.token.email,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Agregar log de auditoría
+      await submissionRef.collection('auditLogs').add({
+        action: 'returned_to_author',
+        by: uid,
+        byEmail: request.auth.token.email,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        details: {
+          reasons
+        }
+      });
+      
+      // Enviar correo al autor y coautores
+      const authorEmail = submissionData.authorEmail || submissionData.correspondingAuthor?.email;
+      const authorName = submissionData.authorName || 
+        `${submissionData.correspondingAuthor?.firstName || ''} ${submissionData.correspondingAuthor?.lastName || ''}`.trim();
+      
+      // Determinar idioma del manuscrito
+      const manuscriptLang = submissionData.paperLanguage || 'es';
+      
+      // Construir lista de razones
+      const reasonsList = reasons.map(reason => `<li>${reason}</li>`).join('');
+      
+      // Correo al autor de correspondencia
+      if (authorEmail) {
+        const emailTitle = manuscriptLang === 'es' 
+          ? `📝 Artículo devuelto para correcciones - ${submissionData.submissionId}`
+          : `📝 Article returned for corrections - ${submissionData.submissionId}`;
+        
+        const emailBody = manuscriptLang === 'es'
+          ? `
+            <div class="highlight-box" style="background-color: #fef2f2; border-left-color: #dc2626;">
+              <p class="article-title">"${submissionData.title}"</p>
+              <p><strong>ID de envío:</strong> ${submissionData.submissionId}</p>
+              <p><strong>Fecha de devolución:</strong> ${new Date().toLocaleDateString('es-CL')}</p>
+            </div>
+            
+            <p>Su artículo ha sido revisado por nuestro equipo editorial y requiere las siguientes correcciones antes de continuar con el proceso:</p>
+            
+            <div class="highlight-box" style="background-color: #fef2f2; border-left-color: #dc2626;">
+              <ul>
+                ${reasonsList}
+              </ul>
+            </div>
+            
+            <p><strong>Instrucciones:</strong></p>
+            <ol>
+              <li>Revise cuidadosamente cada punto mencionado</li>
+              <li>Realice las correcciones necesarias en su manuscrito</li>
+              <li>Vuelva a enviar el artículo corregido a través del portal</li>
+            </ol>
+            
+            <p>Si tiene preguntas sobre las correcciones solicitadas, puede responder a este correo.</p>
+            
+            <div class="button-container">
+              <a href="https://www.revistacienciasestudiantes.com/es/login" class="btn">ACCEDER AL PORTAL</a>
+            </div>
+          `
+          : `
+            <div class="highlight-box" style="background-color: #fef2f2; border-left-color: #dc2626;">
+              <p class="article-title">"${submissionData.titleEn || submissionData.title}"</p>
+              <p><strong>Submission ID:</strong> ${submissionData.submissionId}</p>
+              <p><strong>Return date:</strong> ${new Date().toLocaleDateString('en-US')}</p>
+            </div>
+            
+            <p>Your article has been reviewed by our editorial team and requires the following corrections before proceeding:</p>
+            
+            <div class="highlight-box" style="background-color: #fef2f2; border-left-color: #dc2626;">
+              <ul>
+                ${reasonsList}
+              </ul>
+            </div>
+            
+            <p><strong>Instructions:</strong></p>
+            <ol>
+              <li>Carefully review each point mentioned</li>
+              <li>Make the necessary corrections to your manuscript</li>
+              <li>Resubmit the corrected article through the portal</li>
+            </ol>
+            
+            <p>If you have questions about the requested corrections, you can reply to this email.</p>
+            
+            <div class="button-container">
+              <a href="https://www.revistacienciasestudiantes.com/en/login" class="btn">ACCESS PORTAL</a>
+            </div>
+          `;
+        
+        const htmlBody = getEmailTemplate(
+          emailTitle,
+          manuscriptLang === 'es' 
+            ? `Estimado/a ${authorName}:` 
+            : `Dear ${authorName}:`,
+          emailBody,
+          manuscriptLang === 'es' ? 'Equipo Editorial' : 'Editorial Team',
+          manuscriptLang === 'es' ? 'Revista Nacional de las Ciencias para Estudiantes' : 'National Review of Sciences for Students',
+          manuscriptLang
+        );
+        
+        await sendEmailViaExtension(
+          authorEmail,
+          emailTitle,
+          htmlBody
+        );
+        
+        console.log(`✅ Correo enviado al autor de correspondencia: ${authorEmail}`);
+      }
+      
+      // Enviar correo a coautores
+      if (submissionData.authors && Array.isArray(submissionData.authors)) {
+        const coauthors = submissionData.authors.filter(a => 
+          a.email !== authorEmail && 
+          !a.isCorresponding &&
+          a.email
+        );
+        
+        for (const coauthor of coauthors) {
+          const coauthorEmailTitle = manuscriptLang === 'es'
+            ? `📝 Información sobre el artículo "${submissionData.title}"`
+            : `📝 Information about the article "${submissionData.titleEn || submissionData.title}"`;
+          
+          const coauthorEmailBody = manuscriptLang === 'es'
+            ? `
+              <p>Le informamos que el artículo "${submissionData.title}" (ID: ${submissionData.submissionId}) ha sido devuelto al autor de correspondencia para realizar correcciones.</p>
+              <p>Las correcciones solicitadas incluyen:</p>
+              <ul>${reasonsList}</ul>
+              <p>El autor de correspondencia (${authorName}) ha sido notificado y se encargará de realizar las correcciones y reenviar el artículo.</p>
+            `
+            : `
+              <p>We inform you that the article "${submissionData.titleEn || submissionData.title}" (ID: ${submissionData.submissionId}) has been returned to the corresponding author for corrections.</p>
+              <p>The requested corrections include:</p>
+              <ul>${reasonsList}</ul>
+              <p>The corresponding author (${authorName}) has been notified and will handle the corrections and resubmission.</p>
+            `;
+          
+          const coauthorHtmlBody = getEmailTemplate(
+            coauthorEmailTitle,
+            manuscriptLang === 'es'
+              ? `Estimado/a ${coauthor.firstName} ${coauthor.lastName}:`
+              : `Dear ${coauthor.firstName} ${coauthor.lastName}:`,
+            coauthorEmailBody,
+            manuscriptLang === 'es' ? 'Equipo Editorial' : 'Editorial Team',
+            manuscriptLang === 'es' ? 'Revista Nacional de las Ciencias para Estudiantes' : 'National Review of Sciences for Students',
+            manuscriptLang
+          );
+          
+          await sendEmailViaExtension(
+            coauthor.email,
+            coauthorEmailTitle,
+            coauthorHtmlBody
+          );
+          
+          console.log(`✅ Correo enviado al coautor: ${coauthor.email}`);
+        }
+      }
+      
+      return {
+        success: true,
+        message: manuscriptLang === 'es'
+          ? 'Artículo devuelto al autor correctamente. Se han enviado notificaciones por correo.'
+          : 'Article returned to author successfully. Email notifications have been sent.',
+        submissionId,
+        status: 'returned_to_author'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error en returnArticleToAuthor:', error);
+      
+      // Registrar error en Firestore
+      try {
+        await admin.firestore().collection('systemErrors').add({
+          function: 'returnArticleToAuthor',
+          error: {
+            message: error.message,
+            stack: error.stack
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (logError) {
+        console.error('Error al registrar error:', logError);
+      }
+      
+      throw new HttpsError('internal', error.message);
+    }
+  }
+);
+
+/* ===================== TRIGGER PARA CUANDO UN ARTÍCULO ES DEVUELTO ===================== */
+exports.onArticleReturned = onDocumentUpdated(
+  {
+    document: 'submissions/{submissionId}',
+    region: 'us-central1',
+    minInstances: 0,
+    maxInstances: 10
+  },
+  async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+    
+    // Solo actuar si el estado cambió a 'returned_to_author'
+    if (beforeData.status !== 'returned_to_author' && afterData.status === 'returned_to_author') {
+      console.log(`📝 Artículo ${event.params.submissionId} devuelto al autor`);
+      
+      const db = admin.firestore();
+      const submissionId = event.params.submissionId;
+      
+      // Actualizar contador de devoluciones
+      await db.collection('submissions').doc(submissionId).update({
+        returnCount: admin.firestore.FieldValue.increment(1),
+        lastReturnedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Aquí podrías agregar lógica adicional como:
+      // - Enviar notificaciones push
+      // - Actualizar métricas
+      // - Generar reportes
+    }
+  }
+);

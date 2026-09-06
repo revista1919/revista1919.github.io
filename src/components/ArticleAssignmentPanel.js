@@ -1,71 +1,25 @@
 // src/components/ArticleAssignmentPanel.js
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db } from '../firebase';
+import { db, functions } from '../firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { useLanguage } from '../hooks/useLanguage';
 import { useArticleAssignment } from '../hooks/useArticleAssignment';
 
-// ============ ICONOS SVG PROFESIONALES (Líneas finas, estilo editorial) ============
+// ============ ICONOS SVG PROFESIONALES ============
 const Icons = {
-  FileText: () => (
+  // ... (mantener todos los iconos existentes)
+  
+  // Iconos nuevos
+  ReturnArrow: () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.2} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
     </svg>
   ),
-  CheckCircle: () => (
-    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  XCircle: () => (
-    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  AlertCircle: () => (
+  WhatsApp: () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-  ),
-  Search: () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-    </svg>
-  ),
-  User: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  ),
-  DocumentText: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  ),
-  CurrencyDollar: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  ExclamationTriangle: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-  ),
-  Database: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-    </svg>
-  ),
-  Tag: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 01.586 1.414V19a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
-    </svg>
-  ),
-  Download: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
     </svg>
   ),
 };
@@ -81,6 +35,13 @@ const ArticleAssignmentPanel = ({ user }) => {
   const [assignmentNotes, setAssignmentNotes] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estados para el modo de devolución
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReasons, setReturnReasons] = useState([]);
+  const [customReturnReason, setCustomReturnReason] = useState('');
+  const [isReturning, setIsReturning] = useState(false);
+  const [returnSuccess, setReturnSuccess] = useState(false);
 
   // Estados para la verificación de requisitos
   const [formChecklist, setFormChecklist] = useState({
@@ -94,7 +55,39 @@ const ArticleAssignmentPanel = ({ user }) => {
     isSpanishEnglish: false
   });
 
-  const { loading, error, getSectionEditors, assignToSectionEditor } = useArticleAssignment(user);
+  const { loading, error, getSectionEditors, assignToSectionEditor, returnArticleToAuthor } = useArticleAssignment(user);
+
+  // Lista de razones comunes de devolución
+  const returnReasonOptions = {
+    es: [
+      'Falta el resumen (abstract)',
+      'Falta el resumen en inglés (abstract)',
+      'Faltan las palabras clave',
+      'El PDF está incompleto',
+      'Falta la declaración de conflicto de intereses',
+      'Falta la información de financiamiento',
+      'Falta la institución del autor',
+      'Falta el ORCID del autor',
+      'El documento no cumple con el formato requerido',
+      'El manuscrito está incompleto',
+      'Faltan las referencias bibliográficas',
+      'El título no coincide con el contenido'
+    ],
+    en: [
+      'Missing abstract',
+      'Missing English abstract',
+      'Missing keywords',
+      'PDF is incomplete',
+      'Missing conflict of interest statement',
+      'Missing funding information',
+      'Missing author institution',
+      'Missing author ORCID',
+      'Document does not meet required format',
+      'Manuscript is incomplete',
+      'Missing bibliographic references',
+      'Title does not match content'
+    ]
+  };
 
   // Escuchar envíos no asignados (status 'submitted')
   useEffect(() => {
@@ -138,23 +131,21 @@ const ArticleAssignmentPanel = ({ user }) => {
   }, [getSectionEditors]);
 
   // Actualizar checklist cuando cambia el submission seleccionado
-    // Actualizar checklist cuando cambia el submission seleccionado
   useEffect(() => {
     if (selectedSubmission) {
       const sub = selectedSubmission;
       setFormChecklist({
         hasAbstract: !!(sub.abstract || sub.abstractEn),
-        hasKeywords: !!(sub.keywordsEs?.length > 0 || sub.keywordsEn?.length > 0), // ✅ CAMBIADO
+        hasKeywords: !!(sub.keywordsEs?.length > 0 || sub.keywordsEn?.length > 0),
         hasConflictOfInterest: !!sub.conflictOfInterest,
         hasFundingInfo: sub.funding ? true : false,
         hasAuthorInstitution: !!(sub.authors?.[0]?.institution),
         hasOrcid: !!(sub.authors?.[0]?.orcid),
         hasDriveFiles: !!(sub.driveFolderUrl),
-        isSpanishEnglish: !!(sub.abstract && sub.abstractEn) // Tiene ambos idiomas
+        isSpanishEnglish: !!(sub.abstract && sub.abstractEn)
       });
     }
   }, [selectedSubmission]);
- 
 
   const handleAssign = async () => {
     if (!selectedSubmission || !selectedEditor) {
@@ -165,7 +156,6 @@ const ArticleAssignmentPanel = ({ user }) => {
     setIsAssigning(true);
     const result = await assignToSectionEditor(selectedSubmission.id, selectedEditor, assignmentNotes);
     if (result.success) {
-      // Limpiar selección
       setSelectedSubmission(null);
       setSelectedEditor('');
       setAssignmentNotes('');
@@ -174,15 +164,84 @@ const ArticleAssignmentPanel = ({ user }) => {
     setIsAssigning(false);
   };
 
-  // Filtrar editores por búsqueda
-  const filteredEditors = sectionEditors.filter(editor => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      editor.displayName?.toLowerCase().includes(searchLower) ||
-      editor.email?.toLowerCase().includes(searchLower) ||
-      editor.institution?.toLowerCase().includes(searchLower)
+  // Función para abrir el modal de devolución
+  const handleOpenReturnModal = () => {
+    setShowReturnModal(true);
+    setReturnReasons([]);
+    setCustomReturnReason('');
+    setReturnSuccess(false);
+  };
+
+  // Función para toggle de razones de devolución
+  const toggleReturnReason = (reason) => {
+    setReturnReasons(prev => 
+      prev.includes(reason) 
+        ? prev.filter(r => r !== reason)
+        : [...prev, reason]
     );
-  });
+  };
+
+  // Función para enviar WhatsApp
+  const handleSendWhatsApp = () => {
+    if (!selectedSubmission) return;
+    
+    const phone = selectedSubmission.correspondingAuthor?.phone || selectedSubmission.correspondingAuthorPhone;
+    if (!phone) {
+      alert(isSpanish ? 'No hay número de teléfono disponible para este autor' : 'No phone number available for this author');
+      return;
+    }
+    
+    // Determinar idioma del manuscrito
+    const manuscriptLang = selectedSubmission.paperLanguage || 'es';
+    
+    // Construir mensaje pre-rellenado
+    let message = '';
+    if (manuscriptLang === 'es') {
+      message = `Estimado/a ${selectedSubmission.authorName}, le escribimos de la Revista Nacional de las Ciencias para Estudiantes. Su artículo "${selectedSubmission.title}" (ID: ${selectedSubmission.submissionId}) requiere correcciones antes de continuar con el proceso editorial. Por favor revise su correo electrónico para más detalles.`;
+    } else {
+      message = `Dear ${selectedSubmission.authorName}, we are writing from The National Review of Sciences for Students. Your article "${selectedSubmission.titleEn || selectedSubmission.title}" (ID: ${selectedSubmission.submissionId}) requires corrections before proceeding with the editorial process. Please check your email for more details.`;
+    }
+    
+    // Limpiar número de teléfono
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    
+    window.open(whatsappUrl, '_blank');
+  };
+
+  // Función para manejar la devolución
+  const handleReturnArticle = async () => {
+    if (!selectedSubmission) return;
+    
+    const allReasons = [...returnReasons];
+    if (customReturnReason.trim()) {
+      allReasons.push(customReturnReason.trim());
+    }
+    
+    if (allReasons.length === 0) {
+      alert(isSpanish ? 'Debes seleccionar al menos una razón de devolución' : 'You must select at least one return reason');
+      return;
+    }
+    
+    setIsReturning(true);
+    
+    const result = await returnArticleToAuthor(selectedSubmission.id, allReasons);
+    
+    if (result.success) {
+      setReturnSuccess(true);
+      
+      // Mostrar opción de WhatsApp
+      setTimeout(() => {
+        setShowReturnModal(false);
+        setSelectedSubmission(null);
+        alert(isSpanish ? 'Artículo devuelto al autor correctamente' : 'Article returned to author successfully');
+      }, 2000);
+    } else {
+      alert(isSpanish ? 'Error al devolver el artículo: ' + result.error : 'Error returning article: ' + result.error);
+    }
+    
+    setIsReturning(false);
+  };
 
   // Verificar permisos
   const userRoles = user?.roles || [];
@@ -193,7 +252,7 @@ const ArticleAssignmentPanel = ({ user }) => {
   return (
     <div className="min-h-screen bg-[#FDFDFD] font-sans text-slate-800 selection:bg-blue-100">
       
-      {/* ===================== TOP NAVIGATION (EDITORIAL RIBBON) ===================== */}
+      {/* ===================== TOP NAVIGATION ===================== */}
       <header className="bg-[#002B49] text-white sticky top-0 z-40 border-b border-slate-200 shadow-sm">
         <div className="max-w-[1920px] mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-5">
@@ -393,21 +452,23 @@ const ArticleAssignmentPanel = ({ user }) => {
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          {isSpanish ? 'Teléfono' : 'Phone'}
+                        </label>
+                        <p className="text-sm text-slate-800 font-medium">
+                          {selectedSubmission.correspondingAuthor?.phone || selectedSubmission.correspondingAuthorPhone || '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                           ORCID
                         </label>
                         <p className="text-sm text-slate-800 font-medium">{selectedSubmission.authors?.[0]?.orcid || '—'}</p>
                       </div>
-                      <div>
+                      <div className="md:col-span-2">
                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                           {isSpanish ? 'Institución' : 'Institution'}
                         </label>
                         <p className="text-sm text-slate-800 font-medium">{selectedSubmission.authors?.[0]?.institution || '—'}</p>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                          {isSpanish ? 'Contribución' : 'Contribution'}
-                        </label>
-                        <p className="text-sm text-slate-800 font-medium">{selectedSubmission.authors?.[0]?.contribution || '—'}</p>
                       </div>
                     </div>
                   </div>
@@ -434,7 +495,7 @@ const ArticleAssignmentPanel = ({ user }) => {
                     </div>
                   </div>
 
-                                   {/* PALABRAS CLAVE Y FINANCIAMIENTO */}
+                  {/* PALABRAS CLAVE Y FINANCIAMIENTO */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white border border-slate-200 rounded-sm shadow-sm p-6">
                       <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -442,7 +503,6 @@ const ArticleAssignmentPanel = ({ user }) => {
                         {isSpanish ? 'Palabras Clave' : 'Keywords'}
                       </h3>
                       <div className="flex flex-wrap gap-2">
-                        {/* ✅ CAMBIADO: keywordsEs en lugar de keywords */}
                         {(isSpanish 
                           ? selectedSubmission.keywordsEs 
                           : selectedSubmission.keywordsEn || selectedSubmission.keywordsEs
@@ -494,13 +554,41 @@ const ArticleAssignmentPanel = ({ user }) => {
                     </div>
                   </div>
 
-                  {/* SECCIÓN DE ASIGNACIÓN */}
+                  {/* SECCIÓN DE ACCIONES */}
                   <div className="bg-white border border-slate-200 rounded-sm shadow-sm p-6 mt-6">
                     <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-4">
-                      {isSpanish ? 'Asignar a Editor de Sección' : 'Assign to Section Editor'}
+                      {isSpanish ? 'Acciones del Artículo' : 'Article Actions'}
                     </h3>
                     
+                    {/* Botones de acción rápida */}
+                    <div className="flex flex-wrap gap-3 mb-6">
+                      {/* Botón WhatsApp */}
+                      <button
+                        onClick={handleSendWhatsApp}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors"
+                      >
+                        <Icons.WhatsApp />
+                        WhatsApp
+                      </button>
+                      
+                      {/* Botón Devolver */}
+                      <button
+                        onClick={handleOpenReturnModal}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors"
+                      >
+                        <Icons.ReturnArrow />
+                        {isSpanish ? 'Devolver al Autor' : 'Return to Author'}
+                      </button>
+                    </div>
+                    
+                    {/* Separador */}
+                    <div className="border-t border-slate-200 my-6"></div>
+                    
                     {/* Búsqueda de editor */}
+                    <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-4">
+                      {isSpanish ? 'Asignar a Editor de Sección' : 'Assign to Section Editor'}
+                    </h4>
+                    
                     <div className="relative mb-4">
                       <div className="flex items-center gap-2 bg-[#F5F7F9] border border-slate-200 px-3 py-2 focus-within:border-[#007398] focus-within:bg-white transition-colors rounded-sm">
                         <span className="text-slate-400"><Icons.Search /></span>
@@ -616,6 +704,135 @@ const ArticleAssignmentPanel = ({ user }) => {
         </div>
       </main>
 
+      {/* ===================== MODAL DE DEVOLUCIÓN ===================== */}
+      <AnimatePresence>
+        {showReturnModal && selectedSubmission && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-sm shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              {/* Encabezado del modal */}
+              <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Icons.ReturnArrow />
+                  <h3 className="text-lg font-serif">
+                    {isSpanish ? 'Devolver Artículo al Autor' : 'Return Article to Author'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowReturnModal(false)}
+                  className="text-white/70 hover:text-white transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {returnSuccess ? (
+                /* Mensaje de éxito */
+                <div className="p-8 text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-serif text-slate-800 mb-2">
+                    {isSpanish ? 'Artículo Devuelto Correctamente' : 'Article Returned Successfully'}
+                  </h4>
+                  <p className="text-sm text-slate-600">
+                    {isSpanish 
+                      ? 'Se ha notificado al autor por correo electrónico.' 
+                      : 'The author has been notified by email.'}
+                  </p>
+                </div>
+              ) : (
+                /* Contenido del formulario */
+                <div className="p-6">
+                  <div className="mb-4">
+                    <p className="text-sm text-slate-600 mb-2">
+                      <strong>{isSpanish ? 'Artículo:' : 'Article:'}</strong> {selectedSubmission.title}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      <strong>{isSpanish ? 'Autor:' : 'Author:'}</strong> {selectedSubmission.authorName}
+                    </p>
+                  </div>
+                  
+                  <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-3">
+                    {isSpanish ? 'Seleccione las razones de devolución:' : 'Select return reasons:'}
+                  </h4>
+                  
+                  <div className="space-y-2 mb-4">
+                    {(isSpanish ? returnReasonOptions.es : returnReasonOptions.en).map((reason, index) => (
+                      <label 
+                        key={index}
+                        className={`flex items-center gap-3 p-3 rounded-sm border cursor-pointer transition-colors ${
+                          returnReasons.includes(reason)
+                            ? 'bg-red-50 border-red-300'
+                            : 'bg-white border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={returnReasons.includes(reason)}
+                          onChange={() => toggleReturnReason(reason)}
+                          className="w-4 h-4 text-red-600 rounded"
+                        />
+                        <span className="text-sm text-slate-700">{reason}</span>
+                      </label>
+                    ))}
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      {isSpanish ? 'Razón personalizada (opcional):' : 'Custom reason (optional):'}
+                    </label>
+                    <textarea
+                      value={customReturnReason}
+                      onChange={(e) => setCustomReturnReason(e.target.value)}
+                      rows="3"
+                      className="w-full p-3 bg-[#F5F7F9] border border-slate-200 rounded-sm focus:border-red-400 focus:bg-white transition-colors outline-none text-xs text-slate-700 placeholder-slate-400 resize-none"
+                      placeholder={isSpanish ? 'Describa las correcciones necesarias...' : 'Describe the necessary corrections...'}
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleReturnArticle}
+                      disabled={isReturning}
+                      className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white text-xs uppercase tracking-widest font-bold rounded-sm transition-all disabled:bg-slate-200 disabled:text-slate-400"
+                    >
+                      {isReturning ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          {isSpanish ? 'DEVOLVIENDO...' : 'RETURNING...'}
+                        </span>
+                      ) : (
+                        isSpanish ? 'CONFIRMAR DEVOLUCIÓN' : 'CONFIRM RETURN'
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowReturnModal(false)}
+                      className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs uppercase tracking-widest font-bold rounded-sm transition-colors"
+                    >
+                      {isSpanish ? 'CANCELAR' : 'CANCEL'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 5px;
@@ -630,14 +847,6 @@ const ArticleAssignmentPanel = ({ user }) => {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
-        }
-        
-        .overflow-x-auto {
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
-        }
-        .overflow-x-auto::-webkit-scrollbar {
-          display: none;
         }
       `}</style>
     </div>
