@@ -176,7 +176,7 @@ export default function ReviewerApplicationsPanel() {
           publicEmail: userProfile?.publicEmail || '',
           interests: userProfile?.interests || { es: [], en: [] },
           totalSubmissions: userProfile?.totalSubmissions || 0,
-          reviewerStatus: data.reviewerStatus || 'pending',
+          reviewerStatus: data.reviewerStatus === 'pending_review' ? 'pending' : (data.reviewerStatus || 'pending'),
         });
       }
 
