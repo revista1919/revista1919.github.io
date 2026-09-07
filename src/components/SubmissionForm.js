@@ -1618,7 +1618,7 @@ const [draftId, setDraftId] = useState(initialDraftId || null);// ID del borrado
 const [isSavingDraft, setIsSavingDraft] = useState(false);
 const [saveError, setSaveError] = useState(null);
 const [draftLoaded, setDraftLoaded] = useState(false);
-  
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   // Estado inicial del formulario
   const initialFormState = {
     title: '',
@@ -1716,9 +1716,10 @@ const saveDraftToFirestore = async (data, step) => {
     setIsSavingDraft(false);
   }
 };
-// Cargar borrador desde Firestore
 const loadDraftFromFirestore = async (id) => {
   if (!id) return;
+  
+  setIsLoadingDraft(true);
   
   try {
     const draftDoc = await getDoc(doc(db, 'submissionDrafts', id));
@@ -1729,7 +1730,7 @@ const loadDraftFromFirestore = async (id) => {
       setFormData(prev => ({
         ...prev,
         ...data,
-        manuscript: null, // Archivo no se puede recuperar
+        manuscript: null,
         manuscriptName: data.manuscriptName || '',
         editorComment: data.editorComment || ''
       }));
@@ -1741,9 +1742,14 @@ const loadDraftFromFirestore = async (id) => {
       setDraftId(id);
       setDraftLoaded(true);
       setLastSaved(new Date(data.updatedAt?.toDate?.() || new Date()));
+      
+      setTimeout(() => {
+        setIsLoadingDraft(false);
+      }, 500);
     }
   } catch (error) {
     console.error('Error loading draft:', error);
+    setIsLoadingDraft(false);
   }
 };
 
@@ -1794,10 +1800,10 @@ const loadDraftFromFirestore = async (id) => {
     formDataRef.current = formData;
   }, [formData]);
 
-// Carga del borrador desde Firestore
 useEffect(() => {
   if (initialDraft) {
-    // Si viene un borrador desde el dashboard
+    setIsLoadingDraft(true);
+    
     setFormData(prev => ({
       ...prev,
       ...initialDraft,
@@ -1805,30 +1811,41 @@ useEffect(() => {
       manuscriptName: initialDraft.manuscriptName || '',
       editorComment: initialDraft.editorComment || ''
     }));
+    
     if (initialDraft.currentStep) {
       setCurrentStep(initialDraft.currentStep);
     }
+    
     if (initialDraft.id) {
       setDraftId(initialDraft.id);
     }
+    
     setDraftLoaded(true);
+    
+    setTimeout(() => {
+      setIsLoadingDraft(false);
+    }, 500);
   } else if (draftId) {
-    // Si viene solo el ID del borrador
+    setIsLoadingDraft(true);
     loadDraftFromFirestore(draftId);
+    
+    setTimeout(() => {
+      setIsLoadingDraft(false);
+    }, 500);
   } else {
     setDraftLoaded(true);
+    setIsLoadingDraft(false);
   }
 }, [initialDraft, draftId]);
-// Autoguardado en Firestore (debounced)
 useEffect(() => {
-  if (!draftLoaded) return;
+  if (!draftLoaded || isLoadingDraft) return;
   
   const debouncedSave = setTimeout(() => {
     saveDraftToFirestore(formDataRef.current, currentStep);
-  }, 2000); // Guardar 2 segundos después del último cambio
+  }, 2000);
   
   return () => clearTimeout(debouncedSave);
-}, [formData, currentStep, draftLoaded]);
+}, [formData, currentStep, draftLoaded, isLoadingDraft]);
   // Utilidad para convertir archivo a base64
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {

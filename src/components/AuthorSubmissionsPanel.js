@@ -1227,12 +1227,12 @@ return (
             <div className="bg-[#003b5c] text-white px-4 sm:px-6 py-4 flex items-center justify-between shadow-md z-10 shrink-0">
               <div className="flex items-center gap-4 sm:gap-6 overflow-hidden">
                 <button 
-                  onClick={handleClosePortal}
-                  className="hover:bg-white/10 p-2 -ml-2 rounded-full transition-colors flex-shrink-0"
-                  title={isSpanish ? 'Volver al Escritorio' : 'Back to Desk'}
-                >
-                  <Icons.ArrowLeft />
-                </button>
+  onClick={onBack}
+  className="hover:bg-white/10 p-2 -ml-2 rounded-full transition-colors flex-shrink-0"
+  title={isSpanish ? 'Volver al Panel de Envíos' : 'Back to Submission Dashboard'}
+>
+  <Icons.ArrowLeft />
+</button>
                 <div className="min-w-0">
                   <p className="text-[10px] font-mono text-sky-200 uppercase tracking-widest mb-1">
                     ID: {submission.submissionId || submission.id.substring(0,8)}
@@ -1259,7 +1259,7 @@ return (
                   { id: 'history', label: isSpanish ? 'Historial' : 'History', icon: Icons.History },
                   { id: 'documents', label: isSpanish ? 'Documentos' : 'Documents', icon: Icons.Download },
                   { id: 'reviews', label: isSpanish ? 'Revisiones' : 'Reviews', icon: Icons.Users },
-                  { id: 'tasks', label: isSpanish ? 'Acciones' : 'Actions', icon: Icons.Alert, alert: requiresAction(activePortal) }
+{ id: 'tasks', label: isSpanish ? 'Acciones' : 'Actions', icon: Icons.Alert, alert: requiresAction(submission) }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -2051,7 +2051,7 @@ return (
                 {/* ---------------- PESTAÑA: HISTORIAL ---------------- */}
                 {activeTab === 'history' && (
                   <AuthorHistoryTimeline 
-                    submission={activePortal} 
+                    submission={submission} 
                     isSpanish={isSpanish} 
                   />
                 )}
@@ -2149,7 +2149,7 @@ return (
     </p>
 
     {/* Tarea: Metadatos */}
-    {hasPendingMetadataProposals(activePortal) && (
+    {hasPendingMetadataProposals(submission) && (
       <div className="bg-white border-2 border-amber-300 shadow-md">
         <div className="bg-amber-50 px-6 py-4 border-b border-amber-200 flex items-center gap-3">
           <span className="text-amber-700"><Icons.Document /></span>
@@ -2159,7 +2159,7 @@ return (
         </div>
         <div className="p-6">
           <AuthorMetadataResponseTab
-            submission={activePortal}
+            submission={submission}
             user={user}
             onResponded={() => {}}
           />
@@ -2288,7 +2288,7 @@ return (
     )}
 
     {/* Sin tareas pendientes */}
-    {!hasPendingMetadataProposals(activePortal) && !needsRevisionUpload(submission.status) && (
+    {!hasPendingMetadataProposals(submission) && !needsRevisionUpload(submission.status) && (
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
