@@ -1201,8 +1201,7 @@ if (!submission && !loading) {
   );
 }
 return (
-  <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-700">
-    
+  <div className={`${fullScreen ? 'min-h-screen w-full bg-[#FAFAFA]' : 'max-w-7xl mx-auto p-4 sm:p-6 lg:p-8'} animate-in fade-in duration-700`}>
 
       {/* ===================== PORTAL DEL MANUSCRITO (PANTALLA COMPLETA) ===================== */}
 {/* Portal del Manuscrito - Siempre visible cuando hay submission */}
