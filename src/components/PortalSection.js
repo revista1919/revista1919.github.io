@@ -773,7 +773,6 @@ export default function PortalSection({ user, onLogout }) {
       'reviewer-profile': 'reviewer-profile',
       'assignment': 'assignment',
       'calendar': 'calendar',
-      'submit': 'submit',
       'director': 'director',
       'chief': 'chief',
       'tasks': 'tasks',
@@ -805,7 +804,8 @@ export default function PortalSection({ user, onLogout }) {
   const [claimStatus, setClaimStatus] = useState('idle');
   const [anonymousProfile, setAnonymousProfile] = useState(null);
   const [claimError, setClaimError] = useState('');
-  
+  const [draftToEdit, setDraftToEdit] = useState(null);
+const [showSubmissionForm, setShowSubmissionForm] = useState(false);
   const checkForAnonymousProfileLocal = useCallback(async () => {
     if (!user?.email) {
       setClaimStatus('not-available');
@@ -925,7 +925,6 @@ export default function PortalSection({ user, onLogout }) {
     { id: 'reviewer-applications', label: isSpanish ? 'Postulaciones Revisores' : 'Reviewer Applications', roles: ['Editor de Sección', 'Editor en Jefe', 'Director General'], path: 'reviewer-applications' },
     { id: 'assignment', label: isSpanish ? 'Asignar Artículos' : 'Assign Articles', roles: ['Encargado de Asignación de Artículos', 'Director General'], path: 'assignment' },
     { id: 'calendar', label: isSpanish ? 'Calendario' : 'Calendar', roles: ['Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos'], path: 'calendar' },
-    { id: 'submit', label: isSpanish ? 'Enviar Manuscrito' : 'Submit Manuscript', roles: ['Autor'], path: 'submit' },
     { id: 'director', label: isSpanish ? 'Panel Directivo' : 'Director Panel', roles: ['Director General'], path: 'director' },
     { id: 'chief', label: isSpanish ? 'Panel Editor Jefe' : 'Chief Editor Panel', roles: ['Editor en Jefe'], path: 'chief' },
     { id: 'tasks', label: isSpanish ? 'Tareas' : 'Tasks', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'], path: 'tasks' },
@@ -945,7 +944,6 @@ export default function PortalSection({ user, onLogout }) {
     'reviewer-profile': 'reviewer-profile',
     assignment: 'assignment',
     calendar: 'calendar',
-    submit: 'submit',
     director: 'director',
     chief: 'chief',
     tasks: 'tasks',
@@ -1349,17 +1347,15 @@ export default function PortalSection({ user, onLogout }) {
           )}
 
           {/* MIS ENVÍOS */}
-         // En PortalSection.js, dentro de las pestañas
 {activeTab === 'submissions' && (
   <motion.section key="submissions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-    <SubmissionDashboard 
-      user={userData} 
-      onNavigateToForm={(draft) => {
-        // Si hay draft, abrir formulario con datos
-        // Si no, abrir formulario nuevo
-        setActiveTab('submit');
-      }}
-    />
+<SubmissionDashboard 
+  user={userData} 
+  onNavigateToForm={(draft) => {
+    setDraftToEdit(draft);
+    setShowSubmissionForm(true); // Mostrar formulario como overlay
+  }}
+/>
   </motion.section>
 )}
 
@@ -1518,47 +1514,55 @@ export default function PortalSection({ user, onLogout }) {
             </motion.section>
           )}
 
-          {/* ENVIAR MANUSCRITO */}
-          {activeTab === 'submit' && (
-            <motion.section
-              key="submit"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-white overflow-y-auto"
-            >
-              <div className="sticky top-0 z-50 bg-white border-b-2 border-black">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => handleTabChange('profile', null)}
-                      className="flex items-center gap-2 text-xs font-medium text-[#004b87] hover:text-black transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                      {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
-                    </button>
-                  </div>
-                  <h2 className="font-serif text-lg font-bold text-black">
-                    {isSpanish ? 'Envío de Manuscrito' : 'Manuscript Submission'}
-                  </h2>
-                  <div className="w-24"></div>
-                </div>
-              </div>
+{showSubmissionForm && (
+  <motion.div
+    key="submission-form-overlay"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-[60] bg-white overflow-y-auto"
+  >
+    <div className="sticky top-0 z-50 bg-white border-b-2 border-black">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => {
+              setShowSubmissionForm(false);
+              setDraftToEdit(null);
+            }}
+            className="flex items-center gap-2 text-xs font-medium text-[#004b87] hover:text-black transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            {isSpanish ? 'Volver al Panel de Envíos' : 'Back to Submission Dashboard'}
+          </button>
+        </div>
+        <h2 className="font-serif text-lg font-bold text-black">
+          {isSpanish ? 'Envío de Manuscrito' : 'Manuscript Submission'}
+        </h2>
+        <div className="w-24"></div>
+      </div>
+    </div>
 
-              <div className="w-full">
-                <SubmissionForm 
-                  user={userData} 
-                  onSuccess={(submissionId) => {
-                    console.log('Submission successful:', submissionId);
-                    handleTabChange('submissions', null);
-                  }}
-                />
-              </div>
-            </motion.section>
-          )}
-
+    <div className="w-full">
+      <SubmissionForm 
+        user={userData} 
+        initialDraft={draftToEdit}
+        draftId={draftToEdit?.id || null}
+        onNavigateToDashboard={() => {
+          setShowSubmissionForm(false);
+          setDraftToEdit(null);
+        }}
+        onSuccess={(submissionId) => {
+          console.log('Submission successful:', submissionId);
+          setShowSubmissionForm(false);
+          setDraftToEdit(null);
+        }}
+      />
+    </div>
+  </motion.div>
+)}
           {/* PANEL DIRECTIVO */}
           {activeTab === 'director' && (
             <motion.div
