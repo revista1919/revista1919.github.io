@@ -78,6 +78,16 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
     </svg>
   ),
+  RefreshIcon: () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  ),
+  CheckBadge: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+    </svg>
+  ),
 };
 
 const ArticleAssignmentPanel = ({ user }) => {
@@ -111,7 +121,15 @@ const ArticleAssignmentPanel = ({ user }) => {
     isSpanishEnglish: false
   });
 
-  const { loading, error, getSectionEditors, assignToSectionEditor, returnArticleToAuthor } = useArticleAssignment(user);
+  const { 
+    loading, 
+    error, 
+    getSectionEditors, 
+    assignToSectionEditor, 
+    returnArticleToAuthor,
+    confirmAuthorReceivedReturn,
+    resendReturnNotification
+  } = useArticleAssignment(user);
 
   // Lista de razones comunes de devolución
   const returnReasonOptions = {
@@ -145,13 +163,13 @@ const ArticleAssignmentPanel = ({ user }) => {
     ]
   };
 
-  // Escuchar envíos no asignados (status 'submitted')
+  // Escuchar envíos con estado 'submitted' y 'returned_pending_confirmation'
   useEffect(() => {
     if (!user) return;
 
     const q = query(
       collection(db, 'submissions'),
-      where('status', '==', 'submitted'),
+      where('status', 'in', ['submitted', 'returned_pending_confirmation']),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -203,7 +221,7 @@ const ArticleAssignmentPanel = ({ user }) => {
     }
   }, [selectedSubmission]);
 
-  // Filtrar editores por búsqueda - AQUÍ ESTABA EL PROBLEMA
+  // Filtrar editores por búsqueda
   const filteredEditors = sectionEditors.filter(editor => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -226,6 +244,8 @@ const ArticleAssignmentPanel = ({ user }) => {
       setSelectedEditor('');
       setAssignmentNotes('');
       alert(isSpanish ? 'Artículo asignado correctamente' : 'Article assigned successfully');
+    } else {
+      alert(isSpanish ? 'Error al asignar: ' + result.error : 'Error assigning: ' + result.error);
     }
     setIsAssigning(false);
   };
@@ -257,10 +277,8 @@ const ArticleAssignmentPanel = ({ user }) => {
       return;
     }
     
-    // Determinar idioma del manuscrito
     const manuscriptLang = selectedSubmission.paperLanguage || 'es';
     
-    // Construir mensaje pre-rellenado
     let message = '';
     if (manuscriptLang === 'es') {
       message = `Estimado/a ${selectedSubmission.authorName}, le escribimos de la Revista Nacional de las Ciencias para Estudiantes. Su artículo "${selectedSubmission.title}" (ID: ${selectedSubmission.submissionId}) requiere correcciones antes de continuar con el proceso editorial. Por favor revise su correo electrónico para más detalles.`;
@@ -268,7 +286,6 @@ const ArticleAssignmentPanel = ({ user }) => {
       message = `Dear ${selectedSubmission.authorName}, we are writing from The National Review of Sciences for Students. Your article "${selectedSubmission.titleEn || selectedSubmission.title}" (ID: ${selectedSubmission.submissionId}) requires corrections before proceeding with the editorial process. Please check your email for more details.`;
     }
     
-    // Limpiar número de teléfono
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     
@@ -294,19 +311,46 @@ const ArticleAssignmentPanel = ({ user }) => {
     const result = await returnArticleToAuthor(selectedSubmission.id, allReasons);
     
     if (result.success) {
-      setReturnSuccess(true);
-      
-      // Mostrar opción de WhatsApp
-      setTimeout(() => {
-        setShowReturnModal(false);
-        setSelectedSubmission(null);
-        alert(isSpanish ? 'Artículo devuelto al autor correctamente' : 'Article returned to author successfully');
-      }, 2000);
+      setShowReturnModal(false);
+      setReturnSuccess(false);
+      // El artículo permanece en el panel con estado 'returned_pending_confirmation'
+      alert(isSpanish 
+        ? 'Artículo devuelto. El artículo permanecerá en el panel hasta que confirmes que el autor recibió la notificación.' 
+        : 'Article returned. The article will remain in the panel until you confirm the author received the notification.');
     } else {
       alert(isSpanish ? 'Error al devolver el artículo: ' + result.error : 'Error returning article: ' + result.error);
     }
     
     setIsReturning(false);
+  };
+
+  // Función para confirmar que el autor recibió la notificación
+  const handleConfirmReceipt = async (submissionId) => {
+    if (!confirm(isSpanish 
+      ? '¿Confirmar que el autor recibió la notificación? El artículo saldrá del panel de asignaciones.' 
+      : 'Confirm that the author received the notification? The article will be removed from the assignment panel.')) {
+      return;
+    }
+    
+    const result = await confirmAuthorReceivedReturn(submissionId);
+    if (result.success) {
+      setSelectedSubmission(null);
+      alert(isSpanish 
+        ? 'Recepción confirmada. Artículo removido del panel.' 
+        : 'Receipt confirmed. Article removed from panel.');
+    } else {
+      alert(isSpanish ? 'Error: ' + result.error : 'Error: ' + result.error);
+    }
+  };
+
+  // Función para reenviar notificación
+  const handleResendNotification = async (submissionId) => {
+    const result = await resendReturnNotification(submissionId);
+    if (result.success) {
+      alert(isSpanish ? 'Notificación reenviada correctamente' : 'Notification resent successfully');
+    } else {
+      alert(isSpanish ? 'Error al reenviar: ' + result.error : 'Error resending: ' + result.error);
+    }
   };
 
   // Verificar permisos
@@ -391,6 +435,15 @@ const ArticleAssignmentPanel = ({ user }) => {
                           : 'bg-white border-l-4 border-l-transparent hover:bg-slate-50'
                       }`}
                     >
+                      {/* Badge de estado pendiente */}
+                      {sub.status === 'returned_pending_confirmation' && (
+                        <div className="absolute top-2 right-2">
+                          <span className="text-[8px] px-1.5 py-0.5 bg-amber-100 text-amber-700 border border-amber-300 font-bold uppercase tracking-wider rounded-sm">
+                            ⏳ {isSpanish ? 'Pendiente' : 'Pending'}
+                          </span>
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between items-start mb-2 gap-2">
                         <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-sm">
                           {sub.submissionId?.slice(0, 8)}
@@ -425,6 +478,70 @@ const ArticleAssignmentPanel = ({ user }) => {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
+                  {/* BANNER DE ESTADO PENDIENTE */}
+                  {selectedSubmission.status === 'returned_pending_confirmation' && (
+                    <div className="bg-amber-50 border border-amber-300 rounded-sm shadow-sm p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="text-amber-500 mt-0.5">
+                          <Icons.AlertCircle />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-bold text-amber-800 mb-2">
+                            {isSpanish ? '⏳ Pendiente de Confirmación del Autor' : '⏳ Pending Author Confirmation'}
+                          </h4>
+                          <p className="text-xs text-amber-700 mb-4">
+                            {isSpanish 
+                              ? 'Este artículo fue devuelto al autor y está esperando confirmación de recepción. Puedes reenviar la notificación o enviar un WhatsApp.' 
+                              : 'This article was returned to the author and is awaiting receipt confirmation. You can resend the notification or send a WhatsApp.'}
+                          </p>
+                          
+                          {/* Razones de devolución */}
+                          {selectedSubmission.returnReasons && selectedSubmission.returnReasons.length > 0 && (
+                            <div className="mb-4 p-3 bg-white border border-amber-200 rounded-sm">
+                              <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-2">
+                                {isSpanish ? 'Razones de devolución:' : 'Return reasons:'}
+                              </p>
+                              <ul className="list-disc list-inside text-xs text-amber-700 space-y-1">
+                                {selectedSubmission.returnReasons.map((reason, idx) => (
+                                  <li key={idx}>{reason}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          <div className="flex flex-wrap gap-2">
+                            {/* Botón para reenviar notificación */}
+                            <button
+                              onClick={() => handleResendNotification(selectedSubmission.id)}
+                              className="flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-sm transition-colors"
+                            >
+                              <Icons.RefreshIcon />
+                              {isSpanish ? 'Reenviar Notificación' : 'Resend Notification'}
+                            </button>
+                            
+                            {/* Botón WhatsApp */}
+                            <button
+                              onClick={handleSendWhatsApp}
+                              className="flex items-center gap-2 px-3 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white text-xs font-bold rounded-sm transition-colors"
+                            >
+                              <Icons.WhatsApp />
+                              WhatsApp
+                            </button>
+                            
+                            {/* Botón para confirmar recepción */}
+                            <button
+                              onClick={() => handleConfirmReceipt(selectedSubmission.id)}
+                              className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-sm transition-colors"
+                            >
+                              <Icons.CheckBadge />
+                              {isSpanish ? 'Confirmar Recepción del Autor' : 'Confirm Author Receipt'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* ENCABEZADO con título e IDs */}
                   <div className="bg-white border border-slate-200 rounded-sm shadow-sm overflow-hidden">
                     <div className="bg-[#002B49] text-white px-6 py-5">
@@ -620,128 +737,130 @@ const ArticleAssignmentPanel = ({ user }) => {
                     </div>
                   </div>
 
-                  {/* SECCIÓN DE ACCIONES */}
-                  <div className="bg-white border border-slate-200 rounded-sm shadow-sm p-6 mt-6">
-                    <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-4">
-                      {isSpanish ? 'Acciones del Artículo' : 'Article Actions'}
-                    </h3>
-                    
-                    {/* Botones de acción rápida */}
-                    <div className="flex flex-wrap gap-3 mb-6">
-                      {/* Botón WhatsApp */}
-                      <button
-                        onClick={handleSendWhatsApp}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors"
-                      >
-                        <Icons.WhatsApp />
-                        WhatsApp
-                      </button>
+                  {/* SECCIÓN DE ACCIONES - Solo visible si NO está pendiente de confirmación */}
+                  {selectedSubmission.status !== 'returned_pending_confirmation' && (
+                    <div className="bg-white border border-slate-200 rounded-sm shadow-sm p-6 mt-6">
+                      <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-4">
+                        {isSpanish ? 'Acciones del Artículo' : 'Article Actions'}
+                      </h3>
                       
-                      {/* Botón Devolver */}
-                      <button
-                        onClick={handleOpenReturnModal}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors"
-                      >
-                        <Icons.ReturnArrow />
-                        {isSpanish ? 'Devolver al Autor' : 'Return to Author'}
-                      </button>
-                    </div>
-                    
-                    {/* Separador */}
-                    <div className="border-t border-slate-200 my-6"></div>
-                    
-                    {/* Búsqueda de editor */}
-                    <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-4">
-                      {isSpanish ? 'Asignar a Editor de Sección' : 'Assign to Section Editor'}
-                    </h4>
-                    
-                    <div className="relative mb-4">
-                      <div className="flex items-center gap-2 bg-[#F5F7F9] border border-slate-200 px-3 py-2 focus-within:border-[#007398] focus-within:bg-white transition-colors rounded-sm">
-                        <span className="text-slate-400"><Icons.Search /></span>
-                        <input
-                          type="text"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          placeholder={isSpanish ? 'Buscar editor por nombre, email o institución...' : 'Search editor by name, email or institution...'}
-                          className="bg-transparent border-none outline-none text-xs w-full text-slate-700 font-medium placeholder-slate-400"
-                        />
+                      {/* Botones de acción rápida */}
+                      <div className="flex flex-wrap gap-3 mb-6">
+                        {/* Botón WhatsApp */}
+                        <button
+                          onClick={handleSendWhatsApp}
+                          className="flex items-center gap-2 px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors"
+                        >
+                          <Icons.WhatsApp />
+                          WhatsApp
+                        </button>
+                        
+                        {/* Botón Devolver */}
+                        <button
+                          onClick={handleOpenReturnModal}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors"
+                        >
+                          <Icons.ReturnArrow />
+                          {isSpanish ? 'Devolver al Autor' : 'Return to Author'}
+                        </button>
                       </div>
-                    </div>
+                      
+                      {/* Separador */}
+                      <div className="border-t border-slate-200 my-6"></div>
+                      
+                      {/* Búsqueda de editor */}
+                      <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-4">
+                        {isSpanish ? 'Asignar a Editor de Sección' : 'Assign to Section Editor'}
+                      </h4>
+                      
+                      <div className="relative mb-4">
+                        <div className="flex items-center gap-2 bg-[#F5F7F9] border border-slate-200 px-3 py-2 focus-within:border-[#007398] focus-within:bg-white transition-colors rounded-sm">
+                          <span className="text-slate-400"><Icons.Search /></span>
+                          <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder={isSpanish ? 'Buscar editor por nombre, email o institución...' : 'Search editor by name, email or institution...'}
+                            className="bg-transparent border-none outline-none text-xs w-full text-slate-700 font-medium placeholder-slate-400"
+                          />
+                        </div>
+                      </div>
 
-                    {/* Lista de editores */}
-                    <div className="max-h-80 overflow-y-auto custom-scrollbar space-y-1 border border-slate-200 rounded-sm p-1 mb-4">
-                      {filteredEditors.length === 0 ? (
-                        <p className="text-center text-slate-400 py-8 text-sm">
-                          {searchTerm 
-                            ? (isSpanish ? 'No hay resultados' : 'No results')
-                            : (isSpanish ? 'No hay editores de sección disponibles' : 'No section editors available')}
-                        </p>
-                      ) : (
-                        filteredEditors.map(editor => (
-                          <div
-                            key={editor.uid}
-                            onClick={() => setSelectedEditor(editor.uid)}
-                            className={`p-3 rounded-sm cursor-pointer transition-colors ${
-                              selectedEditor === editor.uid
-                                ? 'bg-[#F4F7F9] border-l-4 border-l-[#007398]'
-                                : 'bg-[#F8FAFC] hover:bg-slate-50 border-l-4 border-l-transparent'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-[#002B49] rounded-full flex items-center justify-center flex-shrink-0">
-                                <span className="text-sm font-serif font-bold text-white">
-                                  {editor.displayName?.charAt(0) || '?'}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-slate-800 truncate">
-                                  {editor.displayName}
+                      {/* Lista de editores */}
+                      <div className="max-h-80 overflow-y-auto custom-scrollbar space-y-1 border border-slate-200 rounded-sm p-1 mb-4">
+                        {filteredEditors.length === 0 ? (
+                          <p className="text-center text-slate-400 py-8 text-sm">
+                            {searchTerm 
+                              ? (isSpanish ? 'No hay resultados' : 'No results')
+                              : (isSpanish ? 'No hay editores de sección disponibles' : 'No section editors available')}
+                          </p>
+                        ) : (
+                          filteredEditors.map(editor => (
+                            <div
+                              key={editor.uid}
+                              onClick={() => setSelectedEditor(editor.uid)}
+                              className={`p-3 rounded-sm cursor-pointer transition-colors ${
+                                selectedEditor === editor.uid
+                                  ? 'bg-[#F4F7F9] border-l-4 border-l-[#007398]'
+                                  : 'bg-[#F8FAFC] hover:bg-slate-50 border-l-4 border-l-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-[#002B49] rounded-full flex items-center justify-center flex-shrink-0">
+                                  <span className="text-sm font-serif font-bold text-white">
+                                    {editor.displayName?.charAt(0) || '?'}
+                                  </span>
                                 </div>
-                                <div className="text-xs text-slate-500 truncate">
-                                  {editor.email}
-                                </div>
-                                {editor.institution && (
-                                  <div className="text-[11px] text-slate-400 mt-0.5 truncate">
-                                    {editor.institution}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-slate-800 truncate">
+                                    {editor.displayName}
                                   </div>
-                                )}
+                                  <div className="text-xs text-slate-500 truncate">
+                                    {editor.email}
+                                  </div>
+                                  {editor.institution && (
+                                    <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+                                      {editor.institution}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                          ))
+                        )}
+                      </div>
 
-                    {/* Notas de asignación */}
-                    <div className="mb-4">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        {isSpanish ? 'Notas para el editor (opcional)' : 'Notes for the editor (optional)'}
-                      </label>
-                      <textarea
-                        value={assignmentNotes}
-                        onChange={(e) => setAssignmentNotes(e.target.value)}
-                        rows="3"
-                        className="w-full p-3 bg-[#F5F7F9] border border-slate-200 rounded-sm focus:border-[#007398] focus:bg-white transition-colors outline-none text-xs text-slate-700 placeholder-slate-400 resize-none"
-                        placeholder={isSpanish ? 'Ej: Revisar especialmente la metodología...' : 'E.g.: Pay special attention to the methodology...'}
-                      />
-                    </div>
+                      {/* Notas de asignación */}
+                      <div className="mb-4">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                          {isSpanish ? 'Notas para el editor (opcional)' : 'Notes for the editor (optional)'}
+                        </label>
+                        <textarea
+                          value={assignmentNotes}
+                          onChange={(e) => setAssignmentNotes(e.target.value)}
+                          rows="3"
+                          className="w-full p-3 bg-[#F5F7F9] border border-slate-200 rounded-sm focus:border-[#007398] focus:bg-white transition-colors outline-none text-xs text-slate-700 placeholder-slate-400 resize-none"
+                          placeholder={isSpanish ? 'Ej: Revisar especialmente la metodología...' : 'E.g.: Pay special attention to the methodology...'}
+                        />
+                      </div>
 
-                    {/* Botón de asignación */}
-                    <button
-                      onClick={handleAssign}
-                      disabled={loading || isAssigning || !selectedEditor}
-                      className="w-full py-3 bg-[#002B49] hover:bg-[#003b5c] text-white text-[10px] uppercase tracking-widest font-bold rounded-sm transition-all disabled:bg-slate-200 disabled:text-slate-400"
-                    >
-                      {loading || isAssigning ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          {isSpanish ? 'ASIGNANDO...' : 'ASSIGNING...'}
-                        </span>
-                      ) : (
-                        isSpanish ? 'ASIGNAR ARTÍCULO' : 'ASSIGN ARTICLE'
-                      )}
-                    </button>
-                  </div>
+                      {/* Botón de asignación */}
+                      <button
+                        onClick={handleAssign}
+                        disabled={loading || isAssigning || !selectedEditor}
+                        className="w-full py-3 bg-[#002B49] hover:bg-[#003b5c] text-white text-[10px] uppercase tracking-widest font-bold rounded-sm transition-all disabled:bg-slate-200 disabled:text-slate-400"
+                      >
+                        {loading || isAssigning ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            {isSpanish ? 'ASIGNANDO...' : 'ASSIGNING...'}
+                          </span>
+                        ) : (
+                          isSpanish ? 'ASIGNAR ARTÍCULO' : 'ASSIGN ARTICLE'
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div
@@ -803,97 +922,86 @@ const ArticleAssignmentPanel = ({ user }) => {
                 </button>
               </div>
               
-              {returnSuccess ? (
-                /* Mensaje de éxito */
-                <div className="p-8 text-center">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <h4 className="text-lg font-serif text-slate-800 mb-2">
-                    {isSpanish ? 'Artículo Devuelto Correctamente' : 'Article Returned Successfully'}
-                  </h4>
+              {/* Contenido del formulario */}
+              <div className="p-6">
+                <div className="mb-4">
+                  <p className="text-sm text-slate-600 mb-2">
+                    <strong>{isSpanish ? 'Artículo:' : 'Article:'}</strong> {selectedSubmission.title}
+                  </p>
                   <p className="text-sm text-slate-600">
-                    {isSpanish 
-                      ? 'Se ha notificado al autor por correo electrónico.' 
-                      : 'The author has been notified by email.'}
+                    <strong>{isSpanish ? 'Autor:' : 'Author:'}</strong> {selectedSubmission.authorName}
                   </p>
                 </div>
-              ) : (
-                /* Contenido del formulario */
-                <div className="p-6">
-                  <div className="mb-4">
-                    <p className="text-sm text-slate-600 mb-2">
-                      <strong>{isSpanish ? 'Artículo:' : 'Article:'}</strong> {selectedSubmission.title}
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      <strong>{isSpanish ? 'Autor:' : 'Author:'}</strong> {selectedSubmission.authorName}
-                    </p>
-                  </div>
-                  
-                  <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-3">
-                    {isSpanish ? 'Seleccione las razones de devolución:' : 'Select return reasons:'}
-                  </h4>
-                  
-                  <div className="space-y-2 mb-4">
-                    {(isSpanish ? returnReasonOptions.es : returnReasonOptions.en).map((reason, index) => (
-                      <label 
-                        key={index}
-                        className={`flex items-center gap-3 p-3 rounded-sm border cursor-pointer transition-colors ${
-                          returnReasons.includes(reason)
-                            ? 'bg-red-50 border-red-300'
-                            : 'bg-white border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={returnReasons.includes(reason)}
-                          onChange={() => toggleReturnReason(reason)}
-                          className="w-4 h-4 text-red-600 rounded"
-                        />
-                        <span className="text-sm text-slate-700">{reason}</span>
-                      </label>
-                    ))}
-                  </div>
-                  
-                  <div className="mb-4">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      {isSpanish ? 'Razón personalizada (opcional):' : 'Custom reason (optional):'}
-                    </label>
-                    <textarea
-                      value={customReturnReason}
-                      onChange={(e) => setCustomReturnReason(e.target.value)}
-                      rows="3"
-                      className="w-full p-3 bg-[#F5F7F9] border border-slate-200 rounded-sm focus:border-red-400 focus:bg-white transition-colors outline-none text-xs text-slate-700 placeholder-slate-400 resize-none"
-                      placeholder={isSpanish ? 'Describa las correcciones necesarias...' : 'Describe the necessary corrections...'}
-                    />
-                  </div>
-                  
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleReturnArticle}
-                      disabled={isReturning}
-                      className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white text-xs uppercase tracking-widest font-bold rounded-sm transition-all disabled:bg-slate-200 disabled:text-slate-400"
-                    >
-                      {isReturning ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          {isSpanish ? 'DEVOLVIENDO...' : 'RETURNING...'}
-                        </span>
-                      ) : (
-                        isSpanish ? 'CONFIRMAR DEVOLUCIÓN' : 'CONFIRM RETURN'
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setShowReturnModal(false)}
-                      className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs uppercase tracking-widest font-bold rounded-sm transition-colors"
-                    >
-                      {isSpanish ? 'CANCELAR' : 'CANCEL'}
-                    </button>
-                  </div>
+                
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-sm">
+                  <p className="text-xs text-blue-700">
+                    {isSpanish 
+                      ? 'ℹ️ El artículo permanecerá en el panel hasta que confirmes que el autor recibió la notificación.'
+                      : 'ℹ️ The article will remain in the panel until you confirm the author received the notification.'}
+                  </p>
                 </div>
-              )}
+                
+                <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-3">
+                  {isSpanish ? 'Seleccione las razones de devolución:' : 'Select return reasons:'}
+                </h4>
+                
+                <div className="space-y-2 mb-4">
+                  {(isSpanish ? returnReasonOptions.es : returnReasonOptions.en).map((reason, index) => (
+                    <label 
+                      key={index}
+                      className={`flex items-center gap-3 p-3 rounded-sm border cursor-pointer transition-colors ${
+                        returnReasons.includes(reason)
+                          ? 'bg-red-50 border-red-300'
+                          : 'bg-white border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={returnReasons.includes(reason)}
+                        onChange={() => toggleReturnReason(reason)}
+                        className="w-4 h-4 text-red-600 rounded"
+                      />
+                      <span className="text-sm text-slate-700">{reason}</span>
+                    </label>
+                  ))}
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    {isSpanish ? 'Razón personalizada (opcional):' : 'Custom reason (optional):'}
+                  </label>
+                  <textarea
+                    value={customReturnReason}
+                    onChange={(e) => setCustomReturnReason(e.target.value)}
+                    rows="3"
+                    className="w-full p-3 bg-[#F5F7F9] border border-slate-200 rounded-sm focus:border-red-400 focus:bg-white transition-colors outline-none text-xs text-slate-700 placeholder-slate-400 resize-none"
+                    placeholder={isSpanish ? 'Describa las correcciones necesarias...' : 'Describe the necessary corrections...'}
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleReturnArticle}
+                    disabled={isReturning}
+                    className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white text-xs uppercase tracking-widest font-bold rounded-sm transition-all disabled:bg-slate-200 disabled:text-slate-400"
+                  >
+                    {isReturning ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        {isSpanish ? 'DEVOLVIENDO...' : 'RETURNING...'}
+                      </span>
+                    ) : (
+                      isSpanish ? 'CONFIRMAR DEVOLUCIÓN' : 'CONFIRM RETURN'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowReturnModal(false)}
+                    className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs uppercase tracking-widest font-bold rounded-sm transition-colors"
+                  >
+                    {isSpanish ? 'CANCELAR' : 'CANCEL'}
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}
