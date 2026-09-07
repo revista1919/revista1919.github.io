@@ -14,7 +14,7 @@ function SubmitSection() {
   const navigate = useNavigate();
 
   const handleSubmitClick = () => {
-    navigate('/login/submit');
+    navigate('/login/submissions');
   };
 
   const fadeUp = {
@@ -291,7 +291,7 @@ function SubmitSection() {
               <p className="text-[12px] text-[#a0a0a0] font-sans">
                 For English-language submissions, please access the{' '}
                 <a 
-                  href="/en/login/submit" 
+                  href="/en/login/submissions" 
                   className="text-[#002147] font-bold hover:text-[#e86125] transition-colors underline underline-offset-4"
                 >
                   English Editorial Portal

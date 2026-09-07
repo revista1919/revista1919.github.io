@@ -256,7 +256,7 @@ const SubmissionDashboard = ({ user, onNavigateToForm }) => {
     if (onNavigateToForm) {
       onNavigateToForm(null);
     } else {
-      navigate(isSpanish ? '/login/submit' : '/en/login/submit');
+      navigate(isSpanish ? '/login/submissions' : '/en/login/submissions');
     }
   };
 
@@ -264,7 +264,7 @@ const SubmissionDashboard = ({ user, onNavigateToForm }) => {
     if (onNavigateToForm) {
       onNavigateToForm(draft);
     } else {
-      navigate(isSpanish ? '/login/submit' : '/en/login/submit', { 
+      navigate(isSpanish ? '/login/submissions' : '/en/login/submissions', { 
         state: { draftId: draft.id } 
       });
     }
