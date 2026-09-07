@@ -310,13 +310,11 @@ const SubmissionDashboard = ({ user, onNavigateToForm }) => {
   // Si hay un submission seleccionado, mostrar el panel detallado A PANTALLA COMPLETA
   if (selectedSubmissionId) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#FAFAFA] overflow-y-auto">
-        <AuthorSubmissionsPanel 
-          user={user} 
-          submissionId={selectedSubmissionId}
-          onBack={handleBackToDashboard}
-        />
-      </div>
+      <AuthorSubmissionsPanel 
+        user={user} 
+        submissionId={selectedSubmissionId}
+        onBack={handleBackToDashboard}
+      />
     );
   }
 
