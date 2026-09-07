@@ -314,6 +314,7 @@ const SubmissionDashboard = ({ user, onNavigateToForm }) => {
         user={user} 
         submissionId={selectedSubmissionId}
         onBack={handleBackToDashboard}
+        fullScreen={true}
       />
     );
   }
