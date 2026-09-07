@@ -336,38 +336,37 @@ const HomeSection = ({ onOpenMenu }) => {
           </div>
         </motion.div>
 
-        {/* INVITACIÓN */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="bg-[#004b87] p-12 md:p-20 text-center border-y border-black rounded-none"
-        >
-          <div className="max-w-3xl mx-auto">
-            <div className="text-white mb-6">
-              <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
-              </svg>
-            </div>
-            <h2 className="text-2xl md:text-4xl font-serif font-medium text-white mb-6 leading-relaxed">
-              {isSpanish 
-                ? 'La ciencia se construye aprendiendo y sometiendo los hallazgos al escrutinio de pares.'
-                : 'Science is built by learning and subjecting findings to peer scrutiny.'}
-            </h2>
-            <p className="text-white/80 font-light mb-10 text-sm md:text-base leading-relaxed">
-              {isSpanish 
-                ? 'Invitamos a estudiantes e investigadores emergentes a participar en el proyecto editorial, ya sea sometiendo sus manuscritos o integrándose al cuerpo de revisores técnicos.'
-                : 'We invite students and emerging researchers to participate in the editorial project, either by submitting their manuscripts or joining the technical review board.'}
-            </p>
-            <button
-              onClick={() => handleNavigate('/admin')}
-              className="px-10 py-4 bg-white text-[#004b87] text-[10px] font-medium uppercase tracking-[0.2em] hover:bg-gray-100 transition-colors rounded-none"
-            >
-              {isSpanish ? 'Consultar Convocatorias Activas' : 'View Active Calls'}
-            </button>
-          </div>
-        </motion.div>
-
+{/* INVITACIÓN */}
+<motion.div
+  initial={{ opacity: 0 }}
+  whileInView={{ opacity: 1 }}
+  viewport={{ once: true }}
+  className="bg-[#002147] p-12 md:p-20 text-center border-y border-black rounded-none"
+>
+  <div className="max-w-3xl mx-auto">
+    <div className="text-white/60 mb-6">
+      <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+      </svg>
+    </div>
+    <h2 className="text-2xl md:text-4xl font-serif font-medium text-white mb-6 leading-relaxed">
+      {isSpanish 
+        ? 'La ciencia se construye aprendiendo y sometiendo los hallazgos al escrutinio de pares.'
+        : 'Science is built by learning and subjecting findings to peer scrutiny.'}
+    </h2>
+    <p className="text-white/70 font-light mb-10 text-sm md:text-base leading-relaxed">
+      {isSpanish 
+        ? 'Invitamos a estudiantes e investigadores emergentes a participar en el proyecto editorial, ya sea sometiendo sus manuscritos o integrándose al cuerpo de revisores técnicos.'
+        : 'We invite students and emerging researchers to participate in the editorial project, either by submitting their manuscripts or joining the technical review board.'}
+    </p>
+    <button
+      onClick={() => handleNavigate('/admin')}
+      className="px-10 py-4 bg-white text-[#002147] text-[10px] font-medium uppercase tracking-[0.2em] hover:bg-gray-100 transition-colors rounded-none"
+    >
+      {isSpanish ? 'Consultar Convocatorias Activas' : 'View Active Calls'}
+    </button>
+  </div>
+</motion.div>
       </div>
     </div>
   );
