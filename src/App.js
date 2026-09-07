@@ -832,23 +832,35 @@ function App() {
                 </button>
               </div>
               <div className="p-2 flex flex-col">
-                {sections.map((section) => (
-                  <NavLink
-                    key={section.name}
-                    to={section.path}
-                    className={({ isActive }) =>
-                      `block py-3 px-4 text-xs font-semibold uppercase tracking-[0.15em] border-b border-gray-100 transition-colors ${
-                        isActive 
-                          ? 'bg-[#002147] text-white' 
-                          : 'text-gray-700 hover:bg-gray-100 hover:text-[#002147]'
-                      }`
-                    }
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {section.label}
-                  </NavLink>
-                ))}
-              </div>
+  {sections.map((section) => {
+    // Determinar si es una sección destacada
+    const isHighlighted = ['submit', 'guidelines', 'login'].includes(section.name);
+    
+    return (
+      <NavLink
+        key={section.name}
+        to={section.path}
+        className={({ isActive }) =>
+          `block py-3 px-4 text-xs font-semibold uppercase tracking-[0.15em] border-b border-gray-100 transition-colors relative ${
+            isActive 
+              ? 'bg-[#002147] text-white' 
+              : isHighlighted
+                ? 'text-[#002147] bg-[#002147]/5 hover:bg-[#002147]/10 border-l-4 border-[#002147]'
+                : 'text-gray-700 hover:bg-gray-100 hover:text-[#002147]'
+          }`
+        }
+        onClick={() => setIsMenuOpen(false)}
+      >
+        {section.label}
+        {isHighlighted && !isActive && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-bold text-[#002147]">
+            ●
+          </span>
+        )}
+      </NavLink>
+    );
+  })}
+</div>
             </motion.div>
           </>
         )}
