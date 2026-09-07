@@ -3,418 +3,371 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../hooks/useLanguage';
 import logo from '../../public/logo.png';
+import logoEN from '../../public/logoEN.png';
 
 const HomeSection = ({ onOpenMenu }) => {
   const navigate = useNavigate();
   const { switchLanguage, language } = useLanguage();
+  const isSpanish = language === 'es';
+  
   const handleLanguageToggle = () => {
-    switchLanguage(language === 'es' ? 'en' : 'es');
+    switchLanguage(isSpanish ? 'en' : 'es');
   };
+
   const cards = [
     {
-      title: 'Artículos',
-      desc: 'Artículos científicos elaborados por estudiantes y revisados por pares.',
-      path: '/article',
+      title: isSpanish ? 'Artículos' : 'Articles',
+      desc: isSpanish 
+        ? 'Artículos científicos elaborados por estudiantes y revisados por pares.'
+        : 'Scientific articles written by students and peer-reviewed.',
+      path: isSpanish ? '/article' : '/en/article/',
       icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-      bgImage: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=773&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+      bgImage: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=773&auto=format&fit=crop'
     },
     {
-      title: 'Números',
-      desc: 'Compilaciones de artículos organizados por edición.',
-      path: '/volume',
+      title: isSpanish ? 'Números' : 'Issues',
+      desc: isSpanish 
+        ? 'Compilaciones de artículos organizados por edición semestral.'
+        : 'Collections of articles organized by edition.',
+      path: isSpanish ? '/volume' : '/en/volume/',
       icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
-      bgImage: 'https://plus.unsplash.com/premium_photo-1677567996070-68fa4181775a?q=80&w=872&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+      bgImage: 'https://plus.unsplash.com/premium_photo-1677567996070-68fa4181775a?q=80&w=872&auto=format&fit=crop'
     },
     {
-      title: 'Manuscritos',
-      desc: 'Información para autores y proceso de envío de trabajos.',
-      path: '/submit',
+      title: isSpanish ? 'Manuscritos' : 'Manuscripts',
+      desc: isSpanish 
+        ? 'Información para autores, normativas y proceso de envío.'
+        : 'Information for authors and the submission process.',
+      path: isSpanish ? '/submit' : '/en/submit/',
       icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12',
-      bgImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+      bgImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=870&auto=format&fit=crop'
     },
     {
-      title: 'Noticias',
-      desc: 'Avisos, actividades y novedades de la comunidad científica estudiantil.',
-      path: '/new',
+      title: isSpanish ? 'Noticias' : 'News',
+      desc: isSpanish 
+        ? 'Avisos, actividades y novedades de la comunidad científica.'
+        : 'Announcements, activities, and updates from the student scientific community.',
+      path: isSpanish ? '/new' : '/en/new/',
       icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z',
       bgImage: 'https://www.revistacienciasestudiantes.com/team.jpg'
     }
   ];
+
+  const authorGuides = [
+    {
+      href: isSpanish ? '/quick.html' : '/quickEN.html',
+      title: isSpanish ? 'Guía Rápida' : 'Interactive Quick Guide',
+      category: isSpanish ? 'Interactivo' : 'Interactive',
+      desc: isSpanish 
+        ? 'Checklist visual de requisitos esenciales. Sin leer documentos largos.'
+        : 'Visual checklist with the essentials. No long documents to read.',
+      badge: '5 min'
+    },
+    {
+      href: isSpanish ? '/author.html' : '/authorEN.html',
+      title: isSpanish ? 'Manual del Autor' : 'Complete Author Guidelines',
+      category: isSpanish ? 'Documento Extenso' : 'Extended Document',
+      desc: isSpanish 
+        ? 'Plantillas, métodos de citación y requisitos técnicos completos.'
+        : 'Templates, citation examples, and technical requirements.',
+    },
+    {
+      href: isSpanish ? '/practices.html' : '/practicesEN.html',
+      title: isSpanish ? 'Buenas Prácticas' : 'Good Practices',
+      category: isSpanish ? 'Ética' : 'Ethics',
+      desc: isSpanish 
+        ? 'Estándares éticos y declaración de originalidad.'
+        : 'Ethical standards and best practices for publishing.',
+    },
+    {
+      href: isSpanish ? '/open-access.html' : '/open-accessEN.html',
+      title: isSpanish ? 'Open Access' : 'Open Access',
+      category: isSpanish ? 'Licenciamiento' : 'Licensing',
+      desc: isSpanish 
+        ? 'Políticas de acceso abierto y derechos de retención.'
+        : 'Open access policies, licenses, and copyright information.',
+    },
+    {
+      href: isSpanish ? '/peer-review.html' : '/peer-reviewEN.html',
+      title: isSpanish ? 'Peer Review' : 'Peer Review',
+      category: isSpanish ? 'Proceso' : 'Process',
+      desc: isSpanish 
+        ? 'Política de revisión por pares y flujo editorial.'
+        : 'Peer review policy and editorial workflow.',
+    },
+    {
+      href: isSpanish ? '/copyright-and-license.html' : '/copyright-and-licenseEN.html',
+      title: isSpanish ? 'Licencias' : 'Licenses',
+      category: isSpanish ? 'Derechos' : 'Rights',
+      desc: isSpanish 
+        ? 'Licencia y derechos de autor.'
+        : 'License and copyright information.',
+    }
+  ];
+
+  const handleNavigate = (path) => {
+    if (isSpanish) {
+      navigate(path);
+    } else {
+      // Para inglés, usar la URL completa
+      window.location.href = `https://www.revistacienciasestudiantes.com${path}`;
+    }
+  };
+
   const Card = ({ card, index }) => {
     const [imageLoaded, setImageLoaded] = React.useState(false);
-    const navigate = useNavigate();
+    
     return (
       <motion.div
         key={card.path}
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ delay: index * 0.1 }}
-        onClick={() => navigate(card.path)}
-        className="group relative h-[350px] sm:h-[400px] flex flex-col justify-end p-6 sm:p-8 overflow-hidden rounded-2xl cursor-pointer bg-gray-100 transition-all shadow-sm hover:shadow-2xl"
+        onClick={() => handleNavigate(card.path)}
+        className="group relative bg-white flex flex-col cursor-pointer hover:bg-gray-50 transition-colors h-full border border-gray-200"
       >
-        {card.bgImage && (
-          <>
-            <img
-              src={card.bgImage}
-              alt=""
-              onLoad={() => setImageLoaded(true)}
-              className={`absolute top-0 left-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent" />
-            <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/10 transition-opacity" />
-          </>
-        )}
-        <div className="relative z-10">
-          <div className="bg-white/10 p-3 rounded-full mb-4 w-fit transition-colors group-hover:bg-blue-400/20">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={card.icon} />
-            </svg>
-          </div>
-          <h3 className="text-2xl font-bold text-white mb-2">
+        <div className="h-48 overflow-hidden border-b border-gray-200">
+          <img 
+            src={card.bgImage} 
+            alt={card.title}
+            onLoad={() => setImageLoaded(true)}
+            className={`w-full h-full object-cover grayscale-[100%] group-hover:grayscale-0 transition-all duration-500 scale-105 group-hover:scale-100 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+          />
+        </div>
+        <div className="p-8 flex flex-col flex-grow">
+          <h3 className="text-xl font-serif text-[#004b87] mb-3">
             {card.title}
           </h3>
-          <p className="text-gray-200 mb-4">
+          <p className="text-sm text-gray-600 mb-6 flex-grow leading-relaxed">
             {card.desc}
           </p>
-          <div className="inline-flex items-center gap-2 text-blue-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-            <span>Explorar</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+          <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#004b87] group-hover:underline underline-offset-4 mt-auto">
+            {isSpanish ? 'Explorar →' : 'Explore →'}
           </div>
         </div>
-        <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-400/20 rounded-2xl pointer-events-none transition-all" />
       </motion.div>
     );
   };
+
   return (
-    <div className="relative overflow-hidden bg-white">
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <motion.div
-          animate={{ 
-            scale: [1, 1.2, 1],
-            opacity: [0.1, 0.2, 0.1] 
-          }}
-          transition={{ duration: 8, repeat: Infinity }}
-          className="absolute -top-20 -right-20 w-64 h-64 sm:w-96 sm:h-96 bg-blue-200 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{ 
-            scale: [1, 1.3, 1],
-            opacity: [0.05, 0.15, 0.05] 
-          }}
-          transition={{ duration: 10, repeat: Infinity, delay: 1 }}
-          className="absolute top-1/4 -left-20 w-72 h-72 bg-gray-200 rounded-full blur-3xl"
-        />
-      </div>
-      <div className="relative z-10 w-full px-0 pt-4 pb-20 sm:pt-6 sm:pb-32">
-        {/* Integrated Header Elements */}
-        <div className="flex items-center justify-between mb-8 sm:mb-12 relative">
-          {/* LADO IZQUIERDO */}
+    <div className="relative bg-[#FAFAFA] font-sans text-[#1a1a1a] min-h-screen">
+      
+      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-6 lg:px-12 pt-6 pb-20">
+        
+        {/* HEADER EDITORIAL */}
+        <header className="flex items-center justify-between mb-16 border-b-2 border-black pb-6">
+          {/* LADO IZQUIERDO: Menú */}
           <div className="flex-1 flex justify-start">
             <button
               onClick={onOpenMenu}
-              className="group flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors focus:outline-none"
-              aria-label="Abrir menú"
+              className="group flex items-center gap-3 hover:text-[#004b87] transition-colors focus:outline-none"
+              aria-label={isSpanish ? 'Abrir menú' : 'Open menu'}
             >
               <div className="space-y-1.5">
-                <div className="w-5 h-0.5 bg-gray-900 rounded group-hover:w-6 transition-all"></div>
-                <div className="w-6 h-0.5 bg-gray-900 rounded"></div>
-                <div className="w-4 h-0.5 bg-gray-900 rounded group-hover:w-6 transition-all"></div>
+                <div className="w-6 h-px bg-current transition-all"></div>
+                <div className="w-6 h-px bg-current"></div>
+                <div className="w-4 h-px bg-current group-hover:w-6 transition-all"></div>
               </div>
-              <span className="hidden sm:block text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                Menú
+              <span className="hidden sm:block text-[10px] font-medium uppercase tracking-[0.2em]">
+                {isSpanish ? 'Índice' : 'Menu'}
               </span>
             </button>
           </div>
-          {/* CENTRO */}
+          
+          {/* CENTRO: Logo */}
           <div className="flex-shrink-0 px-4">
             <motion.div
-              onClick={() => navigate('/')}
-              className="cursor-pointer flex flex-col items-center"
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.6 }}
-              whileHover={{ scale: 1.02 }}
+              onClick={() => handleNavigate(isSpanish ? '/' : '/en/')}
+              className="cursor-pointer"
+              whileHover={{ opacity: 0.8 }}
             >
               <img
-                src={logo}
-                alt="Revista Logo"
-                className="h-12 sm:h-16 w-auto object-contain drop-shadow-sm"
+                src={isSpanish ? logo : logoEN}
+                alt={isSpanish ? 'Revista Logo' : 'Journal Logo'}
+                className="h-14 sm:h-16 w-auto object-contain"
               />
-              <div className="h-px w-8 bg-blue-200 mt-2 hidden sm:block"></div>
             </motion.div>
           </div>
-          {/* LADO DERECHO */}
+          
+          {/* LADO DERECHO: Selector de idioma */}
           <div className="flex-1 flex justify-end">
-            <motion.button
+            <button
               onClick={handleLanguageToggle}
-              whileTap={{ scale: 0.95 }}
-              className="relative flex items-center bg-gray-100/80 backdrop-blur-sm border border-gray-200 p-1 rounded-full w-20 h-9 overflow-hidden shadow-sm"
-              title={`Cambiar a ${language === 'es' ? 'Inglés' : 'Español'}`}
+              className="flex border border-gray-300 text-[10px] font-medium tracking-[0.2em] uppercase"
+              title={isSpanish ? 'Switch to English' : 'Cambiar a Español'}
             >
-              <motion.div
-                className="absolute top-1 bottom-1 w-[34px] bg-white rounded-full shadow-md z-0"
-                initial={false}
-                animate={{ x: language === 'es' ? 0 : 38 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-              <div className="relative z-10 flex w-full justify-around items-center text-[10px] font-bold tracking-tighter">
-                <span className={language === 'es' ? 'text-blue-600' : 'text-gray-400'}>ES</span>
-                <span className={language === 'en' ? 'text-blue-600' : 'text-gray-400'}>EN</span>
-              </div>
-            </motion.button>
+              <span className={`px-3 py-1.5 transition-colors ${isSpanish ? 'bg-[#004b87] text-white' : 'bg-transparent text-gray-500 hover:text-black'}`}>ES</span>
+              <span className={`px-3 py-1.5 transition-colors ${!isSpanish ? 'bg-[#004b87] text-white' : 'bg-transparent text-gray-500 hover:text-black'}`}>EN</span>
+            </button>
           </div>
-        </div>
+        </header>
+
         {/* HERO */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-16 sm:mb-32">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center mb-24">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="relative z-10"
+            className="lg:col-span-7 relative z-10"
           >
-            <span className="text-[9px] sm:text-[10px] font-bold text-blue-600 uppercase tracking-[0.3em] mb-4 block text-center lg:text-left">
-              Revista Nacional de las Ciencias para Estudiantes · ISSN 3087-2839
-            </span>
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-serif font-bold text-gray-900 leading-[1.1] mb-6 text-center lg:text-left">
-              Un espacio para el <br className="hidden sm:block" />
-              <span className="italic text-gray-500 relative">
-                trabajo científico estudiantil
-                <svg className="absolute -bottom-2 left-0 w-full h-3 text-blue-100 -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
-                  <path d="M0 5 Q 25 0 50 5 T 100 5" stroke="currentColor" strokeWidth="8" fill="transparent" />
-                </svg>
+            <div className="border-l-2 border-[#004b87] pl-6 mb-8">
+              <span className="text-[10px] font-medium text-gray-500 uppercase tracking-[0.2em] block mb-2">
+                ISSN 3087-2839
               </span>
+              <span className="text-[10px] font-medium text-[#004b87] uppercase tracking-[0.2em] block">
+                {isSpanish ? 'Revista Nacional de las Ciencias para Estudiantes' : 'The National Review of Sciences for Students'}
+              </span>
+            </div>
+            
+            <h1 className="text-4xl sm:text-6xl lg:text-[5rem] font-serif font-medium text-[#1a1a1a] leading-[1.05] mb-8">
+              {isSpanish ? (
+                <>
+                  Un espacio para el <br />
+                  <span className="italic text-[#004b87]">trabajo científico</span> <br />
+                  estudiantil.
+                </>
+              ) : (
+                <>
+                  A space for <br />
+                  <span className="italic text-[#004b87]">student scientific</span> <br />
+                  work.
+                </>
+              )}
             </h1>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="block lg:hidden w-full aspect-video mb-8 rounded-2xl overflow-hidden shadow-xl"
-            >
-              <img
-                src="https://images.unsplash.com/photo-1616017640739-44ce2bfd9b4e?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                alt="Trabajo científico estudiantil"
-                className="w-full h-full object-cover"
-              />
-            </motion.div>
-            <p className="text-base sm:text-lg text-gray-600 mb-8 sm:mb-10 font-light leading-relaxed max-w-lg mx-auto lg:mx-0 text-center lg:text-left">
-              La Revista Nacional de las Ciencias para Estudiantes es una revista académica de acceso abierto y sin costo para publicar, siendo una plataforma que busca la difusión de trabajos científicos desarrollados por estudiantes, promoviendo el aprendizaje y la discusión académica. 
+            
+            <p className="text-lg text-gray-600 mb-10 font-light leading-relaxed max-w-xl">
+              {isSpanish 
+                ? 'Publicación académica de acceso abierto dedicada a la difusión de investigaciones desarrolladas por estudiantes, promoviendo el escrutinio riguroso y la discusión formal.'
+                : 'Open access academic publication dedicated to disseminating research developed by students, promoting rigorous scrutiny and formal discussion.'}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            
+            <div className="flex flex-col sm:flex-row gap-4">
               <button
-                onClick={() => navigate('/article')}
-                className="px-8 sm:px-10 py-4 bg-gray-900 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg hover:-translate-y-1 active:scale-95"
+                onClick={() => handleNavigate(isSpanish ? '/article' : '/en/article/')}
+                className="px-8 py-4 bg-[#004b87] text-white font-medium text-[10px] uppercase tracking-[0.2em] hover:bg-black transition-colors rounded-none"
               >
-                Ver artículos
+                {isSpanish ? 'Ver volumen actual' : 'View current issue'}
               </button>
               <button
-                onClick={() => navigate('/about')}
-                className="px-8 sm:px-10 py-4 border border-gray-200 text-gray-900 font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all active:scale-95"
+                onClick={() => handleNavigate(isSpanish ? '/about' : '/en/about/')}
+                className="px-8 py-4 border border-gray-300 text-[#1a1a1a] font-medium text-[10px] uppercase tracking-[0.2em] hover:border-[#004b87] transition-colors rounded-none"
               >
-                Sobre la revista
+                {isSpanish ? 'Sobre la revista' : 'About the journal'}
               </button>
             </div>
           </motion.div>
+
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="hidden lg:block relative"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.2 }}
+            className="lg:col-span-5 relative hidden lg:block"
           >
-            <div className="aspect-[4/5] bg-gray-100 rounded-2xl overflow-hidden shadow-2xl grayscale hover:grayscale-0 transition-all duration-700">
+            <div className="aspect-[3/4] border border-gray-300 bg-gray-100 p-2 rounded-none">
               <img
-                src="https://images.unsplash.com/photo-1616017640739-44ce2bfd9b4e?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                alt="Trabajo científico estudiantil"
-                className="w-full h-full object-cover"
+                src="https://images.unsplash.com/photo-1616017640739-44ce2bfd9b4e?q=80&w=1374&auto=format&fit=crop"
+                alt={isSpanish ? 'Laboratorio Estudiantil' : 'Student Laboratory'}
+                className="w-full h-full object-cover grayscale-[80%] hover:grayscale-0 transition-all duration-700"
               />
+            </div>
+            <div className="mt-3 text-[9px] uppercase tracking-[0.15em] text-gray-400 text-right">
+              FIG 1. — {isSpanish ? 'Práctica de laboratorio, 2025' : 'Laboratory practice, 2025'}
             </div>
           </motion.div>
         </div>
 
-        {/* GUÍAS PARA AUTORES - Sección de enlaces directos */}
+        {/* SECCIONES PRINCIPALES */}
+        <div className="mb-24">
+          <div className="flex justify-between items-end border-b-2 border-black pb-4 mb-8">
+            <h2 className="text-2xl font-serif text-[#1a1a1a]">
+              {isSpanish ? 'Directorio de Contenidos' : 'Content Directory'}
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-gray-300 border border-gray-300 rounded-none">
+            {cards.map((card, index) => (
+              <Card key={card.path} card={card} index={index} />
+            ))}
+          </div>
+        </div>
+
+        {/* INFORMACIÓN PARA AUTORES */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mb-16 sm:mb-20"
+          className="mb-24"
         >
-          <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900 mb-3">
-              Guías para Autores
-            </h2>
-            <p className="text-sm text-gray-500 font-serif italic max-w-xl mx-auto">
-              Consulte nuestros recursos completos antes de preparar su manuscrito
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 max-w-6xl mx-auto">
-
-            {/* NUEVA TARJETA PRINCIPAL: Guía Rápida Interactiva */}
-            <a
-              href="/quick.html"
-              className="group relative p-4 bg-white rounded-xl border-2 border-[#007398] hover:shadow-xl transition-all overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 w-full h-1 bg-[#007398]"></div>
-              <div className="absolute top-3 right-3 bg-[#007398] text-white text-[8px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                5 min
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-[#e0ecf4] rounded-lg">
-                  <svg className="w-5 h-5 text-[#001f3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#007398] transition-colors mb-1">
-                    Guía Rápida Interactiva
+          <div className="border-t-4 border-[#004b87] bg-white border-b border-x border-gray-300 rounded-none">
+            <div className="p-6 md:p-8 border-b border-gray-300 bg-[#FAFAFA]">
+              <h2 className="text-2xl font-serif font-medium text-[#1a1a1a] mb-2">
+                {isSpanish ? 'Información para Autores' : 'Information for Authors'}
+              </h2>
+              <p className="text-sm text-gray-500 font-serif italic">
+                {isSpanish 
+                  ? 'Documentación normativa y requerimientos de publicación.'
+                  : 'Normative documentation and publication requirements.'}
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 divide-y md:divide-y-0 divide-gray-300">
+              {authorGuides.map((guide, index) => (
+                <a 
+                  key={index}
+                  href={guide.href}
+                  className={`group p-6 hover:bg-[#FAFAFA] transition-colors flex flex-col h-full ${index % 3 !== 0 ? 'lg:border-l lg:border-gray-200' : ''}`}
+                >
+                  <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400 mb-4">
+                    {guide.category}
+                  </div>
+                  <h3 className="text-sm font-medium text-[#1a1a1a] mb-2">
+                    {guide.title}
                   </h3>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    Checklist visual con lo esencial. Sin leer documentos largos.
+                  <p className="text-xs text-gray-500 mb-6 flex-grow">
+                    {guide.desc}
                   </p>
-                  <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#007398]">
-                    Empezar ahora →
+                  <span className="text-[10px] font-medium uppercase tracking-widest text-[#004b87] mt-auto">
+                    {isSpanish ? 'Consultar →' : 'View →'}
                   </span>
-                </div>
-              </div>
-            </a>
-
-            {/* TARJETA: Guía Completa para Autores */}
-            <a
-              href="/author.html"
-              className="group relative p-4 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#007398] transition-colors"></div>
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-[#f0f4f8] rounded-lg group-hover:bg-[#e0ecf4] transition-colors">
-                  <svg className="w-5 h-5 text-[#001f3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#007398] transition-colors mb-1">
-                    Guía Completa para Autores
-                  </h3>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    Documento extenso con plantillas, ejemplos de citación y requisitos técnicos. (Lectura recomendada si tienes dudas específicas)
-                  </p>
-                  <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#007398] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
-                    Consultar →
-                  </span>
-                </div>
-              </div>
-            </a>
-
-            {/* TARJETA: Buenas Prácticas */}
-            <a
-              href="/practices.html"
-              className="group relative p-4 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#007398] transition-colors"></div>
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-[#f0f4f8] rounded-lg group-hover:bg-[#e0ecf4] transition-colors">
-                  <svg className="w-5 h-5 text-[#001f3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#007398] transition-colors mb-1">
-                    Buenas Prácticas
-                  </h3>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    Estándares éticos y mejores prácticas para publicar.
-                  </p>
-                  <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#007398] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
-                    Consultar →
-                  </span>
-                </div>
-              </div>
-            </a>
-
-            {/* TARJETA: Open Access */}
-            <a
-              href="/open-access.html"
-              className="group relative p-4 bg-white rounded-xl border border-gray-200 hover:border-[#007398] hover:shadow-lg transition-all overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#007398] transition-colors"></div>
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-[#f0f4f8] rounded-lg group-hover:bg-[#e0ecf4] transition-colors">
-                  <svg className="w-5 h-5 text-[#001f3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#007398] transition-colors mb-1">
-                    Open Access
-                  </h3>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    Políticas de acceso abierto, licencias y derechos de autor.
-                  </p>
-                  <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#007398] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
-                    Consultar →
-                  </span>
-                </div>
-              </div>
-            </a>
-
-            {/* TARJETA: Políticas Editoriales */}
-            <a
-              href="/policies.html"
-              className="group relative p-4 bg-white rounded-xl border border-gray-200 hover:border-[#c0a86a] hover:shadow-lg transition-all overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 w-full h-1 bg-[#001f3f] group-hover:bg-[#c0a86a] transition-colors"></div>
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-[#f0f4f8] rounded-lg group-hover:bg-[#f5f0e6] transition-colors">
-                  <svg className="w-5 h-5 text-[#001f3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#c0a86a] transition-colors mb-1">
-                    Políticas Editoriales
-                  </h3>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    Normas, procesos y requisitos editoriales de la revista.
-                  </p>
-                  <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider text-[#c0a86a] opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1">
-                    Consultar →
-                  </span>
-                </div>
-              </div>
-            </a>
-
+                </a>
+              ))}
+            </div>
           </div>
         </motion.div>
-
-        {/* GRID */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {cards.map((card, index) => (
-            <Card key={card.path} card={card} index={index} />
-          ))}
-        </div>
 
         {/* INVITACIÓN */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="mt-20 sm:mt-32 relative rounded-2xl sm:rounded-3xl overflow-hidden bg-gray-900 p-8 sm:p-12 lg:p-20 text-center"
+          className="bg-[#004b87] p-12 md:p-20 text-center border-y border-black rounded-none"
         >
-          <div className="relative z-10 max-w-2xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-white mb-6 italic">
-              "La ciencia se construye aprendiendo y compartiendo."
+          <div className="max-w-3xl mx-auto">
+            <div className="text-white mb-6">
+              <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl md:text-4xl font-serif font-medium text-white mb-6 leading-relaxed">
+              {isSpanish 
+                ? 'La ciencia se construye aprendiendo y sometiendo los hallazgos al escrutinio de pares.'
+                : 'Science is built by learning and subjecting findings to peer scrutiny.'}
             </h2>
-            <p className="text-gray-400 font-light mb-8 sm:mb-10">
-              Invitamos a estudiantes interesados en la divulgación científica a participar en el proyecto editorial y en las distintas áreas de trabajo de la revista.
+            <p className="text-white/80 font-light mb-10 text-sm md:text-base leading-relaxed">
+              {isSpanish 
+                ? 'Invitamos a estudiantes e investigadores emergentes a participar en el proyecto editorial, ya sea sometiendo sus manuscritos o integrándose al cuerpo de revisores técnicos.'
+                : 'We invite students and emerging researchers to participate in the editorial project, either by submitting their manuscripts or joining the technical review board.'}
             </p>
             <button
-              onClick={() => navigate('/admin')}
-              className="px-10 sm:px-12 py-4 bg-white text-gray-900 text-xs font-bold uppercase tracking-[0.3em] hover:bg-blue-500 hover:text-white transition-all"
+              onClick={() => handleNavigate('/admin')}
+              className="px-10 py-4 bg-white text-[#004b87] text-[10px] font-medium uppercase tracking-[0.2em] hover:bg-gray-100 transition-colors rounded-none"
             >
-              Conocer convocatoria
+              {isSpanish ? 'Consultar Convocatorias Activas' : 'View Active Calls'}
             </button>
           </div>
         </motion.div>
+
       </div>
     </div>
   );
