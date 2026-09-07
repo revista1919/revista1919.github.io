@@ -133,9 +133,37 @@ function AppEN() {
     return [...new Set(institutions)].join(', ');
   };
 
-  useEffect(() => {
+useEffect(() => {
     const fetchArticles = async () => {
       try {
+        // PRIMERO: Intentar cargar datos pre-renderizados del HTML
+        const preloadedData = document.getElementById('preloaded-articles-data');
+        if (preloadedData && preloadedData.textContent) {
+          const data = JSON.parse(preloadedData.textContent);
+          const sortedData = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+          setArticles(sortedData);
+          setFilteredArticles(sortedData);
+          setLoading(false);
+          
+          const allAreas = sortedData.flatMap((a) =>
+            (a.area || '').split(';').map((area) => area.trim()).filter(Boolean)
+          );
+          setAreas([...new Set(allAreas)].sort());
+          
+          const uniqueVolumes = [...new Set(sortedData.map(a => safeString(a.volumen)))]
+            .filter(Boolean)
+            .sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+          setArticleVolumes(uniqueVolumes);
+          
+          const uniqueNumbers = [...new Set(sortedData.map(a => safeString(a.numero)))]
+            .filter(Boolean)
+            .sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+          setArticleNumbers(uniqueNumbers);
+          
+          return;
+        }
+        
+        // SEGUNDO: Fetch normal
         const response = await fetch(ARTICLES_JSON, { cache: 'no-store' });
         if (!response.ok) {
           throw new Error(`Error loading the JSON file: ${response.status}`);
@@ -146,10 +174,7 @@ function AppEN() {
         setFilteredArticles(sortedData);
 
         const allAreas = sortedData.flatMap((a) =>
-          (a.area || '')
-            .split(';')
-            .map((area) => area.trim())
-            .filter(Boolean)
+          (a.area || '').split(';').map((area) => area.trim()).filter(Boolean)
         );
         const uniqueAreas = [...new Set(allAreas)].sort();
         setAreas(uniqueAreas);

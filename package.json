@@ -2,12 +2,13 @@
   "name": "revista1919",
   "version": "1.0.0",
   "homepage": "https://revista1919.github.io/revista1919",
-  "scripts": {
+ "scripts": {
     "start": "webpack serve --open",
     "start:dev": "cross-env NODE_ENV=development webpack serve --open",
     "build": "dotenv -e .env -- webpack --mode production",
     "build:debug": "cross-env NODE_ENV=production DEBUG=true webpack --mode production --progress --verbose",
-    "build:prerender": "npm run build && react-snap",
+    "preload-data": "node preload-data.js",
+    "build:prerender": "npm run build && npm run preload-data && react-snap",
     "generate-all": "node generate-all.js",
     "generate:articles": "cross-env REBUILD_TYPE=articles node generate-all.js",
     "generate:volumes": "cross-env REBUILD_TYPE=volumes node generate-all.js",

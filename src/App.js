@@ -138,9 +138,38 @@ function App() {
     return [...new Set(institutions)].join(', ');
   };
 
-  useEffect(() => {
+useEffect(() => {
     const fetchArticles = async () => {
       try {
+        // PRIMERO: Intentar cargar datos pre-renderizados del HTML
+        const preloadedData = document.getElementById('preloaded-articles-data');
+        if (preloadedData && preloadedData.textContent) {
+          const data = JSON.parse(preloadedData.textContent);
+          const sortedData = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+          setArticles(sortedData);
+          setFilteredArticles(sortedData);
+          setLoading(false);
+          
+          // También configurar áreas y volúmenes
+          const allAreas = sortedData.flatMap((a) =>
+            (a.area || '').split(';').map((area) => area.trim()).filter(Boolean)
+          );
+          setAreas([...new Set(allAreas)].sort());
+          
+          const uniqueVolumes = [...new Set(sortedData.map(a => safeString(a.volumen)))]
+            .filter(Boolean)
+            .sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+          setArticleVolumes(uniqueVolumes);
+          
+          const uniqueNumbers = [...new Set(sortedData.map(a => safeString(a.numero)))]
+            .filter(Boolean)
+            .sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+          setArticleNumbers(uniqueNumbers);
+          
+          return; // No hacer fetch si ya tenemos datos
+        }
+        
+        // SEGUNDO: Si no hay datos pre-cargados, hacer fetch normal
         const response = await fetch(ARTICLES_JSON, { cache: 'no-store' });
         if (!response.ok) {
           throw new Error(`Error al cargar el archivo JSON: ${response.status}`);
@@ -151,15 +180,11 @@ function App() {
         setFilteredArticles(sortedData);
 
         const allAreas = sortedData.flatMap((a) =>
-          (a.area || '')
-            .split(';')
-            .map((area) => area.trim())
-            .filter(Boolean)
+          (a.area || '').split(';').map((area) => area.trim()).filter(Boolean)
         );
         const uniqueAreas = [...new Set(allAreas)].sort();
         setAreas(uniqueAreas);
 
-        // Obtener volúmenes únicos como números
         const uniqueVolumes = [...new Set(sortedData.map(a => safeString(a.volumen)))]
           .filter(Boolean)
           .sort((a, b) => {
@@ -169,7 +194,6 @@ function App() {
           });
         setArticleVolumes(uniqueVolumes);
 
-        // Obtener números únicos
         const uniqueNumbers = [...new Set(sortedData.map(a => safeString(a.numero)))]
           .filter(Boolean)
           .sort((a, b) => {

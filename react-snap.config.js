@@ -3,79 +3,30 @@ const path = require('path');
 module.exports = {
   source: 'dist',
   
-  // ✅ Rutas REALES que usa tu aplicación (App.js y AppEN.js)
+  // ✅ Rutas REALES que usa tu aplicación
   routes: [
     // Español
     '/',
     '/article',
     '/volume',
     '/collection',
-    '/submit',
-    '/team',
-    '/admin',
     '/about',
     '/aims-scope',
     '/guidelines',
     '/faq',
     '/new',
-    '/login',
-    '/collection/:folderName',
-    '/reviewer-response',
-    '/reviewer-onboarding',
-    '/reviewer-workspace/:assignmentId',
-    
+    '/team',
     // Inglés
     '/en',
     '/en/article',
     '/en/volume',
     '/en/collection',
-    '/en/submit',
-    '/en/team',
-    '/en/admin',
     '/en/about',
     '/en/aims-scope',
     '/en/guidelines',
     '/en/faq',
     '/en/new',
-    '/en/login',
-    '/en/collection/:folderName',
-    '/en/reviewer-response',
-    '/en/reviewer-onboarding',
-    '/en/reviewer-workspace/:assignmentId',
-    
-    // Portal editorial (rutas anidadas)
-    '/login/submit',
-    '/login/director',
-    '/login/chief',
-    '/login/submissions',
-    '/login/reviewer-tasks',
-    '/login/deskreview',
-    '/login/assignment',
-    '/login/calendar',
-    '/login/reviewer-profile',
-    '/login/reviewer-applications',
-    '/login/tasks',
-    '/login/news',
-    '/login/sci-news',
-    '/login/admissions',
-    '/login/users',
-    
-    // Portal editorial inglés
-    '/en/login/submit',
-    '/en/login/director',
-    '/en/login/chief',
-    '/en/login/submissions',
-    '/en/login/reviewer-tasks',
-    '/en/login/deskreview',
-    '/en/login/assignment',
-    '/en/login/calendar',
-    '/en/login/reviewer-profile',
-    '/en/login/reviewer-applications',
-    '/en/login/tasks',
-    '/en/login/news',
-    '/en/login/sci-news',
-    '/en/login/admissions',
-    '/en/login/users'
+    '/en/team'
   ],
   
   puppeteerExecutablePath: '/usr/bin/chromium-browser',
@@ -107,16 +58,53 @@ module.exports = {
     '--mute-audio'
   ],
   
-  delay: 3000,
+  // ⏰ AUMENTAR EL DELAY PARA QUE CARGUEN LOS DATOS
+  delay: 8000,  // 8 segundos para que fetch() complete
+  
   waitForNavigation: 'networkidle0',
   
+  // 🎯 ESPERAR A QUE LOS DATOS ESTÉN CARGADOS
   waitFor: [
-    'body > div > div > div.container',
-    '.articles',
-    '.news-grid',
-    '.team-grid',
-    { timeout: 5000 }
+    // Esperar a que la lista de artículos esté visible
+    {
+      selector: '.border-t.border-gray-300',  // Contenedor de artículos
+      timeout: 10000
+    },
+    // Esperar a que no haya spinner de carga
+    {
+      selector: 'body:not(:has(.animate-spin))',
+      timeout: 10000
+    }
   ],
+  
+  // 🚀 EJECUTAR JAVASCRIPT ANTES DE TOMAR SNAPSHOT
+  beforeEval: async (page) => {
+    // Esperar a que las fetch terminen
+    await page.waitForFunction(() => {
+      return !document.querySelector('.animate-spin');
+    }, { timeout: 10000 });
+    
+    // Scroll para cargar lazy content
+    await page.evaluate(async () => {
+      await new Promise((resolve) => {
+        let totalHeight = 0;
+        const distance = 100;
+        const timer = setInterval(() => {
+          const scrollHeight = document.body.scrollHeight;
+          window.scrollBy(0, distance);
+          totalHeight += distance;
+          
+          if(totalHeight >= scrollHeight){
+            clearInterval(timer);
+            resolve();
+          }
+        }, 100);
+      });
+    });
+    
+    // Volver arriba
+    await page.evaluate(() => window.scrollTo(0, 0));
+  },
   
   inlineCss: true,
   generateIndexHtml: false,
@@ -147,5 +135,5 @@ module.exports = {
   
   publicPath: '/www.revistacienciasestudiantes.com/',
   
-  timeout: 45000
+  timeout: 60000  // 60 segundos máximo
 };
