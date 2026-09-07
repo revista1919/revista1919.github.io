@@ -60,15 +60,16 @@ const PreOrcidEmailModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1a1a]/70 backdrop-blur-md font-['Inter',sans-serif]"
       onClick={handleClose}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 10 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 10 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        className="bg-white rounded-none border border-gray-200 shadow-2xl max-w-md w-full p-10 relative overflow-hidden"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="bg-[#FCFCFC] border border-gray-200 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] max-w-md w-full p-10 relative overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Línea superior decorativa */}
@@ -77,60 +78,60 @@ const PreOrcidEmailModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
         {/* Botón cerrar */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 text-gray-300 hover:text-gray-600 transition-colors"
+          className="absolute top-4 right-4 text-gray-400 hover:text-[#002147] transition-colors duration-300 p-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        <div className="text-center mb-8">
-          {/* Círculo con ícono */}
-          <div className="w-16 h-16 bg-stone-50 border border-stone-200 rounded-full flex items-center justify-center mx-auto mb-5">
+        <div className="text-center mb-10">
+          {/* Cuadrado con ícono */}
+          <div className="w-16 h-16 bg-[#F5F5F0] border border-gray-200 flex items-center justify-center mx-auto mb-6">
             <OrcidIcon className="w-8 h-8" />
           </div>
 
-          <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#A6CE39] mb-2">
+          <p className="text-[10px] uppercase tracking-[0.25em] font-semibold text-[#002147] mb-3">
             Revista Nacional de las Ciencias para Estudiantes
           </p>
-          <h3 className="font-serif text-2xl font-bold text-gray-900 mb-3">
+          <h3 className="font-['Lora',serif] text-2xl text-[#1a1a1a] mb-4 leading-tight font-medium">
             Iniciar sesión con ORCID
           </h3>
-          <p className="text-sm text-gray-500 leading-relaxed max-w-sm mx-auto">
+          <p className="text-sm text-gray-600 leading-relaxed max-w-sm mx-auto">
             Serás redirigido a ORCID para autenticarte. Antes, necesitamos tu correo electrónico para mantenerte informado sobre tus envíos y revisiones.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-1.5 block">
+            <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#002147] mb-3 block">
               Correo electrónico
             </label>
             <div className="relative">
-              <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+              <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu.nombre@institucion.edu"
-                className="w-full bg-gray-50 border border-gray-200 pl-11 pr-4 py-3.5 text-sm focus:outline-none focus:border-[#A6CE39] focus:bg-white transition-all placeholder:text-gray-300"
+                className="w-full bg-[#FAFAF8] border border-gray-300 pl-11 pr-4 py-3.5 text-sm focus:outline-none focus:border-[#002147] focus:ring-1 focus:ring-[#002147]/20 focus:bg-white transition-all duration-300 placeholder:text-gray-400"
                 autoFocus
                 disabled={isLoading}
               />
             </div>
             {error && (
-              <p className="mt-2 text-[11px] text-red-600 font-medium">{error}</p>
+              <p className="mt-2 text-[10px] text-[#8B0000] font-bold uppercase tracking-wider">{error}</p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={isLoading || !email}
-            className="w-full bg-[#A6CE39] hover:bg-[#8FB832] text-white py-4 text-xs uppercase font-black tracking-[0.2em] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-300 disabled:cursor-not-allowed shadow-sm"
+            className="w-full bg-[#A6CE39] hover:bg-[#96BB32] text-white py-4 text-[10px] uppercase font-bold tracking-[0.25em] transition-colors duration-300 flex items-center justify-center gap-3 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>
-                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="h-4 w-4 border-2 border-white/30 border-t-white animate-spin" />
                 Conectando con ORCID...
               </>
             ) : (
@@ -144,14 +145,14 @@ const PreOrcidEmailModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
           <button
             type="button"
             onClick={handleClose}
-            className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors py-2 font-medium"
+            className="w-full text-center text-[10px] font-bold uppercase tracking-[0.25em] text-gray-400 hover:text-[#002147] transition-colors duration-300 py-2"
             disabled={isLoading}
           >
             Cancelar
           </button>
         </form>
 
-        <p className="text-[10px] text-gray-400 text-center mt-6 leading-relaxed">
+        <p className="text-[10px] text-gray-500 text-center mt-6 leading-relaxed border-t border-gray-200 pt-6">
           Al continuar, serás redirigido al sitio oficial de ORCID para autenticar tu identidad académica.
         </p>
       </motion.div>
@@ -551,46 +552,75 @@ export default function LoginSection({ onLogin }) {
     }
   };
 
+  // ========== COMPONENTE PARA RENDERIZAR MENSAJES ==========
+  const renderMessage = () => {
+    if (!message.text) return null;
+    
+    const isError = message.type === 'error';
+    const isSuccess = message.type === 'success';
+    const isInfo = message.type === 'info';
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className={`mt-6 p-4 text-[10px] uppercase tracking-[0.15em] font-bold leading-relaxed border-l-4 ${
+          isError 
+            ? 'bg-[#8B0000]/5 border-[#8B0000] text-[#8B0000]' 
+            : isSuccess
+            ? 'bg-[#002147]/5 border-[#002147] text-[#002147]'
+            : 'bg-gray-100 border-gray-400 text-gray-600'
+        }`}
+      >
+        {message.text}
+      </motion.div>
+    );
+  };
+  // =====================================================
+
   // ========== PANTALLA DE SESIÓN CORRUPTA O TIMEOUT ==========
   if (corruptedSession || loadingTimeout) {
     return (
-      <div className="max-w-md mx-auto py-12 px-6">
+      <div className="max-w-md mx-auto py-12 px-6 font-['Inter',sans-serif]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white border-2 border-red-200 p-8 text-center space-y-6 shadow-lg"
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="bg-[#FCFCFC] border border-gray-200 border-t-4 border-t-[#8B0000] p-10 text-center shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)]"
         >
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto border border-red-200">
-            <svg className="h-10 w-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          <div className="w-16 h-16 bg-[#8B0000]/5 border border-[#8B0000]/20 flex items-center justify-center mx-auto mb-6">
+            <svg className="h-8 w-8 text-[#8B0000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
 
           <div>
-            <h3 className="text-2xl font-serif font-bold text-gray-900 mb-2">
+            <h3 className="text-2xl font-['Lora',serif] text-[#1a1a1a] mb-4 leading-tight font-medium">
               {loadingTimeout ? 'Tiempo de espera agotado' : 'Sesión corrupta detectada'}
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
               {loadingTimeout
                 ? 'La carga está tardando demasiado. Esto puede deberse a problemas de conexión o datos dañados.'
                 : 'Los datos de tu sesión parecen estar dañados. Esto impide que puedas acceder al portal correctamente.'}
             </p>
-            <p className="text-xs text-gray-500 mb-6">
+            <p className="text-xs text-gray-500 mb-6 leading-relaxed">
               Si el problema persiste, por favor reporta el error a:{' '}
               <a
                 href="mailto:contact@revistacienciasestudiantes.com"
-                className="text-[#007398] underline font-bold"
+                className="text-[#002147] underline font-bold hover:text-[#8B0000] transition-colors duration-300"
               >
                 contact@revistacienciasestudiantes.com
               </a>
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <button
               onClick={forceResetSession}
-              className="w-full bg-red-600 hover:bg-red-700 text-white py-4 text-xs uppercase font-black tracking-[0.2em] transition-colors"
+              className="w-full bg-[#8B0000] hover:bg-[#6B0000] text-white py-4 text-[10px] uppercase font-bold tracking-[0.25em] transition-colors duration-300"
             >
               Reiniciar sesión
             </button>
@@ -605,7 +635,7 @@ export default function LoginSection({ onLogin }) {
                 setFirstName('');
                 setLastName('');
               }}
-              className="w-full border-2 border-gray-300 text-gray-700 py-4 text-xs uppercase font-black tracking-[0.2em] hover:bg-gray-50 transition-colors"
+              className="w-full border border-gray-300 text-[#1a1a1a] py-4 text-[10px] uppercase font-bold tracking-[0.25em] hover:bg-gray-50 transition-colors duration-300"
             >
               Crear nueva cuenta
             </button>
@@ -618,51 +648,53 @@ export default function LoginSection({ onLogin }) {
   // ========== PANTALLA DE USUARIO YA LOGUEADO ==========
   if (currentUser) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-md mx-auto py-12 px-6">
-        <div className="bg-white border-2 border-black p-8 text-center space-y-6">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto border border-gray-200">
+      <motion.div 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="max-w-md mx-auto py-12 px-6 font-['Inter',sans-serif]"
+      >
+        <div className="bg-[#FCFCFC] border border-gray-200 border-t-4 border-t-[#002147] p-10 text-center shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)]">
+          <div className="w-20 h-20 bg-[#F5F5F0] border border-gray-200 flex items-center justify-center mx-auto mb-6">
             {currentUser.imageUrl ? (
-              <img src={currentUser.imageUrl} alt={currentUser.displayName} className="w-20 h-20 rounded-full object-cover" />
+              <img 
+                src={currentUser.imageUrl} 
+                alt={currentUser.displayName} 
+                className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500" 
+              />
             ) : (
-              <UserIcon className="h-10 w-10 text-gray-400" />
+              <UserIcon className="h-8 w-8 text-gray-400" />
             )}
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#007398] mb-1">Sesión Iniciada</p>
-            <h3 className="text-2xl font-serif font-bold text-gray-900">{currentUser.displayName}</h3>
+            <p className="text-[10px] uppercase tracking-[0.25em] font-semibold text-[#002147] mb-3">
+              Sesión Iniciada
+            </p>
+            <h3 className="text-2xl font-['Lora',serif] text-[#002147] mb-3 font-medium">
+              {currentUser.displayName}
+            </h3>
             {currentUser.orcid && (
               <a
                 href={`https://orcid.org/${currentUser.orcid}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-[#A6CE39] hover:underline mt-1"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#F5F5F0] border border-gray-200 text-[10px] text-gray-600 hover:border-[#A6CE39] hover:bg-white transition-colors duration-300 font-semibold tracking-wider"
               >
-                <OrcidIcon className="h-4 w-4" />
+                <OrcidIcon className="h-3 w-3" />
                 {currentUser.orcid}
               </a>
             )}
-            <p className="text-sm text-gray-500 font-mono mt-2">{currentUser.roles.join('; ')}</p>
+            <p className="text-sm text-gray-500 font-mono mt-3">
+              {currentUser.roles.join('; ')}
+            </p>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2 w-full py-3 border border-red-200 text-red-600 text-xs uppercase font-black tracking-widest hover:bg-red-50 transition-colors"
+            className="mt-8 flex items-center justify-center gap-2 w-full py-4 border border-[#8B0000] text-[#8B0000] text-[10px] uppercase font-bold tracking-[0.25em] hover:bg-[#8B0000] hover:text-white transition-colors duration-300"
           >
             <ArrowRightOnRectangleIcon className="h-4 w-4" /> Finalizar Sesión
           </button>
-          <AnimatePresence>
-            {message.text && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className={`mt-6 p-4 text-[11px] font-medium leading-relaxed border-l-4 ${
-                  message.type === 'error' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-green-50 border-green-500 text-green-700'
-                }`}
-              >
-                {message.text}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {renderMessage()}
         </div>
       </motion.div>
     );
@@ -671,15 +703,19 @@ export default function LoginSection({ onLogin }) {
   // ========== PANTALLA DE CARGA (ORCID) ==========
   if (isOrcidLoading) {
     return (
-      <div className="max-w-md mx-auto py-12 px-6">
-        <div className="bg-white border-2 border-black p-8 text-center space-y-6">
-          <OrcidIcon className="h-12 w-12 mx-auto" />
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A6CE39] mx-auto"></div>
-          <p className="text-gray-600 text-sm">Conectando con ORCID...</p>
-          <p className="text-xs text-gray-400">Se abrirá una ventana emergente para autenticarte.</p>
+      <div className="max-w-md mx-auto py-12 px-6 font-['Inter',sans-serif]">
+        <div className="bg-[#FCFCFC] border border-gray-200 p-12 text-center shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)]">
+          <OrcidIcon className="h-12 w-12 mx-auto mb-6" />
+          <div className="animate-spin h-8 w-8 border-2 border-transparent border-t-[#A6CE39] mx-auto mb-6"></div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#002147] mb-3">
+            Conectando con ORCID...
+          </p>
+          <p className="text-xs text-gray-500 mb-6">
+            Se abrirá una ventana emergente para autenticarte.
+          </p>
 
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs text-gray-400 mb-3">
+          <div className="pt-6 border-t border-gray-200">
+            <p className="text-xs text-gray-500 mb-3">
               ¿No se abrió la ventana?
             </p>
             <button
@@ -687,7 +723,7 @@ export default function LoginSection({ onLogin }) {
                 setIsOrcidLoading(false);
                 setMessage({ text: 'Inicio de sesión cancelado.', type: 'info' });
               }}
-              className="text-xs text-red-600 hover:text-red-800 underline font-bold"
+              className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#8B0000] hover:text-[#6B0000] transition-colors duration-300"
             >
               Cancelar
             </button>
@@ -700,13 +736,15 @@ export default function LoginSection({ onLogin }) {
   // ========== PANTALLA DE CARGA CON BOTÓN DE ESCAPE ==========
   if (isLoading && !currentUser) {
     return (
-      <div className="max-w-md mx-auto py-12 px-6">
-        <div className="bg-white border-2 border-black p-8 text-center space-y-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#007398] mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando...</p>
+      <div className="max-w-md mx-auto py-12 px-6 font-['Inter',sans-serif]">
+        <div className="bg-[#FCFCFC] border border-gray-200 p-12 text-center shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)]">
+          <div className="animate-spin h-8 w-8 border-2 border-transparent border-t-[#002147] mx-auto mb-6"></div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#002147] mb-3">
+            Cargando...
+          </p>
 
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs text-gray-400 mb-3">
+          <div className="pt-6 border-t border-gray-200">
+            <p className="text-xs text-gray-500 mb-3">
               ¿La carga está tardando demasiado?
             </p>
             <button
@@ -714,7 +752,7 @@ export default function LoginSection({ onLogin }) {
                 setLoadingTimeout(true);
                 setCorruptedSession(true);
               }}
-              className="text-xs text-red-600 hover:text-red-800 underline font-bold"
+              className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#8B0000] hover:text-[#6B0000] transition-colors duration-300"
             >
               Forzar salida de pantalla de carga
             </button>
@@ -727,159 +765,182 @@ export default function LoginSection({ onLogin }) {
   // ========== FORMULARIO DE LOGIN/REGISTRO ==========
   return (
     <>
-      <div className="max-w-md mx-auto py-16 px-6">
+      <div className="max-w-md mx-auto py-16 px-6 font-['Inter',sans-serif]">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="bg-white border border-gray-200 p-8 shadow-sm relative overflow-hidden"
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="bg-[#FCFCFC] border border-gray-200 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] relative overflow-hidden"
         >
-          <div className="absolute top-0 left-0 w-full h-1 bg-[#007398]" />
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-serif font-bold text-gray-900 mb-2">
-              {isLogin ? 'Acceso Editorial' : 'Registro de Autor'}
-            </h2>
-            <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">
-              Revista Nacional de las Ciencias para Estudiantes
-            </p>
-          </div>
-
-          {/* ========== BOTÓN DE ORCID (AHORA ABRE EL MODAL PRIMERO) ========== */}
-          <div className="mb-6">
-            <button
-              type="button"
-              onClick={handleOrcidButtonClick}
-              disabled={isLoading}
-              className="w-full bg-[#A6CE39] hover:bg-[#8FB832] text-white py-4 text-xs uppercase font-black tracking-[0.2em] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
-            >
-              <OrcidIcon className="h-5 w-5" />
-              Iniciar sesión con ORCID
-            </button>
-          </div>
-
-          {/* ========== SEPARADOR ========== */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200"></div>
+          {/* Línea superior decorativa */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-[#002147]" />
+          
+          <div className="p-10">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-['Lora',serif] text-[#1a1a1a] mb-4 leading-tight font-medium">
+                {isLogin ? 'Acceso Editorial' : 'Registro de Autor'}
+              </h2>
+              <div className="w-16 h-px bg-[#002147]/30 mx-auto mb-4"></div>
+              <p className="text-[10px] text-[#002147]/70 uppercase tracking-[0.3em] font-semibold">
+                Revista Nacional de las Ciencias para Estudiantes
+              </p>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-4 text-gray-400 font-bold tracking-widest">o con correo</span>
-            </div>
-          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {!isLogin && (
-              <>
-                <div>
-                  <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Nombre</label>
-                  <input
-                    type="text"
-                    className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-                    placeholder="Tu nombre"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    disabled={isLoading}
-                  />
-                  {errors.firstName && <p className="mt-1 text-[11px] text-red-700">{errors.firstName}</p>}
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Apellidos</label>
-                  <input
-                    type="text"
-                    className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-                    placeholder="Tus apellidos"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    disabled={isLoading}
-                  />
-                  {errors.lastName && <p className="mt-1 text-[11px] text-red-700">{errors.lastName}</p>}
-                </div>
-              </>
-            )}
-            <div>
-              <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1.5 block">Correo</label>
-              <input
-                type="email"
-                className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-                placeholder="ejemplo@gmail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+            {/* ========== BOTÓN DE ORCID (AHORA ABRE EL MODAL PRIMERO) ========== */}
+            <div className="mb-8">
+              <button
+                type="button"
+                onClick={handleOrcidButtonClick}
                 disabled={isLoading}
-              />
-              {errors.email && <p className="mt-1 text-[11px] text-red-700">{errors.email}</p>}
+                className="w-full bg-[#A6CE39] hover:bg-[#96BB32] text-white py-4 text-[10px] uppercase font-bold tracking-[0.25em] transition-colors duration-300 flex items-center justify-center gap-3 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                <OrcidIcon className="h-4 w-4" />
+                Iniciar sesión con ORCID
+              </button>
             </div>
-            <div>
-              <div className="flex justify-between items-end mb-1.5">
-                <label className="text-[10px] uppercase font-bold tracking-widest text-gray-500 block">Contraseña</label>
-                {isLogin && (
-                  <button
-                    type="button"
-                    onClick={handleForgotPassword}
-                    className="text-[9px] uppercase font-bold text-[#007398] hover:underline"
-                    disabled={isLoading || !email}
-                  >
-                    ¿Olvidó su clave?
-                  </button>
-                )}
+
+            {/* ========== SEPARADOR ========== */}
+            <div className="relative mb-8">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
               </div>
-              <div className="relative">
+              <div className="relative flex justify-center">
+                <span className="bg-[#FCFCFC] px-4 text-[10px] uppercase tracking-[0.25em] font-semibold text-gray-500">
+                  o con correo
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {!isLogin && (
+                <>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#002147] mb-3 block">
+                      Nombre
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full bg-[#FAFAF8] border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-[#002147] focus:ring-1 focus:ring-[#002147]/20 focus:bg-white transition-all duration-300"
+                      placeholder="Tu nombre"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    {errors.firstName && (
+                      <p className="mt-1 text-[10px] font-bold text-[#8B0000] uppercase tracking-wider">
+                        {errors.firstName}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#002147] mb-3 block">
+                      Apellidos
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full bg-[#FAFAF8] border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-[#002147] focus:ring-1 focus:ring-[#002147]/20 focus:bg-white transition-all duration-300"
+                      placeholder="Tus apellidos"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    {errors.lastName && (
+                      <p className="mt-1 text-[10px] font-bold text-[#8B0000] uppercase tracking-wider">
+                        {errors.lastName}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+              
+              <div>
+                <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#002147] mb-3 block">
+                  Correo
+                </label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="w-full bg-gray-50 border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-[#007398] focus:bg-white transition-all"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  type="email"
+                  className="w-full bg-[#FAFAF8] border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-[#002147] focus:ring-1 focus:ring-[#002147]/20 focus:bg-white transition-all duration-300"
+                  placeholder="ejemplo@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  disabled={isLoading}
-                >
-                  {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                </button>
+                {errors.email && (
+                  <p className="mt-1 text-[10px] font-bold text-[#8B0000] uppercase tracking-wider">
+                    {errors.email}
+                  </p>
+                )}
               </div>
-              {errors.password && <p className="mt-1 text-[11px] text-red-700">{errors.password}</p>}
-            </div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-black text-white py-4 text-xs uppercase font-black tracking-[0.2em] hover:bg-[#007398] transition-colors flex items-center justify-center gap-3 disabled:bg-gray-400"
-            >
-              {isLoading ? (
-                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>{isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}</>
-              )}
-            </button>
-          </form>
-          <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-xs text-gray-500 hover:text-black transition-colors"
-              disabled={isLoading}
-            >
-              {isLogin ? (
-                <>¿Es su primera vez? <span className="font-bold text-[#007398]">Cree su cuenta aquí</span></>
-              ) : (
-                <>¿Ya tiene cuenta? <span className="font-bold text-[#007398]">Inicie sesión</span></>
-              )}
-            </button>
-          </div>
-          <AnimatePresence>
-            {message.text && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className={`mt-6 p-4 text-[11px] font-medium leading-relaxed border-l-4 ${
-                  message.type === 'error' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-green-50 border-green-500 text-green-700'
-                }`}
+              
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#002147] block">
+                    Contraseña
+                  </label>
+                  {isLogin && (
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 hover:text-[#002147] transition-colors duration-300"
+                      disabled={isLoading || !email}
+                    >
+                      ¿Olvidó su clave?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="w-full bg-[#FAFAF8] border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-[#002147] focus:ring-1 focus:ring-[#002147]/20 focus:bg-white transition-all duration-300 pr-12"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#002147] transition-colors duration-300"
+                    disabled={isLoading}
+                  >
+                    {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="mt-1 text-[10px] font-bold text-[#8B0000] uppercase tracking-wider">
+                    {errors.password}
+                  </p>
+                )}
+              </div>
+              
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-[#002147] hover:bg-[#001A3A] text-white py-4 text-[10px] uppercase font-bold tracking-[0.25em] transition-colors duration-300 flex items-center justify-center gap-3 disabled:bg-gray-400 mt-4"
               >
-                {message.text}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                {isLoading ? (
+                  <div className="h-4 w-4 border-2 border-white/30 border-t-white animate-spin" />
+                ) : (
+                  <>{isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}</>
+                )}
+              </button>
+            </form>
+            
+            <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+              <button
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500 hover:text-[#002147] transition-colors duration-300"
+                disabled={isLoading}
+              >
+                {isLogin ? (
+                  <>¿Es su primera vez? <span className="text-[#002147] underline underline-offset-4">Cree su cuenta aquí</span></>
+                ) : (
+                  <>¿Ya tiene cuenta? <span className="text-[#002147] underline underline-offset-4">Inicie sesión</span></>
+                )}
+              </button>
+            </div>
+            {renderMessage()}
+          </div>
         </motion.div>
       </div>
 

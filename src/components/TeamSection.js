@@ -62,7 +62,7 @@ function TeamSection() {
       })
       .catch(error => {
         console.error('Error al cargar el JSON:', error);
-        setJsonError('No se pudo cargar la información del equipo.');
+        setJsonError('No se pudo cargar la información del directorio.');
         setMainData([]);
         setCientificoData([]);
         setInstitutionsData([]);
@@ -111,7 +111,7 @@ function TeamSection() {
       .replace(/[^a-z0-9-]/g, '');
   };
 
-  // Componente de Tooltip con icono de información
+  // Tooltip con estilo editorial académico
   const RoleDefinitionButton = ({ role, sectionName }) => {
     const definitionKey = sectionName || role;
     if (!roleDefinitions[definitionKey]) return null;
@@ -123,12 +123,10 @@ function TeamSection() {
             e.stopPropagation();
             setActiveTooltip(activeTooltip === definitionKey ? null : definitionKey);
           }}
-          className="text-gray-400 hover:text-[#FF7900] transition-colors focus:outline-none"
-          title={`¿Qué es ${definitionKey}?`}
+          className="text-[10px] font-mono text-gray-400 hover:text-[#002147] transition-colors duration-300 focus:outline-none"
+          title={`Definición de ${definitionKey}`}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          [?]
         </button>
         <AnimatePresence>
           {activeTooltip === definitionKey && (
@@ -136,10 +134,13 @@ function TeamSection() {
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 5 }}
-              className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-3 w-72 p-4 bg-[#002147] text-white text-xs leading-relaxed rounded shadow-xl"
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-72 p-5 bg-white border border-[#002147] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)]"
             >
               <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-[#002147]"></div>
-              <p className="text-left font-sans">{roleDefinitions[definitionKey]}</p>
+              <p className="text-left font-['Inter',sans-serif] text-[11px] leading-relaxed text-[#1a1a1a] normal-case tracking-normal">
+                {roleDefinitions[definitionKey]}
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -148,61 +149,58 @@ function TeamSection() {
   };
 
   return (
-    <div className="bg-[#FCFCFD] min-h-screen font-sans text-[#1A232C]">
+    <div className="bg-[#FCFCFC] min-h-screen font-['Inter',sans-serif] text-[#1a1a1a] selection:bg-[#002147] selection:text-white">
       
       {/* ===================== HEADER SECTION ===================== */}
-      <header className="bg-white border-b border-gray-200 pt-20 pb-16 px-4">
-        <div className="max-w-7xl mx-auto text-center">
+      <header className="bg-white border-b border-gray-300 pt-20 pb-16 px-6">
+        <div className="max-w-[1200px] mx-auto">
           <motion.span
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="text-[11px] uppercase tracking-[0.3em] font-semibold text-[#002147] mb-4 block"
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="text-[10px] uppercase tracking-[0.25em] font-semibold text-[#002147]/70 mb-4 block"
           >
             Directorio Institucional
           </motion.span>
           <motion.h1
-            initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            className="text-4xl md:text-5xl font-serif text-black mb-6"
+            initial={{ y: 20, opacity: 0 }} 
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="text-4xl md:text-5xl font-['Lora',serif] text-[#002147] mb-6 tracking-tight font-medium"
           >
             Cuerpo Editorial y Académico
           </motion.h1>
-          <div className="w-16 h-1 bg-[#FF7900] mx-auto mb-6"></div>
-          <p className="text-[#64748B] max-w-2xl mx-auto leading-relaxed text-sm md:text-base">
+          <div className="w-16 h-px bg-[#002147]/40 mb-6"></div>
+          <p className="text-gray-600 max-w-2xl leading-relaxed text-sm">
             Fomentando la excelencia científica a través de la rigurosidad editorial, la evaluación por pares y el trabajo colaborativo de nuestro destacado equipo.
           </p>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-12">
+      <main className="max-w-[1200px] mx-auto px-6 py-12">
         
         {/* ===================== FILTROS DE ROLES ===================== */}
         {/* Botón para mostrar filtros en móvil */}
-        <div className="md:hidden mb-4">
+        <div className="md:hidden mb-8">
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-[#002147]"
+            className="w-full flex items-center justify-between px-5 py-4 bg-white border border-gray-300 text-[10px] font-bold uppercase tracking-[0.2em] text-[#002147] hover:border-[#002147] transition-colors duration-300"
           >
             <span>Filtrar por rol: {selectedRole}</span>
-            <svg 
-              className={`w-5 h-5 transition-transform ${showMobileFilters ? 'rotate-180' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
+            <span className="font-mono text-gray-400">{showMobileFilters ? '[-]' : '[+]'}</span>
           </button>
         </div>
 
         {/* Filtros para desktop */}
-        <div className="hidden md:flex flex-wrap justify-center gap-2 mb-12">
+        <div className="hidden md:flex flex-wrap gap-2 mb-12">
           {roles.map((role) => (
             <div key={role} className="flex items-center">
               <button
                 onClick={() => setSelectedRole(role)}
-                className={`px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-all duration-300 border-b-2 ${
+                className={`px-5 py-3 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-300 border ${
                   selectedRole === role
-                    ? 'border-[#FF7900] text-[#002147] bg-[#F3F7F9]'
-                    : 'border-transparent text-gray-500 hover:text-[#002147] hover:bg-gray-50'
+                    ? 'border-[#002147] bg-[#002147] text-white'
+                    : 'border-gray-300 bg-white text-gray-500 hover:border-[#002147] hover:text-[#002147]'
                 }`}
               >
                 {role}
@@ -219,27 +217,26 @@ function TeamSection() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="md:hidden mb-6 overflow-hidden"
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="md:hidden mb-8 overflow-hidden"
             >
-              <div className="bg-white border border-gray-200 rounded-lg p-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {roles.map((role) => (
-                    <button
-                      key={role}
-                      onClick={() => {
-                        setSelectedRole(role);
-                        setShowMobileFilters(false);
-                      }}
-                      className={`px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                        selectedRole === role
-                          ? 'bg-[#002147] text-white'
-                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {role}
-                    </button>
-                  ))}
-                </div>
+              <div className="bg-white border border-gray-300 divide-y divide-gray-200">
+                {roles.map((role) => (
+                  <button
+                    key={role}
+                    onClick={() => {
+                      setSelectedRole(role);
+                      setShowMobileFilters(false);
+                    }}
+                    className={`w-full text-left px-5 py-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-300 ${
+                      selectedRole === role
+                        ? 'bg-[#002147] text-white'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {role}
+                  </button>
+                ))}
               </div>
             </motion.div>
           )}
@@ -247,17 +244,31 @@ function TeamSection() {
 
         {/* ===================== GRID: EQUIPO EDITORIAL ===================== */}
         {isLoading ? (
-          <div className="text-center py-20">
-            <div className="w-8 h-8 border-4 border-[#002147] border-t-[#FF7900] rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-sm text-gray-500 uppercase tracking-widest">Cargando directorio...</p>
+          <div className="text-center py-32">
+            <div className="w-8 h-8 border-2 border-gray-300 border-t-[#002147] animate-spin mx-auto mb-6"></div>
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">
+              Consultando registros...
+            </p>
           </div>
         ) : jsonError ? (
-          <p className="text-red-600 text-center py-10 bg-red-50 border border-red-100 rounded">{jsonError}</p>
+          <div className="border border-[#8B0000] bg-[#8B0000]/5 p-8 text-center">
+            <p className="text-[#8B0000] text-[10px] font-bold uppercase tracking-[0.2em]">
+              {jsonError}
+            </p>
+          </div>
         ) : filteredMembers.length === 0 ? (
-          <p className="text-gray-500 text-center py-10">No se encontraron miembros para este criterio.</p>
+          <div className="border border-gray-300 bg-white p-16 text-center">
+            <p className="text-gray-500 font-['Lora',serif] italic">
+              No existen registros para este criterio.
+            </p>
+          </div>
         ) : (
           <>
-            <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* CUADRÍCULA CONTINUA (Seamless Grid) */}
+            <motion.div 
+              layout 
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-t border-l border-gray-300 bg-white"
+            >
               <AnimatePresence>
                 {displayedMembers.map((member) => {
                   const slug = getUserSlug(member);
@@ -265,15 +276,16 @@ function TeamSection() {
                     <motion.div
                       layout
                       key={member.uid || member.displayName}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
                       onClick={() => handleNavigation(slug)}
-                      className="group bg-white border border-gray-200 border-t-4 border-t-transparent hover:border-t-[#FF7900] hover:shadow-xl hover:shadow-gray-200/40 p-6 transition-all duration-300 cursor-pointer flex flex-col"
+                      className="group border-b border-r border-gray-300 p-8 hover:bg-[#FAFAF8] transition-colors duration-300 cursor-pointer flex flex-col"
                     >
-                      <div className="flex items-start space-x-4 mb-4">
+                      <div className="flex items-start space-x-5 mb-6">
                         {member.imageUrl ? (
-                          <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 border border-gray-100">
+                          <div className="w-20 h-20 flex-shrink-0 border border-gray-300 overflow-hidden">
                             <img
                               src={member.imageUrl}
                               alt={member.displayName}
@@ -281,23 +293,26 @@ function TeamSection() {
                             />
                           </div>
                         ) : (
-                          <div className="w-16 h-16 rounded bg-[#F3F7F9] flex items-center justify-center flex-shrink-0 border border-gray-100">
-                            <span className="text-[#002147] font-serif text-xl">
+                          <div className="w-20 h-20 flex-shrink-0 border border-gray-300 bg-[#F5F5F0] flex items-center justify-center">
+                            <span className="text-[#002147] font-['Lora',serif] text-2xl">
                               {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
                             </span>
                           </div>
                         )}
                         <div>
-                          <h3 className="text-lg font-serif text-black leading-tight group-hover:text-[#FF7900] transition-colors">
+                          <h3 className="text-xl font-['Lora',serif] text-[#1a1a1a] group-hover:text-[#002147] leading-tight mb-2 transition-colors duration-300 font-medium">
                             {member.displayName || `${member.firstName} ${member.lastName}`}
                           </h3>
                         </div>
                       </div>
                       
-                      <div className="mt-auto pt-4 border-t border-gray-50">
-                        <div className="flex flex-wrap gap-1.5">
+                      <div className="mt-auto">
+                        <div className="flex flex-wrap gap-2">
                           {(member.roles || []).filter(r => r && r !== 'Autor' && r !== 'Revisor').map((role) => (
-                            <span key={role} className="text-[10px] font-semibold uppercase tracking-wider bg-[#F3F7F9] text-[#002147] px-2.5 py-1 rounded-sm">
+                            <span 
+                              key={role} 
+                              className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 border border-gray-200 px-2.5 py-1 bg-white"
+                            >
                               {role}
                             </span>
                           ))}
@@ -313,9 +328,9 @@ function TeamSection() {
               <div className="text-center mt-12">
                 <button
                   onClick={() => setShowAll(!showAll)}
-                  className="px-6 py-2 border border-[#002147] text-[#002147] text-xs font-bold uppercase tracking-widest hover:bg-[#002147] hover:text-white transition-colors rounded-sm"
+                  className="px-8 py-4 bg-white border border-[#002147] text-[#002147] text-[10px] font-bold uppercase tracking-[0.25em] hover:bg-[#002147] hover:text-white transition-colors duration-300"
                 >
-                  {showAll ? "Mostrar menos resultados" : "Ver listado completo"}
+                  {showAll ? "REDUCIR LISTADO" : "VER LISTADO COMPLETO"}
                 </button>
               </div>
             )}
@@ -324,24 +339,24 @@ function TeamSection() {
 
         {/* ===================== SECCIÓN: COMITÉ CIENTÍFICO ===================== */}
         {cientificoData.length > 0 && (
-          <section className="mt-24">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-8">
-              <h2 className="text-2xl font-serif text-black inline-flex items-center">
+          <section className="mt-32">
+            <div className="border-b-2 border-[#1a1a1a] pb-4 mb-10 flex items-center">
+              <h2 className="text-3xl font-['Lora',serif] text-[#1a1a1a] font-medium">
                 Comité Científico
-                <RoleDefinitionButton role="Comité Científico" sectionName="Comité Científico" />
               </h2>
+              <RoleDefinitionButton role="Comité Científico" sectionName="Comité Científico" />
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 border-t border-l border-gray-300 bg-white">
               {cientificoData.map((member) => {
                 const slug = getUserSlug(member);
                 return (
                   <div
                     key={member.uid || member.displayName}
                     onClick={() => handleNavigation(slug)}
-                    className="text-center group cursor-pointer"
+                    className="group border-b border-r border-gray-300 p-6 text-center cursor-pointer hover:bg-[#FAFAF8] transition-colors duration-300"
                   >
-                    <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden border-2 border-transparent group-hover:border-[#FF7900] shadow-sm transition-all duration-300">
+                    <div className="w-24 h-24 mx-auto mb-5 border border-gray-300 overflow-hidden">
                       {member.imageUrl ? (
                         <img
                           src={member.imageUrl}
@@ -349,15 +364,15 @@ function TeamSection() {
                           alt={member.displayName}
                         />
                       ) : (
-                        <div className="w-full h-full bg-[#F3F7F9] flex items-center justify-center text-[#002147] font-serif">
+                        <div className="w-full h-full bg-[#F5F5F0] flex items-center justify-center text-[#002147] font-['Lora',serif] text-2xl">
                           {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
                         </div>
                       )}
                     </div>
-                    <h4 className="text-sm font-serif text-black group-hover:text-[#002147] leading-snug">
+                    <h4 className="text-base font-['Lora',serif] text-[#1a1a1a] group-hover:text-[#002147] leading-tight mb-2 transition-colors duration-300 font-medium">
                       {member.displayName || `${member.firstName} ${member.lastName}`}
                     </h4>
-                    <p className="text-[9px] text-[#64748B] uppercase mt-1.5 tracking-widest font-semibold">
+                    <p className="text-[9px] text-gray-400 uppercase tracking-[0.2em] font-bold">
                       Asesor Académico
                     </p>
                   </div>
@@ -369,15 +384,15 @@ function TeamSection() {
 
         {/* ===================== SECCIÓN: INSTITUCIONES ===================== */}
         {institutionsData.length > 0 && (
-          <section className="mt-28">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-10">
-              <h2 className="text-2xl font-serif text-black inline-flex items-center">
+          <section className="mt-32">
+            <div className="border-b-2 border-[#1a1a1a] pb-4 mb-10 flex items-center">
+              <h2 className="text-3xl font-['Lora',serif] text-[#1a1a1a] font-medium">
                 Instituciones Colaboradoras
-                <RoleDefinitionButton role="Institución Colaboradora" sectionName="Institución Colaboradora" />
               </h2>
+              <RoleDefinitionButton role="Institución Colaboradora" sectionName="Institución Colaboradora" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 border-t border-l border-gray-300 bg-white">
               {institutionsData.map((inst) => {
                 const slug = getUserSlug(inst);
                 const website = inst.social?.website || inst.website || '';
@@ -385,52 +400,45 @@ function TeamSection() {
                 return (
                   <motion.div
                     key={inst.uid || inst.displayName}
-                    whileHover={{ y: -3 }}
                     onClick={() => handleNavigation(slug)}
-                    className="flex flex-col sm:flex-row bg-white border border-gray-200 hover:border-[#FF7900] hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden rounded-sm"
+                    className="flex flex-col sm:flex-row border-b border-r border-gray-300 hover:bg-[#FAFAF8] transition-colors duration-300 cursor-pointer group"
                   >
-                    <div className="sm:w-1/3 bg-[#F3F7F9] p-6 flex items-center justify-center border-b sm:border-b-0 sm:border-r border-gray-100">
+                    <div className="sm:w-2/5 p-8 flex items-center justify-center border-b sm:border-b-0 sm:border-r border-gray-200 bg-white">
                       {inst.imageUrl ? (
                         <img
                           src={inst.imageUrl}
-                          className="max-w-full max-h-24 object-contain mix-blend-multiply"
+                          className="max-w-full max-h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-500 mix-blend-multiply"
                           alt={inst.displayName}
                         />
                       ) : (
-                        <svg className="w-12 h-12 text-[#002147]/20" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2L2 7v2h20V7L12 2zm0 2.8L18.4 7H5.6L12 4.8zM4 11h3v8H4v-8zm5 0h3v8H9v-8zm5 0h3v8h-3v-8zm5 0h3v8h-3v-8zM2 21h20v2H2v-2z"/>
-                        </svg>
+                        <span className="text-[10px] text-gray-300 font-bold uppercase tracking-[0.2em]">
+                          Sin Logotipo
+                        </span>
                       )}
                     </div>
 
-                    <div className="sm:w-2/3 p-6 flex flex-col justify-between">
-                      <div>
-                        <span className="text-[9px] text-[#FF7900] font-bold uppercase tracking-widest mb-1 block">
-                          Respaldo Institucional
-                        </span>
-                        <h3 className="text-xl font-serif text-black mb-3 leading-tight">
-                          {inst.displayName || `${inst.firstName} ${inst.lastName}`}
-                        </h3>
-                      </div>
+                    <div className="sm:w-3/5 p-8 flex flex-col justify-center">
+                      <span className="text-[9px] text-gray-400 font-bold uppercase tracking-[0.2em] mb-2 block">
+                        Respaldo Institucional
+                      </span>
+                      <h3 className="text-xl font-['Lora',serif] text-[#1a1a1a] mb-4 leading-tight group-hover:text-[#002147] transition-colors duration-300 font-medium">
+                        {inst.displayName || `${inst.firstName} ${inst.lastName}`}
+                      </h3>
 
-                      <div className="flex items-center justify-between mt-4">
-                        <span className="text-xs font-semibold text-[#64748B] hover:text-[#002147] flex items-center gap-1 transition-colors">
-                          Ver Perfil 
-                          <span aria-hidden="true">&rarr;</span>
+                      <div className="flex items-center gap-4 mt-auto">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#002147]">
+                          VER PERFIL &rarr;
                         </span>
-
                         {website && (
                           <a
                             href={website}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1.5 text-xs text-[#002147] hover:text-[#FF7900] transition-colors"
+                            className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 hover:text-[#002147] transition-colors duration-300 border-l border-gray-300 pl-4"
                             title="Visitar sitio web oficial"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
+                            WEBSITE
                           </a>
                         )}
                       </div>
@@ -441,24 +449,27 @@ function TeamSection() {
             </div>
           </section>
         )}
-
       </main>
 
       {/* ===================== FOOTER DE CAPTACIÓN ===================== */}
-      <footer className="mt-20 bg-[#002147] text-white border-t-4 border-[#FF7900] px-4 py-16 text-center">
-        <div className="max-w-3xl mx-auto">
-          <svg className="w-10 h-10 mx-auto text-[#FF7900] mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-          </svg>
-          <h3 className="text-3xl font-serif mb-4">Únase a nuestro proyecto editorial</h3>
-          <p className="text-[#A1B3C4] mb-8 font-sans">
-            Buscamos investigadores, académicos y profesionales comprometidos con la revisión por pares y el avance de la comunicación científica.
+      <footer className="mt-32 bg-[#002147] text-white border-t border-gray-200 px-6 py-24 text-center">
+        <div className="max-w-2xl mx-auto">
+          <div className="w-16 h-16 border border-white/20 mx-auto mb-8 flex items-center justify-center">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+            </svg>
+          </div>
+          <h3 className="text-3xl font-['Lora',serif] mb-6 font-medium">
+            Integrar el Proyecto Editorial
+          </h3>
+          <p className="text-gray-300 mb-10 font-['Inter',sans-serif] text-sm leading-relaxed">
+            Convocamos a investigadores, académicos y profesionales comprometidos con la rigurosidad científica y la revisión por pares a formar parte de nuestros comités.
           </p>
           <a
             href="https://www.revistacienciasestudiantes.com/es/admin"
-            className="inline-block bg-[#FF7900] text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-[#E06A00] transition-colors rounded-sm"
+            className="inline-block bg-white text-[#002147] px-8 py-4 text-[10px] font-bold uppercase tracking-[0.25em] hover:bg-gray-100 transition-colors duration-300"
           >
-            Postular a un cargo
+            FORMULARIO DE POSTULACIÓN
           </a>
         </div>
       </footer>
