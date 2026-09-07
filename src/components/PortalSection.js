@@ -1346,17 +1346,42 @@ const [showSubmissionForm, setShowSubmissionForm] = useState(false);
             </motion.section>
           )}
 
-          {/* MIS ENVÍOS */}
 {activeTab === 'submissions' && (
-  <motion.section key="submissions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-<SubmissionDashboard 
-  user={userData} 
-  onNavigateToForm={(draft) => {
-    setDraftToEdit(draft);
-    setShowSubmissionForm(true); // Mostrar formulario como overlay
-  }}
-/>
-  </motion.section>
+  <motion.div
+    key="submissions"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-50 bg-white overflow-y-auto"
+  >
+    <div className="sticky top-0 z-50 bg-white border-b-2 border-black">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <button
+          onClick={(e) => handleTabChange('profile', e)}
+          className="flex items-center gap-2 text-xs font-medium text-[#004b87] hover:text-black transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
+        </button>
+        <h2 className="font-serif text-lg font-bold text-black">
+          {isSpanish ? 'Mis Envíos' : 'My Submissions'}
+        </h2>
+        <div className="w-24"></div>
+      </div>
+    </div>
+
+    <div className="w-full">
+      <SubmissionDashboard 
+        user={userData} 
+        onNavigateToForm={(draft) => {
+          setDraftToEdit(draft);
+          setShowSubmissionForm(true);
+        }}
+      />
+    </div>
+  </motion.div>
 )}
 
           {activeTab === 'reviewer-profile' && (
