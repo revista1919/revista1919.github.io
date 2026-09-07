@@ -11,42 +11,42 @@ import AuthorSubmissionsPanel from './AuthorSubmissionsPanel';
 ================================ */
 const EditorialIcons = {
   DocumentPlus: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12H9m1.5-4.5H9m3.75 9H9m6.75-13.5H15m-3 13.5h6.75" />
     </svg>
   ),
   ArrowRight: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
     </svg>
   ),
   Clock: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   CheckCircle: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   AlertTriangle: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
     </svg>
   ),
   FileText: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
   ),
   Trash: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
   ),
   Edit: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.147l-3.148.868a.375.375 0 01-.465-.465l.868-3.148a4.5 4.5 0 011.147-1.89L16.862 4.487zM16.862 4.487L19.5 7.125" />
     </svg>
   ),
@@ -56,12 +56,12 @@ const EditorialIcons = {
     </svg>
   ),
   Inbox: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
     </svg>
   ),
   Send: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
     </svg>
   ),
@@ -73,77 +73,77 @@ const EditorialIcons = {
 };
 
 /* ================================
-   ESTADOS DE SUBMISSION
+   ESTADOS DE SUBMISSION (PALETA ACADÉMICA ESTRICTA)
 ================================ */
 const SUBMISSION_STATES = {
   'submitted': { 
     es: 'Enviado', en: 'Submitted',
-    color: 'bg-slate-50 text-slate-700 border-slate-200',
+    theme: 'text-[#002147] border-[#002147] bg-white',
     icon: <EditorialIcons.Send />
   },
   'in-editorial-review': { 
     es: 'Revisión Editorial', en: 'Desk Review',
-    color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    theme: 'text-[#002147] border-[#002147] bg-white',
     icon: <EditorialIcons.FileText />
   },
   'in-peer-review': { 
     es: 'Revisión por Pares', en: 'Peer Review',
-    color: 'bg-purple-50 text-purple-700 border-purple-200',
+    theme: 'text-[#002147] border-[#002147] bg-white',
     icon: <EditorialIcons.Edit />
   },
   'revisions-requested': { 
     es: 'Requiere Revisiones', en: 'Revisions Required',
-    color: 'bg-amber-50 text-amber-700 border-amber-300',
+    theme: 'bg-[#8B0000] text-white border-[#8B0000]',
     icon: <EditorialIcons.AlertTriangle />
   },
   'accepted': { 
     es: 'Aceptado', en: 'Accepted',
-    color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    theme: 'bg-[#004d00] text-white border-[#004d00]',
     icon: <EditorialIcons.CheckCircle />
   },
   'rejected': { 
     es: 'Rechazado', en: 'Rejected',
-    color: 'bg-rose-50 text-rose-700 border-rose-200',
+    theme: 'text-[#8B0000] border-[#8B0000] bg-white',
     icon: <EditorialIcons.AlertTriangle />
   },
   'awaiting-editor-decision': { 
     es: 'Decisión Pendiente', en: 'Pending Decision',
-    color: 'bg-violet-50 text-violet-700 border-violet-200',
+    theme: 'text-[#002147] border-[#002147] bg-white',
     icon: <EditorialIcons.Clock />
   },
   'minor-revision-required': { 
     es: 'Revisión Menor', en: 'Minor Revision',
-    color: 'bg-amber-50 text-amber-700 border-amber-300',
+    theme: 'bg-[#8B0000] text-white border-[#8B0000]',
     icon: <EditorialIcons.Edit />
   },
   'major-revision-required': { 
     es: 'Revisión Mayor', en: 'Major Revision',
-    color: 'bg-orange-50 text-orange-700 border-orange-300',
+    theme: 'bg-[#8B0000] text-white border-[#8B0000]',
     icon: <EditorialIcons.AlertTriangle />
   },
   'awaiting-revision': { 
     es: 'Esperando Corrección', en: 'Awaiting Correction',
-    color: 'bg-amber-50 text-amber-700 border-amber-300',
+    theme: 'bg-[#8B0000] text-white border-[#8B0000]',
     icon: <EditorialIcons.Clock />
   },
   'desk-review-rejected': { 
     es: 'Rechazo Editorial', en: 'Desk Reject',
-    color: 'bg-rose-50 text-rose-700 border-rose-200',
+    theme: 'text-[#8B0000] border-[#8B0000] bg-white',
     icon: <EditorialIcons.AlertTriangle />
   },
   'in-reviewer-selection': { 
     es: 'Asignando Revisores', en: 'Assigning Reviewers',
-    color: 'bg-sky-50 text-sky-700 border-sky-200',
+    theme: 'text-[#002147] border-[#002147] bg-white',
     icon: <EditorialIcons.Inbox />
   },
   'awaiting-reviewer-responses': { 
     es: 'Invitaciones Enviadas', en: 'Invitations Sent',
-    color: 'bg-blue-50 text-blue-700 border-blue-200',
+    theme: 'text-[#002147] border-[#002147] bg-white',
     icon: <EditorialIcons.Clock />
   },
   'metadata_refinement_pending': { 
     es: 'Ajuste de Metadatos', en: 'Metadata Refinement',
-    color: 'bg-teal-50 text-teal-700 border-teal-200',
+    theme: 'bg-[#8B0000] text-white border-[#8B0000]',
     icon: <EditorialIcons.Edit />
   }
 };
@@ -189,7 +189,7 @@ const SubmissionDashboard = ({ user, onNavigateToForm }) => {
   const [drafts, setDrafts] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
-const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   /* ================================
@@ -280,12 +280,13 @@ const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
     }
   };
 
-const handleOpenSubmission = (submission) => {
-  setSelectedSubmissionId(submission.id);
-};
-const handleBackToDashboard = () => {
-  setSelectedSubmissionId(null);
-};
+  const handleOpenSubmission = (submission) => {
+    setSelectedSubmissionId(submission.id);
+  };
+  
+  const handleBackToDashboard = () => {
+    setSelectedSubmissionId(null);
+  };
 
   /* ================================
      MÉTRICAS DEL DASHBOARD
@@ -307,24 +308,23 @@ const handleBackToDashboard = () => {
   ================================ */
   
   // Si hay un submission seleccionado, mostrar el panel detallado
-// Si hay un submission seleccionado, mostrar el panel detallado
-if (selectedSubmissionId) {
-  return (
-    <AuthorSubmissionsPanel 
-      user={user} 
-      submissionId={selectedSubmissionId}
-      onBack={handleBackToDashboard}
-    />
-  );
-}
+  if (selectedSubmissionId) {
+    return (
+      <AuthorSubmissionsPanel 
+        user={user} 
+        submissionId={selectedSubmissionId}
+        onBack={handleBackToDashboard}
+      />
+    );
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center font-sans">
-        <div className="flex flex-col items-center bg-white p-12 border border-gray-200 border-t-4 border-t-[#004b87]">
-          <div className="w-10 h-10 border-2 border-gray-200 border-t-[#004b87] rounded-full animate-spin" />
-          <p className="mt-6 text-[#004b87] font-medium text-xs tracking-wide">
-            {isSpanish ? 'Accediendo al Panel de Envíos...' : 'Accessing Submission Dashboard...'}
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center font-['Inter',sans-serif]">
+        <div className="flex flex-col items-center p-12">
+          <div className="w-8 h-8 border-2 border-gray-300 border-t-[#002147] rounded-full animate-spin" />
+          <p className="mt-6 text-[#1a1a1a] font-bold text-[10px] tracking-[0.2em] uppercase">
+            {isSpanish ? 'Sincronizando registros...' : 'Synchronizing records...'}
           </p>
         </div>
       </div>
@@ -332,225 +332,155 @@ if (selectedSubmissionId) {
   }
 
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-900">
-      
-      {/* ================================
-          HEADER EDITORIAL
-      ================================ */}
-      <header className="mb-0">
-        {/* Top utility bar */}
-        <div className="flex justify-end items-center py-2 text-[11px] font-sans text-gray-500 gap-6 border-b border-gray-200 px-6 lg:px-12">
-          <div className="flex items-center gap-2">
-            <span>{isSpanish ? 'Investigador / Usuario:' : 'Researcher / User:'}</span>
-            <span className="font-medium text-gray-800">{user?.displayName || user?.email}</span>
-          </div>
-        </div>
-
-        {/* Brand Area */}
-        <div className="py-10 flex flex-col md:flex-row md:items-end justify-between gap-6 px-6 lg:px-12 border-b-2 border-black">
+    <div className="min-h-screen bg-[#FAFAFA] font-['Inter',sans-serif] text-[#1a1a1a]">
+      <div className="max-w-[1200px] mx-auto px-6 py-12">
+        
+        {/* ================================
+            HEADER EDITORIAL "PORTADA"
+        ================================ */}
+        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between border-b-2 border-[#1a1a1a] pb-6 gap-6">
           <div>
-            <div className="uppercase tracking-wide text-[10px] font-medium text-gray-500 mb-3">
-              {isSpanish ? 'Sistema de Gestión Editorial' : 'Editorial Management System'}
+            <div className="uppercase tracking-[0.2em] text-[10px] font-bold text-gray-500 mb-3">
+              {isSpanish ? 'Registro de Investigador' : 'Investigator Registry'} • {user?.displayName || user?.email}
             </div>
-            <h1 className="font-serif text-4xl md:text-5xl text-black tracking-tight mb-2">
-              {isSpanish ? 'Panel de Envíos' : 'Submission Dashboard'}
+            <h1 className="font-['Lora',serif] text-4xl md:text-5xl text-[#002147] tracking-tight">
+              {isSpanish ? 'Manuscritos & Envíos' : 'Manuscripts & Submissions'}
             </h1>
-            <p className="font-serif text-lg text-gray-600 italic">
-              {isSpanish ? 'Gestión de Manuscritos y Borradores' : 'Manuscript and Draft Management'}
-            </p>
           </div>
           
           <button
             onClick={handleNewSubmission}
-            className="bg-[#004b87] hover:bg-black text-white px-8 py-3.5 text-xs font-medium uppercase tracking-wide transition-colors flex items-center gap-3 rounded-none shadow-sm"
+            className="bg-[#002147] hover:bg-black text-white px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors flex items-center gap-3 shrink-0"
           >
             <EditorialIcons.DocumentPlus />
-            {isSpanish ? 'Iniciar Nuevo Envío' : 'Start New Submission'}
+            {isSpanish ? 'Nuevo Manuscrito' : 'New Manuscript'}
           </button>
-        </div>
-      </header>
+        </header>
 
-      {/* ================================
-          MÉTRICAS RÁPIDAS
-      ================================ */}
-      <div className="px-6 lg:px-12 py-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+        {/* ================================
+            MÉTRICAS (FRANJA DE DATOS)
+        ================================ */}
+        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-300 border-y border-gray-300 bg-white mb-16">
+          
           {/* Borradores */}
-          <div className="bg-white border border-gray-300 border-t-4 border-t-[#004b87] p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-                {isSpanish ? 'Borradores' : 'Drafts'}
-              </span>
-              <span className="text-[#004b87]">
-                <EditorialIcons.FileText />
-              </span>
-            </div>
-            <p className="font-serif text-4xl text-black mb-1">{metrics.totalDrafts}</p>
-            <p className="text-xs text-gray-500">
-              {isSpanish ? 'En progreso' : 'In progress'}
-            </p>
+          <div className="p-6 flex flex-col justify-center">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-2">
+              {isSpanish ? 'Borradores' : 'Drafts'}
+            </span>
+            <p className="font-['Lora',serif] text-3xl text-[#1a1a1a]">{metrics.totalDrafts}</p>
           </div>
 
           {/* Enviados */}
-          <div className="bg-white border border-gray-300 border-t-4 border-t-[#004b87] p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-                {isSpanish ? 'Enviados' : 'Submitted'}
-              </span>
-              <span className="text-[#004b87]">
-                <EditorialIcons.Send />
-              </span>
-            </div>
-            <p className="font-serif text-4xl text-black mb-1">{metrics.totalSubmissions}</p>
-            <p className="text-xs text-gray-500">
-              {isSpanish ? 'Manuscritos enviados' : 'Manuscripts submitted'}
-            </p>
+          <div className="p-6 flex flex-col justify-center">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-2">
+              {isSpanish ? 'Enviados' : 'Submitted'}
+            </span>
+            <p className="font-['Lora',serif] text-3xl text-[#1a1a1a]">{metrics.totalSubmissions}</p>
           </div>
 
-          {/* En revisión */}
-          <div className="bg-white border border-gray-300 border-t-4 border-t-[#004b87] p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-                {isSpanish ? 'En Revisión' : 'In Review'}
-              </span>
-              <span className="text-[#004b87]">
-                <EditorialIcons.Clock />
-              </span>
-            </div>
-            <p className="font-serif text-4xl text-black mb-1">{metrics.inReview}</p>
-            <p className="text-xs text-gray-500">
-              {isSpanish ? 'En evaluación' : 'Under evaluation'}
-            </p>
+          {/* En Revisión */}
+          <div className="p-6 flex flex-col justify-center">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#002147] mb-2">
+              {isSpanish ? 'En Revisión' : 'In Review'}
+            </span>
+            <p className="font-['Lora',serif] text-3xl text-[#002147]">{metrics.inReview}</p>
           </div>
 
-          {/* Acción requerida */}
-          <div className={`bg-white border p-6 ${
-            metrics.actionRequired > 0 
-              ? 'border-amber-400 border-t-4 border-t-amber-500' 
-              : 'border-gray-300 border-t-4 border-t-[#004b87]'
-          }`}>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-                {isSpanish ? 'Acción Requerida' : 'Action Required'}
-              </span>
-              <span className={metrics.actionRequired > 0 ? 'text-amber-600' : 'text-[#004b87]'}>
-                <EditorialIcons.AlertTriangle />
-              </span>
-            </div>
-            <p className={`font-serif text-4xl mb-1 ${metrics.actionRequired > 0 ? 'text-amber-700' : 'text-black'}`}>
+          {/* Acción Requerida */}
+          <div className={`p-6 flex flex-col justify-center ${metrics.actionRequired > 0 ? 'bg-[#8B0000]/5' : ''}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-2 ${metrics.actionRequired > 0 ? 'text-[#8B0000]' : 'text-gray-400'}`}>
+              {isSpanish ? 'Atención Requerida' : 'Action Required'}
+            </span>
+            <p className={`font-['Lora',serif] text-3xl ${metrics.actionRequired > 0 ? 'text-[#8B0000]' : 'text-[#1a1a1a]'}`}>
               {metrics.actionRequired}
             </p>
-            <p className="text-xs text-gray-500">
-              {isSpanish ? 'Requieren su atención' : 'Require your attention'}
-            </p>
           </div>
+
         </div>
 
         {/* ================================
-            SECCIÓN: BORRADORES
+            SECCIÓN: BORRADORES (DRAFTS)
         ================================ */}
-        <section className="mb-16">
-          <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
-            <div>
-              <h2 className="font-serif text-2xl text-black flex items-center gap-3">
-                <EditorialIcons.FileText />
-                {isSpanish ? 'Borradores en Progreso' : 'Drafts in Progress'}
-              </h2>
-              <p className="text-xs text-gray-500 mt-1 font-sans">
-                {isSpanish 
-                  ? 'Manuscritos no enviados. Continúe donde lo dejó.'
-                  : 'Unsubmitted manuscripts. Continue where you left off.'}
-              </p>
-            </div>
-            <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1">
-              {drafts.length} {isSpanish ? 'borradores' : 'drafts'}
-            </span>
+        <section className="mb-20">
+          <div className="border-b border-gray-300 pb-2 mb-6">
+            <h2 className="font-['Lora',serif] text-2xl text-[#1a1a1a]">
+              {isSpanish ? 'Borradores Activos' : 'Active Drafts'}
+            </h2>
           </div>
 
           {drafts.length === 0 ? (
-            <div className="bg-white border-2 border-dashed border-gray-300 p-12 text-center">
-              <div className="text-gray-300 mb-4">
+            <div className="bg-white border border-gray-200 p-12 text-center">
+              <div className="text-gray-300 mb-4 flex justify-center">
                 <EditorialIcons.FolderPlus />
               </div>
-              <p className="font-serif text-lg text-gray-400 italic">
-                {isSpanish ? 'No hay borradores activos.' : 'No active drafts.'}
+              <p className="font-['Lora',serif] text-lg text-gray-400 italic">
+                {isSpanish ? 'No existen borradores en progreso.' : 'No drafts in progress.'}
               </p>
-              <p className="text-sm text-gray-400 mt-2 font-sans">
+              <p className="text-sm text-gray-400 mt-2">
                 {isSpanish 
                   ? 'Inicie un nuevo envío y su progreso se guardará automáticamente.'
                   : 'Start a new submission and your progress will be saved automatically.'}
               </p>
               <button
                 onClick={handleNewSubmission}
-                className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-[#004b87] hover:bg-black text-white text-xs font-medium uppercase tracking-wide transition-colors"
+                className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-[#002147] hover:bg-black text-white text-[10px] font-bold uppercase tracking-[0.2em] transition-colors"
               >
                 <EditorialIcons.DocumentPlus />
                 {isSpanish ? 'Crear Borrador' : 'Create Draft'}
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-white border border-gray-300 divide-y divide-gray-200">
               {drafts.map((draft) => (
                 <motion.div
                   key={draft.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ y: -2 }}
-                  className="bg-white border border-gray-300 hover:border-[#004b87] transition-colors shadow-sm flex flex-col"
+                  className="p-6 flex flex-col md:flex-row md:items-center gap-6 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="p-6 flex-1 flex flex-col">
-                    {/* Estado del borrador */}
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="px-2.5 py-1 bg-gray-50 border border-gray-200 text-[10px] font-medium uppercase tracking-wider text-gray-500">
-                        {isSpanish ? 'Borrador' : 'Draft'}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-sans">
-                        {formatRelativeTime(draft.updatedAt, isSpanish)}
-                      </span>
-                    </div>
+                  
+                  {/* Meta izquierda */}
+                  <div className="md:w-1/4 flex-shrink-0 flex flex-col gap-2">
+                    <span className="inline-block border border-gray-300 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 w-fit">
+                      {isSpanish ? 'Borrador' : 'Draft'}
+                    </span>
+                    <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                      <EditorialIcons.Clock />
+                      {formatRelativeTime(draft.updatedAt, isSpanish)}
+                    </span>
+                    <span className="text-[10px] font-mono text-gray-400">
+                      ID: {draft.id.substring(0, 8)}
+                    </span>
+                  </div>
 
-                    {/* Título */}
-                    <h3 className="font-serif text-lg text-black mb-2 line-clamp-2 flex-1">
-                      {draft.title || (isSpanish ? 'Sin título' : 'Untitled')}
+                  {/* Título Centro */}
+                  <div className="flex-1">
+                    <h3 className="font-['Lora',serif] text-xl text-[#002147] mb-2 leading-tight">
+                      {draft.title || (isSpanish ? '[Sin título asignado]' : '[Untitled]')}
                     </h3>
-
-                    {/* Paso actual */}
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-                        {isSpanish ? 'Paso actual:' : 'Current step:'}
-                      </span>
-                      <span className="text-[10px] font-bold text-[#004b87] uppercase tracking-wider">
-                        {getStepLabel(draft.currentStep, isSpanish)}
-                      </span>
-                    </div>
-
-                    {/* Área temática */}
-                    {draft.area && (
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="text-[10px] text-gray-500">
-                          {draft.area}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Acciones */}
-                    <div className="pt-4 border-t border-gray-100 flex items-center gap-3">
-                      <button
-                        onClick={() => handleContinueDraft(draft)}
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#004b87] hover:bg-black text-white text-[11px] font-medium uppercase tracking-wide transition-colors"
-                      >
-                        {isSpanish ? 'Continuar' : 'Continue'}
-                        <EditorialIcons.ArrowRight />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(draft.id)}
-                        className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors border border-gray-200"
-                        title={isSpanish ? 'Eliminar borrador' : 'Delete draft'}
-                      >
-                        <EditorialIcons.Trash />
-                      </button>
+                    <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500">
+                      <span>{isSpanish ? 'Paso:' : 'Step:'} {getStepLabel(draft.currentStep, isSpanish)}</span>
+                      {draft.area && <span>• {draft.area}</span>}
                     </div>
                   </div>
+
+                  {/* Acciones Derecha */}
+                  <div className="md:w-auto flex-shrink-0 flex items-center gap-4 border-t md:border-t-0 pt-4 md:pt-0 border-gray-200">
+                    <button
+                      onClick={() => handleContinueDraft(draft)}
+                      className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#002147] hover:underline underline-offset-4 flex items-center gap-2"
+                    >
+                      {isSpanish ? 'Continuar' : 'Continue'} <EditorialIcons.ArrowRight />
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(draft.id)}
+                      className="text-gray-400 hover:text-[#8B0000] transition-colors p-2"
+                      title={isSpanish ? 'Descartar' : 'Discard'}
+                    >
+                      <EditorialIcons.Trash />
+                    </button>
+                  </div>
+
                 </motion.div>
               ))}
             </div>
@@ -561,39 +491,28 @@ if (selectedSubmissionId) {
             SECCIÓN: SUBMISSIONS ENVIADOS
         ================================ */}
         <section>
-          <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
-            <div>
-              <h2 className="font-serif text-2xl text-black flex items-center gap-3">
-                <EditorialIcons.Inbox />
-                {isSpanish ? 'Manuscritos Enviados' : 'Submitted Manuscripts'}
-              </h2>
-              <p className="text-xs text-gray-500 mt-1 font-sans">
-                {isSpanish 
-                  ? 'Seguimiento del proceso editorial de sus envíos.'
-                  : 'Track the editorial process of your submissions.'}
-              </p>
-            </div>
-            <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1">
-              {submissions.length} {isSpanish ? 'envíos' : 'submissions'}
-            </span>
+          <div className="border-b border-gray-300 pb-2 mb-6">
+            <h2 className="font-['Lora',serif] text-2xl text-[#1a1a1a]">
+              {isSpanish ? 'Historial de Envíos' : 'Submission History'}
+            </h2>
           </div>
 
           {submissions.length === 0 ? (
-            <div className="bg-white border-2 border-dashed border-gray-300 p-12 text-center">
-              <div className="text-gray-300 mb-4">
+            <div className="bg-white border border-gray-200 p-12 text-center">
+              <div className="text-gray-300 mb-4 flex justify-center">
                 <EditorialIcons.Send />
               </div>
-              <p className="font-serif text-lg text-gray-400 italic">
-                {isSpanish ? 'No hay manuscritos enviados.' : 'No submitted manuscripts.'}
+              <p className="font-['Lora',serif] text-lg text-gray-400 italic">
+                {isSpanish ? 'Aún no se han registrado envíos formales.' : 'No formal submissions recorded yet.'}
               </p>
-              <p className="text-sm text-gray-400 mt-2 font-sans">
+              <p className="text-sm text-gray-400 mt-2">
                 {isSpanish 
                   ? 'Cuando envíe su primer manuscrito, aparecerá aquí.'
                   : 'When you submit your first manuscript, it will appear here.'}
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="bg-white border border-gray-300 divide-y divide-gray-200">
               {submissions.map((sub) => {
                 const statusInfo = SUBMISSION_STATES[sub.status] || SUBMISSION_STATES.submitted;
                 const requiresAction = ['revisions-requested', 'minor-revision-required', 'major-revision-required', 'awaiting-revision', 'metadata_refinement_pending'].includes(sub.status);
@@ -605,50 +524,44 @@ if (selectedSubmissionId) {
                     animate={{ opacity: 1, y: 0 }}
                     whileHover={{ x: 2 }}
                     onClick={() => handleOpenSubmission(sub)}
-                    className={`bg-white border cursor-pointer transition-all shadow-sm ${
-                      requiresAction 
-                        ? 'border-amber-400 border-l-4 border-l-amber-500' 
-                        : 'border-gray-300 border-l-4 border-l-[#004b87] hover:border-[#004b87]'
-                    }`}
+                    className="group p-6 flex flex-col md:flex-row md:items-center gap-6 hover:bg-gray-50 transition-colors cursor-pointer border-l-4 border-transparent hover:border-l-[#002147]"
                   >
-                    <div className="p-6 flex flex-col sm:flex-row sm:items-center gap-4">
-                      {/* Icono de estado */}
-                      <div className={`w-12 h-12 flex items-center justify-center border flex-shrink-0 ${statusInfo.color}`}>
-                        {statusInfo.icon}
-                      </div>
-
-                      {/* Información principal */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-widest">
-                            ID: {sub.submissionId || sub.id.substring(0, 8)}
-                          </span>
-                          {requiresAction && (
-                            <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-700 uppercase tracking-wider">
-                              {isSpanish ? 'Acción Requerida' : 'Action Required'}
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="font-serif text-lg text-black leading-snug line-clamp-2">
-                          {sub.title}
-                        </h3>
-                      </div>
-
-                      {/* Estado y fecha */}
-                      <div className="flex flex-col items-start sm:items-end gap-2 flex-shrink-0">
-                        <span className={`px-3 py-1 text-[10px] font-medium uppercase tracking-wider border ${statusInfo.color}`}>
-                          {statusInfo[language]}
+                    {/* Meta izquierda */}
+                    <div className="md:w-1/4 flex-shrink-0 flex flex-col gap-2">
+                      <span className={`inline-flex items-center gap-2 border px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.2em] w-fit ${statusInfo.theme}`}>
+                        <span className="flex-shrink-0">
+                          {statusInfo.icon}
                         </span>
-                        <span className="text-[10px] text-gray-400 font-sans flex items-center gap-1.5">
-                          <EditorialIcons.Clock />
-                          {formatRelativeTime(sub.createdAt, isSpanish)}
-                        </span>
-                      </div>
+                        {statusInfo[language]}
+                      </span>
+                      <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                        <EditorialIcons.Clock />
+                        {formatRelativeTime(sub.createdAt, isSpanish)}
+                      </span>
+                      <span className="text-[10px] font-mono text-gray-400">
+                        REF: {sub.submissionId || sub.id.substring(0, 8)}
+                      </span>
+                    </div>
 
-                      {/* Flecha */}
-                      <div className="text-gray-300 flex-shrink-0">
+                    {/* Título Centro */}
+                    <div className="flex-1">
+                      <h3 className="font-['Lora',serif] text-xl text-[#1a1a1a] group-hover:text-[#002147] transition-colors mb-2 leading-tight">
+                        {sub.title}
+                      </h3>
+                      {requiresAction && (
+                        <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#8B0000] bg-[#8B0000]/5 px-3 py-1.5">
+                          <EditorialIcons.AlertTriangle />
+                          {isSpanish ? 'Requiere Atención del Autor' : 'Author Attention Required'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Acciones Derecha */}
+                    <div className="md:w-auto flex-shrink-0 flex items-center justify-end">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 group-hover:text-[#002147] transition-colors flex items-center gap-2">
+                        {isSpanish ? 'Ver Expediente' : 'View File'} 
                         <EditorialIcons.ChevronRight />
-                      </div>
+                      </span>
                     </div>
                   </motion.div>
                 );
@@ -656,48 +569,49 @@ if (selectedSubmissionId) {
             </div>
           )}
         </section>
+
       </div>
 
       {/* ================================
-          MODAL DE CONFIRMACIÓN DE ELIMINACIÓN
+          MODAL DE CONFIRMACIÓN (Descartar)
       ================================ */}
       <AnimatePresence>
         {deleteConfirm && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-none shadow-2xl max-w-md w-full p-8 font-sans border-t-4 border-t-red-600"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="bg-white max-w-lg w-full p-10 border-t-4 border-[#8B0000] shadow-2xl"
             >
               <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 bg-red-50 border border-red-200 flex items-center justify-center text-red-600 flex-shrink-0">
+                <div className="w-12 h-12 bg-[#8B0000]/10 border border-[#8B0000]/30 flex items-center justify-center text-[#8B0000] flex-shrink-0">
                   <EditorialIcons.AlertTriangle />
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl font-bold text-black mb-2">
-                    {isSpanish ? 'Eliminar Borrador' : 'Delete Draft'}
+                  <h3 className="font-['Lora',serif] text-2xl text-[#1a1a1a] mb-2">
+                    {isSpanish ? 'Descartar Manuscrito' : 'Discard Manuscript'}
                   </h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
                     {isSpanish 
-                      ? 'Esta acción no se puede deshacer. Todo el progreso no enviado se perderá permanentemente.'
-                      : 'This action cannot be undone. All unsent progress will be permanently lost.'}
+                      ? '¿Está seguro de que desea eliminar este borrador? Esta acción destruirá permanentemente los metadatos y archivos asociados no enviados. Esta acción es irreversible.'
+                      : 'Are you sure you want to delete this draft? This will permanently destroy unsent metadata and associated files. This action is irreversible.'}
                   </p>
                 </div>
               </div>
               
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleDeleteDraft(deleteConfirm)}
-                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-medium text-xs uppercase tracking-wide transition-colors"
-                >
-                  {isSpanish ? 'Eliminar Permanentemente' : 'Delete Permanently'}
-                </button>
+              <div className="flex gap-4">
                 <button
                   onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 py-3 border border-gray-300 hover:bg-gray-50 font-medium text-xs uppercase tracking-wide transition-colors text-gray-700"
+                  className="flex-1 py-3 border border-gray-300 text-[#1a1a1a] text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-gray-50 transition-colors"
                 >
                   {isSpanish ? 'Cancelar' : 'Cancel'}
+                </button>
+                <button
+                  onClick={() => handleDeleteDraft(deleteConfirm)}
+                  className="flex-1 py-3 bg-[#8B0000] text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-black transition-colors"
+                >
+                  {isSpanish ? 'Descartar' : 'Discard'}
                 </button>
               </div>
             </motion.div>

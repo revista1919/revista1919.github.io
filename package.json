@@ -2,7 +2,7 @@
   "name": "revista1919",
   "version": "1.0.0",
   "homepage": "https://revista1919.github.io/revista1919",
- "scripts": {
+  "scripts": {
     "start": "webpack serve --open",
     "start:dev": "cross-env NODE_ENV=development webpack serve --open",
     "build": "dotenv -e .env -- webpack --mode production",
