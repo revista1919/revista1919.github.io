@@ -1709,10 +1709,11 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
   fs.writeFileSync(volumesIndexPathEn, indexContentEn, 'utf8');
   console.log(`✅ Índice volúmenes inglés: ${volumesIndexPathEn}`);
 }
+// ==================== FUNCIONES PARA SITEMAP Y SCHOLAR ====================
 
-// ==================== FUNCIONES PARA SITEMAP ====================
 async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes) {
   const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
+  const scholarPath = path.join(__dirname, 'dist', 'scholar-metadata.xml');
   
   // Función auxiliar para sanitizar URLs
   const sanitizeUrl = (url) => {
@@ -1720,6 +1721,7 @@ async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes
     return url.replace(/https:\/\/revista1919\.github\.io/g, 'https://www.revistacienciasestudiantes.com');
   };
   
+  // ==================== SITEMAP PRINCIPAL ====================
   const articleUrls = articles.map(article => {
     const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
     const pdfUrl = sanitizeUrl(article.pdfUrl || article.pdf);
@@ -1728,21 +1730,21 @@ async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes
 <url>
   <loc>${domain}/articles/article-${articleSlug}.html</loc>
   <lastmod>${article.fecha}</lastmod>
-  <changefreq>monthly</changefreq>
-  <priority>0.8</priority>
+  <changefreq>never</changefreq>
+  <priority>1.0</priority>
 </url>
 <url>
   <loc>${domain}/articles/article-${articleSlug}EN.html</loc>
   <lastmod>${article.fecha}</lastmod>
-  <changefreq>monthly</changefreq>
-  <priority>0.8</priority>
+  <changefreq>never</changefreq>
+  <priority>1.0</priority>
 </url>
-<url>
+${pdfUrl ? `<url>
   <loc>${pdfUrl}</loc>
   <lastmod>${article.fecha}</lastmod>
-  <changefreq>monthly</changefreq>
-  <priority>0.8</priority>
-</url>`;
+  <changefreq>never</changefreq>
+  <priority>0.9</priority>
+</url>` : ''}`;
   }).join('');
 
   const volumeUrls = volumes.map(volume => {
@@ -1753,37 +1755,37 @@ async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes
 <url>
   <loc>${domain}/volumes/volume-${volumeSlug}.html</loc>
   <lastmod>${volume.fecha}</lastmod>
-  <changefreq>monthly</changefreq>
+  <changefreq>yearly</changefreq>
   <priority>0.8</priority>
 </url>
 <url>
   <loc>${domain}/volumes/volume-${volumeSlug}EN.html</loc>
   <lastmod>${volume.fecha}</lastmod>
-  <changefreq>monthly</changefreq>
+  <changefreq>yearly</changefreq>
   <priority>0.8</priority>
 </url>
-<url>
+${volumePdf ? `<url>
   <loc>${volumePdf}</loc>
   <lastmod>${volume.fecha}</lastmod>
-  <changefreq>monthly</changefreq>
+  <changefreq>yearly</changefreq>
   <priority>0.8</priority>
-</url>`;
+</url>` : ''}`;
   }).join('');
 
   const newsUrls = newsItems.map(item => {
     const slug = generateSlug(item.titulo + ' ' + item.fecha);
     return `
 <url>
-  <loc>${domain}/news/${slug}.html</loc>
+  <loc>${domain}/new/${slug}.html</loc>
   <lastmod>${item.fecha}</lastmod>
   <changefreq>monthly</changefreq>
-  <priority>0.7</priority>
+  <priority>0.6</priority>
 </url>
 <url>
-  <loc>${domain}/news/${slug}.EN.html</loc>
+  <loc>${domain}/new/${slug}.EN.html</loc>
   <lastmod>${item.fecha}</lastmod>
   <changefreq>monthly</changefreq>
-  <priority>0.7</priority>
+  <priority>0.6</priority>
 </url>`;
   }).join('');
 
@@ -1794,19 +1796,19 @@ async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes
   <loc>${domain}/team/${member.slug}.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
-  <priority>0.6</priority>
+  <priority>0.5</priority>
 </url>
 <url>
   <loc>${domain}/team/${member.slug}.EN.html</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
-  <priority>0.6</priority>
+  <priority>0.5</priority>
 </url>`;
   }).join('');
 
   const spaUrls = spaRoutes.map(route => `
 <url>
-  <loc>${domain}${route}/</loc>
+  <loc>${domain}${route}</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
@@ -1822,53 +1824,82 @@ async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes
   <priority>1.0</priority>
 </url>
 <url>
-  <loc>${domain}/articles/index.html</loc>
+  <loc>${domain}/article</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-  <changefreq>monthly</changefreq>
+  <changefreq>weekly</changefreq>
   <priority>0.9</priority>
 </url>
 <url>
-  <loc>${domain}/articles/index.EN.html</loc>
+  <loc>${domain}/en/article</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-  <changefreq>monthly</changefreq>
+  <changefreq>weekly</changefreq>
   <priority>0.9</priority>
 </url>
 ${articleUrls}
 <url>
-  <loc>${domain}/volumes/index.html</loc>
+  <loc>${domain}/volume</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
-  <priority>0.9</priority>
+  <priority>0.8</priority>
 </url>
 <url>
-  <loc>${domain}/volumes/index.EN.html</loc>
+  <loc>${domain}/en/volume</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   <changefreq>monthly</changefreq>
-  <priority>0.9</priority>
+  <priority>0.8</priority>
 </url>
 ${volumeUrls}
 <url>
-  <loc>${domain}/news/index.html</loc>
+  <loc>${domain}/new</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-  <changefreq>monthly</changefreq>
-  <priority>0.8</priority>
+  <changefreq>daily</changefreq>
+  <priority>0.7</priority>
 </url>
 <url>
-  <loc>${domain}/news/index.EN.html</loc>
+  <loc>${domain}/en/new</loc>
   <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-  <changefreq>monthly</changefreq>
-  <priority>0.8</priority>
+  <changefreq>daily</changefreq>
+  <priority>0.7</priority>
 </url>
 ${newsUrls}
 ${teamUrls}
 ${spaUrls}
 </urlset>`.replace(/^\s*\n/gm, '');
 
-  // Sanitizar el contenido final del sitemap por si acaso
+  // ==================== SCHOLAR METADATA XML ====================
+  const scholarUrls = articles.map(article => {
+    const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+    const pdfUrl = sanitizeUrl(article.pdfUrl || article.pdf);
+    
+    return `
+<url>
+  <loc>${domain}/articles/article-${articleSlug}.html</loc>
+  <priority>1.0</priority>
+</url>
+<url>
+  <loc>${domain}/articles/article-${articleSlug}EN.html</loc>
+  <priority>1.0</priority>
+</url>
+${pdfUrl ? `<url>
+  <loc>${pdfUrl}</loc>
+  <priority>0.9</priority>
+</url>` : ''}`;
+  }).join('');
+
+  const scholarContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<!-- Google Scholar Metadata for Revista Nacional de las Ciencias para Estudiantes -->
+${scholarUrls}
+</urlset>`.replace(/^\s*\n/gm, '');
+
+  // Sanitizar el contenido final
   const finalSitemapContent = sanitizeUrl(sitemapContent);
+  const finalScholarContent = sanitizeUrl(scholarContent);
   
   fs.writeFileSync(sitemapPath, finalSitemapContent, 'utf8');
+  fs.writeFileSync(scholarPath, finalScholarContent, 'utf8');
   console.log(`✅ Sitemap generado: ${sitemapPath}`);
+  console.log(`✅ Scholar metadata generado: ${scholarPath}`);
 }
 
 function generateRobotsTxt() {
@@ -1880,14 +1911,47 @@ function generateRobotsTxt() {
     return url.replace(/https:\/\/revista1919\.github\.io/g, 'https://www.revistacienciasestudiantes.com');
   };
   
-  const robotsContent = `User-agent: *
+  const robotsContent = `
+# ============================================
+# Google Scholar específico
+# ============================================
+User-agent: GoogleScholar
+Allow: /articles/
+Allow: /pdf/
+Allow: /article
+Allow: /volume
+Allow: /new
+Disallow: /login
+Disallow: /admin
+Disallow: /submit
+Disallow: /api/
+Crawl-delay: 1
+
+# ============================================
+# Googlebot y otros buscadores
+# ============================================
+User-agent: *
 Allow: /
+Allow: /article
+Allow: /volume
+Allow: /collection
+Allow: /about
+Allow: /aims-scope
+Allow: /guidelines
+Allow: /faq
+Allow: /new
+Allow: /team
 Disallow: /search
 Disallow: /login
 Disallow: /admin
 Disallow: /submit
 Disallow: /api/
+
+# ============================================
+# Sitemaps
+# ============================================
 Sitemap: ${sanitizeUrl(domain)}/sitemap.xml
+Sitemap: ${sanitizeUrl(domain)}/scholar-metadata.xml
   `.trim();
   
   fs.writeFileSync(robotsPath, robotsContent, 'utf8');
