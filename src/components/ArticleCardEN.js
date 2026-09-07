@@ -190,17 +190,22 @@ function ArticleCard({ article }) {
 
   const journal = 'Revista Nacional de las Ciencias para Estudiantes';
   
-  // Determinar el título principal (inglés si existe, sino español)
+  // IMPORTANTE: Para las URLs SIEMPRE usar el título en español
+  const spanishTitle = article?.titulo || article?.tituloEnglish || 'Untitled';
+  
+  // Para mostrar el título en inglés si existe
   const mainTitle = article?.tituloEnglish || article?.titulo || 'Untitled';
   
-  const articleSlug = article?.permalink || `${generateSlug(mainTitle)}-${article?.numeroArticulo || ''}`;
+  // CORRECCIÓN: Generar slug usando el título en español
+  const articleSlug = article?.permalink || `${generateSlug(spanishTitle)}-${article?.numeroArticulo || ''}`;
   
   const pdfUrl = article?.pdfUrl || article?.pdf || '';
   const doiUrl = formatDOI(article?.doi);
   const doiDisplay = displayDOI(article?.doi);
   
-  const htmlUrlEn = `/articles/article-${articleSlug}.html`;
-  const htmlUrlEs = `/articles/article-${articleSlug}ES.html`;
+  // CORRECCIÓN: URLs correctas
+  const htmlUrlEn = `/articles/article-${articleSlug}EN.html`;
+  const htmlUrlEs = `/articles/article-${articleSlug}.html`;
   
   const pages = `${article?.primeraPagina || ''}-${article?.ultimaPagina || ''}`.trim() || '';
 

@@ -1,5 +1,4 @@
-// AppEN.js
-import React, { useState, useEffect, useMemo } from 'react'; // ← ESTA LÍNEA FALTABA
+import React, { useState, useEffect, useMemo } from 'react';
 import { auth } from './firebase';
 import {
   onAuthStateChanged,
@@ -18,7 +17,6 @@ import CollectionViewEN from './components/CollectionViewEN';
 import SingleCollectionViewEN from './components/SingleCollectionViewEN';
 import ReviewerResponsePage from './components/ReviewerResponsePage';
 import ReviewerWorkspacePage from './components/ReviewerWorkspacePage';
-import Tabs from './components/TabsEN';
 import SubmitSection from './components/SubmitSectionEN';
 import AdminSection from './components/AdminSectionEN';
 import AboutSection from './components/AboutSectionEN';
@@ -727,17 +725,9 @@ function AppEN() {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans text-[#1a1a1a] selection:bg-[#002147] selection:text-white">
       
-      {/* BARRA SUPERIOR INSTITUCIONAL */}
       <div className="h-1.5 w-full bg-[#002147] z-50"></div>
 
       {!isHome && <Header onOpenMenu={() => setIsMenuOpen(true)} />}
-
-      {/* NAVEGACIÓN TIPO ÍNDICE */}
-      <nav className="sticky top-0 z-30 bg-white border-b border-gray-300">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <Tabs sections={sections} />
-        </div>
-      </nav>
 
       <main className="flex-grow flex flex-col">
         <AnimatePresence mode="wait">
@@ -766,7 +756,6 @@ function AppEN() {
               </motion.div>
             } />
             
-            {/* Rutas anidadas del Portal */}
             {['submit', 'director', 'chief', 'submissions', 'reviewer-tasks', 'deskreview', 'assignment', 'calendar', 'reviewer-profile', 'reviewer-applications', 'tasks', 'news', 'sci-news', 'admissions', 'users'].map((subRoute) => (
               <Route key={subRoute} path={`/login/${subRoute}`} element={
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container max-w-full px-0 flex-grow">
@@ -800,7 +789,6 @@ function AppEN() {
 
       <NewsletterModal delay={45000} scrollTrigger={0.5} cookieExpirationDays={90} />
 
-      {/* MENÚ HAMBURGUESA EDITORIAL */}
       <AnimatePresence>
         {isMenuOpen && (
           <>
@@ -850,11 +838,15 @@ function AppEN() {
                       }
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      {section.label}
-                      {isHighlighted && !isActive && (
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-bold text-[#002147]">
-                          ●
-                        </span>
+                      {({ isActive }) => (
+                        <>
+                          {section.label}
+                          {isHighlighted && !isActive && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-bold text-[#002147]">
+                              ●
+                            </span>
+                          )}
+                        </>
                       )}
                     </NavLink>
                   );
