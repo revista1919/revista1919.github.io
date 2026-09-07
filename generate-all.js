@@ -1710,13 +1710,20 @@ ${Object.keys(volumesByYear).sort().reverse().map(year => `
   console.log(`✅ Índice volúmenes inglés: ${volumesIndexPathEn}`);
 }
 
-
 // ==================== FUNCIONES PARA SITEMAP ====================
 async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes) {
   const sitemapPath = path.join(__dirname, 'dist', 'sitemap.xml');
   
+  // Función auxiliar para sanitizar URLs
+  const sanitizeUrl = (url) => {
+    if (!url) return url;
+    return url.replace(/https:\/\/revista1919\.github\.io/g, 'https://www.revistacienciasestudiantes.com');
+  };
+  
   const articleUrls = articles.map(article => {
     const articleSlug = `${generateSlug(article.titulo)}-${article.numeroArticulo}`;
+    const pdfUrl = sanitizeUrl(article.pdfUrl || article.pdf);
+    
     return `
 <url>
   <loc>${domain}/articles/article-${articleSlug}.html</loc>
@@ -1731,7 +1738,7 @@ async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes
   <priority>0.8</priority>
 </url>
 <url>
-  <loc>${article.pdfUrl || article.pdf}</loc>
+  <loc>${pdfUrl}</loc>
   <lastmod>${article.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
@@ -1740,6 +1747,8 @@ async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes
 
   const volumeUrls = volumes.map(volume => {
     const volumeSlug = `${volume.volumen}-${volume.numero}`;
+    const volumePdf = sanitizeUrl(volume.pdf);
+    
     return `
 <url>
   <loc>${domain}/volumes/volume-${volumeSlug}.html</loc>
@@ -1754,7 +1763,7 @@ async function generateSitemap(articles, volumes, newsItems, teamData, spaRoutes
   <priority>0.8</priority>
 </url>
 <url>
-  <loc>${volume.pdf}</loc>
+  <loc>${volumePdf}</loc>
   <lastmod>${volume.fecha}</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
@@ -1855,12 +1864,22 @@ ${teamUrls}
 ${spaUrls}
 </urlset>`.replace(/^\s*\n/gm, '');
 
-  fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
+  // Sanitizar el contenido final del sitemap por si acaso
+  const finalSitemapContent = sanitizeUrl(sitemapContent);
+  
+  fs.writeFileSync(sitemapPath, finalSitemapContent, 'utf8');
   console.log(`✅ Sitemap generado: ${sitemapPath}`);
 }
 
 function generateRobotsTxt() {
   const robotsPath = path.join(__dirname, 'dist', 'robots.txt');
+  
+  // Sanitizar el dominio en el sitemap URL
+  const sanitizeUrl = (url) => {
+    if (!url) return url;
+    return url.replace(/https:\/\/revista1919\.github\.io/g, 'https://www.revistacienciasestudiantes.com');
+  };
+  
   const robotsContent = `User-agent: *
 Allow: /
 Disallow: /search
@@ -1868,9 +1887,9 @@ Disallow: /login
 Disallow: /admin
 Disallow: /submit
 Disallow: /api/
-Sitemap: ${domain}/sitemap.xml
+Sitemap: ${sanitizeUrl(domain)}/sitemap.xml
   `.trim();
   
   fs.writeFileSync(robotsPath, robotsContent, 'utf8');
   console.log(`✅ robots.txt generado`);
-      }
+}
