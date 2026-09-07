@@ -1,4 +1,4 @@
-// src/components/PortalSection.js (VERSIÓN CORREGIDA - SIN ERROR 404)
+// src/components/PortalSection.js (VERSIÓN FINAL CON REDISEÑO EDITORIAL)
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -99,7 +99,6 @@ const EN_TO_ES = {
 };
 
 const ALL_ROLES = Object.keys(ES_TO_EN);
-// En el componente PortalSection, agrega esta función
 
 const base64EncodeUnicode = (str) => {
   const encoder = new TextEncoder();
@@ -139,10 +138,10 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-[#fdf6f3] border-l-4 border-[#e86125] text-gray-800 p-6 m-4 shadow-sm rounded-r-md font-sans">
-          <h3 className="font-bold text-[#e86125] uppercase tracking-wider text-sm mb-2">Error Crítico</h3>
+        <div className="bg-white border-l-4 border-black text-gray-900 p-6 m-4 rounded-none font-sans">
+          <h3 className="font-serif font-bold text-black uppercase tracking-wide text-sm mb-2">Error Crítico</h3>
           <p className="text-sm">Ocurrió un error en el portal. Por favor recargue la página.</p>
-          <details className="mt-4 text-xs text-gray-500 bg-white p-4 border border-gray-200 rounded">
+          <details className="mt-4 text-xs text-gray-600 bg-gray-50 p-4 border border-gray-200 rounded-none">
             <summary className="cursor-pointer font-bold text-[#004b87]">Detalles técnicos</summary>
             <pre className="mt-2 overflow-x-auto">{this.state.error?.message}</pre>
             <pre className="mt-2 overflow-x-auto">{this.state.errorInfo?.componentStack}</pre>
@@ -161,8 +160,8 @@ function CalendarComponent({ events, onSelectEvent }) {
   const isSpanish = language === 'es';
   
   return (
-    <div className="bg-white border border-gray-200 border-t-4 border-t-[#004b87] p-6 md:p-10 rounded-lg shadow-sm mb-6 overflow-hidden">
-      <h3 className="font-serif text-2xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-100">
+    <div className="bg-white border border-gray-300 border-t-4 border-t-[#004b87] p-6 md:p-10 rounded-none mb-6 overflow-hidden">
+      <h3 className="font-serif text-2xl font-bold text-black mb-6 pb-4 border-b-2 border-black">
         {isSpanish ? 'Calendario de Plazos' : 'Deadline Calendar'}
       </h3>
       <div className="h-[500px] md:h-[700px] font-sans">
@@ -176,7 +175,7 @@ function CalendarComponent({ events, onSelectEvent }) {
           views={['month', 'week', 'day', 'agenda']}
           popup
           selectable
-          className="border border-gray-200 rounded-md overflow-hidden bg-white"
+          className="border border-gray-300 rounded-none overflow-hidden bg-white"
           messages={{
             next: isSpanish ? "Siguiente" : "Next",
             previous: isSpanish ? "Anterior" : "Previous",
@@ -223,40 +222,40 @@ const InterestsTags = ({ value = [], onChange, placeholder }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {value.map((tag, index) => (
           <motion.div
             key={index}
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="group bg-[#f4f5f7] border border-gray-200 hover:border-[#004b87] transition-colors text-[#2b2b2b] text-xs font-medium px-3 py-1.5 rounded-md flex items-center gap-2"
+            className="group bg-gray-100 border border-gray-300 hover:border-black transition-colors text-gray-800 text-xs font-medium px-3 py-1 rounded-none flex items-center gap-2"
           >
             {tag}
             <button
               onClick={() => removeTag(index)}
-              className="text-gray-400 hover:text-[#e86125] transition-colors"
+              className="text-gray-500 hover:text-black transition-colors"
             >
-              <XMarkIcon className="w-4 h-4" />
+              <XMarkIcon className="w-3 h-3" />
             </button>
           </motion.div>
         ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-2">
         <input
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="flex-1 p-3 bg-[#f8f9fa] border border-gray-200 rounded-md focus:ring-1 focus:ring-[#004b87] focus:border-[#004b87] text-sm text-gray-800 placeholder-gray-400 font-sans transition-all"
+          className="flex-1 p-2 bg-white border border-gray-300 rounded-none focus:ring-0 focus:border-black text-sm text-gray-800 placeholder-gray-400 font-sans transition-all"
         />
         <button
           onClick={addTag}
-          className="px-6 py-3 bg-[#004b87] hover:bg-[#003666] transition-all text-white font-bold tracking-wider text-xs uppercase rounded-md flex items-center justify-center gap-2 shadow-sm active:scale-95"
+          className="px-4 py-2 bg-[#004b87] hover:bg-black transition-all text-white font-medium tracking-wide text-xs rounded-none flex items-center justify-center gap-2 active:scale-95"
         >
-          <PlusIcon className="w-4 h-4" />
-          {isSpanish ? 'AÑADIR' : 'ADD'}
+          <PlusIcon className="w-3 h-3" />
+          {isSpanish ? 'Añadir' : 'Add'}
         </button>
       </div>
     </div>
@@ -380,217 +379,139 @@ const ProfileSection = ({ user }) => {
 
   if (!user) {
     console.warn('ProfileSection rendered without user data');
-    return <div className="text-center p-8 font-sans text-sm tracking-widest uppercase text-gray-500">{language === 'es' ? 'Cargando perfil...' : 'Loading profile...'}</div>;
+    return <div className="text-center p-8 font-sans text-sm tracking-wide text-gray-500">{language === 'es' ? 'Cargando perfil...' : 'Loading profile...'}</div>;
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 px-2 sm:px-4 font-sans text-[#2b2b2b]">
+    <div className="max-w-5xl mx-auto space-y-12 px-2 sm:px-4 font-sans text-gray-900">
       
-      {/* Encabezado Avatar */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-t-4 border-t-[#004b87] p-8 lg:p-10 flex flex-col lg:flex-row items-center gap-8 lg:gap-12 relative overflow-hidden">
+      {/* ENCABEZADO DE PERFIL EDITORIAL */}
+      <div className="bg-white border-y-2 border-black py-12 flex flex-col md:flex-row items-start gap-10">
+        
+        {/* Fotografía estilo retrato académico */}
         <div className="relative group flex-shrink-0">
-          <div className="w-36 h-36 lg:w-44 lg:h-44 rounded-lg overflow-hidden ring-1 ring-gray-200 shadow-sm relative bg-[#f4f5f7]">
+          <div className="w-40 h-48 overflow-hidden border border-gray-300 bg-gray-50 relative">
             {form.imageUrl ? (
-              <img src={form.imageUrl} className="object-cover w-full h-full" alt={language === 'es' ? 'Perfil' : 'Profile'} />
+              <img src={form.imageUrl} className="object-cover w-full h-full grayscale-[20%] hover:grayscale-0 transition-all duration-500" alt={language === 'es' ? 'Perfil' : 'Profile'} />
             ) : (
               <div className="flex items-center justify-center w-full h-full">
-                <UserIcon className="w-16 h-16 text-gray-300" />
+                <UserIcon className="w-12 h-12 text-gray-300" />
               </div>
             )}
-
+            
             {uploading && (
-              <div className="absolute inset-0 bg-[#004b87]/80 backdrop-blur-sm flex flex-col items-center justify-center">
-                <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mb-2" />
-                <span className="text-white text-xs font-bold tracking-widest">
-                  {language === 'es' ? 'SUBIENDO...' : 'UPLOADING...'}
-                </span>
+              <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center">
+                <div className="w-5 h-5 border-2 border-[#004b87] border-t-transparent rounded-full animate-spin mb-2" />
               </div>
             )}
-
-            <label className="absolute inset-0 flex items-center justify-center bg-[#004b87]/0 group-hover:bg-[#004b87]/60 transition-all duration-300 cursor-pointer">
-              <CameraIcon className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            
+            <label className="absolute inset-x-0 bottom-0 py-2 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+              <span className="text-[10px] text-white font-medium uppercase tracking-wide">
+                {language === 'es' ? 'Actualizar Foto' : 'Update Photo'}
+              </span>
               <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
             </label>
           </div>
         </div>
 
-        <div className="flex-1 text-center lg:text-left">
-          <h2 className="text-3xl lg:text-4xl font-serif font-bold text-gray-900 mb-2 border-b border-gray-100 pb-4 inline-block lg:block">
+        {/* Datos Principales */}
+        <div className="flex-1">
+          <h2 className="text-4xl font-serif text-[#004b87] mb-3 leading-tight">
             {form.firstName} {form.lastName}
           </h2>
-          <p className="text-base font-sans text-[#666] tracking-wide uppercase text-sm mt-4">
-            {form.institution || (language === 'es' ? 'Sin institución afiliada' : 'No affiliated institution')}
-          </p>
-          {form.orcid && (
-            <a href={`https://orcid.org/${form.orcid}`} target="_blank" rel="noreferrer" className="text-[#004b87] hover:text-[#e86125] transition-colors text-sm font-mono mt-3 inline-flex items-center gap-2 font-medium">
-              <span className="bg-[#e86125] text-white text-[10px] px-2 py-0.5 rounded-sm font-bold tracking-wider">ORCID</span>
-              {form.orcid}
-            </a>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Columna Izquierda */}
-        <div className="lg:col-span-7 space-y-8">
+          <div className="text-sm font-medium text-gray-600 mb-6">
+            {form.institution || (language === 'es' ? 'Afiliación no especificada' : 'Unspecified affiliation')}
+          </div>
           
-          {/* Biografía */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 lg:p-10">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 pb-4 border-b border-gray-100">
-              <h3 className="font-serif text-2xl font-bold text-gray-900">
-                {language === 'es' ? 'Biografía e Intereses' : 'Biography & Interests'}
-              </h3>
-              
-              <div className="flex bg-[#f4f5f7] rounded-md p-1 border border-gray-200">
-                <button 
-                  onClick={() => setLang('es')} 
-                  className={`px-4 py-1.5 rounded text-xs font-bold tracking-wider transition-all ${lang === 'es' ? 'bg-white shadow-sm text-[#004b87] border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  ESPAÑOL
-                </button>
-                <button 
-                  onClick={() => setLang('en')} 
-                  className={`px-4 py-1.5 rounded text-xs font-bold tracking-wider transition-all ${lang === 'en' ? 'bg-white shadow-sm text-[#004b87] border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  ENGLISH
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-8">
-              <div>
-                <label className="block text-xs tracking-[0.15em] font-bold text-[#666] uppercase mb-3">
-                  {language === 'es' ? 'Descripción Académica' : 'Academic Description'}
-                </label>
-                <textarea
-                  name={lang === 'es' ? 'descriptionEs' : 'descriptionEn'}
-                  value={lang === 'es' ? form.descriptionEs : form.descriptionEn}
-                  onChange={handleChange}
-                  className="w-full h-48 p-4 bg-[#f9fafb] border border-gray-200 rounded-md focus:ring-1 focus:ring-[#004b87] focus:border-[#004b87] resize-y text-sm leading-relaxed text-[#2b2b2b] transition-all"
-                  placeholder={lang === 'es' ? 'Resumen de trayectoria académica, publicaciones y enfoque de investigación...' : 'Summary of academic trajectory, publications, and research focus...'}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs tracking-[0.15em] font-bold text-[#666] uppercase mb-3">
-                  {language === 'es' ? 'Áreas de Especialidad' : 'Areas of Expertise'}
-                </label>
-                <InterestsTags
-                  value={lang === 'es' ? form.interestsEs : form.interestsEn}
-                  onChange={(newTags) => handleInterestsChange(lang, newTags)}
-                  placeholder={lang === 'es' ? 'Economía Política, IA, Historia...' : 'Political Economy, AI, History...'}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Afiliación */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 lg:p-10">
-            <h3 className="font-serif text-2xl font-bold text-gray-900 mb-8 pb-4 border-b border-gray-100">
-              {language === 'es' ? 'Datos de Afiliación' : 'Affiliation Data'}
-            </h3>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-xs tracking-[0.15em] font-bold text-[#666] uppercase mb-3">
-                  {language === 'es' ? 'Institución u Organización' : 'Institution or Organization'}
-                </label>
-                <input 
-                  name="institution" 
-                  value={form.institution} 
-                  onChange={handleChange} 
-                  className="w-full p-4 bg-[#f9fafb] border border-gray-200 rounded-md focus:ring-1 focus:ring-[#004b87] focus:border-[#004b87] text-sm text-[#2b2b2b]" 
-                />
-              </div>
-              <div>
-                <label className="block text-xs tracking-[0.15em] font-bold text-[#666] uppercase mb-3">
-                  {language === 'es' ? 'Correo de Contacto Público' : 'Public Contact Email'}
-                </label>
-                <div className="relative">
-                  <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input 
-                    name="publicEmail" 
-                    value={form.publicEmail} 
-                    onChange={handleChange} 
-                    className="w-full pl-12 p-4 bg-[#f9fafb] border border-gray-200 rounded-md focus:ring-1 focus:ring-[#004b87] focus:border-[#004b87] text-sm text-[#2b2b2b]" 
-                    placeholder={language === 'es' ? 'academico@universidad.edu' : 'academic@university.edu'} 
-                  />
-                </div>
-              </div>
+          <div className="flex flex-wrap gap-4 mt-6">
+            {form.orcid && (
+              <a href={`https://orcid.org/${form.orcid}`} target="_blank" rel="noreferrer" 
+                 className="inline-flex items-center gap-2 border border-gray-300 px-3 py-1.5 text-xs hover:border-[#004b87] hover:bg-[#004b87]/5 transition-colors rounded-none">
+                <span className="text-[#004b87] font-bold">iD</span>
+                <span className="font-mono text-gray-600">{form.orcid}</span>
+              </a>
+            )}
+            <div className="inline-flex items-center gap-2 border border-gray-300 px-3 py-1.5 text-xs rounded-none">
+              <EnvelopeIcon className="w-4 h-4 text-gray-400" />
+              <input 
+                name="publicEmail" 
+                value={form.publicEmail} 
+                onChange={handleChange} 
+                placeholder={language === 'es' ? 'Correo académico' : 'Academic email'}
+                className="bg-transparent border-none p-0 focus:ring-0 text-gray-600 placeholder-gray-400 w-48"
+              />
             </div>
           </div>
         </div>
-
-        {/* Columna Derecha */}
-        <div className="lg:col-span-5 space-y-8">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 lg:p-10">
-            <h3 className="font-serif text-2xl font-bold text-gray-900 mb-8 pb-4 border-b border-gray-100">
-              {language === 'es' ? 'Identificadores & Redes' : 'Identifiers & Networks'}
-            </h3>
-            <div className="space-y-5">
-              
-              <div className="group flex items-center bg-[#f9fafb] border border-gray-200 rounded-md focus-within:border-[#004b87] focus-within:ring-1 focus-within:ring-[#004b87] transition-all overflow-hidden">
-                <div className="pl-4 pr-3 text-[#004b87] font-serif font-black text-lg border-r border-gray-200 bg-gray-50 h-full py-3">in</div>
-                <input
-                  name="linkedin"
-                  value={form.social.linkedin}
-                  onChange={handleSocialChange}
-                  placeholder="https://linkedin.com/in/..."
-                  className="bg-transparent border-0 flex-1 py-3 px-4 focus:ring-0 text-sm text-[#2b2b2b] truncate"
-                />
-              </div>
-
-              <div className="group flex items-center bg-[#f9fafb] border border-gray-200 rounded-md focus-within:border-[#004b87] focus-within:ring-1 focus-within:ring-[#004b87] transition-all overflow-hidden">
-                <div className="pl-4 pr-3 text-[#2b2b2b] font-bold text-lg border-r border-gray-200 bg-gray-50 h-full py-3">𝕏</div>
-                <input
-                  name="twitter"
-                  value={form.social.twitter}
-                  onChange={handleSocialChange}
-                  placeholder="https://x.com/..."
-                  className="bg-transparent border-0 flex-1 py-3 px-4 focus:ring-0 text-sm text-[#2b2b2b] truncate"
-                />
-              </div>
-
-              <div className="group flex items-center bg-[#f9fafb] border border-gray-200 rounded-md focus-within:border-[#004b87] focus-within:ring-1 focus-within:ring-[#004b87] transition-all overflow-hidden">
-                <div className="pl-4 pr-3 text-gray-400 border-r border-gray-200 bg-gray-50 h-full py-3 flex items-center justify-center">
-                  <LinkIcon className="w-5 h-5 text-gray-500" />
-                </div>
-                <input
-                  name="website"
-                  value={form.social.website}
-                  onChange={handleSocialChange}
-                  placeholder="https://academicwebsite.com"
-                  className="bg-transparent border-0 flex-1 py-3 px-4 focus:ring-0 text-sm text-[#2b2b2b] truncate"
-                />
-              </div>
-
-              <div className="group flex items-center bg-[#fdf6f3] border border-[#e86125]/30 rounded-md focus-within:border-[#e86125] focus-within:ring-1 focus-within:ring-[#e86125] transition-all overflow-hidden">
-                <div className="pl-4 pr-3 text-[#e86125] font-mono font-bold text-sm border-r border-[#e86125]/30 bg-white h-full py-3">ORCID</div>
-                <input
-                  name="orcid"
-                  value={form.orcid}
-                  onChange={handleChange}
-                  placeholder="0000-0000-0000-0000"
-                  className="bg-transparent border-0 flex-1 py-3 px-4 focus:ring-0 text-sm font-mono text-[#2b2b2b] truncate"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Botón Guardar */}
+        
+        {/* Botón Guardar */}
+        <div className="md:ml-auto">
           <button
             onClick={saveProfile}
             disabled={saving}
-            className="w-full py-5 bg-[#004b87] text-white rounded-md font-bold tracking-[0.15em] text-xs uppercase hover:bg-[#003666] transition-colors border border-transparent shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="px-8 py-3 bg-[#004b87] text-white text-[11px] font-medium uppercase tracking-wide hover:bg-black transition-colors disabled:opacity-50 rounded-none"
           >
-            {saving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                {language === 'es' ? 'GUARDANDO...' : 'SAVING...'}
-              </>
-            ) : (
-              language === 'es' ? 'ACTUALIZAR REGISTRO' : 'UPDATE RECORD'
-            )}
+            {saving ? (language === 'es' ? 'Guardando...' : 'Saving...') : (language === 'es' ? 'Guardar Cambios' : 'Save Changes')}
           </button>
+        </div>
+      </div>
+
+      {/* ÁREA DE BIOGRAFÍA ESTILO "AUTHOR INFO" */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <div className="lg:col-span-2 space-y-8">
+          <div>
+            <div className="flex justify-between items-end border-b-2 border-black pb-3 mb-6">
+              <h3 className="font-serif text-2xl text-black">
+                {language === 'es' ? 'Biografía Académica' : 'Academic Biography'}
+              </h3>
+              <div className="flex gap-4 text-[11px] font-medium uppercase">
+                <button onClick={() => setLang('es')} className={lang === 'es' ? 'text-[#004b87] underline underline-offset-4' : 'text-gray-400 hover:text-black'}>ES</button>
+                <button onClick={() => setLang('en')} className={lang === 'en' ? 'text-[#004b87] underline underline-offset-4' : 'text-gray-400 hover:text-black'}>EN</button>
+              </div>
+            </div>
+            
+            <textarea
+              name={lang === 'es' ? 'descriptionEs' : 'descriptionEn'}
+              value={lang === 'es' ? form.descriptionEs : form.descriptionEn}
+              onChange={handleChange}
+              className="w-full h-64 p-0 bg-transparent border-none focus:ring-0 resize-y text-base leading-relaxed text-gray-700 placeholder-gray-300"
+              placeholder={lang === 'es' ? 'Escriba un resumen de su trayectoria investigadora...' : 'Write a summary of your research trajectory...'}
+            />
+          </div>
+        </div>
+
+        {/* BARRA LATERAL */}
+        <div className="space-y-10">
+          <div>
+            <h3 className="font-serif text-lg text-black border-b border-gray-300 pb-2 mb-4">
+              {language === 'es' ? 'Palabras Clave' : 'Keywords'}
+            </h3>
+            <InterestsTags
+              value={lang === 'es' ? form.interestsEs : form.interestsEn}
+              onChange={(newTags) => handleInterestsChange(lang, newTags)}
+              placeholder="+ Añadir área..."
+            />
+          </div>
+
+          <div>
+            <h3 className="font-serif text-lg text-black border-b border-gray-300 pb-2 mb-4">
+              {language === 'es' ? 'Redes Académicas' : 'Academic Networks'}
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center border-b border-gray-200 py-2">
+                <span className="text-[10px] font-medium text-gray-400 w-20">LINKEDIN</span>
+                <input name="linkedin" value={form.social.linkedin} onChange={handleSocialChange} className="bg-transparent border-none p-0 flex-1 focus:ring-0 text-sm text-gray-700" placeholder="URL del perfil" />
+              </div>
+              <div className="flex items-center border-b border-gray-200 py-2">
+                <span className="text-[10px] font-medium text-gray-400 w-20">TWITTER / X</span>
+                <input name="twitter" value={form.social.twitter} onChange={handleSocialChange} className="bg-transparent border-none p-0 flex-1 focus:ring-0 text-sm text-gray-700" placeholder="@usuario" />
+              </div>
+              <div className="flex items-center border-b border-gray-200 py-2">
+                <span className="text-[10px] font-medium text-gray-400 w-20">WEBSITE</span>
+                <input name="website" value={form.social.website} onChange={handleSocialChange} className="bg-transparent border-none p-0 flex-1 focus:ring-0 text-sm text-gray-700" placeholder="https://" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -598,7 +519,6 @@ const ProfileSection = ({ user }) => {
 };
 
 // ==================== GESTIÓN DE USUARIOS ====================
-// Componente UserManagement optimizado
 const UserManagement = ({ users: initialUsers }) => {
   const [users, setUsers] = useState(initialUsers || []);
   const [searchTerm, setSearchTerm] = useState('');
@@ -614,7 +534,6 @@ const UserManagement = ({ users: initialUsers }) => {
     }
   }, [initialUsers]);
 
-  // Virtualización simple para mejorar rendimiento
   const filteredUsers = useMemo(() => {
     if (!users || users.length === 0) return [];
     return users.filter(user => 
@@ -633,7 +552,6 @@ const UserManagement = ({ users: initialUsers }) => {
     const newRoles = [...currentRoles, role];
     
     try {
-      // Actualización optimista
       setUsers(prev => prev.map(u => 
         u.id === uid ? { ...u, roles: newRoles } : u
       ));
@@ -641,7 +559,6 @@ const UserManagement = ({ users: initialUsers }) => {
       await updateRole({ targetUid: uid, newRoles });
     } catch (err) {
       console.error('Error al añadir rol:', err);
-      // Revertir cambio en caso de error
       setUsers(prev => prev.map(u => 
         u.id === uid ? { ...u, roles: currentRoles } : u
       ));
@@ -655,7 +572,6 @@ const UserManagement = ({ users: initialUsers }) => {
     const newRoles = (user.roles || []).filter(r => r !== role);
     
     try {
-      // Actualización optimista
       setUsers(prev => prev.map(u => 
         u.id === uid ? { ...u, roles: newRoles } : u
       ));
@@ -663,7 +579,6 @@ const UserManagement = ({ users: initialUsers }) => {
       await updateRole({ targetUid: uid, newRoles });
     } catch (err) {
       console.error('Error al eliminar rol:', err);
-      // Revertir cambio
       setUsers(prev => prev.map(u => 
         u.id === uid ? { ...u, roles: (user.roles || []) } : u
       ));
@@ -672,9 +587,9 @@ const UserManagement = ({ users: initialUsers }) => {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 max-w-6xl mx-auto text-center border-t-4 border-t-[#004b87]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-[#f4f5f7] border-t-[#004b87] mb-4"></div>
-        <p className="text-gray-500 font-sans tracking-widest text-xs uppercase">
+      <div className="bg-white border border-gray-300 p-12 max-w-6xl mx-auto text-center border-t-4 border-t-[#004b87] rounded-none">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-[#004b87] mb-4"></div>
+        <p className="text-gray-500 font-sans tracking-wide text-xs">
           {isSpanish ? 'Cargando directorio...' : 'Loading directory...'}
         </p>
       </div>
@@ -683,7 +598,7 @@ const UserManagement = ({ users: initialUsers }) => {
 
   if (!users || users.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 max-w-6xl mx-auto text-center border-t-4 border-t-[#004b87]">
+      <div className="bg-white border border-gray-300 p-12 max-w-6xl mx-auto text-center border-t-4 border-t-[#004b87] rounded-none">
         <UserIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
         <p className="text-gray-500 font-medium">
           {isSpanish ? 'No hay usuarios disponibles' : 'No users available'}
@@ -693,13 +608,13 @@ const UserManagement = ({ users: initialUsers }) => {
   }
 
   return (
-    <div ref={containerRef} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:p-10 max-w-7xl mx-auto border-t-4 border-t-[#004b87]">
-      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 mb-8 border-b border-gray-100 pb-6">
+    <div ref={containerRef} className="bg-white border border-gray-300 p-6 lg:p-10 max-w-7xl mx-auto border-t-4 border-t-[#004b87] rounded-none">
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 mb-8 border-b-2 border-black pb-6">
         <div>
-          <h3 className="text-3xl font-serif font-bold text-gray-900">
+          <h3 className="text-3xl font-serif font-bold text-black">
             {isSpanish ? 'Directorio Editorial' : 'Editorial Directory'}
           </h3>
-          <p className="text-sm font-sans tracking-wide text-[#666] mt-2 uppercase">
+          <p className="text-sm font-sans text-gray-600 mt-2">
             {isSpanish ? 'Gestión de Permisos y Roles' : 'Roles and Access Management'}
           </p>
         </div>
@@ -710,7 +625,7 @@ const UserManagement = ({ users: initialUsers }) => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder={isSpanish ? "Filtrar por nombre o email..." : "Filter by name or email..."}
-            className="w-full pl-10 pr-4 py-3 bg-[#f9fafb] border border-gray-200 rounded-md focus:border-[#004b87] focus:ring-1 focus:ring-[#004b87] text-sm font-sans transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-none focus:border-black focus:ring-0 text-sm font-sans transition-all"
           />
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -718,58 +633,57 @@ const UserManagement = ({ users: initialUsers }) => {
         </div>
       </div>
 
-      <div className="mb-4 text-xs font-bold tracking-widest text-[#666] uppercase">
+      <div className="mb-4 text-xs font-medium text-gray-600">
         {isSpanish 
           ? `Mostrando ${filteredUsers.length} de ${users.length} registros`
           : `Showing ${filteredUsers.length} of ${users.length} records`
         }
       </div>
 
-      {/* Tabla Desktop (Forzada estilo APA/Elsevier) */}
-      <div className="overflow-x-auto rounded-md border border-gray-200">
+      <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-left font-sans text-sm">
-          <thead className="bg-[#f8f9fa] border-b-2 border-gray-300">
-            <tr>
-              <th className="px-6 py-4 font-bold text-[#004b87] uppercase tracking-widest text-[10px]">
+          <thead>
+            <tr className="border-b-2 border-black">
+              <th className="px-6 py-3 font-medium text-black text-xs">
                 {isSpanish ? 'Investigador / Usuario' : 'Researcher / User'}
               </th>
-              <th className="px-6 py-4 font-bold text-[#004b87] uppercase tracking-widest text-[10px]">
+              <th className="px-6 py-3 font-medium text-black text-xs">
                 Contacto
               </th>
-              <th className="px-6 py-4 font-bold text-[#004b87] uppercase tracking-widest text-[10px]">
+              <th className="px-6 py-3 font-medium text-black text-xs">
                 {isSpanish ? 'Asignación de Roles' : 'Role Assignment'}
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody>
             {filteredUsers.slice(0, 100).map((user) => (
-              <tr key={user.id} className="hover:bg-[#f4f5f7] transition-colors">
+              <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 align-top">
                   <div className="flex items-center gap-4">
                     {user.imageUrl ? (
                       <img 
                         src={user.imageUrl} 
-                        className="w-10 h-10 rounded object-cover border border-gray-200" 
+                        className="w-10 h-10 object-cover border border-gray-300" 
                         alt={user.displayName}
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-[#f4f5f7] border border-gray-200 rounded flex items-center justify-center">
+                      <div className="w-10 h-10 bg-gray-100 border border-gray-300 flex items-center justify-center">
                         <span className="text-lg font-serif font-bold text-[#004b87]">
                           {user.displayName?.charAt(0) || 'U'}
                         </span>
                       </div>
                     )}
                     <div>
-                      <div className="font-bold text-[#2b2b2b]">
+                      <div className="font-medium text-gray-900">
                         {user.displayName || (isSpanish ? 'Sin nombre' : 'No name')}
                       </div>
-                      <div className="text-[10px] text-gray-400 font-mono tracking-wider mt-0.5">UID: {user.id?.slice(0, 8)}</div>
+                      <div className="text-[10px] text-gray-400 font-mono mt-0.5">UID: {user.id?.slice(0, 8)}</div>
                     </div>
                   </div>
                 </td>
                 
-                <td className="px-6 py-4 align-top text-[#666] font-medium">
+                <td className="px-6 py-4 align-top text-gray-600">
                   {user.email}
                 </td>
 
@@ -780,12 +694,12 @@ const UserManagement = ({ users: initialUsers }) => {
                       return (
                         <div 
                           key={role}
-                          className="inline-flex items-center gap-1.5 bg-[#eef3f7] border border-[#004b87]/20 text-[#004b87] text-[11px] font-bold tracking-wide px-2.5 py-1 rounded"
+                          className="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-300 text-gray-700 text-[11px] font-medium px-2.5 py-1 rounded-none"
                         >
                           {displayRole}
                           <button
                             onClick={() => removeRole(user.id, role)}
-                            className="text-[#004b87] hover:text-[#e86125] transition-colors font-black ml-1"
+                            className="text-gray-400 hover:text-black transition-colors ml-1"
                             title={isSpanish ? 'Revocar' : 'Revoke'}
                           >
                             ×
@@ -802,11 +716,11 @@ const UserManagement = ({ users: initialUsers }) => {
                         e.target.value = '';
                       }
                     }}
-                    className="w-full max-w-xs appearance-none bg-[#f9fafb] border border-dashed border-gray-300 hover:border-[#004b87] text-[#666] text-xs font-bold tracking-wider uppercase rounded px-3 py-2 cursor-pointer transition-colors focus:outline-none focus:border-[#004b87]"
+                    className="w-full max-w-xs appearance-none bg-white border border-dashed border-gray-300 hover:border-black text-gray-600 text-xs font-medium rounded-none px-3 py-2 cursor-pointer transition-colors focus:outline-none focus:border-black"
                     value=""
                   >
                     <option value="" disabled>
-                      {isSpanish ? '+ AÑADIR NUEVO ROL' : '+ ADD NEW ROLE'}
+                      {isSpanish ? '+ Añadir nuevo rol' : '+ Add new role'}
                     </option>
                     {ALL_ROLES.filter(r => !(user.roles || []).includes(r)).map(role => {
                       const displayRole = !isSpanish ? (ES_TO_EN[role] || role) : role;
@@ -823,9 +737,9 @@ const UserManagement = ({ users: initialUsers }) => {
       </div>
 
       {filteredUsers.length === 0 && (
-        <div className="text-center py-16 text-gray-400 bg-[#f9fafb] border border-gray-200 mt-4 rounded-md">
+        <div className="text-center py-16 text-gray-400 bg-gray-50 border border-gray-200 mt-4 rounded-none">
           <UserIcon className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-          <p className="text-sm tracking-wide font-sans">
+          <p className="text-sm font-sans">
             {isSpanish 
               ? 'No se encontraron coincidencias en el directorio.' 
               : 'No matches found in the directory.'
@@ -843,36 +757,34 @@ export default function PortalSection({ user, onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-const getActiveTabFromPath = () => {
-  const path = location.pathname;
-  // Extraer el segmento después de /login/ o /es/login/
-  const match = path.match(/\/(?:es\/)?login\/([^/]+)/);
-  if (!match) return 'profile';
-  
-  const routePath = match[1];
-  
-  // Mapear rutas a IDs de tabs
-  const routeToTab = {
-    '': 'profile',
-    'submissions': 'submissions',
-    'reviewer-tasks': 'reviewer-tasks',
-    'deskreview': 'deskreview',
-    'reviewer-applications': 'reviewer-applications',
-    'reviewer-profile': 'reviewer-profile',
-    'assignment': 'assignment',
-    'calendar': 'calendar',
-    'submit': 'submit',
-    'director': 'director',
-    'chief': 'chief',
-    'tasks': 'tasks',
-    'news': 'news',
-    'sci-news': 'SciNews', // ← AÑADIDO
-    'admissions': 'admissions',
-    'users': 'users'
+  const getActiveTabFromPath = () => {
+    const path = location.pathname;
+    const match = path.match(/\/(?:es\/)?login\/([^/]+)/);
+    if (!match) return 'profile';
+    
+    const routePath = match[1];
+    
+    const routeToTab = {
+      '': 'profile',
+      'submissions': 'submissions',
+      'reviewer-tasks': 'reviewer-tasks',
+      'deskreview': 'deskreview',
+      'reviewer-applications': 'reviewer-applications',
+      'reviewer-profile': 'reviewer-profile',
+      'assignment': 'assignment',
+      'calendar': 'calendar',
+      'submit': 'submit',
+      'director': 'director',
+      'chief': 'chief',
+      'tasks': 'tasks',
+      'news': 'news',
+      'sci-news': 'SciNews',
+      'admissions': 'admissions',
+      'users': 'users'
+    };
+    
+    return routeToTab[routePath] || 'profile';
   };
-  
-  return routeToTab[routePath] || 'profile';
-};
 
   const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const [isDirectorPanelExpanded, setIsDirectorPanelExpanded] = useState(false);
@@ -880,22 +792,20 @@ const getActiveTabFromPath = () => {
   const [effectiveName, setEffectiveName] = useState(user?.displayName || '');
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
- const [loadingUser, setLoadingUser] = useState(true);
-const [loadTimeout, setLoadTimeout] = useState(false);
-const [dataCorrupted, setDataCorrupted] = useState(false);
-const safetyTimeoutRef = useRef(null);
-// ===============================================
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [loadTimeout, setLoadTimeout] = useState(false);
+  const [dataCorrupted, setDataCorrupted] = useState(false);
+  const safetyTimeoutRef = useRef(null);
   
-  // Datos en tiempo real desde Firebase
   const [userData, setUserData] = useState(user);
   const [users, setUsers] = useState([]);
   const [reviewerAssignments, setReviewerAssignments] = useState([]);
 
-  // Estados para reclamación de perfil
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [claimStatus, setClaimStatus] = useState('idle');
   const [anonymousProfile, setAnonymousProfile] = useState(null);
   const [claimError, setClaimError] = useState('');
+  
   const checkForAnonymousProfileLocal = useCallback(async () => {
     if (!user?.email) {
       setClaimStatus('not-available');
@@ -929,7 +839,6 @@ const safetyTimeoutRef = useRef(null);
     }
   }, [user, isSpanish]);
 
-  // Función para reclamar perfil (reemplaza la existente)
   const handleClaimProfile = useCallback(async () => {
     if (!anonymousProfile) return;
     
@@ -970,9 +879,9 @@ const safetyTimeoutRef = useRef(null);
       );
     }
   }, [anonymousProfile, isSpanish]);
+  
   const { getReviewerAssignmentsByEmail } = useReviewerAssignment(user);
 
-  // Módulos de Quill (se mantienen por si acaso)
   const modules = useMemo(() => ({
     toolbar: {
       container: [
@@ -1004,52 +913,48 @@ const safetyTimeoutRef = useRef(null);
   const isWebDev = userRoles.includes('Responsable de Desarrollo Web');
   const isAssignmentManager = userRoles.includes('Encargado de Asignación de Artículos');
 
-const isChiefEditor = userRoles.includes('Editor en Jefe'); 
-const isDirectorGeneral = userRoles.includes('Director General');
-const canManageReviewers = isSectionEditor || isChiefEditor || isDirectorGeneral;
+  const isChiefEditor = userRoles.includes('Editor en Jefe'); 
+  const isDirectorGeneral = userRoles.includes('Director General');
+  const canManageReviewers = isSectionEditor || isChiefEditor || isDirectorGeneral;
 
-// Actualiza el array de tabs para incluir la nueva pestaña:
-// Actualiza el array de tabs para incluir la nueva pestaña:
-const tabs = [
-  { id: 'profile', label: isSpanish ? 'MI PERFIL' : 'MY PROFILE', roles: ['any'], path: '' },
-  { id: 'submissions', label: isSpanish ? 'MIS ENVÍOS' : 'MY SUBMISSIONS', roles: ['Autor'], path: 'submissions' },
-  { id: 'reviewer-tasks', label: isSpanish ? 'MIS REVISIONES' : 'MY REVIEWS', roles: ['Revisor'], path: 'reviewer-tasks' },
-  { id: 'deskreview', label: isSpanish ? 'DESK REVIEW' : 'DESK REVIEW', roles: ['Editor de Sección', 'Editor en Jefe'], path: 'deskreview' },
-  { id: 'reviewer-applications', label: isSpanish ? 'POSTULACIONES REVISORES' : 'REVIEWER APPLICATIONS', roles: ['Editor de Sección', 'Editor en Jefe', 'Director General'], path: 'reviewer-applications' },
-  { id: 'assignment', label: isSpanish ? 'ASIGNAR ARTÍCULOS' : 'ASSIGN ARTICLES', roles: ['Encargado de Asignación de Artículos', 'Director General'], path: 'assignment' },
-  { id: 'calendar', label: isSpanish ? 'CALENDARIO' : 'CALENDAR', roles: ['Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos'], path: 'calendar' },
-  { id: 'submit', label: isSpanish ? 'ENVIAR MANUSCRITO' : 'SUBMIT MANUSCRIPT', roles: ['Autor'], path: 'submit' },
-  { id: 'director', label: isSpanish ? 'PANEL DIRECTIVO' : 'DIRECTOR PANEL', roles: ['Director General'], path: 'director' },
-  { id: 'chief', label: isSpanish ? 'PANEL EDITOR JEFE' : 'CHIEF EDITOR PANEL', roles: ['Editor en Jefe'], path: 'chief' },
-  { id: 'tasks', label: isSpanish ? 'TAREAS' : 'TASKS', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'], path: 'tasks' },
-  { id: 'news', label: isSpanish ? 'NOTICIAS' : 'NEWS', roles: ['Director General'], path: 'news' },
-  { id: 'SciNews', label: isSpanish ? 'NOTICIAS CIENTÍFICAS' : 'SCIENTIFIC NEWS', roles: ['Director General', 'Editor en Jefe', 'Editor de Sección', 'Periodista'], path: 'sci-news' }, // ← CAMBIADO: path diferente
-  { id: 'admissions', label: isSpanish ? 'ADMISIONES' : 'ADMISSIONS', roles: ['Director General'], path: 'admissions' },
-  { id: 'users', label: isSpanish ? 'USUARIOS' : 'USERS', roles: ['Director General'], path: 'users' },
-  { id: 'reviewer-profile', label: isSpanish ? 'MI PERFIL REVISOR' : 'MY REVIEWER PROFILE', roles: ['Revisor'], path: 'reviewer-profile' },
-].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
-// Actualiza el mapeo de rutas para incluir la nueva ruta:
-// Actualiza el mapeo de rutas para incluir la nueva ruta:
-const tabRoutes = {
-  profile: '',
-  submissions: 'submissions',
-  'reviewer-tasks': 'reviewer-tasks',
-  deskreview: 'deskreview',
-  'reviewer-applications': 'reviewer-applications',
-  'reviewer-profile': 'reviewer-profile',
-  assignment: 'assignment',
-  calendar: 'calendar',
-  submit: 'submit',
-  director: 'director',
-  chief: 'chief',
-  tasks: 'tasks',
-  news: 'news',
-  'SciNews': 'sci-news', // ← AÑADIDO: mapeo correcto
-  admissions: 'admissions',
-  users: 'users'
-};
+  const tabs = [
+    { id: 'profile', label: isSpanish ? 'Mi Perfil' : 'My Profile', roles: ['any'], path: '' },
+    { id: 'submissions', label: isSpanish ? 'Mis Envíos' : 'My Submissions', roles: ['Autor'], path: 'submissions' },
+    { id: 'reviewer-tasks', label: isSpanish ? 'Mis Revisiones' : 'My Reviews', roles: ['Revisor'], path: 'reviewer-tasks' },
+    { id: 'deskreview', label: isSpanish ? 'Desk Review' : 'Desk Review', roles: ['Editor de Sección', 'Editor en Jefe'], path: 'deskreview' },
+    { id: 'reviewer-applications', label: isSpanish ? 'Postulaciones Revisores' : 'Reviewer Applications', roles: ['Editor de Sección', 'Editor en Jefe', 'Director General'], path: 'reviewer-applications' },
+    { id: 'assignment', label: isSpanish ? 'Asignar Artículos' : 'Assign Articles', roles: ['Encargado de Asignación de Artículos', 'Director General'], path: 'assignment' },
+    { id: 'calendar', label: isSpanish ? 'Calendario' : 'Calendar', roles: ['Editor en Jefe', 'Director General', 'Encargado de Asignación de Artículos'], path: 'calendar' },
+    { id: 'submit', label: isSpanish ? 'Enviar Manuscrito' : 'Submit Manuscript', roles: ['Autor'], path: 'submit' },
+    { id: 'director', label: isSpanish ? 'Panel Directivo' : 'Director Panel', roles: ['Director General'], path: 'director' },
+    { id: 'chief', label: isSpanish ? 'Panel Editor Jefe' : 'Chief Editor Panel', roles: ['Editor en Jefe'], path: 'chief' },
+    { id: 'tasks', label: isSpanish ? 'Tareas' : 'Tasks', roles: ['Encargado de Redes Sociales', 'Responsable de Desarrollo Web'], path: 'tasks' },
+    { id: 'news', label: isSpanish ? 'Noticias' : 'News', roles: ['Director General'], path: 'news' },
+    { id: 'SciNews', label: isSpanish ? 'Noticias Científicas' : 'Scientific News', roles: ['Director General', 'Editor en Jefe', 'Editor de Sección', 'Periodista'], path: 'sci-news' },
+    { id: 'admissions', label: isSpanish ? 'Admisiones' : 'Admissions', roles: ['Director General'], path: 'admissions' },
+    { id: 'users', label: isSpanish ? 'Usuarios' : 'Users', roles: ['Director General'], path: 'users' },
+    { id: 'reviewer-profile', label: isSpanish ? 'Mi Perfil Revisor' : 'My Reviewer Profile', roles: ['Revisor'], path: 'reviewer-profile' },
+  ].filter(tab => tab.roles.includes('any') || tab.roles.some(role => userRoles.includes(role)));
 
-  // Sincronizar la ruta con la pestaña activa
+  const tabRoutes = {
+    profile: '',
+    submissions: 'submissions',
+    'reviewer-tasks': 'reviewer-tasks',
+    deskreview: 'deskreview',
+    'reviewer-applications': 'reviewer-applications',
+    'reviewer-profile': 'reviewer-profile',
+    assignment: 'assignment',
+    calendar: 'calendar',
+    submit: 'submit',
+    director: 'director',
+    chief: 'chief',
+    tasks: 'tasks',
+    news: 'news',
+    'SciNews': 'sci-news',
+    admissions: 'admissions',
+    users: 'users'
+  };
+
   useEffect(() => {
     const pathTab = getActiveTabFromPath();
     if (pathTab !== activeTab) {
@@ -1057,22 +962,22 @@ const tabRoutes = {
     }
   }, [location.pathname]);
 
-const handleTabChange = (tabId, event) => {
-  if (event) {
-    event.preventDefault();
-  }
-  
-  setActiveTab(tabId);
-  const route = tabRoutes[tabId] || '';
-  
-  const currentPath = location.pathname;
-  const langPrefix = currentPath.match(/^\/(es|en)\//) ? currentPath.match(/^\/(es|en)\//)[0] : '/';
-  
-  const newPath = route ? `${langPrefix}login/${route}` : `${langPrefix}login`;
-  
-  navigate(newPath, { replace: true });
-};
-  // Snapshot de usuario
+  const handleTabChange = (tabId, event) => {
+    if (event) {
+      event.preventDefault();
+    }
+    
+    setActiveTab(tabId);
+    const route = tabRoutes[tabId] || '';
+    
+    const currentPath = location.pathname;
+    const langPrefix = currentPath.match(/^\/(es|en)\//) ? currentPath.match(/^\/(es|en)\//)[0] : '/';
+    
+    const newPath = route ? `${langPrefix}login/${route}` : `${langPrefix}login`;
+    
+    navigate(newPath, { replace: true });
+  };
+
   useEffect(() => {
     if (!user?.uid) {
       console.warn('No user UID available for snapshot');
@@ -1104,7 +1009,6 @@ const handleTabChange = (tabId, event) => {
     };
   }, [user?.uid]);
 
-  // Snapshot de todos los usuarios (solo para Director)
   useEffect(() => {
     if (userData?.roles?.includes('Director General')) {
       console.log('Setting up users snapshot for Director');
@@ -1123,7 +1027,6 @@ const handleTabChange = (tabId, event) => {
     }
   }, [userData?.roles]);
 
-  // Cargar asignaciones de revisor si el usuario es revisor
   useEffect(() => {
     if (isReviewer && user?.email) {
       const loadReviewerAssignments = async () => {
@@ -1136,7 +1039,6 @@ const handleTabChange = (tabId, event) => {
     }
   }, [isReviewer, user?.email, getReviewerAssignmentsByEmail]);
 
-  // Cargar deadlines para el calendario
   useEffect(() => {
     const loadDeadlines = async () => {
       if (!user) return;
@@ -1161,11 +1063,8 @@ const handleTabChange = (tabId, event) => {
     loadDeadlines();
   }, [user, isSpanish]);
 
-  // ========== EFECTO 1: CONTROL DE CARGA Y TIMEOUT ==========
   useEffect(() => {
-    // Solo ejecutar la lógica si aún estamos en estado de carga
     if (!loadingUser) {
-      // Si ya no estamos cargando, limpiar cualquier timeout pendiente
       if (safetyTimeoutRef.current) {
         clearTimeout(safetyTimeoutRef.current);
         safetyTimeoutRef.current = null;
@@ -1173,9 +1072,7 @@ const handleTabChange = (tabId, event) => {
       return;
     }
 
-    // Verificar si tenemos datos válidos para dejar de cargar
     if (userData && effectiveName) {
-      // Verificar integridad mínima de datos
       if (!userData.uid || !userData.email) {
         console.error('Datos de usuario corruptos en PortalSection');
         setDataCorrupted(true);
@@ -1187,7 +1084,6 @@ const handleTabChange = (tabId, event) => {
         return;
       }
 
-      // Datos válidos, salir de carga
       setLoadingUser(false);
       if (safetyTimeoutRef.current) {
         clearTimeout(safetyTimeoutRef.current);
@@ -1196,8 +1092,6 @@ const handleTabChange = (tabId, event) => {
       return;
     }
 
-    // Si llegamos aquí, estamos en carga y no tenemos datos todavía
-    // Iniciar timeout de seguridad SOLO si no hay uno activo
     if (!safetyTimeoutRef.current) {
       safetyTimeoutRef.current = setTimeout(() => {
         console.error('Timeout de carga en PortalSection - posible corrupción de datos');
@@ -1205,10 +1099,9 @@ const handleTabChange = (tabId, event) => {
         setDataCorrupted(true);
         setLoadingUser(false);
         safetyTimeoutRef.current = null;
-      }, 20000); // 20 segundos máximo
+      }, 20000);
     }
 
-    // Cleanup function
     return () => {
       if (safetyTimeoutRef.current) {
         clearTimeout(safetyTimeoutRef.current);
@@ -1217,31 +1110,23 @@ const handleTabChange = (tabId, event) => {
     };
   }, [userData, effectiveName, loadingUser]);
 
-  // ========== EFECTO 2: RESETEAR ESTADO DE CORRUPCIÓN CUANDO CAMBIA EL USUARIO ==========
   useEffect(() => {
-    // Si los datos del usuario cambian, resetear los estados de error
     if (userData && userData.uid && userData.email) {
       setDataCorrupted(false);
       setLoadTimeout(false);
     }
   }, [userData?.uid]);
-  // ====================================================================================
-  
 
-  // Función segura para abrir en nueva pestaña (CORREGIDA)
   const openReviewerWorkspace = (assignmentId) => {
-    // Usar window.open de manera segura, pero solo cuando sea necesario
-    // Idealmente, deberías usar navigate de React Router
     window.open(`/reviewer-workspace/${assignmentId}`, '_blank', 'noopener,noreferrer');
   };
-  // ========== PANTALLA DE CARGA CON BOTÓN DE ESCAPE ==========
-    // ========== PANTALLA DE CARGA CON BOTÓN DE ESCAPE ==========
+
   if (loadingUser) {
     return (
-      <div className="min-h-screen bg-[#f4f5f7] flex items-center justify-center font-sans">
-        <div className="flex flex-col items-center bg-white p-12 rounded-lg shadow-sm border border-gray-200">
-          <div className="w-12 h-12 border-2 border-[#f4f5f7] border-t-[#004b87] rounded-full animate-spin" />
-          <p className="mt-6 text-[#004b87] font-bold tracking-widest text-xs uppercase">
+      <div className="min-h-screen bg-white flex items-center justify-center font-sans">
+        <div className="flex flex-col items-center bg-white p-12 border-2 border-black rounded-none">
+          <div className="w-12 h-12 border-2 border-gray-200 border-t-[#004b87] rounded-full animate-spin" />
+          <p className="mt-6 text-[#004b87] font-medium text-xs">
             {isSpanish ? 'Iniciando Portal Editorial...' : 'Loading Editorial Portal...'}
           </p>
           <p className="mt-2 text-xs text-gray-400">
@@ -1250,7 +1135,6 @@ const handleTabChange = (tabId, event) => {
               : 'This should not take more than a few seconds'}
           </p>
 
-          {/* ========== BOTÓN DE ESCAPE (aparece después de 8 segundos) ========== */}
           <div className="mt-8 pt-4 border-t border-gray-200">
             <p className="text-xs text-gray-400 mb-3">
               {isSpanish 
@@ -1259,7 +1143,6 @@ const handleTabChange = (tabId, event) => {
             </p>
             <button
               onClick={() => {
-                // Limpiar timeout si existe
                 if (safetyTimeoutRef.current) {
                   clearTimeout(safetyTimeoutRef.current);
                   safetyTimeoutRef.current = null;
@@ -1268,27 +1151,23 @@ const handleTabChange = (tabId, event) => {
                 setDataCorrupted(true);
                 setLoadingUser(false);
               }}
-              className="text-xs text-[#e86125] hover:text-red-800 underline font-bold"
+              className="text-xs text-black hover:text-[#004b87] underline font-medium"
             >
               {isSpanish
                 ? 'Forzar salida de pantalla de carga'
                 : 'Force exit loading screen'}
             </button>
           </div>
-          {/* ==================================================================== */}
         </div>
       </div>
     );
   }
-  // =========================================================
-  // =========================================================
-   // ========== PANTALLA DE DATOS CORRUPTOS O TIMEOUT ==========
- 
+
   if (dataCorrupted || loadTimeout) {
     return (
-      <div className="min-h-screen bg-[#f4f5f7] flex items-center justify-center p-4 font-sans">
-        <div className="bg-[#fdf6f3] border-t-4 border-t-[#e86125] rounded-md shadow-md p-8 md:p-12 max-w-lg w-full">
-          <h3 className="font-serif text-2xl font-bold text-[#e86125] mb-4">
+      <div className="min-h-screen bg-white flex items-center justify-center p-4 font-sans">
+        <div className="bg-white border-t-4 border-t-black rounded-none shadow-none p-8 md:p-12 max-w-lg w-full border border-gray-300">
+          <h3 className="font-serif text-2xl font-bold text-black mb-4">
             {loadTimeout ? 'Timeout del Servidor' : 'Excepción de Sesión'}
           </h3>
           <p className="text-sm text-gray-700 leading-relaxed mb-6">
@@ -1302,7 +1181,7 @@ const handleTabChange = (tabId, event) => {
               if (onLogout) onLogout();
               window.location.reload();
             }}
-            className="w-full bg-[#2b2b2b] hover:bg-black text-white py-3 text-xs uppercase font-bold tracking-widest rounded transition-all"
+            className="w-full bg-black hover:bg-[#004b87] text-white py-3 text-xs font-medium tracking-wide rounded-none transition-all"
           >
             {isSpanish ? 'Destruir Sesión y Reiniciar' : 'Destroy Session & Restart'}
           </button>
@@ -1310,10 +1189,9 @@ const handleTabChange = (tabId, event) => {
       </div>
     );
   }
-  // ==============================================================
 
   if (!effectiveName) {
-    return <div className="text-red-600 text-center p-4">
+    return <div className="text-black text-center p-4">
       {isSpanish ? 'Usuario no definido' : 'User not defined'}
     </div>;
   }
@@ -1323,9 +1201,9 @@ const handleTabChange = (tabId, event) => {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="min-h-screen bg-[#f4f5f7] p-4 md:p-8 flex items-center justify-center"
+        className="min-h-screen bg-white p-4 md:p-8 flex items-center justify-center"
       >
-        <div className="text-center text-gray-600 bg-white p-6 rounded-lg shadow-md">
+        <div className="text-center text-gray-600 bg-white p-6 border border-gray-300 rounded-none">
           <p className="text-lg font-sans mb-4">
             {isSpanish ? 'Cargando datos del usuario...' : 'Loading user data...'}
           </p>
@@ -1335,115 +1213,133 @@ const handleTabChange = (tabId, event) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 bg-white min-h-screen font-sans">
+    <div className="min-h-screen bg-white font-sans text-gray-900">
       
-      {/* HEADER EDITORIAL */}
-      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between border-b-2 border-gray-300 pb-8">
-        <div>
-          <h1 className="font-serif text-4xl md:text-5xl font-bold text-[#051d31] mb-3">
-            {isSpanish ? 'Portal Editorial' : 'Editorial Portal'}
-          </h1>
-          <div className="flex items-center space-x-3 bg-white border border-gray-200 px-4 py-2 rounded-md shadow-sm w-fit">
-            <p className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">
-              {isSpanish ? 'ID SESIÓN:' : 'SESSION ID:'}
+      {/* HEADER EDITORIAL - ESTILO ACADÉMICO CLÁSICO */}
+      <header className="mb-0">
+        {/* Top utility bar */}
+        <div className="flex justify-end items-center py-2 text-[11px] font-sans text-gray-500 gap-6 border-b border-gray-200 px-6 lg:px-12">
+          <div className="flex items-center gap-2">
+            <span>{isSpanish ? 'Investigador / Usuario:' : 'Researcher / User:'}</span>
+            <span className="font-medium text-gray-800">{effectiveName}</span>
+            <span className="text-gray-400 font-mono ml-2">UID:{userData?.uid?.substring(0,6)}</span>
+          </div>
+          <button 
+            onClick={onLogout} 
+            className="text-[#004b87] hover:text-black font-medium transition-colors"
+          >
+            {isSpanish ? 'Cerrar Sesión' : 'Log Out'}
+          </button>
+        </div>
+
+        {/* Brand Area */}
+        <div className="py-10 flex flex-col md:flex-row md:items-end justify-between gap-6 px-6 lg:px-12 border-b-2 border-black">
+          <div>
+            <div className="uppercase tracking-wide text-[10px] font-medium text-gray-500 mb-3">
+              {isSpanish ? 'Sistema de Gestión Editorial' : 'Editorial Management System'}
+            </div>
+            <h1 className="font-serif text-4xl md:text-5xl text-black tracking-tight mb-2">
+              {isSpanish ? 'Portal Editorial' : 'Editorial Portal'}
+            </h1>
+            <p className="font-serif text-lg text-gray-600 italic">
+              Revista Nacional de las Ciencias para Estudiantes
             </p>
+          </div>
+          
+          <div className="hidden md:flex items-center gap-4">
             {userData.imageUrl ? (
-              <img src={userData.imageUrl} alt="Profile" className="w-6 h-6 rounded-sm object-cover border border-gray-200" />
+              <img src={userData.imageUrl} alt="Profile" className="w-12 h-12 object-cover border border-gray-300 rounded-none" />
             ) : (
-              <div className="w-6 h-6 rounded-sm bg-[#f4f5f7] flex items-center justify-center border border-gray-200">
-                <span className="text-[#004b87] text-xs font-serif font-bold">{effectiveName?.charAt(0) || 'U'}</span>
+              <div className="w-12 h-12 bg-gray-100 flex items-center justify-center border border-gray-300 rounded-none">
+                <span className="text-black text-lg font-serif">{effectiveName?.charAt(0) || 'U'}</span>
               </div>
             )}
-            <span className="font-bold text-[#2b2b2b] text-xs uppercase tracking-wider">{effectiveName}</span>
           </div>
         </div>
-        <button
-          onClick={onLogout}
-          className="mt-6 md:mt-0 text-[10px] font-bold uppercase tracking-widest px-6 py-2.5 border border-gray-300 bg-white text-[#2b2b2b] hover:bg-gray-50 hover:border-gray-400 transition-all rounded"
-        >
-          {isSpanish ? 'Cerrar Sesión' : 'Log Out'}
-        </button>
+
+        {/* TABS NAVEGACIÓN - GRID ESTRICTO */}
+        <div className="px-6 lg:px-12">
+          <nav className="flex overflow-x-auto whitespace-nowrap scrollbar-hide gap-8 border-b-2 border-black bg-white">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={(e) => handleTabChange(tab.id, e)}
+                className={`py-4 text-[14px] font-sans transition-colors relative flex-shrink-0 group ${
+                  activeTab === tab.id 
+                    ? 'text-black font-medium' 
+                    : 'text-gray-500 hover:text-black'
+                }`}
+              >
+                {tab.label}
+                
+                <div className={`absolute bottom-[-2px] left-0 right-0 h-[4px] transition-colors ${
+                  activeTab === tab.id 
+                    ? 'bg-[#004b87]' 
+                    : 'bg-transparent group-hover:bg-gray-300'
+                }`} />
+              </button>
+            ))}
+          </nav>
+        </div>
       </header>
 
-      {/* Panel de invitaciones para revisores - AHORA USANDO NAVIGATE EN LUGAR DE WINDOW.OPEN */}
+      {/* Panel de invitaciones para revisores */}
       {isReviewer && (
-        // ✅ CORRECTO: Buscar assignmentId por invitationId
-<ReviewerInvitationsPanel 
-  user={userData}
-  onAccept={(invitation) => {
-    // Buscar la asignación por invitationId
-    const assignmentQuery = query(
-      collection(db, 'reviewerAssignments'),
-      where('invitationId', '==', invitation.id)
-    );
-    
-    getDocs(assignmentQuery).then(snapshot => {
-      if (!snapshot.empty) {
-        const assignmentId = snapshot.docs[0].id;
-        navigate(`/reviewer-workspace/${assignmentId}`);
-      } else {
-        // Si no existe aún, esperar y reintentar
-        setTimeout(async () => {
-          const retrySnapshot = await getDocs(assignmentQuery);
-          if (!retrySnapshot.empty) {
-            const assignmentId = retrySnapshot.docs[0].id;
-            navigate(`/reviewer-workspace/${assignmentId}`);
-          } else {
-            // Fallback: ir a la pestaña de revisiones
-            handleTabChange('reviewer-tasks', null);
-          }
-        }, 3000);
-      }
-    });
-  }}
-/>
+        <ReviewerInvitationsPanel 
+          user={userData}
+          onAccept={(invitation) => {
+            const assignmentQuery = query(
+              collection(db, 'reviewerAssignments'),
+              where('invitationId', '==', invitation.id)
+            );
+            
+            getDocs(assignmentQuery).then(snapshot => {
+              if (!snapshot.empty) {
+                const assignmentId = snapshot.docs[0].id;
+                navigate(`/reviewer-workspace/${assignmentId}`);
+              } else {
+                setTimeout(async () => {
+                  const retrySnapshot = await getDocs(assignmentQuery);
+                  if (!retrySnapshot.empty) {
+                    const assignmentId = retrySnapshot.docs[0].id;
+                    navigate(`/reviewer-workspace/${assignmentId}`);
+                  } else {
+                    handleTabChange('reviewer-tasks', null);
+                  }
+                }, 3000);
+              }
+            });
+          }}
+        />
       )}
 
-      {/* TABS NAVEGACIÓN */}
-
-        <nav className="flex overflow-x-auto mb-10 border-b border-gray-200 gap-8 whitespace-nowrap">
-  {tabs.map(tab => (
-    <button
-      key={tab.id}
-      type="button" // <- IMPORTANTE: type="button"
-      onClick={(e) => handleTabChange(tab.id, e)} // <- Pasamos el evento
-      className={`pb-4 text-[11px] font-bold uppercase tracking-widest transition-colors relative flex-shrink-0 ${
-        activeTab === tab.id ? 'text-[#004b87]' : 'text-gray-500 hover:text-[#2b2b2b]'
-      }`}
-    >
-      {tab.label}
-      {activeTab === tab.id && (
-        <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-[#e86125]" />
-      )}
-    </button>
-  ))}
-</nav>
-    
-
-      <main>
+      {/* ÁREA DE CONTENIDO */}
+      <main className="max-w-[1400px] mx-auto px-6 lg:px-12 py-12">
         <AnimatePresence mode="wait">
           {/* PERFIL */}
           {activeTab === 'profile' && (
             <motion.section
               key="profile"
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -10 }}
             >
               <ProfileSection user={userData} />
               
-              {/* Box de Claim Profile */}
               {isAuthor && !userData?.claimedAnonymousUid && claimStatus === 'idle' && (
-                <div className="mt-8 max-w-6xl mx-auto bg-white border border-gray-200 border-l-4 border-l-[#004b87] rounded-r-md p-8 shadow-sm">
+                <div className="mt-8 max-w-5xl mx-auto bg-white border-l-4 border-l-[#004b87] rounded-none p-8">
                   <h3 className="font-serif text-xl font-bold text-[#004b87] mb-2">
                     {isSpanish ? 'Reclamar Publicaciones Anteriores' : 'Claim Previous Publications'}
                   </h3>
-                  <p className="text-sm text-[#666] mb-5">
+                  <p className="text-sm text-gray-600 mb-5">
                     {isSpanish 
                       ? 'Si publicaste en volúmenes pasados de la revista, puedes asociar esos metadatos a este perfil digital.'
                       : 'If you published in past volumes of the journal, you can associate those metadata to this digital profile.'}
                   </p>
                   <button
                     onClick={() => { setShowClaimModal(true); checkForAnonymousProfileLocal(); }}
-                    className="px-6 py-2.5 bg-[#f4f5f7] border border-gray-200 hover:border-[#004b87] text-[#004b87] font-bold text-xs uppercase tracking-widest rounded transition-all"
+                    className="px-6 py-2.5 bg-white border border-gray-300 hover:border-[#004b87] text-[#004b87] font-medium text-xs rounded-none transition-all"
                   >
                     {isSpanish ? 'Verificar Historial' : 'Verify History'}
                   </button>
@@ -1452,7 +1348,7 @@ const handleTabChange = (tabId, event) => {
             </motion.section>
           )}
 
-          {/* MIS ENVÍOS (AUTOR) */}
+          {/* MIS ENVÍOS */}
           {activeTab === 'submissions' && (
             <motion.section
               key="submissions"
@@ -1463,21 +1359,23 @@ const handleTabChange = (tabId, event) => {
               <AuthorSubmissionsPanel user={userData} />
             </motion.section>
           )}
-{activeTab === 'reviewer-profile' && (
-  <motion.div
-    key="reviewer-profile"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 z-50 bg-[#f4f5f7] overflow-y-auto"
-  >
-    <ReviewerProfilePanel 
-      user={userData} 
-      onBack={(e) => handleTabChange('profile', e)} 
-    />
-  </motion.div>
-)}
-          {/* MIS REVISIONES (REVISOR) */}
+
+          {activeTab === 'reviewer-profile' && (
+            <motion.div
+              key="reviewer-profile"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-white overflow-y-auto"
+            >
+              <ReviewerProfilePanel 
+                user={userData} 
+                onBack={(e) => handleTabChange('profile', e)} 
+              />
+            </motion.div>
+          )}
+
+          {/* MIS REVISIONES */}
           {activeTab === 'reviewer-tasks' && (
             <motion.section
               key="reviewer-tasks"
@@ -1485,8 +1383,8 @@ const handleTabChange = (tabId, event) => {
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
             >
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-t-4 border-t-[#004b87] p-8">
-                <h2 className="font-serif text-2xl font-bold text-gray-900 mb-6 border-b border-gray-100 pb-4">
+              <div className="bg-white border border-gray-300 border-t-4 border-t-[#004b87] p-8 rounded-none">
+                <h2 className="font-serif text-2xl font-bold text-black mb-6 border-b-2 border-black pb-4">
                   {isSpanish ? 'Expedientes Asignados para Revisión' : 'Assigned Files for Review'}
                 </h2>
                 {reviewerAssignments.length === 0 ? (
@@ -1498,23 +1396,23 @@ const handleTabChange = (tabId, event) => {
                     {reviewerAssignments.map(assignment => (
                       <div
                         key={assignment.id}
-                        className="p-6 border border-gray-200 rounded-md bg-[#f9fafb] hover:border-[#004b87] hover:shadow-sm transition-all cursor-pointer group"
+                        className="p-6 border border-gray-300 rounded-none bg-white hover:border-black hover:shadow-none transition-all cursor-pointer group"
                         onClick={() => navigate(`/reviewer-workspace/${assignment.id}`)}
                       >
-                        <h3 className="font-serif font-bold text-lg text-[#004b87] group-hover:text-[#e86125] transition-colors mb-3">
+                        <h3 className="font-serif font-bold text-lg text-[#004b87] group-hover:text-black transition-colors mb-3">
                           {assignment.submission?.title}
                         </h3>
-                        <div className="flex gap-6 text-xs font-sans text-gray-600 uppercase tracking-widest font-bold">
+                        <div className="flex gap-6 text-xs font-sans text-gray-600">
                           <span>
-                            {isSpanish ? 'ESTADO: ' : 'STATUS: '} 
+                            {isSpanish ? 'Estado: ' : 'Status: '} 
                             <span className={
                               assignment.status === 'submitted' ? 'text-green-700' :
-                              assignment.status === 'in-progress' ? 'text-blue-700' : 'text-[#e86125]'
+                              assignment.status === 'in-progress' ? 'text-blue-700' : 'text-black'
                             }>
                               {assignment.status}
                             </span>
                           </span>
-                          <span>{isSpanish ? 'RONDA: ' : 'ROUND: '} {assignment.round}</span>
+                          <span>{isSpanish ? 'Ronda: ' : 'Round: '} {assignment.round}</span>
                         </div>
                       </div>
                     ))}
@@ -1525,76 +1423,77 @@ const handleTabChange = (tabId, event) => {
           )}
 
           {/* DESK REVIEW */}
-          {/* DESK REVIEW - PANTALLA COMPLETA */}
-{activeTab === 'deskreview' && (
-  <motion.div
-    key="deskreview"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 z-50 bg-[#f4f5f7] overflow-y-auto"
-  >
-    {/* Barra superior para volver al portal */}
-    <div className="sticky top-0 z-50 bg-white border-b-2 border-gray-300 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-        <button
-          onClick={(e) => handleTabChange('profile', e)}
-          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#004b87] hover:text-[#e86125] transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
-        </button>
-        <h2 className="font-serif text-lg font-bold text-[#004b87]">
-          {isSpanish ? 'Panel de Desk Review' : 'Desk Review Panel'}
-        </h2>
-        <div className="w-24"></div> {/* Espaciador para centrar el título */}
-      </div>
-    </div>
-    
-    {/* Contenido del panel */}
-    <div className="w-full">
-      <DeskReviewPanel user={userData} />
-    </div>
-  </motion.div>
-)}
-          {/* POSTULACIONES A REVISOR - PANTALLA COMPLETA */}
-{activeTab === 'reviewer-applications' && (
-  <motion.div
-    key="reviewer-applications"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 z-50 bg-[#f4f5f7] overflow-y-auto"
-  >
-    {/* Barra superior para volver al portal */}
-    <div className="sticky top-0 z-50 bg-white border-b-2 border-gray-300 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-        <button
-          onClick={(e) => handleTabChange('profile', e)}
-          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#004b87] hover:text-[#e86125] transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
-        </button>
-        <h2 className="font-serif text-lg font-bold text-[#004b87]">
-          {isSpanish ? 'Panel de Postulaciones a Revisor' : 'Reviewer Applications Panel'}
-        </h2>
-        <div className="w-24"></div> {/* Espaciador para centrar el título */}
-      </div>
-    </div>
-    
-    {/* Contenido del panel a pantalla completa */}
-    <div className="w-full h-full">
-      <ReviewerApplicationsPanel />
-    </div>
-  </motion.div>
-)}
+          {activeTab === 'deskreview' && (
+            <motion.div
+              key="deskreview"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-white overflow-y-auto"
+            >
+              <div className="sticky top-0 z-50 bg-white border-b-2 border-black">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+                  <button
+                    onClick={(e) => handleTabChange('profile', e)}
+                    className="flex items-center gap-2 text-xs font-medium text-[#004b87] hover:text-black transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
+                  </button>
+                  <h2 className="font-serif text-lg font-bold text-black">
+                    {isSpanish ? 'Panel de Desk Review' : 'Desk Review Panel'}
+                  </h2>
+                  <div className="w-24"></div>
+                </div>
+              </div>
+              
+              <div className="w-full">
+                <DeskReviewPanel user={userData} />
+              </div>
+            </motion.div>
+          )}
+
+          {/* POSTULACIONES A REVISOR */}
+          {activeTab === 'reviewer-applications' && (
+            <motion.div
+              key="reviewer-applications"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-white overflow-y-auto"
+            >
+              <div className="sticky top-0 z-50 bg-white border-b-2 border-black">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+                  <button
+                    onClick={(e) => handleTabChange('profile', e)}
+                    className="flex items-center gap-2 text-xs font-medium text-[#004b87] hover:text-black transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
+                  </button>
+                  <h2 className="font-serif text-lg font-bold text-black">
+                    {isSpanish ? 'Panel de Postulaciones a Revisor' : 'Reviewer Applications Panel'}
+                  </h2>
+                  <div className="w-24"></div>
+                </div>
+              </div>
+              
+              <div className="w-full h-full">
+                <ReviewerApplicationsPanel />
+              </div>
+            </motion.div>
+          )}
+
           {/* ASIGNAR ARTÍCULOS */}
-          {activeTab === 'assignment' && <motion.section key="assignment"><ArticleAssignmentPanel user={userData} /></motion.section>}
+          {activeTab === 'assignment' && (
+            <motion.section key="assignment">
+              <ArticleAssignmentPanel user={userData} />
+            </motion.section>
+          )}
           
           {/* CALENDARIO */}
           {activeTab === 'calendar' && (
@@ -1609,98 +1508,95 @@ const handleTabChange = (tabId, event) => {
               />
             </motion.section>
           )}
-{activeTab === 'SciNews' && (
-  <motion.section key="SciNews">
-    <ScientificNewsUploadSection userData={userData} />
-  </motion.section>
-)}
-          {/* ENVIAR MANUSCRITO */}
-          {/* ENVIAR MANUSCRITO - OCUPA TODA LA PANTALLA */}
-{activeTab === 'submit' && (
-  <motion.section
-    key="submit"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 z-40 bg-[#f4f5f7] overflow-y-auto"
-  >
-    {/* Barra superior para volver al portal */}
-    <div className="sticky top-0 z-50 bg-white border-b-2 border-gray-300 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => handleTabChange('profile', null)}
-            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#004b87] hover:text-[#e86125] transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
-          </button>
-        </div>
-        <h2 className="font-serif text-lg font-bold text-[#004b87]">
-          {isSpanish ? 'Envío de Manuscrito' : 'Manuscript Submission'}
-        </h2>
-        <div className="w-24"></div> {/* Espaciador para centrar el título */}
-      </div>
-    </div>
 
-    {/* Contenido del formulario a pantalla completa */}
-    <div className="w-full">
-      <SubmissionForm 
-        user={userData} 
-        onSuccess={(submissionId) => {
-          console.log('Submission successful:', submissionId);
-          handleTabChange('submissions', null);
-        }}
-      />
-    </div>
-  </motion.section>
-)}
+          {activeTab === 'SciNews' && (
+            <motion.section key="SciNews">
+              <ScientificNewsUploadSection userData={userData} />
+            </motion.section>
+          )}
+
+          {/* ENVIAR MANUSCRITO */}
+          {activeTab === 'submit' && (
+            <motion.section
+              key="submit"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-white overflow-y-auto"
+            >
+              <div className="sticky top-0 z-50 bg-white border-b-2 border-black">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => handleTabChange('profile', null)}
+                      className="flex items-center gap-2 text-xs font-medium text-[#004b87] hover:text-black transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
+                    </button>
+                  </div>
+                  <h2 className="font-serif text-lg font-bold text-black">
+                    {isSpanish ? 'Envío de Manuscrito' : 'Manuscript Submission'}
+                  </h2>
+                  <div className="w-24"></div>
+                </div>
+              </div>
+
+              <div className="w-full">
+                <SubmissionForm 
+                  user={userData} 
+                  onSuccess={(submissionId) => {
+                    console.log('Submission successful:', submissionId);
+                    handleTabChange('submissions', null);
+                  }}
+                />
+              </div>
+            </motion.section>
+          )}
 
           {/* PANEL DIRECTIVO */}
           {activeTab === 'director' && (
-  <motion.div
-    key="director"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 z-50 bg-[#f4f5f7] overflow-y-auto"
-  >
-    {/* Barra superior para volver al portal */}
-    <div className="sticky top-0 z-50 bg-white border-b-2 border-gray-300 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-        <button
-          onClick={(e) => handleTabChange('profile', e)}
-          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#004b87] hover:text-[#e86125] transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
-        </button>
-        <h2 className="font-serif text-lg font-bold text-[#004b87]">
-          {isSpanish ? 'Panel Directivo' : 'Director Panel'}
-        </h2>
-        <div className="w-24"></div> {/* Espaciador para centrar el título */}
-      </div>
-    </div>
-    
-    {/* Contenido del panel */}
-    <div className="w-full">
-      <DirectorPanel 
-        user={userData} 
-        isExpanded={isDirectorPanelExpanded} 
-        onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
-      />
-      {(isAssignmentManager || isDirector) && (
-        <div className="mt-8">
-          <ArticleAssignmentPanel user={userData} />
-        </div>
-      )}
-    </div>
-  </motion.div>
-)}
+            <motion.div
+              key="director"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-white overflow-y-auto"
+            >
+              <div className="sticky top-0 z-50 bg-white border-b-2 border-black">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+                  <button
+                    onClick={(e) => handleTabChange('profile', e)}
+                    className="flex items-center gap-2 text-xs font-medium text-[#004b87] hover:text-black transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    {isSpanish ? 'Volver al Portal' : 'Back to Portal'}
+                  </button>
+                  <h2 className="font-serif text-lg font-bold text-black">
+                    {isSpanish ? 'Panel Directivo' : 'Director Panel'}
+                  </h2>
+                  <div className="w-24"></div>
+                </div>
+              </div>
+              
+              <div className="w-full">
+                <DirectorPanel 
+                  user={userData} 
+                  isExpanded={isDirectorPanelExpanded} 
+                  onToggle={() => setIsDirectorPanelExpanded(!isDirectorPanelExpanded)} 
+                />
+                {(isAssignmentManager || isDirector) && (
+                  <div className="mt-8">
+                    <ArticleAssignmentPanel user={userData} />
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
 
           {/* PANEL EDITOR JEFE */}
           {activeTab === 'chief' && (
@@ -1714,37 +1610,49 @@ const handleTabChange = (tabId, event) => {
           )}
 
           {/* TAREAS */}
-          {activeTab === 'tasks' && <motion.section key="tasks"><TaskSection user={userData} /></motion.section>}
+          {activeTab === 'tasks' && (
+            <motion.section key="tasks">
+              <TaskSection user={userData} />
+            </motion.section>
+          )}
           
           {/* NOTICIAS */}
-          {activeTab === 'news' && <motion.section key="news"><NewsUploadSection /></motion.section>}
+          {activeTab === 'news' && (
+            <motion.section key="news">
+              <NewsUploadSection />
+            </motion.section>
+          )}
           
           {/* ADMISIONES */}
-          {activeTab === 'admissions' && <motion.section key="admissions"><Admissions /></motion.section>}
+          {activeTab === 'admissions' && (
+            <motion.section key="admissions">
+              <Admissions />
+            </motion.section>
+          )}
           
           {/* GESTIÓN DE USUARIOS */}
           {activeTab === 'users' && (
-  <motion.section key="users">
-    <UserManagement users={users} />
-  </motion.section>
-)}
+            <motion.section key="users">
+              <UserManagement users={users} />
+            </motion.section>
+          )}
         </AnimatePresence>
       </main>
 
-      {/* MODAL DE RECLAMACIÓN DE PERFIL (Re-estilizado) */}
+      {/* MODAL DE RECLAMACIÓN DE PERFIL */}
       <AnimatePresence>
         {showClaimModal && (
-          <div className="fixed inset-0 z-50 bg-[#004b87]/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }} 
               animate={{ scale: 1, opacity: 1 }} 
               exit={{ scale: 0.95, opacity: 0 }} 
-              className="bg-white rounded-md shadow-2xl max-w-lg w-full p-10 font-sans border-t-8 border-t-[#e86125]"
+              className="bg-white rounded-none shadow-2xl max-w-lg w-full p-10 font-sans border-t-4 border-t-[#004b87]"
             >
               {claimStatus === 'checking' && (
                 <div className="text-center py-8">
                   <div className="w-8 h-8 border-2 border-gray-200 border-t-[#004b87] rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-xs tracking-widest font-bold text-gray-500 uppercase">
+                  <p className="text-xs font-medium text-gray-500">
                     {isSpanish ? 'Consultando base de datos...' : 'Querying database...'}
                   </p>
                 </div>
@@ -1755,24 +1663,24 @@ const handleTabChange = (tabId, event) => {
                   <h3 className="font-serif text-2xl font-bold text-[#004b87] mb-4">
                     {isSpanish ? '¡Perfil encontrado!' : 'Profile found!'}
                   </h3>
-                  <div className="bg-[#f9fafb] border border-gray-200 rounded-md p-6 mb-6">
-                    <p className="text-[#2b2b2b] font-semibold mb-2 text-sm">
+                  <div className="bg-gray-50 border border-gray-300 rounded-none p-6 mb-6">
+                    <p className="text-gray-800 font-medium mb-2 text-sm">
                       {isSpanish ? 'Hemos encontrado un perfil como autor en los siguientes artículos:' : 'We found a profile as author in the following articles:'}
                     </p>
-                    <ul className="list-disc list-inside text-[#666] space-y-1">
+                    <ul className="list-disc list-inside text-gray-600 space-y-1">
                       {anonymousProfile.articles?.map((article, idx) => (
                         <li key={idx} className="text-xs">{article.title}</li>
                       ))}
                     </ul>
                   </div>
-                  <p className="text-[#2b2b2b] mb-6 text-sm leading-relaxed">
+                  <p className="text-gray-800 mb-6 text-sm leading-relaxed">
                     {isSpanish 
                       ? 'Al reclamar este perfil, todos estos artículos se vincularán automáticamente a tu cuenta y aparecerán en tu perfil público.'
                       : 'By claiming this profile, all these articles will be automatically linked to your account and will appear in your public profile.'}
                   </p>
                   
                   {claimError && (
-                    <div className="bg-[#fdf6f3] text-[#e86125] p-4 rounded-md mb-6 text-xs border border-[#e86125]/30">
+                    <div className="bg-white text-black p-4 rounded-none mb-6 text-xs border border-black">
                       {claimError}
                     </div>
                   )}
@@ -1781,7 +1689,7 @@ const handleTabChange = (tabId, event) => {
                     <button
                       onClick={handleClaimProfile}
                       disabled={claimStatus === 'claiming'}
-                      className="flex-1 py-3 bg-[#004b87] hover:bg-[#003666] disabled:bg-gray-300 text-white font-bold text-xs uppercase tracking-widest rounded-md transition-all"
+                      className="flex-1 py-3 bg-[#004b87] hover:bg-black disabled:bg-gray-300 text-white font-medium text-xs rounded-none transition-all"
                     >
                       {claimStatus === 'claiming' ? (
                         <span className="flex items-center justify-center gap-2">
@@ -1798,7 +1706,7 @@ const handleTabChange = (tabId, event) => {
                         setClaimStatus('idle');
                         setAnonymousProfile(null);
                       }}
-                      className="flex-1 py-3 border border-gray-300 hover:bg-gray-50 font-bold text-xs uppercase tracking-widest rounded-md transition-all text-[#2b2b2b]"
+                      className="flex-1 py-3 border border-gray-300 hover:bg-gray-50 font-medium text-xs rounded-none transition-all text-gray-800"
                     >
                       {isSpanish ? 'Cancelar' : 'Cancel'}
                     </button>
@@ -1808,7 +1716,7 @@ const handleTabChange = (tabId, event) => {
               
               {claimStatus === 'success' && (
                 <div className="text-center py-8">
-                  <div className="w-12 h-12 bg-[#eef3f7] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-300">
                     <svg className="w-6 h-6 text-[#004b87]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -1816,7 +1724,7 @@ const handleTabChange = (tabId, event) => {
                   <h3 className="font-serif text-xl font-bold text-[#004b87] mb-2">
                     {isSpanish ? '¡Perfil reclamado con éxito!' : 'Profile claimed successfully!'}
                   </h3>
-                  <p className="text-[#666] text-sm">
+                  <p className="text-gray-600 text-sm">
                     {isSpanish 
                       ? 'Tus publicaciones se han vinculado a tu cuenta.'
                       : 'Your publications have been linked to your account.'}
@@ -1826,18 +1734,18 @@ const handleTabChange = (tabId, event) => {
               
               {claimStatus === 'error' && claimStatus !== 'claiming' && (
                 <div className="text-center py-8">
-                  <div className="w-12 h-12 bg-[#fdf6f3] rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-6 h-6 text-[#e86125]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-300">
+                    <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
-                  <h3 className="font-serif text-xl font-bold text-[#e86125] mb-2">
+                  <h3 className="font-serif text-xl font-bold text-black mb-2">
                     {isSpanish ? 'Error al reclamar' : 'Error claiming profile'}
                   </h3>
-                  <p className="text-[#666] mb-4 text-sm">{claimError || (isSpanish ? 'Intenta nuevamente más tarde' : 'Please try again later')}</p>
+                  <p className="text-gray-600 mb-4 text-sm">{claimError || (isSpanish ? 'Intenta nuevamente más tarde' : 'Please try again later')}</p>
                   <button
                     onClick={() => setShowClaimModal(false)}
-                    className="px-6 py-2.5 bg-[#2b2b2b] text-white rounded-md font-bold text-xs uppercase tracking-widest"
+                    className="px-6 py-2.5 bg-black text-white rounded-none font-medium text-xs"
                   >
                     {isSpanish ? 'Cerrar' : 'Close'}
                   </button>
@@ -1846,14 +1754,14 @@ const handleTabChange = (tabId, event) => {
 
               {claimStatus === 'not-available' && (
                 <div className="text-center py-8">
-                  <p className="text-[#666] text-sm">
+                  <p className="text-gray-600 text-sm">
                     {isSpanish 
                       ? 'No encontramos publicaciones anteriores asociadas a tu email.'
                       : 'We did not find previous publications associated with your email.'}
                   </p>
                   <button
                     onClick={() => setShowClaimModal(false)}
-                    className="mt-6 px-6 py-2.5 bg-[#2b2b2b] text-white rounded-md font-bold text-xs uppercase tracking-widest"
+                    className="mt-6 px-6 py-2.5 bg-black text-white rounded-none font-medium text-xs"
                   >
                     {isSpanish ? 'Cerrar' : 'Close'}
                   </button>

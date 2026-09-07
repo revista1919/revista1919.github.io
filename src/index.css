@@ -1,9 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Ensure full-screen layout */
+/* ================================================ */
+/* ===== 1. RESET EDITORIAL ACADÉMICO ============= */
+/* ================================================ */
+
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -12,226 +15,480 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Roboto', sans-serif;
-  background-color: #f5f5f5; /* Softer background for modern look */
-  color: #333333;
+  /* Sans-serif limpia y densa para interfaces de lectura */
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background-color: #ffffff; /* Blanco puro, como papel */
+  color: #1a1a1a; /* Tinta negra, alto contraste */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Main content */
-main {
-  flex-grow: 1;
-  padding: 1.5rem; /* Add padding for content */
+/* Forzar la tipografía Serif en TODOS los encabezados para el look "Paper" */
+h1, h2, h3, h4, h5, h6, .font-serif {
+  font-family: 'Playfair Display', serif !important;
+  color: #000000;
+  letter-spacing: -0.015em; /* Típico en prensa escrita */
 }
 
-/* Quill editor */
-.ql-container {
-  overflow: auto;
-  max-height: 100%;
+/* Eliminar el aspecto "SaaS Genérico" globalmente */
+/* Convertimos esquinas redondeadas en rígidas (estilo revista) */
+button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
+  border-radius: 0 !important; /* Completamente cuadrado */
 }
 
-.ql-editor {
-  min-height: 120px;
-  max-height: 240px;
-  overflow-y: auto;
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-}
-
-/* Sticky buttons */
-.sticky-buttons {
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-  padding: 1rem;
-  background: inherit;
-}
-
-/* Container */
-.container {
-  width: 100%;
-  margin: 0;
-  padding: 0;
+/* Reemplazamos las sombras flotantes por bordes sólidos */
+.shadow-sm, .shadow, .shadow-md, .shadow-lg {
+  box-shadow: none !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
 /* ================================================ */
-/* ===== ESTILOS PARA LISTAS EN REVISIONES ===== */
+/* ===== 2. NAVEGACIÓN EDITORIAL ================= */
 /* ================================================ */
 
-/* Estilos base para listas en contenido de revisiones */
-.review-content ul,
-.review-content ol,
-.ql-editor ul,
-.ql-editor ol {
-  padding-left: 1.5em !important;
-  margin: 0.5em 0 !important;
-}
-
-.review-content ul li,
-.review-content ol li,
-.ql-editor ul li,
-.ql-editor ol li {
-  margin: 0.2em 0 !important;
-  list-style-position: outside !important;
-}
-
-/* Viñetas para listas no ordenadas */
-.review-content ul,
-.ql-editor ul {
-  list-style-type: disc !important;
-}
-
-.review-content ul ul,
-.ql-editor ul ul {
-  list-style-type: circle !important;
-}
-
-.review-content ul ul ul,
-.ql-editor ul ul ul {
-  list-style-type: square !important;
-}
-
-/* Números para listas ordenadas */
-.review-content ol,
-.ql-editor ol {
-  list-style-type: decimal !important;
-}
-
-.review-content ol ol,
-.ql-editor ol ol {
-  list-style-type: lower-alpha !important;
-}
-
-.review-content ol ol ol,
-.ql-editor ol ol ol {
-  list-style-type: lower-roman !important;
-}
-
-/* Estilos adicionales para mejorar la visualización del contenido Quill */
-.ql-editor {
-  line-height: 1.6 !important;
-  min-height: 120px;
-  max-height: 240px;
-  overflow-y: auto;
+/* Barra de navegación estilo índice de revista */
+.editorial-nav {
+  border-bottom: 2px solid #000000;
   background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  padding: 1rem;
 }
 
-/* Cuando se usa en modo visualización (no editor) */
-.ql-editor.read-only {
-  min-height: auto;
-  max-height: none;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  background: transparent;
+.editorial-nav-item {
+  position: relative;
+  padding: 1rem 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4a5568;
+  transition: color 0.2s ease;
 }
 
-.ql-editor p {
-  margin: 0.5em 0 !important;
+.editorial-nav-item:hover {
+  color: #000000;
 }
 
-.ql-editor blockquote {
-  border-left: 4px solid #ccc !important;
-  margin: 0.5em 0 !important;
-  padding-left: 1em !important;
-  color: #555;
-}
-
-.ql-editor h1,
-.ql-editor h2,
-.ql-editor h3 {
-  margin: 0.8em 0 0.4em 0 !important;
+.editorial-nav-item.active {
+  color: #000000;
   font-weight: 600;
 }
 
-.ql-editor h1 {
-  font-size: 2em !important;
+.editorial-nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: #004b87;
 }
 
-.ql-editor h2 {
-  font-size: 1.5em !important;
+/* ================================================ */
+/* ===== 3. TARJETAS Y CONTENEDORES ============== */
+/* ================================================ */
+
+/* Contenedor de contenido principal */
+.content-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
 }
 
-.ql-editor h3 {
-  font-size: 1.17em !important;
+@media (min-width: 1024px) {
+  .content-container {
+    padding: 3rem 3rem;
+  }
 }
 
-.ql-editor strong,
-.ql-editor b {
-  font-weight: bold !important;
+/* Tarjeta editorial - sin sombras, bordes definidos */
+.editorial-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-top: 3px solid #004b87;
+  padding: 2rem;
 }
 
-.ql-editor em,
-.ql-editor i {
-  font-style: italic !important;
+/* Sección con borde inferior sólido */
+.section-divider {
+  border-bottom: 2px solid #000000;
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
 }
 
-.ql-editor u {
-  text-decoration: underline !important;
+/* ================================================ */
+/* ===== 4. TABLAS EDITORIALES =================== */
+/* ================================================ */
+
+/* Tabla estilo revista académica */
+.editorial-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
 }
 
-.ql-editor a {
-  color: #003b5c !important;
-  text-decoration: underline !important;
+.editorial-table th {
+  border-bottom: 2px solid #000000;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #000000;
+  background-color: #fafafa;
 }
 
-.ql-editor code {
-  background-color: #f1f3f4;
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
-  font-family: monospace;
-  font-size: 0.9em;
-}
-
-.ql-editor pre {
-  background-color: #f1f3f4;
-  padding: 1em;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-family: monospace;
-  font-size: 0.9em;
-  margin: 0.5em 0;
-}
-
-/* Clase específica para el contenido de revisiones en el portal */
-.review-content {
-  font-family: 'Lora', serif;
-  line-height: 1.8;
+.editorial-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 1rem;
   color: #1a1a1a;
 }
 
-.review-content ul,
-.review-content ol {
+.editorial-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* ================================================ */
+/* ===== 5. BOTONES INSTITUCIONALES ============== */
+/* ================================================ */
+
+/* Botón primario académico */
+.btn-academic-primary {
+  background-color: #004b87;
+  color: #ffffff;
+  padding: 0.75rem 2rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  transition: background-color 0.2s ease;
+}
+
+.btn-academic-primary:hover {
+  background-color: #000000;
+}
+
+/* Botón secundario */
+.btn-academic-secondary {
+  background-color: #ffffff;
+  color: #1a1a1a;
+  padding: 0.75rem 2rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  border: 1px solid #cbd5e1;
+  transition: all 0.2s ease;
+}
+
+.btn-academic-secondary:hover {
+  border-color: #000000;
+  background-color: #fafafa;
+}
+
+/* ================================================ */
+/* ===== 6. FORMULARIOS EDITORIALES ============== */
+/* ================================================ */
+
+/* Input estilo editorial */
+.input-academic {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  font-size: 0.875rem;
+  color: #1a1a1a;
+  transition: all 0.2s ease;
+}
+
+.input-academic:focus {
+  border-color: #004b87;
+  outline: none;
+  box-shadow: 0 0 0 1px #004b87;
+}
+
+.input-academic::placeholder {
+  color: #94a3b8;
+}
+
+/* ================================================ */
+/* ===== 7. ETIQUETAS Y BADGES =================== */
+/* ================================================ */
+
+/* Etiqueta editorial */
+.editorial-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  background-color: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+/* Badge de estado */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.status-approved {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #34d399;
+}
+
+.status-rejected {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #f87171;
+}
+
+/* ================================================ */
+/* ===== 8. PANELES DE REVISIÓN ================== */
+/* ================================================ */
+
+/* Contenedor de revisión */
+.review-panel {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 2rem;
+}
+
+.review-panel-header {
+  border-bottom: 2px solid #000000;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+}
+
+.review-panel-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #000000;
+}
+
+/* ================================================ */
+/* ===== 9. MODALES Y OVERLAYS =================== */
+/* ================================================ */
+
+/* Modal editorial */
+.editorial-modal {
+  background-color: #ffffff;
+  border: 1px solid #000000;
+  max-width: 600px;
+  width: 100%;
+  padding: 2rem;
+}
+
+.editorial-modal-header {
+  border-bottom: 2px solid #000000;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.editorial-modal-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* ================================================ */
+/* ===== 10. EDITOR QUILL (MODO ACADÉMICO) ======= */
+/* ================================================ */
+
+.ql-container {
+  overflow: auto;
+  max-height: 100%;
+  font-family: 'Lora', serif;
+}
+
+.ql-editor {
+  line-height: 1.8 !important;
+  min-height: 150px;
+  max-height: 400px;
+  overflow-y: auto;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 0 !important;
+  padding: 1.5rem !important;
+  font-size: 1.05rem;
+  color: #111111;
+}
+
+.ql-toolbar {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1 !important;
+  border-bottom: none !important;
+  border-radius: 0 !important;
+}
+
+.ql-editor.read-only {
+  min-height: auto;
+  max-height: none;
+  border: none !important;
+  padding: 0 !important;
+  background: transparent;
+}
+
+.ql-editor p { 
+  margin: 0.75em 0 !important; 
+}
+
+.ql-editor blockquote {
+  border-left: 3px solid #004b87 !important;
+  margin: 1.5em 0 !important;
+  padding-left: 1.5em !important;
+  color: #333;
+  font-style: italic;
+}
+
+.ql-editor h1, .ql-editor h2, .ql-editor h3 {
+  font-family: 'Playfair Display', serif !important;
+  margin: 1.2em 0 0.5em 0 !important;
+  font-weight: 700;
+  color: #000;
+}
+
+.ql-editor h1 { 
+  font-size: 2.2em !important; 
+  border-bottom: 1px solid #eaeaea; 
+  padding-bottom: 0.3em; 
+}
+
+.ql-editor h2 { 
+  font-size: 1.6em !important; 
+}
+
+.ql-editor h3 { 
+  font-size: 1.25em !important; 
+}
+
+.ql-editor a { 
+  color: #004b87 !important; 
+  text-decoration: none !important; 
+  border-bottom: 1px dotted #004b87; 
+}
+
+.ql-editor a:hover { 
+  border-bottom: 1px solid #004b87; 
+}
+
+.ql-editor strong, .ql-editor b { 
+  font-weight: bold !important; 
+}
+
+.ql-editor em, .ql-editor i { 
+  font-style: italic !important; 
+}
+
+.ql-editor u { 
+  text-decoration: underline !important; 
+}
+
+.ql-editor code {
+  background-color: #f8f9fa;
+  padding: 0.2em 0.4em;
+  border-radius: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  border: 1px solid #e9ecef;
+}
+
+.ql-editor pre {
+  background-color: #f8f9fa;
+  padding: 1.5em;
+  border-radius: 0;
+  overflow-x: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  margin: 1em 0;
+  border: 1px solid #e9ecef;
+}
+
+/* ================================================ */
+/* ===== 11. LISTAS DE REVISIÓN ================== */
+/* ================================================ */
+
+.review-content {
+  font-family: 'Lora', serif;
+  line-height: 1.8;
+  color: #111111;
+}
+
+.review-content ul, .review-content ol, .ql-editor ul, .ql-editor ol {
   padding-left: 2em !important;
-  margin: 0.75em 0 !important;
+  margin: 1em 0 !important;
 }
 
-.review-content ul li,
-.review-content ol li {
-  margin: 0.3em 0 !important;
+.review-content ul li, .review-content ol li, .ql-editor ul li, .ql-editor ol li {
+  margin: 0.4em 0 !important;
+  list-style-position: outside !important;
 }
 
-.review-content p {
-  margin: 0.75em 0 !important;
+.review-content ul, .ql-editor ul { 
+  list-style-type: disc !important; 
 }
 
-/* Para asegurar que las listas se vean bien en la vista de revisión */
-.review-content > ul,
-.review-content > ol {
-  margin-top: 0.5em !important;
-  margin-bottom: 0.5em !important;
+.review-content ul ul, .ql-editor ul ul { 
+  list-style-type: circle !important; 
 }
-/* ============================================
-   REACT PHONE NUMBER INPUT - ESTILO PERSONALIZADO
-   Acorde al diseño del formulario de envío
-   ============================================ */
-/* ============================================
-   Phone Input - Diseño Limpio y Profesional
-   ============================================ */
 
+.review-content ul ul ul, .ql-editor ul ul ul { 
+  list-style-type: square !important; 
+}
+
+.review-content ol, .ql-editor ol { 
+  list-style-type: decimal !important; 
+}
+
+.review-content ol ol, .ql-editor ol ol { 
+  list-style-type: lower-alpha !important; 
+}
+
+.review-content ol ol ol, .ql-editor ol ol ol { 
+  list-style-type: lower-roman !important; 
+}
+
+/* ================================================ */
+/* ===== 12. UTILIDADES ADICIONALES ============== */
+/* ================================================ */
+
+/* Ocultar scrollbar en navegación horizontal */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Alineación vertical para tablas */
+.align-top {
+  vertical-align: top;
+}
+
+/* Espaciado editorial consistente */
+.editorial-spacing {
+  margin-bottom: 2.5rem;
+}
+
+/* Tipografía para metadatos */
+.metadata-text {
+  font-size: 0.75rem;
+  color: #64748b;
+  letter-spacing: 0.025em;
+}
+
+/* ============================================ */
+/* ===== 13. COMPONENTES DE FORMULARIO ======= */
+/* ============================================ */
+
+/* Phone Input - Diseño Institucional Rígido */
 .PhoneInput {
   display: flex;
   align-items: center;
@@ -239,35 +496,34 @@ main {
   width: 100%;
   padding: 0.75rem 1rem;
   background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  border: 1px solid #94a3b8 !important;
+  border-radius: 0 !important;
+  font-family: 'Roboto', sans-serif;
   font-size: 0.875rem;
-  color: #0f172a;
-  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  color: #111;
+  transition: all 0.2s ease;
 }
 
 .PhoneInput:hover {
-  border-color: #cbd5e1;
+  border-color: #475569 !important;
 }
 
 .PhoneInput:focus-within {
-  border-color: #003b5c;
-  box-shadow: 0 0 0 3px rgba(0, 59, 92, 0.08);
+  border-color: #004b87 !important;
+  box-shadow: 0 0 0 1px #004b87 !important;
 }
 
 .PhoneInput--error {
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08) !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 1px #dc2626 !important;
 }
 
-/* Input de texto */
 .PhoneInputInput {
   flex: 1;
   min-width: 0;
   padding: 0;
   background: transparent;
-  border: none;
+  border: none !important;
   outline: none;
   color: inherit;
   font-family: inherit;
@@ -284,13 +540,12 @@ main {
   color: #94a3b8;
 }
 
-/* Selector de país */
 .PhoneInputCountry {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding-right: 0.75rem;
-  border-right: 1px solid #e2e8f0;
+  border-right: 1px solid #cbd5e1;
   position: relative;
   cursor: pointer;
 }
@@ -309,33 +564,46 @@ main {
 .PhoneInputCountryIcon {
   width: 1.5rem;
   height: 1.125rem;
-  border-radius: 2px;
+  border-radius: 0;
+  border: 1px solid #cbd5e1;
   overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
-.PhoneInputCountryIconImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.PhoneInputCountryIconImg { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
 }
 
-/* Flecha del dropdown */
 .PhoneInputCountrySelectArrow {
-  width: 0.4rem;
+  width: 0.4rem; 
   height: 0.4rem;
-  border-right: 2px solid #94a3b8;
-  border-bottom: 2px solid #94a3b8;
+  border-right: 2px solid #64748b;
+  border-bottom: 2px solid #64748b;
   transform: rotate(45deg);
   margin-left: 0.25rem;
   transition: border-color 0.2s ease-in-out;
 }
 
 .PhoneInputCountry:hover .PhoneInputCountrySelectArrow {
-  border-color: #003b5c;
+  border-color: #004b87;
 }
 
-/* Responsive */
+/* Sticky buttons */
+.sticky-buttons {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-top: 1px solid #e2e8f0;
+  backdrop-filter: blur(4px);
+}
+
+/* ============================================ */
+/* ===== 14. RESPONSIVE ====================== */
+/* ============================================ */
+
 @media (max-width: 640px) {
   .PhoneInput {
     padding: 0.625rem 0.75rem;
@@ -346,5 +614,17 @@ main {
     width: 1.25rem;
     height: 0.9375rem;
   }
+
+  .ql-editor {
+    padding: 1rem !important;
+    font-size: 0.95rem;
+  }
+  
+  .content-container {
+    padding: 1.5rem 1rem;
+  }
+  
+  .editorial-card {
+    padding: 1.25rem;
+  }
 }
-/* ===== FIN ESTILOS PARA REVISIONES ===== */
