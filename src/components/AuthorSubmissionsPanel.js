@@ -1,7 +1,7 @@
 // src/components/AuthorSubmissionsPanel.js
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db, submitRevision } from '../firebase';
+import { db, submitRevision, doc } from '../firebase';
 import { 
   collection, 
   query, 
@@ -892,15 +892,13 @@ const SUBMISSION_STATES = {
 };
 
 // ================= COMPONENTE PRINCIPAL =================
-const AuthorSubmissionsPanel = ({ user }) => {
+const AuthorSubmissionsPanel = ({ user, submissionId, onBack }) => {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
-  const [submissions, setSubmissions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [assignedEditor, setAssignedEditor] = useState(null);
-  // Estado para el Portal (Modal de pantalla completa)
-  const [activePortal, setActivePortal] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+const [submission, setSubmission] = useState(null); // Solo un submission
+const [loading, setLoading] = useState(true);
+const [activeTab, setActiveTab] = useState('overview');
+const [assignedEditor, setAssignedEditor] = useState(null);
 
   // Estados para el formulario de revisión
   const [revisionComment, setRevisionComment] = useState('');
@@ -908,146 +906,95 @@ const AuthorSubmissionsPanel = ({ user }) => {
   const [revisionNotes, setRevisionNotes] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // ================= CARGA DE DATOS =================
-  useEffect(() => {
-    if (!user?.uid) {
+useEffect(() => {
+  if (!user?.uid || !submissionId) {
+    setLoading(false);
+    return;
+  }
+
+  const unsubscribers = [];
+
+  // Cargar submission principal
+  const subRef = doc(db, 'submissions', submissionId);
+  const unsubSub = onSnapshot(subRef, (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      setSubmission({
+        id: snap.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
+        reviews: [],
+        pendingProposals: []
+      });
       setLoading(false);
-      return;
+    } else {
+      setLoading(false);
     }
+  }, (error) => {
+    console.error('Error loading submission:', error);
+    setLoading(false);
+  });
+  unsubscribers.push(unsubSub);
 
-    const q = query(collection(db, 'submissions'), where('authorUID', '==', user.uid));
-    const reviewsListeners = new Map();
-    const proposalsListeners = new Map();
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const baseSubmissionsList = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
-          deskReviewCompletedAt: data.deskReviewCompletedAt?.toDate?.(),
-          decisionMadeAt: data.decisionMadeAt?.toDate?.(),
-          reviews: [],
-          pendingProposals: []
+  // Cargar editor asignado
+  const tasksQuery = query(
+    collection(db, 'editorialTasks'),
+    where('submissionId', '==', submissionId),
+    where('status', 'in', ['in-review', 'awaiting-decision', 'awaiting-author-revision', 'in-peer-review', 'awaiting-review'])
+  );
+  
+  const unsubTask = onSnapshot(tasksQuery, (tasksSnap) => {
+    if (!tasksSnap.empty) {
+      const task = tasksSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.round || 0) - (a.round || 0))[0];
+      
+      if (task && task.assignedToName && task.assignedToEmail) {
+        const editorInfo = {
+          name: task.assignedToName,
+          email: task.assignedToEmail,
+          round: task.round || 1,
+          taskId: task.id
         };
-      }).sort((a, b) => b.createdAt - a.createdAt);
-
-      setSubmissions(baseSubmissionsList);
-      setLoading(false);
-      // Cargar editor asignado para cada submission
-      snapshot.docs.forEach(doc => {
-        const submissionId = doc.id;
         
-        // Query para editorialTasks
-        const tasksQuery = query(
-          collection(db, 'editorialTasks'),
-          where('submissionId', '==', submissionId),
-          where('status', 'in', ['in-review', 'awaiting-decision', 'awaiting-author-revision', 'in-peer-review', 'awaiting-review'])
-        );
-        
-        const unsubTask = onSnapshot(tasksQuery, (tasksSnap) => {
-          if (!tasksSnap.empty) {
-            // Obtener la tarea más reciente
-            const task = tasksSnap.docs
-              .map(d => ({ id: d.id, ...d.data() }))
-              .sort((a, b) => (b.round || 0) - (a.round || 0))[0];
-            
-            if (task && task.assignedToName && task.assignedToEmail) {
-              const editorInfo = {
-                name: task.assignedToName,
-                email: task.assignedToEmail,
-                round: task.round || 1,
-                taskId: task.id
-              };
-              
-              // Actualizar el submission con el editor asignado
-              setSubmissions(prev => prev.map(sub => 
-                sub.id === submissionId ? { ...sub, assignedEditor: editorInfo } : sub
-              ));
-              
-              // Actualizar el portal activo si está abierto
-              setActivePortal(prev => {
-                if (prev?.id === submissionId) {
-                  return { ...prev, assignedEditor: editorInfo };
-                }
-                return prev;
-              });
-            }
-          }
-        });
-        
-        // Agregar el listener a la limpieza
-        if (!reviewsListeners.has(`task-${submissionId}`)) {
-          reviewsListeners.set(`task-${submissionId}`, unsubTask);
-        }
-      });
-      // Limpiar listeners anteriores
-      reviewsListeners.forEach(unsub => unsub());
-      reviewsListeners.clear();
-      proposalsListeners.forEach(unsub => unsub());
-      proposalsListeners.clear();
+        setSubmission(prev => prev ? { ...prev, assignedEditor: editorInfo } : prev);
+      }
+    }
+  });
+  unsubscribers.push(unsubTask);
 
-      snapshot.docs.forEach(doc => {
-        const submissionId = doc.id;
-        
-        // Listener Revisiones
-        const reviewsQuery = query(collection(db, 'submissions', submissionId, 'reviews'));
-        const unsubReviews = onSnapshot(reviewsQuery, (reviewsSnap) => {
-          const reviews = reviewsSnap.docs.map(r => ({ 
-            id: r.id, 
-            ...r.data(), 
-            submittedAt: r.data().submittedAt?.toDate?.() || r.data().submittedAt 
-          }));
-          setSubmissions(prev => prev.map(sub => 
-            sub.id === submissionId ? { ...sub, reviews } : sub
-          ));
-          // Actualizar portal activo si está abierto
-          setActivePortal(prev => {
-            if (prev?.id === submissionId) {
-              return { ...prev, reviews };
-            }
-            return prev;
-          });
-        });
-        reviewsListeners.set(submissionId, unsubReviews);
+  // Cargar revisiones
+  const reviewsQuery = query(collection(db, 'submissions', submissionId, 'reviews'));
+  const unsubReviews = onSnapshot(reviewsQuery, (reviewsSnap) => {
+    const reviews = reviewsSnap.docs.map(r => ({ 
+      id: r.id, 
+      ...r.data(), 
+      submittedAt: r.data().submittedAt?.toDate?.() || r.data().submittedAt 
+    }));
+    setSubmission(prev => prev ? { ...prev, reviews } : prev);
+  });
+  unsubscribers.push(unsubReviews);
 
-        // Listener Propuestas de metadatos
-        const proposalsQuery = query(
-          collection(db, 'submissions', submissionId, 'metadataProposals'), 
-          where('status', '==', 'pending-author')
-        );
-        const unsubProposals = onSnapshot(proposalsQuery, (propsSnap) => {
-          const pendingProposals = propsSnap.docs.map(p => ({ 
-            id: p.id, 
-            ...p.data(),
-            proposedAt: p.data().proposedAt?.toDate?.() || p.data().proposedAt
-          }));
-          setSubmissions(prev => prev.map(sub => 
-            sub.id === submissionId ? { ...sub, pendingProposals } : sub
-          ));
-          // Actualizar portal activo si está abierto
-          setActivePortal(prev => {
-            if (prev?.id === submissionId) {
-              return { ...prev, pendingProposals };
-            }
-            return prev;
-          });
-        });
-        proposalsListeners.set(submissionId, unsubProposals);
-      });
-    }, (error) => {
-      console.error('Error loading submissions:', error);
-      setLoading(false);
-    });
+  // Cargar propuestas de metadatos
+  const proposalsQuery = query(
+    collection(db, 'submissions', submissionId, 'metadataProposals'), 
+    where('status', '==', 'pending-author')
+  );
+  const unsubProposals = onSnapshot(proposalsQuery, (propsSnap) => {
+    const pendingProposals = propsSnap.docs.map(p => ({ 
+      id: p.id, 
+      ...p.data(),
+      proposedAt: p.data().proposedAt?.toDate?.() || p.data().proposedAt
+    }));
+    setSubmission(prev => prev ? { ...prev, pendingProposals } : prev);
+  });
+  unsubscribers.push(unsubProposals);
 
-    return () => {
-      unsubscribe();
-      reviewsListeners.forEach(unsub => unsub());
-      proposalsListeners.forEach(unsub => unsub());
-    };
-  }, [user]);
+  return () => {
+    unsubscribers.forEach(unsub => unsub());
+  };
+}, [user?.uid, submissionId]);
 
   // ================= FUNCIONES AUXILIARES =================
   const hasPendingMetadataProposals = (submission) => {
@@ -1060,24 +1007,6 @@ const AuthorSubmissionsPanel = ({ user }) => {
 
   const requiresAction = (sub) => {
     return needsRevisionUpload(sub?.status) || hasPendingMetadataProposals(sub);
-  };
-
-    const handleOpenPortal = (sub) => {
-    setActivePortal(sub);
-    // Enrutamiento inteligente al abrir
-    if (requiresAction(sub)) {
-      setActiveTab('tasks');
-    } else {
-      setActiveTab('overview');
-    }
-  };
-
-  const handleClosePortal = () => {
-    if (uploading) return;
-    setActivePortal(null);
-    setRevisionFile(null);
-    setRevisionNotes('');
-    setRevisionComment('');
   };
 
   const getTimelineStep = (status) => {
@@ -1124,12 +1053,12 @@ const AuthorSubmissionsPanel = ({ user }) => {
         reader.onload = async () => {
           try {
             const result = await submitRevision({
-              submissionId: activePortal.id,
+              submissionId: submission.id,
               fileBase64: reader.result,
               fileName: revisionFile.name,
               notes: revisionNotes,
               revisionComment: revisionComment,
-              round: activePortal.currentRound || 1
+              round: submission.currentRound || 1
             });
             if (result.success) {
               alert(isSpanish ? 'Revisión enviada con éxito' : 'Revision submitted successfully');
@@ -1157,22 +1086,22 @@ const AuthorSubmissionsPanel = ({ user }) => {
     }
   };
 
-    const handleDownloadManuscript = () => {
-    let downloadUrl = null;
-    let fileName = 'manuscrito.pdf';
-    
-    if (activePortal.formattedPdfFile?.url) {
-      downloadUrl = activePortal.formattedPdfFile.url;
-      fileName = `manuscrito_${activePortal.submissionId || activePortal.id?.substring(0, 8)}.pdf`;
-    } else if (activePortal.formattedDocsFile?.url) {
-      const fileId = activePortal.formattedDocsFile.id || activePortal.formattedDocsFile.url.split('/d/')[1]?.split('/')[0];
+const handleDownloadManuscript = () => {
+  let downloadUrl = null;
+  let fileName = 'manuscrito.pdf';
+  
+  if (submission.formattedPdfFile?.url) {
+    downloadUrl = submission.formattedPdfFile.url;
+    fileName = `manuscrito_${submission.submissionId || submission.id?.substring(0, 8)}.pdf`;
+  } else if (submission.formattedDocsFile?.url) {
+    const fileId = submission.formattedDocsFile.id || submission.formattedDocsFile.url.split('/d/')[1]?.split('/')[0];
       if (fileId) {
         downloadUrl = `https://docs.google.com/document/d/${fileId}/export?format=pdf`;
-        fileName = `manuscrito_${activePortal.submissionId || activePortal.id?.substring(0, 8)}.pdf`;
+        fileName = `manuscrito_${submission.submissionId || submission.id?.substring(0, 8)}.pdf`;
       }
-    } else if (activePortal.originalFileUrl) {
-      downloadUrl = getDriveDownloadUrl(activePortal.originalFileUrl);
-      fileName = activePortal.originalFileName || 'manuscrito_original.pdf';
+    } else if (submission.originalFileUrl) {
+      downloadUrl = getDriveDownloadUrl(submission.originalFileUrl);
+      fileName = submission.originalFileName || 'manuscrito_original.pdf';
     }
     
     if (downloadUrl) {
@@ -1190,7 +1119,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
   };
     const handleDownloadCertificate = () => {
   // Verificar si existe certificado
-  const certificate = activePortal.certificateFileUrl || activePortal.certificateUrl;
+  const certificate = submission.certificateFileUrl || submission.certificateUrl;
   
   if (!certificate) {
     alert(isSpanish 
@@ -1204,7 +1133,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
   
   if (downloadUrl) {
     // Crear nombre elegante para el archivo
-    const submissionId = activePortal.submissionId || activePortal.id?.substring(0, 8);
+    const submissionId = submission.submissionId || submission.id?.substring(0, 8);
     const fileName = `Certificado_${submissionId}_RNCE.pdf`;
     
     // Crear elemento de descarga
@@ -1249,117 +1178,51 @@ const AuthorSubmissionsPanel = ({ user }) => {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-6">
-        <div className="w-10 h-10 border-2 border-t-[#003b5c] border-slate-200 rounded-full animate-spin"></div>
-        <p className="font-serif italic text-slate-500 text-lg">
-          {isSpanish ? 'Accediendo a los expedientes editoriales...' : 'Accessing editorial records...'}
+if (loading) {
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-6">
+      <div className="w-10 h-10 border-2 border-t-[#003b5c] border-slate-200 rounded-full animate-spin"></div>
+      <p className="font-serif italic text-slate-500 text-lg">
+        {isSpanish ? 'Cargando expediente...' : 'Loading record...'}
+      </p>
+    </div>
+  );
+}
+if (!submission && !loading) {
+  return (
+    <div className="min-h-[50vh] flex items-center justify-center">
+      <div className="text-center p-8 bg-white border border-slate-200 shadow-sm max-w-md">
+        <Icons.File />
+        <p className="mt-4 text-slate-500 font-serif italic">
+          {isSpanish ? 'No se encontró el manuscrito solicitado.' : 'The requested manuscript was not found.'}
         </p>
       </div>
-    );
-  }
-
-  return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-700">
-      
-      {/* ===================== ESCRITORIO (DASHBOARD) ===================== */}
-      <header className="mb-12 border-b border-slate-200 pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="font-serif text-4xl sm:text-5xl text-[#003b5c] mb-2 leading-tight">
-            {isSpanish ? 'Expedientes de Autor' : 'Author Records'}
-          </h1>
-          <p className="text-slate-500 font-sans uppercase tracking-widest text-xs font-bold flex items-center gap-2">
-            <span className="w-4 h-px bg-[#C0A86A]"></span>
-            {isSpanish ? 'Gestor de Manuscritos — Revista Nacional de Ciencias para Estudiantes' : 'Manuscript Manager — National Student Science Journal'}
-          </p>
-        </div>
-        <button
-          onClick={() => window.location.href = isSpanish ? '/login/submit' : '/en/login/submit'}
-          className="bg-[#003b5c] hover:bg-[#002840] text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center justify-center gap-3 group"
-        >
-          <span className="text-lg leading-none group-hover:rotate-90 transition-transform">+</span>
-          {isSpanish ? 'Iniciar Nuevo Envío' : 'Start New Submission'}
-        </button>
-      </header>
-
-      {submissions.length === 0 ? (
-        <div className="text-center py-24 bg-slate-50 border-2 border-dashed border-slate-200">
-          <Icons.File />
-          <p className="font-serif text-2xl text-slate-400 italic mt-4">
-            {isSpanish ? 'No posee manuscritos en curso.' : 'No manuscripts in progress.'}
-          </p>
-          <p className="text-slate-400 text-sm mt-2">
-            {isSpanish ? 'Inicie un nuevo envío para comenzar.' : 'Start a new submission to begin.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {submissions.map((sub) => {
-            const hasAction = requiresAction(sub);
-            const statusInfo = SUBMISSION_STATES[sub.status] || SUBMISSION_STATES.submitted;
-
-            return (
-              <motion.div
-                key={sub.id}
-                whileHover={{ y: -4 }}
-                onClick={() => handleOpenPortal(sub)}
-                className={`group cursor-pointer bg-white border ${
-                  hasAction 
-                    ? 'border-amber-300 shadow-md ring-1 ring-amber-300' 
-                    : 'border-slate-200 shadow-sm hover:border-[#003b5c] hover:shadow-md'
-                } transition-all flex flex-col h-full`}
-              >
-                {/* Banner de Acción Requerida */}
-                {hasAction && (
-                  <div className="bg-amber-50 px-4 py-2 border-b border-amber-200 flex items-center gap-2">
-                    <span className="text-amber-600"><Icons.Alert /></span>
-                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">
-                      {isSpanish ? 'Acción Requerida' : 'Action Required'}
-                    </span>
-                  </div>
-                )}
-
-                <div className="p-6 flex-1 flex flex-col">
-                  <div className="flex justify-between items-start mb-4">
-                    <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
-                      ID: {sub.submissionId || sub.id.substring(0,8)}
-                    </span>
-                    <span className={`text-[10px] px-2.5 py-1 uppercase font-bold tracking-wider border ${statusInfo.color}`}>
-                      {statusInfo[language]}
-                    </span>
-                  </div>
-
-                  <h3 className="font-serif text-xl text-slate-800 group-hover:text-[#003b5c] transition-colors leading-snug mb-4 flex-1 line-clamp-3">
-                    {sub.title}
-                  </h3>
-
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-sans">
-                    <span className="flex items-center gap-1.5">
-                      <Icons.Clock />
-                      {sub.createdAt?.toLocaleDateString()}
-                    </span>
-                    <span className="flex items-center gap-1 group-hover:text-[#003b5c] transition-colors font-bold uppercase tracking-wider">
-                      {isSpanish ? 'Abrir' : 'Open'} <Icons.Check />
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-
+    </div>
+  );
+}
+return (
+  <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-700">
+    
+    {/* Botón Volver */}
+    <div className="mb-6">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-xs font-medium text-[#004b87] hover:text-black transition-colors font-sans"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        {isSpanish ? 'Volver al Panel de Envíos' : 'Back to Submission Dashboard'}
+      </button>
+    </div>
       {/* ===================== PORTAL DEL MANUSCRITO (PANTALLA COMPLETA) ===================== */}
-      <AnimatePresence>
-        {activePortal && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-50 bg-[#F8F9FB] flex flex-col overflow-hidden"
-          >
+{/* Portal del Manuscrito - Siempre visible cuando hay submission */}
+{submission && (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-[#F8F9FB] flex flex-col"
+  >
             {/* Header del Portal */}
             <div className="bg-[#003b5c] text-white px-4 sm:px-6 py-4 flex items-center justify-between shadow-md z-10 shrink-0">
               <div className="flex items-center gap-4 sm:gap-6 overflow-hidden">
@@ -1372,17 +1235,17 @@ const AuthorSubmissionsPanel = ({ user }) => {
                 </button>
                 <div className="min-w-0">
                   <p className="text-[10px] font-mono text-sky-200 uppercase tracking-widest mb-1">
-                    ID: {activePortal.submissionId || activePortal.id.substring(0,8)}
+                    ID: {submission.submissionId || submission.id.substring(0,8)}
                   </p>
                   <h2 className="font-serif text-base sm:text-lg font-bold truncate">
-                    {activePortal.title}
+                    {submission.title}
                   </h2>
                 </div>
               </div>
               
               <div className="hidden sm:block">
                 <span className="text-xs px-3 py-1.5 uppercase font-bold tracking-wider bg-white/10 text-white border border-white/20">
-                  {SUBMISSION_STATES[activePortal.status]?.[language]}
+                  {SUBMISSION_STATES[submission.status]?.[language]}
                 </span>
               </div>
             </div>
@@ -1428,7 +1291,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                     {/* Estado del Expediente */}
                     <div className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
                                           {/* Editor Asignado */}
-                    {activePortal.assignedEditor && (
+                    {submission.assignedEditor && (
                       <div className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm border-l-4 border-l-[#C0A86A]">
                         <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-400 mb-4">
                           {isSpanish ? 'Editor Asignado' : 'Assigned Editor'}
@@ -1441,20 +1304,20 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           <div className="flex-1">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
                               <p className="font-serif text-lg sm:text-xl text-[#003b5c] font-bold">
-                                {activePortal.assignedEditor.name}
+                                {submission.assignedEditor.name}
                               </p>
-                              {activePortal.assignedEditor.round && (
+                              {submission.assignedEditor.round && (
                                 <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-sm">
-                                  {isSpanish ? 'Ronda' : 'Round'} {activePortal.assignedEditor.round}
+                                  {isSpanish ? 'Ronda' : 'Round'} {submission.assignedEditor.round}
                                 </span>
                               )}
                             </div>
                             <a 
-                              href={`mailto:${activePortal.assignedEditor.email}`}
+                              href={`mailto:${submission.assignedEditor.email}`}
                               className="text-sm text-slate-600 hover:text-[#003b5c] transition-colors flex items-center gap-2 font-sans"
                             >
                               <Icons.Email />
-                              {activePortal.assignedEditor.email}
+                              {submission.assignedEditor.email}
                             </a>
                             <p className="text-xs text-slate-400 mt-2 font-sans italic">
                               {isSpanish 
@@ -1470,21 +1333,21 @@ const AuthorSubmissionsPanel = ({ user }) => {
                       </h3>
                       <div className="flex items-start gap-4">
                         <div className="w-12 h-12 bg-slate-50 flex items-center justify-center border border-slate-100 flex-shrink-0 text-[#003b5c]">
-  {SUBMISSION_STATES[activePortal.status]?.icon}
+  {SUBMISSION_STATES[submission.status]?.icon}
 </div>
                         <div>
                           <p className="font-serif text-xl sm:text-2xl text-[#003b5c]">
-                            {SUBMISSION_STATES[activePortal.status]?.[language]}
+                            {SUBMISSION_STATES[submission.status]?.[language]}
                           </p>
                           <p className="text-slate-600 font-sans text-sm mt-1">
-                            {SUBMISSION_STATES[activePortal.status]?.description[language]}
+                            {SUBMISSION_STATES[submission.status]?.description[language]}
                           </p>
                         </div>
                       </div>
                     </div>
 
                     {/* Timeline de Progreso */}
-                    {!['accepted', 'rejected', 'desk-review-rejected'].includes(activePortal.status) && (
+                    {!['accepted', 'rejected', 'desk-review-rejected'].includes(submission.status) && (
                       <div className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
                         <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-400 mb-6">
                           {isSpanish ? 'Progreso del Manuscrito' : 'Manuscript Progress'}
@@ -1493,7 +1356,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           <div className="absolute top-4 left-0 w-full h-[1px] bg-slate-200 z-0 hidden sm:block" />
                           <div className="flex sm:justify-between overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 gap-4 sm:gap-0">
                             {['submitted', 'in-editorial-review', 'in-reviewer-selection', 'awaiting-reviewer-responses', 'in-peer-review', 'awaiting-editor-decision', 'accepted'].map((step, idx) => {
-                              const currentStep = getTimelineStep(activePortal.status);
+                              const currentStep = getTimelineStep(submission.status);
                               const isCompleted = idx < currentStep;
                               const isCurrent = idx === currentStep;
                               
@@ -1522,30 +1385,30 @@ const AuthorSubmissionsPanel = ({ user }) => {
                     )}
 
                     {/* Feedback del Editor / Decisiones Finales */}
-                    {activePortal.finalDecision && (
+                    {submission.finalDecision && (
                       <div className={`p-6 sm:p-8 border shadow-sm ${
-                        activePortal.finalDecision === 'accept' ? 'bg-emerald-50 border-emerald-200' :
-                        activePortal.finalDecision === 'reject' ? 'bg-rose-50 border-rose-200' :
+                        submission.finalDecision === 'accept' ? 'bg-emerald-50 border-emerald-200' :
+                        submission.finalDecision === 'reject' ? 'bg-rose-50 border-rose-200' :
                         'bg-amber-50 border-amber-200'
                       }`}>
                         <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-500 mb-4">
                           {isSpanish ? 'Resolución Editorial Final' : 'Final Editorial Resolution'}
                         </h3>
-                        {activePortal.finalFeedback && (
+                        {submission.finalFeedback && (
                           <div 
                             className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-800 leading-relaxed" 
-                            dangerouslySetInnerHTML={{ __html: activePortal.finalFeedback }}  />
+                            dangerouslySetInnerHTML={{ __html: submission.finalFeedback }}  />
                         )}
                       </div>
                     )}
 
-                    {activePortal.deskReviewFeedback && !activePortal.finalDecision && (
+                    {submission.deskReviewFeedback && !submission.finalDecision && (
                       <div className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm border-l-4 border-l-indigo-400">
                         <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-400 mb-4">
                           {isSpanish ? 'Nota del Comité Editorial' : 'Note from Editorial Committee'}
                         </h3>
                         <p className="font-serif text-slate-700 leading-relaxed">
-                          {activePortal.deskReviewFeedback}
+                          {submission.deskReviewFeedback}
                         </p>
                       </div>
                     )}
@@ -1560,26 +1423,26 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             {isSpanish ? 'Fecha de envío' : 'Submission date'}
                           </p>
-                          <p className="font-serif text-slate-700">{activePortal.createdAt?.toLocaleDateString()}</p>
+                          <p className="font-serif text-slate-700">{submission.createdAt?.toLocaleDateString()}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             {isSpanish ? 'Ronda actual' : 'Current round'}
                           </p>
-                          <p className="font-serif text-slate-700">{activePortal.currentRound || 1}</p>
+                          <p className="font-serif text-slate-700">{submission.currentRound || 1}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             {isSpanish ? 'Área temática' : 'Thematic area'}
                           </p>
-                          <p className="font-serif text-slate-700">{activePortal.area || '—'}</p>
+                          <p className="font-serif text-slate-700">{submission.area || '—'}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             {isSpanish ? 'Idioma' : 'Language'}
                           </p>
                           <p className="font-serif text-slate-700">
-                            {activePortal.paperLanguage === 'es' ? 'Español' : 'English'}
+                            {submission.paperLanguage === 'es' ? 'Español' : 'English'}
                           </p>
                         </div>
                       </div>
@@ -1611,9 +1474,9 @@ const AuthorSubmissionsPanel = ({ user }) => {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                         {[
-                          { label: 'Submission ID', value: activePortal.submissionId },
-                          { label: 'Request ID', value: activePortal.requestId },
-                          { label: 'Author UID', value: activePortal.authorUID || activePortal.uid }
+                          { label: 'Submission ID', value: submission.submissionId },
+                          { label: 'Request ID', value: submission.requestId },
+                          { label: 'Author UID', value: submission.authorUID || submission.uid }
                         ].map((item, idx) => (
                           <div key={idx} className="bg-slate-50 p-3 border border-slate-100">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</p>
@@ -1638,22 +1501,22 @@ const AuthorSubmissionsPanel = ({ user }) => {
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
         {isSpanish ? 'Nombre' : 'Name'}
       </p>
-      <p className="font-serif text-slate-700 break-all">{activePortal.authorName || '—'}</p>
+      <p className="font-serif text-slate-700 break-all">{submission.authorName || '—'}</p>
     </div>
     <div className="bg-slate-50 p-3 border border-slate-100">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email</p>
-      <p className="font-serif text-slate-700 break-all">{activePortal.authorEmail || '—'}</p>
+      <p className="font-serif text-slate-700 break-all">{submission.authorEmail || '—'}</p>
     </div>
     
     {/* ✅ NUEVO: Teléfono de contacto */}
-    {(activePortal.correspondingAuthorPhone || activePortal.correspondingAuthor?.phone) && (
+    {(submission.correspondingAuthorPhone || submission.correspondingAuthor?.phone) && (
       <div className="bg-slate-50 p-3 border border-slate-100 sm:col-span-2">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
           <Icons.Phone />
           {isSpanish ? 'Teléfono de Contacto' : 'Contact Phone'}
         </p>
         <p className="font-mono text-slate-700 mt-1 text-base">
-  {activePortal.correspondingAuthorPhone || activePortal.correspondingAuthor?.phone || '—'}
+  {submission.correspondingAuthorPhone || submission.correspondingAuthor?.phone || '—'}
 </p>
       </div>
     )}
@@ -1675,14 +1538,14 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             {isSpanish ? 'Título' : 'Title'}
                           </p>
-                          <p className="font-serif text-slate-700 mt-1">{activePortal.title || '—'}</p>
+                          <p className="font-serif text-slate-700 mt-1">{submission.title || '—'}</p>
                         </div>
-                        {activePortal.titleEn && (
+                        {submission.titleEn && (
                           <div className="bg-slate-50 p-3 border border-slate-100">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                               {isSpanish ? 'Título (Inglés)' : 'Title (English)'}
                             </p>
-                            <p className="font-serif text-slate-700 mt-1 italic">{activePortal.titleEn}</p>
+                            <p className="font-serif text-slate-700 mt-1 italic">{submission.titleEn}</p>
                           </div>
                         )}
                         <div className="bg-slate-50 p-3 border border-slate-100">
@@ -1690,16 +1553,16 @@ const AuthorSubmissionsPanel = ({ user }) => {
                             {isSpanish ? 'Resumen' : 'Abstract'}
                           </p>
                           <p className="font-serif text-slate-700 mt-1 text-sm leading-relaxed">
-                            {activePortal.abstract || '—'}
+                            {submission.abstract || '—'}
                           </p>
                         </div>
-                        {activePortal.abstractEn && (
+                        {submission.abstractEn && (
                           <div className="bg-slate-50 p-3 border border-slate-100">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                               {isSpanish ? 'Resumen (Inglés)' : 'Abstract (English)'}
                             </p>
                             <p className="font-serif text-slate-700 mt-1 text-sm leading-relaxed italic">
-                              {activePortal.abstractEn}
+                              {submission.abstractEn}
                             </p>
                           </div>
                         )}
@@ -1708,20 +1571,20 @@ const AuthorSubmissionsPanel = ({ user }) => {
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                               {isSpanish ? 'Área' : 'Area'}
                             </p>
-                            <p className="font-sans text-slate-700 text-sm">{activePortal.area || '—'}</p>
+                            <p className="font-sans text-slate-700 text-sm">{submission.area || '—'}</p>
                           </div>
                           <div className="bg-slate-50 p-3 border border-slate-100">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                               {isSpanish ? 'Tipo de Artículo' : 'Article Type'}
                             </p>
-                            <p className="font-sans text-slate-700 text-sm">{activePortal.articleType || '—'}</p>
+                            <p className="font-sans text-slate-700 text-sm">{submission.articleType || '—'}</p>
                           </div>
                         </div>
                       </div>
                     </section>
 
                     {/* 4. PALABRAS CLAVE */}
-                    {activePortal.keywords && activePortal.keywords.length > 0 && (
+                    {submission.keywords && submission.keywords.length > 0 && (
                       <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
                           <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
@@ -1730,22 +1593,22 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
                             {isSpanish ? 'Palabras Clave' : 'Keywords'}
                           </h3>
-                          {activePortal.keywordsVocabulario && (
+                          {submission.keywordsVocabulario && (
                             <span className="text-[10px] bg-slate-100 px-2 py-0.5 font-mono text-slate-500">
-                              {activePortal.keywordsVocabulario}
+                              {submission.keywordsVocabulario}
                             </span>
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {activePortal.keywords.map((kw, idx) => (
+                          {submission.keywords.map((kw, idx) => (
                             <span key={idx} className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600">
                               {kw}
                             </span>
                           ))}
                         </div>
-                        {activePortal.keywordsEn && activePortal.keywordsEn.length > 0 && (
+                        {submission.keywordsEn && submission.keywordsEn.length > 0 && (
                           <div className="mt-4 flex flex-wrap gap-2">
-                            {activePortal.keywordsEn.map((kw, idx) => (
+                            {submission.keywordsEn.map((kw, idx) => (
                               <span key={idx} className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-xs font-mono text-slate-500 italic">
                                 {kw}
                               </span>
@@ -1756,18 +1619,18 @@ const AuthorSubmissionsPanel = ({ user }) => {
                     )}
 
                     {/* 5. AUTORES */}
-                    {activePortal.authors && activePortal.authors.length > 0 && (
+                    {submission.authors && submission.authors.length > 0 && (
                       <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
                           <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
                             <Icons.Users />
                           </div>
                           <h3 className="font-sans font-bold text-xs uppercase tracking-widest text-slate-600">
-                            {isSpanish ? 'Autores' : 'Authors'} ({activePortal.authors.length})
+                            {isSpanish ? 'Autores' : 'Authors'} ({submission.authors.length})
                           </h3>
                         </div>
                         <div className="space-y-3">
-                          {activePortal.authors.map((author, idx) => (
+                          {submission.authors.map((author, idx) => (
                             <div key={idx} className="bg-slate-50 p-4 border border-slate-100">
                               <div className="flex flex-wrap items-center gap-2 mb-2">
                                 <span className="font-serif font-bold text-slate-800">
@@ -1798,14 +1661,14 @@ const AuthorSubmissionsPanel = ({ user }) => {
                                   <span className="text-slate-600 font-mono">{author.orcid || '—'}</span>
                                 </div>
                                 {/* ✅ Teléfono - solo para autor de correspondencia */}
-{author.isCorresponding && (author.phone || activePortal.correspondingAuthorPhone) && (
+{author.isCorresponding && (author.phone || submission.correspondingAuthorPhone) && (
   <div>
     <span className="text-slate-400 flex items-center gap-1">
       <Icons.Phone />
       {isSpanish ? 'Teléfono:' : 'Phone:'}
     </span>
     <span className="text-slate-600 font-mono">
-  {author.phone || activePortal.correspondingAuthorPhone || '—'}
+  {author.phone || submission.correspondingAuthorPhone || '—'}
 </span>
   </div>
 )}
@@ -1837,40 +1700,40 @@ const AuthorSubmissionsPanel = ({ user }) => {
                             {isSpanish ? '¿Tiene financiamiento?' : 'Has funding?'}
                           </p>
                           <p className="font-sans text-slate-700 text-sm">
-                            {activePortal.funding?.hasFunding 
+                            {submission.funding?.hasFunding 
                               ? (isSpanish ? 'Sí' : 'Yes') 
                               : (isSpanish ? 'No' : 'No')}
                           </p>
                         </div>
-                        {activePortal.funding?.hasFunding && (
+                        {submission.funding?.hasFunding && (
                           <>
                             <div className="bg-slate-50 p-3 border border-slate-100">
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                 {isSpanish ? 'Fuentes' : 'Sources'}
                               </p>
-                              <p className="font-sans text-slate-700 text-sm">{activePortal.funding.sources || '—'}</p>
+                              <p className="font-sans text-slate-700 text-sm">{submission.funding.sources || '—'}</p>
                             </div>
                             <div className="bg-slate-50 p-3 border border-slate-100">
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                 {isSpanish ? 'Números de subvención' : 'Grant numbers'}
                               </p>
-                              <p className="font-mono text-slate-700 text-sm">{activePortal.funding.grantNumbers || '—'}</p>
+                              <p className="font-mono text-slate-700 text-sm">{submission.funding.grantNumbers || '—'}</p>
                             </div>
                           </>
                         )}
-                        {activePortal.conflictOfInterest && (
+                        {submission.conflictOfInterest && (
                           <div className="bg-slate-50 p-3 border border-slate-100">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                               {isSpanish ? 'Conflicto de intereses' : 'Conflict of interest'}
                             </p>
-                            <p className="font-sans text-slate-700 text-sm">{activePortal.conflictOfInterest}</p>
+                            <p className="font-sans text-slate-700 text-sm">{submission.conflictOfInterest}</p>
                           </div>
                         )}
                       </div>
                     </section>
 
                     {/* 7. DISPONIBILIDAD DE DATOS Y CÓDIGO */}
-                    {(activePortal.dataAvailability || activePortal.codeAvailability) && (
+                    {(submission.dataAvailability || submission.codeAvailability) && (
                       <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
                           <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
@@ -1881,20 +1744,20 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           </h3>
                         </div>
                         <div className="space-y-3">
-                          {activePortal.dataAvailability && (
+                          {submission.dataAvailability && (
                             <div className="bg-slate-50 p-3 border border-slate-100">
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                 {isSpanish ? 'Datos' : 'Data'}
                               </p>
-                              <p className="font-sans text-slate-700 text-sm">{activePortal.dataAvailability}</p>
+                              <p className="font-sans text-slate-700 text-sm">{submission.dataAvailability}</p>
                             </div>
                           )}
-                          {activePortal.codeAvailability && (
+                          {submission.codeAvailability && (
                             <div className="bg-slate-50 p-3 border border-slate-100">
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                 {isSpanish ? 'Código' : 'Code'}
                               </p>
-                              <p className="font-sans text-slate-700 text-sm">{activePortal.codeAvailability}</p>
+                              <p className="font-sans text-slate-700 text-sm">{submission.codeAvailability}</p>
                             </div>
                           )}
                         </div>
@@ -1917,24 +1780,24 @@ const AuthorSubmissionsPanel = ({ user }) => {
                             {isSpanish ? '¿Requiere aprobación ética?' : 'Requires ethics approval?'}
                           </p>
                           <p className="font-sans text-slate-700 text-sm">
-                            {activePortal.requiresEthicsApproval 
+                            {submission.requiresEthicsApproval 
                               ? (isSpanish ? 'Sí' : 'Yes') 
                               : (isSpanish ? 'No' : 'No')}
                           </p>
                         </div>
-                        {activePortal.requiresEthicsApproval && activePortal.ethicsCommitteeName && (
+                        {submission.requiresEthicsApproval && submission.ethicsCommitteeName && (
                           <div className="bg-slate-50 p-3 border border-slate-100">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                               {isSpanish ? 'Comité de ética' : 'Ethics committee'}
                             </p>
-                            <p className="font-sans text-slate-700 text-sm">{activePortal.ethicsCommitteeName}</p>
+                            <p className="font-sans text-slate-700 text-sm">{submission.ethicsCommitteeName}</p>
                           </div>
                         )}
                       </div>
                     </section>
 
                     {/* 9. USO DE IA */}
-                    {activePortal.aiUsed && (
+                    {submission.aiUsed && (
                       <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
                           <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
@@ -1944,9 +1807,9 @@ const AuthorSubmissionsPanel = ({ user }) => {
                             {isSpanish ? 'Uso de Inteligencia Artificial' : 'AI Usage'}
                           </h3>
                         </div>
-                        {activePortal.aiTools && activePortal.aiTools.length > 0 && (
+                        {submission.aiTools && submission.aiTools.length > 0 && (
                           <div className="space-y-3">
-                            {activePortal.aiTools.map((tool, idx) => (
+                            {submission.aiTools.map((tool, idx) => (
                               <div key={idx} className="bg-slate-50 p-3 border border-slate-100">
                                 <p className="font-sans font-bold text-slate-700 text-sm">{tool.name}</p>
                                 <div className="grid grid-cols-2 gap-2 mt-1 text-xs">
@@ -1967,7 +1830,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                     )}
 
                     {/* 10. COMENTARIO AL EDITOR */}
-                    {activePortal.editorComment && (
+                    {submission.editorComment && (
                       <section className="bg-white p-6 sm:p-8 border border-slate-200 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
                           <div className="w-8 h-8 bg-[#003b5c] text-white flex items-center justify-center">
@@ -1980,7 +1843,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                         <div className="bg-slate-50 p-4 border border-slate-100">
                            <div 
                           className="review-content ql-editor read-only prose prose-sm max-w-none font-serif text-slate-700 leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: activePortal.editorComment }}  
+                          dangerouslySetInnerHTML={{ __html: submission.editorComment }}  
                         />
                         </div>
                       </section>
@@ -1997,21 +1860,21 @@ const AuthorSubmissionsPanel = ({ user }) => {
                         </h3>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        {activePortal.originalFileName && (
+                        {submission.originalFileName && (
                           <div className="bg-slate-50 p-3 border border-slate-100">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                               {isSpanish ? 'Archivo Original' : 'Original File'}
                             </p>
-                            <p className="font-mono text-xs text-slate-700 break-all">{activePortal.originalFileName}</p>
+                            <p className="font-mono text-xs text-slate-700 break-all">{submission.originalFileName}</p>
                           </div>
                         )}
-                        {activePortal.originalFileSize && (
+                        {submission.originalFileSize && (
                           <div className="bg-slate-50 p-3 border border-slate-100">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                               {isSpanish ? 'Tamaño' : 'Size'}
                             </p>
                             <p className="font-mono text-xs text-slate-700">
-                              {(activePortal.originalFileSize / 1024).toFixed(2)} KB
+                              {(submission.originalFileSize / 1024).toFixed(2)} KB
                             </p>
                           </div>
                         )}
@@ -2020,11 +1883,11 @@ const AuthorSubmissionsPanel = ({ user }) => {
                             {isSpanish ? 'Estado del documento' : 'Document status'}
                           </p>
                           <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-mono ${
-                            activePortal.documentStatus === 'processed' 
+                            submission.documentStatus === 'processed' 
                               ? 'bg-emerald-100 text-emerald-700' 
                               : 'bg-amber-100 text-amber-700'
                           }`}>
-                            {activePortal.documentStatus === 'processed' 
+                            {submission.documentStatus === 'processed' 
                               ? (isSpanish ? 'Procesado' : 'Processed')
                               : (isSpanish ? 'Enviado' : 'Submitted')}
                           </span>
@@ -2052,9 +1915,9 @@ const AuthorSubmissionsPanel = ({ user }) => {
                             {isSpanish ? 'Versión Actual' : 'Current Version'}
                           </h4>
                           <p className="text-xs text-slate-500 font-sans mb-6">
-                            {activePortal.formattedPdfFile?.url 
+                            {submission.formattedPdfFile?.url 
                               ? (isSpanish ? 'PDF Formateado' : 'Formatted PDF')
-                              : activePortal.formattedDocsFile?.url
+                              : submission.formattedDocsFile?.url
                               ? (isSpanish ? 'Google Docs' : 'Google Docs')
                               : (isSpanish ? 'Documento Original' : 'Original Document')}
                           </p>
@@ -2068,13 +1931,13 @@ const AuthorSubmissionsPanel = ({ user }) => {
                       </div>
                       {/* Certificado de Aceptación */}
                       <div className={`bg-white p-6 border shadow-sm flex flex-col ${
-                        activePortal.status === 'accepted' 
+                        submission.status === 'accepted' 
                           ? 'border-[#C0A86A] border-2' 
                           : 'border-slate-200 opacity-60'
                       }`}>
                         <div className="flex-1">
                           <span className={`inline-block px-2 py-1 text-[10px] font-bold uppercase tracking-widest mb-3 ${
-                            activePortal.status === 'accepted'
+                            submission.status === 'accepted'
                               ? 'bg-[#C0A86A]/20 text-[#8B7745]'
                               : 'bg-slate-100 text-slate-400'
                           }`}>
@@ -2089,7 +1952,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                           </h4>
                           
                           <p className="text-xs text-slate-500 font-sans mb-6">
-                            {activePortal.status === 'accepted'
+                            {submission.status === 'accepted'
                               ? (isSpanish 
                                   ? 'Documento oficial que acredita la aceptación del manuscrito.'
                                   : 'Official document accrediting the acceptance of the manuscript.')
@@ -2098,13 +1961,13 @@ const AuthorSubmissionsPanel = ({ user }) => {
                                   : 'Available when the manuscript is accepted.')}
                           </p>
                           
-                          {activePortal.status === 'accepted' && (
+                          {submission.status === 'accepted' && (
                             <div className="bg-emerald-50 border border-emerald-200 p-3 mb-4">
                               <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
                                 {isSpanish ? 'Número de Certificado' : 'Certificate Number'}
                               </p>
                               <p className="font-mono text-xs text-emerald-800 break-all">
-                                {activePortal.certificateNumber || activePortal.certificateId || '—'}
+                                {submission.certificateNumber || submission.certificateId || '—'}
                               </p>
                             </div>
                           )}
@@ -2112,9 +1975,9 @@ const AuthorSubmissionsPanel = ({ user }) => {
                         
                         <button 
                           onClick={handleDownloadCertificate}
-                          disabled={!activePortal.certificateFileUrl && !activePortal.certificateUrl}
+                          disabled={!submission.certificateFileUrl && !submission.certificateUrl}
                           className={`w-full py-2.5 transition-colors text-xs font-bold uppercase tracking-wider flex justify-center items-center gap-2 ${
-                            activePortal.certificateFileUrl || activePortal.certificateUrl
+                            submission.certificateFileUrl || submission.certificateUrl
                               ? 'bg-[#003b5c] text-white hover:bg-[#002840]'
                               : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                           }`}
@@ -2124,7 +1987,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                         </button>
                       </div>
                                             {/* Docx de Revisiones */}
-                      {activePortal.finalReviewDocUrl && (
+                      {submission.finalReviewDocUrl && (
                         <div className="bg-white p-6 border border-slate-200 shadow-sm flex flex-col border-l-4 border-l-[#C0A86A]">
                           <div className="flex-1">
                             <span className="inline-block px-2 py-1 bg-[#C0A86A]/20 text-[#8B7745] text-[10px] font-bold uppercase tracking-widest mb-3">
@@ -2138,7 +2001,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                             </p>
                           </div>
                           <a 
-                            href={getDriveDownloadUrl(activePortal.finalReviewDocUrl)}
+                            href={getDriveDownloadUrl(submission.finalReviewDocUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             download
@@ -2150,13 +2013,13 @@ const AuthorSubmissionsPanel = ({ user }) => {
                       )}
 
                       {/* Consentimientos de menores */}
-                      {activePortal.hasMinorAuthors && activePortal.consentFiles && activePortal.consentFiles.length > 0 && (
+                      {submission.hasMinorAuthors && submission.consentFiles && submission.consentFiles.length > 0 && (
                         <div className="bg-white p-6 border border-slate-200 shadow-sm md:col-span-2">
                           <span className="inline-block px-2 py-1 bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-widest mb-4">
                             {isSpanish ? 'Consentimientos de Menores' : 'Minor Consent Forms'}
                           </span>
                           <div className="space-y-2">
-                            {activePortal.consentFiles.map((consent, idx) => (
+                            {submission.consentFiles.map((consent, idx) => (
                               <div key={idx} className="flex items-center justify-between bg-slate-50 p-3 border border-slate-100">
                                 <div className="flex items-center gap-2">
                                   <Icons.File />
@@ -2199,7 +2062,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                       {isSpanish ? 'Dictámenes de Revisión por Pares' : 'Peer Review Reports'}
                     </h2>
                     
-                    {!activePortal.reviews || activePortal.reviews.length === 0 ? (
+                    {!submission.reviews || submission.reviews.length === 0 ? (
                       <div className="bg-white p-12 border border-slate-200 shadow-sm text-center">
                         <Icons.Users />
                         <p className="text-slate-500 italic font-serif mt-4">
@@ -2209,7 +2072,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
                         </p>
                       </div>
                     ) : (
-                      activePortal.reviews.map((review, idx) => (
+                      submission.reviews.map((review, idx) => (
                         <div key={review.id || idx} className="bg-white border border-slate-200 shadow-sm p-6 sm:p-8 mb-6">
                           <div className="flex flex-wrap justify-between items-center mb-6 pb-4 border-b border-slate-100">
                             <h3 className="font-sans font-bold text-sm text-slate-400 uppercase tracking-widest">
@@ -2305,7 +2168,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
     )}
 
     {/* Tarea: Subir Revisión */}
-    {needsRevisionUpload(activePortal.status) && (
+    {needsRevisionUpload(submission.status) && (
       <>
         {/* GUÍA DE INSTRUCCIONES */}
         <RevisionGuideCard 
@@ -2425,7 +2288,7 @@ const AuthorSubmissionsPanel = ({ user }) => {
     )}
 
     {/* Sin tareas pendientes */}
-    {!hasPendingMetadataProposals(activePortal) && !needsRevisionUpload(activePortal.status) && (
+    {!hasPendingMetadataProposals(activePortal) && !needsRevisionUpload(submission.status) && (
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -2452,8 +2315,8 @@ const AuthorSubmissionsPanel = ({ user }) => {
             <Icons.Clock />
             <span>
               {isSpanish 
-                ? `Última actualización: ${activePortal.updatedAt?.toLocaleDateString?.() || activePortal.createdAt?.toLocaleDateString?.() || '—'}`
-                : `Last updated: ${activePortal.updatedAt?.toLocaleDateString?.() || activePortal.createdAt?.toLocaleDateString?.() || '—'}`}
+                ? `Última actualización: ${submission.updatedAt?.toLocaleDateString?.() || submission.createdAt?.toLocaleDateString?.() || '—'}`
+                : `Last updated: ${submission.updatedAt?.toLocaleDateString?.() || submission.createdAt?.toLocaleDateString?.() || '—'}`}
             </span>
           </div>
         </div>
@@ -2464,9 +2327,8 @@ const AuthorSubmissionsPanel = ({ user }) => {
 
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+  </motion.div>
+)}
     </div>
   );
 };

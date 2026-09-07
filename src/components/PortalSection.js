@@ -15,7 +15,7 @@ import DeskReviewPanel from './DeskReviewPanel';
 import ScientificNewsUploadSection from './ScientificNewsUploadSection';
 import ReviewerInvitationsPanel from './ReviewerInvitationsPanel';
 import AuthorSubmissionsPanel from './AuthorSubmissionsPanel';
-
+import SubmissionDashboard from './SubmissionDashboard';
 import { 
   UserIcon, 
   CameraIcon, 
@@ -1349,16 +1349,19 @@ export default function PortalSection({ user, onLogout }) {
           )}
 
           {/* MIS ENVÍOS */}
-          {activeTab === 'submissions' && (
-            <motion.section
-              key="submissions"
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }}
-            >
-              <AuthorSubmissionsPanel user={userData} />
-            </motion.section>
-          )}
+         // En PortalSection.js, dentro de las pestañas
+{activeTab === 'submissions' && (
+  <motion.section key="submissions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <SubmissionDashboard 
+      user={userData} 
+      onNavigateToForm={(draft) => {
+        // Si hay draft, abrir formulario con datos
+        // Si no, abrir formulario nuevo
+        setActiveTab('submit');
+      }}
+    />
+  </motion.section>
+)}
 
           {activeTab === 'reviewer-profile' && (
             <motion.div

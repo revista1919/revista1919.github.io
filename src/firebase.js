@@ -24,6 +24,7 @@ import {
   setDoc,
   getDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   query,
   collection,
@@ -205,6 +206,7 @@ export {
   getDoc,
   updateDoc,
   onSnapshot,
+  deleteDoc,
   query,
   collection,
   getDocs,    // ✅ AGREGAR AL EXPORT

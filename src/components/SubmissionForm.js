@@ -1,7 +1,7 @@
 // src/components/SubmissionForm.js (DISEÑO EDITORIAL + LÓGICA COMPLETA + HELP CAPSULES + UX MEJORADA)
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { auth } from '../firebase';
+import { auth, db, doc, setDoc, getDoc, deleteDoc, query, collection, where, getDocs } from '../firebase';
 import { useLanguage } from '../hooks/useLanguage';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -1595,7 +1595,13 @@ const MinorConsentSection = ({ author, index, onUpdate }) => {
 
 // ============ COMPONENTE PRINCIPAL DEL FORMULARIO ============
 
-export default function SubmissionForm({ user, onSuccess }) {
+export default function SubmissionForm({ 
+  user, 
+  onSuccess, 
+  initialDraft = null, 
+  draftId = null,
+  onNavigateToDashboard = null 
+}) {
   const { language } = useLanguage();
   const isSpanish = language === 'es';
 
@@ -1607,7 +1613,11 @@ export default function SubmissionForm({ user, onSuccess }) {
   const [submissionId, setSubmissionId] = useState('');
   const [driveFolderId, setDriveFolderId] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
-  const [lastSaved, setLastSaved] = useState(null);
+ const [lastSaved, setLastSaved] = useState(null);
+const [draftId, setDraftId] = useState(draftId || null); // ID del borrador en Firestore
+const [isSavingDraft, setIsSavingDraft] = useState(false);
+const [saveError, setSaveError] = useState(null);
+const [draftLoaded, setDraftLoaded] = useState(false);
   
   // Estado inicial del formulario
   const initialFormState = {
@@ -1667,9 +1677,75 @@ export default function SubmissionForm({ user, onSuccess }) {
     wantsToBeReviewer: false,
     reviewerAreas: [],
   };
-
-  const [formData, setFormData] = useState(initialFormState);
-  const formDataRef = useRef(formData);
+const [formData, setFormData] = useState(initialFormState);
+const formDataRef = useRef(formData);
+const saveTimeoutRef = useRef(null); // Para debounce
+// Guardar borrador en Firestore
+const saveDraftToFirestore = async (data, step) => {
+  if (!user?.uid) return;
+  
+  try {
+    setIsSavingDraft(true);
+    setSaveError(null);
+    
+    const draftRef = draftId 
+      ? doc(db, 'submissionDrafts', draftId)
+      : doc(db, 'submissionDrafts', `${user.uid}_new`);
+    
+    const payload = {
+      ...data,
+      manuscript: null, // No guardar archivo en Firestore
+      manuscriptName: data.manuscriptName || '',
+      authorUID: user.uid,
+      updatedAt: new Date(),
+      status: 'draft',
+      currentStep: step || currentStep
+    };
+    
+    await setDoc(draftRef, payload, { merge: true });
+    
+    if (!draftId) {
+      setDraftId(draftRef.id);
+    }
+    
+    setLastSaved(new Date());
+  } catch (error) {
+    console.error('Error saving draft:', error);
+    setSaveError(isSpanish ? 'Error al guardar borrador' : 'Error saving draft');
+  } finally {
+    setIsSavingDraft(false);
+  }
+};
+// Cargar borrador desde Firestore
+const loadDraftFromFirestore = async (id) => {
+  if (!id) return;
+  
+  try {
+    const draftDoc = await getDoc(doc(db, 'submissionDrafts', id));
+    
+    if (draftDoc.exists()) {
+      const data = draftDoc.data();
+      
+      setFormData(prev => ({
+        ...prev,
+        ...data,
+        manuscript: null, // Archivo no se puede recuperar
+        manuscriptName: data.manuscriptName || '',
+        editorComment: data.editorComment || ''
+      }));
+      
+      if (data.currentStep) {
+        setCurrentStep(data.currentStep);
+      }
+      
+      setDraftId(id);
+      setDraftLoaded(true);
+      setLastSaved(new Date(data.updatedAt?.toDate?.() || new Date()));
+    }
+  } catch (error) {
+    console.error('Error loading draft:', error);
+  }
+};
 
   // Opciones de tipo de artículo
   const articleTypeOptions = {
@@ -1718,40 +1794,41 @@ export default function SubmissionForm({ user, onSuccess }) {
     formDataRef.current = formData;
   }, [formData]);
 
-  // Carga del borrador
-  useEffect(() => {
-    const savedData = localStorage.getItem('submissionFormDraft');
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        setFormData(prev => ({
-          ...prev,
-          ...parsed,
-          manuscript: null,
-          manuscriptName: parsed.manuscriptName || '',
-          editorComment: parsed.editorComment || ''
-        }));
-        setLastSaved(new Date());
-      } catch (e) {
-        console.error('[DEBUG] Error cargando borrador:', e);
-      }
+// Carga del borrador desde Firestore
+useEffect(() => {
+  if (initialDraft) {
+    // Si viene un borrador desde el dashboard
+    setFormData(prev => ({
+      ...prev,
+      ...initialDraft,
+      manuscript: null,
+      manuscriptName: initialDraft.manuscriptName || '',
+      editorComment: initialDraft.editorComment || ''
+    }));
+    if (initialDraft.currentStep) {
+      setCurrentStep(initialDraft.currentStep);
     }
-  }, []);
-
-  // Autoguardado con timestamp visible
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const dataToSave = {
-        ...formDataRef.current,
-        manuscript: null,
-        manuscriptName: formDataRef.current.manuscriptName,
-      };
-      localStorage.setItem('submissionFormDraft', JSON.stringify(dataToSave));
-      setLastSaved(new Date());
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
+    if (initialDraft.id) {
+      setDraftId(initialDraft.id);
+    }
+    setDraftLoaded(true);
+  } else if (draftId) {
+    // Si viene solo el ID del borrador
+    loadDraftFromFirestore(draftId);
+  } else {
+    setDraftLoaded(true);
+  }
+}, [initialDraft, draftId]);
+// Autoguardado en Firestore (debounced)
+useEffect(() => {
+  if (!draftLoaded) return;
+  
+  const debouncedSave = setTimeout(() => {
+    saveDraftToFirestore(formDataRef.current, currentStep);
+  }, 2000); // Guardar 2 segundos después del último cambio
+  
+  return () => clearTimeout(debouncedSave);
+}, [formData, currentStep, draftLoaded]);
   // Utilidad para convertir archivo a base64
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -2179,12 +2256,17 @@ export default function SubmissionForm({ user, onSuccess }) {
     }
   };
 
-  const prevStep = () => {
-    setValidationErrors({});
-    setCurrentStep(prev => prev - 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
+// Guardar y salir al dashboard
+const handleSaveAndExit = async () => {
+  await saveDraftToFirestore(formDataRef.current, currentStep);
+  
+  // Navegar al dashboard
+  if (onNavigateToDashboard) {
+    onNavigateToDashboard();
+  } else {
+    window.location.href = isSpanish ? '/login/submissions' : '/en/login/submissions';
+  }
+};
   // Función de envío
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -2288,8 +2370,15 @@ export default function SubmissionForm({ user, onSuccess }) {
       }
 
       const result = await response.json();
-      localStorage.removeItem('submissionFormDraft');
-      setSubmissionId(result.submissionId);
+// Eliminar borrador de Firestore
+if (draftId) {
+  try {
+    await deleteDoc(doc(db, 'submissionDrafts', draftId));
+  } catch (error) {
+    console.error('Error deleting draft after submit:', error);
+  }
+}
+setSubmissionId(result.submissionId);
       setDriveFolderId(result.driveFolderId);
       setSubmitStatus(isSpanish ? 'Artículo enviado con éxito' : 'Article submitted successfully');
       setSubmitted(true);
@@ -3893,40 +3982,66 @@ export default function SubmissionForm({ user, onSuccess }) {
               )}
             </AnimatePresence>
 
-            {/* Botones de navegación */}
-            <div className="mt-12 pt-6 border-t border-slate-200 flex items-center justify-between bg-white">
-              <button 
-                type="button" 
-                onClick={prevStep} 
-                className={`px-6 py-3 rounded-xl font-bold text-sm tracking-wide transition-all font-sans
-                  ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
-              >
-                &larr; {isSpanish ? 'Volver' : 'Back'}
-              </button>
-              
-              {currentStep < 3 ? (
-                <button 
-                  type="button" 
-                  onClick={nextStep} 
-                  className="px-8 py-3 bg-[#003b5c] text-white rounded-xl font-bold text-sm tracking-wide hover:bg-[#00273f] hover:shadow-lg hover:shadow-[#003b5c]/20 transition-all active:scale-95 font-sans"
-                >
-                  {isSpanish ? 'Continuar' : 'Continue'} &rarr;
-                </button>
-              ) : (
-                <button 
-                  type="submit" 
-                  disabled={uploading || !isStepValid(3)}
-                  className="px-10 py-3 bg-gradient-to-r from-[#003b5c] to-[#005282] text-white rounded-xl font-bold text-sm tracking-wide hover:shadow-xl hover:shadow-[#003b5c]/30 transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed font-sans"
-                >
-                  {uploading 
-                    ? (isSpanish ? 'Enviando...' : 'Submitting...') 
-                    : (isSpanish ? 'Enviar Manuscrito' : 'Submit Manuscript')}
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                </button>
-              )}
-            </div>
+{/* Botones de navegación */}
+<div className="mt-12 pt-6 border-t border-slate-200 flex items-center justify-between bg-white">
+  <div className="flex items-center gap-4">
+    <button 
+      type="button" 
+      onClick={prevStep} 
+      className={`px-6 py-3 rounded-xl font-bold text-sm tracking-wide transition-all font-sans
+        ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
+    >
+      &larr; {isSpanish ? 'Volver' : 'Back'}
+    </button>
+  </div>
+  
+  <div className="flex items-center gap-4">
+    {/* Botón Guardar y Salir */}
+    <button 
+      type="button" 
+      onClick={handleSaveAndExit}
+      disabled={isSavingDraft}
+      className="px-6 py-3 border border-gray-300 text-gray-600 hover:border-[#003b5c] hover:text-[#003b5c] font-bold text-sm tracking-wide transition-all font-sans flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl"
+    >
+      {isSavingDraft ? (
+        <>
+          <div className="w-4 h-4 border-2 border-gray-300 border-t-[#003b5c] rounded-full animate-spin" />
+          {isSpanish ? 'Guardando...' : 'Saving...'}
+        </>
+      ) : (
+        <>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {isSpanish ? 'Guardar y Salir' : 'Save and Exit'}
+        </>
+      )}
+    </button>
+    
+    {currentStep < 3 ? (
+      <button 
+        type="button" 
+        onClick={nextStep} 
+        className="px-8 py-3 bg-[#003b5c] text-white rounded-xl font-bold text-sm tracking-wide hover:bg-[#00273f] hover:shadow-lg hover:shadow-[#003b5c]/20 transition-all active:scale-95 font-sans"
+      >
+        {isSpanish ? 'Continuar' : 'Continue'} &rarr;
+      </button>
+    ) : (
+      <button 
+        type="submit" 
+        disabled={uploading || !isStepValid(3)}
+        className="px-10 py-3 bg-gradient-to-r from-[#003b5c] to-[#005282] text-white rounded-xl font-bold text-sm tracking-wide hover:shadow-xl hover:shadow-[#003b5c]/30 transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed font-sans"
+      >
+        {uploading 
+          ? (isSpanish ? 'Enviando...' : 'Submitting...') 
+          : (isSpanish ? 'Enviar Manuscrito' : 'Submit Manuscript')}
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+      </button>
+    )}
+  </div>
+</div>
 
             {/* Estado del envío */}
             {submitStatus && (
@@ -3957,8 +4072,16 @@ export default function SubmissionForm({ user, onSuccess }) {
               )}
               <span className="hidden sm:inline text-slate-300">·</span>
               <span className="text-slate-400">
-                {isSpanish ? 'Puedes cerrar y continuar después' : 'You can close and continue later'}
-              </span>
+  {isSpanish ? 'Guardado en la nube · Disponible desde cualquier dispositivo' : 'Cloud saved · Available from any device'}
+</span>
+{saveError && (
+  <div className="mt-2 flex items-center justify-center gap-2 text-red-500 text-xs">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    {saveError}
+  </div>
+)}
             </div>
           </form>
         </div>
