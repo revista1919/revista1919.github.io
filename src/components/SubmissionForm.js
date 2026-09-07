@@ -1599,7 +1599,7 @@ export default function SubmissionForm({
   user, 
   onSuccess, 
   initialDraft = null, 
-  draftId = null,
+  initialDraftId = null,  
   onNavigateToDashboard = null 
 }) {
   const { language } = useLanguage();
@@ -1614,7 +1614,7 @@ export default function SubmissionForm({
   const [driveFolderId, setDriveFolderId] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
  const [lastSaved, setLastSaved] = useState(null);
-const [draftId, setDraftId] = useState(draftId || null); // ID del borrador en Firestore
+const [draftId, setDraftId] = useState(initialDraftId || null);// ID del borrador en Firestore
 const [isSavingDraft, setIsSavingDraft] = useState(false);
 const [saveError, setSaveError] = useState(null);
 const [draftLoaded, setDraftLoaded] = useState(false);
