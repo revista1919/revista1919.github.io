@@ -1,4 +1,4 @@
-// App.js - VERSIÓN COMPLETA CON DISEÑO EDITORIAL ACADÉMICO
+// App.js (VERSIÓN ACTUALIZADA CON RUTAS ANIDADAS PARA EL PORTAL)
 import React, { useState, useEffect, useMemo } from 'react';
 import { auth } from './firebase';
 import {
@@ -12,7 +12,7 @@ import ReviewerOnboarding from './components/ReviewerOnboarding';
 import ReviewerWorkspacePage from './components/ReviewerWorkspacePage';
 import Header from './components/Header';
 import AimsScopeSection from './components/AimsScopeSection';
-import CollectionView from './components/CollectionView';
+import CollectionView from './components/CollectionView';      // <--- NUEVO
 import SingleCollectionView from './components/SingleCollectionView';
 import SearchAndFilters from './components/SearchAndFilters';
 import ReviewerResponsePage from './components/ReviewerResponsePage';
@@ -32,7 +32,9 @@ import LoginSection from './components/LoginSection';
 import PortalSection from './components/PortalSection';
 import NewsSection from './components/NewsSection';
 import HomeSection from './components/HomeSection';
+// En App.js, en la sección de imports, AÑADE:
 import { Routes, Route, useLocation, NavLink, useSearchParams, Navigate } from 'react-router-dom';
+//                                                              ^^^^^^^^
 import './index.css';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -70,6 +72,7 @@ function App() {
   const [volumeVolumes, setVolumeVolumes] = useState([]);
   const [volumeNumbers, setVolumeNumbers] = useState([]);
 
+  // Función para obtener datos del usuario desde Firebase/ localStorage
   const getUserData = (firebaseUser) => {
     return {
       uid: firebaseUser.uid,
@@ -119,6 +122,7 @@ function App() {
       });
   }, []);
 
+  // Función auxiliar para obtener texto de autores
   const getAutoresText = (autores) => {
     if (!autores) return '';
     if (Array.isArray(autores)) {
@@ -127,15 +131,17 @@ function App() {
     return String(autores);
   };
 
+  // Función auxiliar para obtener instituciones
   const getInstitutionsText = (autores) => {
     if (!autores || !Array.isArray(autores)) return '';
     const institutions = autores.map(a => a.institution).filter(Boolean);
     return [...new Set(institutions)].join(', ');
   };
 
-  useEffect(() => {
+useEffect(() => {
     const fetchArticles = async () => {
       try {
+        // PRIMERO: Intentar cargar datos pre-renderizados del HTML
         const preloadedData = document.getElementById('preloaded-articles-data');
         if (preloadedData && preloadedData.textContent) {
           const data = JSON.parse(preloadedData.textContent);
@@ -144,6 +150,7 @@ function App() {
           setFilteredArticles(sortedData);
           setLoading(false);
           
+          // También configurar áreas y volúmenes
           const allAreas = sortedData.flatMap((a) =>
             (a.area || '').split(';').map((area) => area.trim()).filter(Boolean)
           );
@@ -159,9 +166,10 @@ function App() {
             .sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
           setArticleNumbers(uniqueNumbers);
           
-          return;
+          return; // No hacer fetch si ya tenemos datos
         }
         
+        // SEGUNDO: Si no hay datos pre-cargados, hacer fetch normal
         const response = await fetch(ARTICLES_JSON, { cache: 'no-store' });
         if (!response.ok) {
           throw new Error(`Error al cargar el archivo JSON: ${response.status}`);
@@ -272,9 +280,11 @@ function App() {
     const numericTerm = normalizeNumberSearch(searchTerm);
     
     const filtered = articles.filter((article) => {
+      // Manejo seguro de autores
       const autoresText = getAutoresText(article.autores).toLowerCase();
       const institucionesText = getInstitutionsText(article.autores).toLowerCase();
       
+      // Manejo seguro de palabras clave
       const keywordsText = Array.isArray(article.palabras_clave) 
         ? article.palabras_clave.join(' ').toLowerCase()
         : safeString(article.palabras_clave).toLowerCase();
@@ -454,117 +464,123 @@ function App() {
       component: <HomeSection onOpenMenu={() => setIsMenuOpen(true)} />,
     },
     {
-      name: 'articles',
-      label: 'Artículos',
-      path: '/article',
-      component: (
-        <motion.div
-          className="py-12 md:py-16 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 font-sans"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="mb-12 max-w-4xl">
-            <h1 className="text-4xl md:text-5xl font-serif text-[#002147] tracking-tight">Archivo de Artículos</h1>
-            <hr className="w-16 border-t-2 border-[#002147] my-6" />
-            <p className="text-lg text-gray-600 font-serif leading-relaxed">
-              Explora y descubre investigaciones revisadas por pares organizadas por disciplina, volumen y número.
+  name: 'articles',
+  label: 'Artículos',
+  path: '/article',
+  component: (
+    <motion.div
+      className="py-12 md:py-16 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* Cabecera de página estilo editorial */}
+      <div className="mb-12 max-w-4xl">
+        <h1 className="text-4xl md:text-5xl font-serif text-gray-900 tracking-tight">Archivo de Artículos</h1>
+        <hr className="w-16 border-t-4 border-[#007398] my-6" />
+        <p className="text-lg text-gray-600 font-serif leading-relaxed">
+          Explora y descubre investigaciones revisadas por pares organizadas por disciplina, volumen y número.
+        </p>
+      </div>
+
+      <SearchAndFilters
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        selectedArea={selectedArea}
+        setSelectedArea={setSelectedArea}
+        areas={areas}
+        onSearch={handleSearch}
+        clearFilters={clearFilters}
+        placeholder="Buscar por título, autor, palabras clave..."
+        quickTags={['2025', 'Vol. 1', 'Núm. 1']}
+        selectedVolume={selectedArticleVolume}
+        setSelectedVolume={setSelectedArticleVolume}
+        volumesList={articleVolumes}
+        selectedNumber={selectedArticleNumber}
+        setSelectedNumber={setSelectedArticleNumber}
+        numbersList={articleNumbers}
+        volumeLabel="Volumen"
+        numberLabel="Número"
+      />
+
+      <div className="mt-12">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007398]"></div>
+            <p className="mt-6 text-gray-500 font-serif text-lg italic">Consultando la base de datos...</p>
+          </div>
+        ) : filteredArticles.length === 0 ? (
+          <div className="bg-gray-50 border border-gray-200 py-20 px-6 text-center rounded-sm">
+            <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <p className="text-xl text-gray-600 font-serif italic mb-2">
+              No se han encontrado registros para los criterios seleccionados.
             </p>
+            <button onClick={clearFilters} className="mt-4 text-sm text-[#007398] font-bold uppercase tracking-wider hover:underline">
+              Limpiar todos los filtros
+            </button>
           </div>
+        ) : (
+          <>
+            {/* Contenedor principal de la lista sin fondo ni bordes de bloque completos, fluye natural */}
+            <div className="border-t border-gray-300">
+              {filteredArticles.slice(0, visibleArticles).map((article, index) => (
+                <motion.div
+                  key={article.titulo + index}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index % 6 * 0.05, duration: 0.3 }}
+                >
+                  <ArticleCard article={article} />
+                </motion.div>
+              ))}
+            </div>
 
-          <SearchAndFilters
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            selectedArea={selectedArea}
-            setSelectedArea={setSelectedArea}
-            areas={areas}
-            onSearch={handleSearch}
-            clearFilters={clearFilters}
-            placeholder="Buscar por título, autor, palabras clave..."
-            quickTags={['2025', 'Vol. 1', 'Núm. 1']}
-            selectedVolume={selectedArticleVolume}
-            setSelectedVolume={setSelectedArticleVolume}
-            volumesList={articleVolumes}
-            selectedNumber={selectedArticleNumber}
-            setSelectedNumber={setSelectedArticleNumber}
-            numbersList={articleNumbers}
-            volumeLabel="Volumen"
-            numberLabel="Número"
-          />
-
-          <div className="mt-12">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#002147] border-t-transparent"></div>
-                <p className="mt-6 text-gray-500 font-serif text-sm italic">Consultando la base de datos...</p>
+            {/* Paginación estilo editorial limpio y tipográfico */}
+            <div className="mt-16 mb-20 flex flex-col items-center border-t border-gray-200 pt-10">
+              <p className="text-sm text-gray-500 mb-8 uppercase tracking-widest font-semibold">
+                Mostrando <span className="text-gray-900">{Math.min(visibleArticles, filteredArticles.length)}</span> de <span className="text-gray-900">{filteredArticles.length}</span> resultados
+              </p>
+              <div className="flex gap-4">
+                {filteredArticles.length > visibleArticles && (
+                  <button
+                    className="px-8 py-3 bg-[#007398] text-white text-sm font-bold tracking-wide hover:bg-[#005a77] transition-colors rounded-sm shadow-sm"
+                    onClick={loadMoreArticles}
+                  >
+                    Cargar más artículos
+                  </button>
+                )}
+                {visibleArticles > 6 && (
+                  <button
+                    className="px-8 py-3 bg-white border border-gray-300 text-gray-700 text-sm font-bold tracking-wide hover:bg-gray-50 hover:text-[#007398] hover:border-[#007398] transition-all rounded-sm"
+                    onClick={showLessArticles}
+                  >
+                    Ver menos
+                  </button>
+                )}
               </div>
-            ) : filteredArticles.length === 0 ? (
-              <div className="bg-gray-50 border border-gray-300 py-20 px-6 text-center rounded-none">
-                <p className="text-lg text-gray-600 font-serif italic mb-2">
-                  No se han encontrado registros para los criterios seleccionados.
-                </p>
-                <button onClick={clearFilters} className="mt-4 text-xs text-[#002147] font-bold uppercase tracking-widest hover:underline">
-                  Limpiar todos los filtros
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="border-t border-gray-300">
-                  {filteredArticles.slice(0, visibleArticles).map((article, index) => (
-                    <motion.div
-                      key={article.titulo + index}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: index % 6 * 0.05, duration: 0.3 }}
-                    >
-                      <ArticleCard article={article} />
-                    </motion.div>
-                  ))}
-                </div>
-
-                <div className="mt-16 mb-20 flex flex-col items-center border-t border-gray-300 pt-10">
-                  <p className="text-xs text-gray-500 mb-8 uppercase tracking-[0.2em] font-bold">
-                    Mostrando <span className="text-[#1a1a1a]">{Math.min(visibleArticles, filteredArticles.length)}</span> de <span className="text-[#1a1a1a]">{filteredArticles.length}</span> resultados
-                  </p>
-                  <div className="flex gap-4">
-                    {filteredArticles.length > visibleArticles && (
-                      <button
-                        className="px-8 py-3 bg-[#002147] text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-black transition-colors rounded-none"
-                        onClick={loadMoreArticles}
-                      >
-                        Cargar más artículos
-                      </button>
-                    )}
-                    {visibleArticles > 6 && (
-                      <button
-                        className="px-8 py-3 bg-white border border-gray-300 text-gray-700 text-[10px] font-bold uppercase tracking-[0.2em] hover:border-[#002147] transition-colors rounded-none"
-                        onClick={showLessArticles}
-                      >
-                        Ver menos
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </motion.div>
-      ),
-    },
+            </div>
+          </>
+        )}
+      </div>
+    </motion.div>
+  ),
+},
     {
       name: 'volumes',
       label: 'Volúmenes',
       path: '/volume',
       component: (
         <motion.div
-          className="py-12 md:py-16 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 font-sans"
+          className="py-12 md:py-16 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           <div className="mb-12 max-w-4xl">
-            <h1 className="text-4xl md:text-5xl font-serif text-[#002147] tracking-tight">Archivo de Volúmenes</h1>
-            <hr className="w-16 border-t-2 border-[#002147] my-6" />
+            <h1 className="text-4xl md:text-5xl font-serif text-gray-900 tracking-tight">Archivo de Volúmenes</h1>
+            <hr className="w-16 border-t-4 border-[#007398] my-6" />
             <p className="text-lg text-gray-600 font-serif leading-relaxed">
               Consulta nuestras ediciones pasadas y actuales completas.
             </p>
@@ -592,15 +608,15 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
             {volumeLoading ? (
               <div className="flex flex-col items-center justify-center py-20 col-span-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#002147] border-t-transparent"></div>
-                <p className="mt-6 text-gray-500 font-serif text-sm italic">Cargando volúmenes...</p>
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007398]"></div>
+                <p className="mt-6 text-gray-500 font-serif text-lg italic">Cargando volúmenes...</p>
               </div>
             ) : filteredVolumes.length === 0 ? (
-              <div className="bg-gray-50 border border-gray-300 py-20 px-6 text-center col-span-full rounded-none">
-                <p className="text-lg text-gray-600 font-serif italic mb-2">
+              <div className="bg-gray-50 border border-gray-200 py-20 px-6 text-center rounded-sm col-span-full">
+                <p className="text-xl text-gray-600 font-serif italic mb-2">
                   No se han encontrado volúmenes para los criterios seleccionados.
                 </p>
-                <button onClick={clearVolumeFilters} className="mt-4 text-xs text-[#002147] font-bold uppercase tracking-widest hover:underline">
+                <button onClick={clearVolumeFilters} className="mt-4 text-sm text-[#007398] font-bold uppercase tracking-wider hover:underline">
                   Limpiar todos los filtros
                 </button>
               </div>
@@ -620,18 +636,19 @@ function App() {
         </motion.div>
       ),
     },
-    {
-      name: 'collections',
-      label: 'Colecciones',
-      path: '/collection',
-      component: <CollectionView />,
-    },
+     {
+    name: 'collections',
+    label: 'Colecciones',
+    path: '/collection',
+    component: <CollectionView />,
+  },
     {
       name: 'submit',
       label: 'Enviar Artículo',
       path: '/submit',
       component: <SubmitSection className="py-12 max-w-[1280px] mx-auto" />,
     },
+    
     {
       name: 'team',
       label: 'Nuestro Equipo',
@@ -655,11 +672,11 @@ function App() {
       component: <AboutSection className="py-12 max-w-[1280px] mx-auto" />,
     },
     {
-      name: 'aims-scope',
-      label: 'Aims & Scope',
-      path: '/aims-scope',
-      component: <AimsScopeSection className="py-12 max-w-[1280px] mx-auto" />,
-    },
+  name: 'aims-scope',                    // Nombre único para la ruta
+  label: 'Aims & Scope',                 // Texto que aparece en el menú
+  path: '/aims-scope',                   // URL de la ruta
+  component: <AimsScopeSection className="py-12 max-w-[1280px] mx-auto" />,
+},
     {
       name: 'guidelines',
       label: 'Guías',
@@ -686,11 +703,11 @@ function App() {
         <div className={`py-12 ${user ? 'w-full' : 'max-w-lg mx-auto'}`}>
           {!user && (
             <div className="mb-8">
-              <h2 className="text-3xl font-serif text-[#002147] text-center mb-4">
+              <h2 className="text-3xl font-serif text-gray-900 text-center mb-4">
                 Acceso Editorial
               </h2>
-              <hr className="w-12 border-t-2 border-[#002147] mx-auto mb-6" />
-              <p className="text-center text-gray-600 text-sm">
+              <hr className="w-12 border-t-2 border-[#007398] mx-auto mb-6" />
+              <p className="text-center text-gray-600">
                 Plataforma de gestión para Autores, Revisores y Editores.
               </p>
             </div>
@@ -707,11 +724,11 @@ function App() {
 
   if (authLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-white font-sans">
+      <div className="h-screen flex items-center justify-center bg-white">
         <motion.div
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ repeat: Infinity, duration: 1.5 }}
-          className="font-serif text-sm tracking-[0.2em] text-gray-500 uppercase"
+          className="font-serif text-xl tracking-[0.2em] text-gray-500 uppercase"
         >
           Inicializando...
         </motion.div>
@@ -721,20 +738,28 @@ function App() {
 
   const isLoginActive = location.pathname.includes('login');
   const rawPath = location.pathname.replace(/\/$/, '');
-  const normalizedPath = typeof cleanPath === 'function' ? cleanPath(rawPath) : rawPath;
+  const normalizedPath =
+    typeof cleanPath === 'function'
+      ? cleanPath(rawPath)
+      : rawPath;
   const isHome = normalizedPath === '/' || normalizedPath === '' || rawPath === '/es';
 
+  const framerItem = (delay) => ({
+    initial: { opacity: 0, x: -20 },
+    animate: { opacity: 1, x: 0 },
+    transition: { delay: 0.1 * delay, duration: 0.3 }
+  });
+
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans text-[#1a1a1a] selection:bg-[#002147] selection:text-white">
-      
-      {/* BARRA SUPERIOR INSTITUCIONAL */}
-      <div className="h-1.5 w-full bg-[#002147] z-50"></div>
+    <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900 selection:bg-[#007398] selection:text-white">
+      {/* Accent Bar Superior (Detalle premium editorial) */}
+      <div className="h-2 w-full bg-[#007398] z-50"></div>
 
       {!isHome && <Header onOpenMenu={() => setIsMenuOpen(true)} />}
 
-      {/* NAVEGACIÓN TIPO ÍNDICE */}
-      <nav className="sticky top-0 z-30 bg-white border-b border-gray-300">
-        <div className="max-w-[1400px] mx-auto px-6">
+      {/* Navegación sólida, sin blur, dando estructura de documento serio */}
+      <nav className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm transition-all duration-300">
+        <div className="max-w-[1400px] mx-auto px-4">
           <Tabs sections={sections} />
         </div>
       </nav>
@@ -742,65 +767,339 @@ function App() {
       <main className="flex-grow flex flex-col">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.key}>
+            {/* Ruta para revisores - disponible en español e inglés */}
             <Route path="/reviewer-response" element={
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container mx-auto px-6 lg:px-8 flex-grow">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container mx-auto px-6 lg:px-8 flex-grow"
+              >
                 <ReviewerResponsePage />
               </motion.div>
             } />
 
+            {/* NUEVA RUTA: Workspace del revisor */}
             <Route path="/reviewer-workspace/:assignmentId" element={
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-grow">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex-grow"
+              >
                 <ReviewerWorkspacePage />
               </motion.div>
             } />
-
-            <Route path="/reviewer-onboarding" element={
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-grow">
-                <ReviewerOnboarding />
-              </motion.div>
-            } />
-
+<Route path="/reviewer-onboarding" element={
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.3 }}
+    className="flex-grow"
+  >
+    <ReviewerOnboarding />
+  </motion.div>
+} />
+            {/* <-- NUEVO: Rutas anidadas para el portal editorial */}
             <Route path="/login" element={
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`container ${user ? 'max-w-full px-0' : 'mx-auto px-6 lg:px-8'} flex-grow`}>
-                {!user ? <LoginSection onLogout={handleLogout} /> : <PortalSection user={user} onLogout={handleLogout} />}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className={`container ${user ? 'max-w-full px-0' : 'mx-auto px-6 lg:px-8'} flex-grow`}
+              >
+                {!user ? (
+                  <LoginSection onLogout={handleLogout} />
+                ) : (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                )}
               </motion.div>
             } />
             
-            {/* Rutas anidadas del Portal */}
-            {['submit', 'director', 'chief', 'submissions', 'reviewer-tasks', 'deskreview', 'assignment', 'calendar', 'reviewer-profile', 'reviewer-applications', 'tasks', 'news', 'sci-news', 'admissions', 'users'].map((subRoute) => (
-              <Route key={subRoute} path={`/login/${subRoute}`} element={
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container max-w-full px-0 flex-grow">
-                  {user ? <PortalSection user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />}
-                </motion.div>
-              } />
-            ))}
+            {/* <-- NUEVO: Rutas para cada tab del portal */}
+            <Route path="/login/submit" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+            
+            <Route path="/login/director" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+<Route path="/collection/:folderName" element={
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
+    className="container mx-auto px-6 lg:px-8 flex-grow"
+  >
+    <SingleCollectionView />
+  </motion.div>
+} />
+            <Route path="/login/chief" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+            
+            <Route path="/login/submissions" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+            
+            <Route path="/login/reviewer-tasks" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+            
+            <Route path="/login/deskreview" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+            
+            <Route path="/login/assignment" element={
+              <motion.div                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+            
+            <Route path="/login/calendar" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+            <Route path="/login/reviewer-profile" element={
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
+    className="container max-w-full px-0 flex-grow"
+  >
+    {user ? (
+      <PortalSection user={user} onLogout={handleLogout} />
+    ) : (
+      <Navigate to="/login" replace />
+    )}
+  </motion.div>
+} />
 
-            <Route path="/collection/:folderName" element={
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container mx-auto px-6 lg:px-8 flex-grow">
-                <SingleCollectionView />
+{/* Ruta para postulaciones a revisor (nueva pestaña para editores) */}
+<Route path="/login/reviewer-applications" element={
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
+    className="container max-w-full px-0 flex-grow"
+  >
+    {user ? (
+      <PortalSection user={user} onLogout={handleLogout} />
+    ) : (
+      <Navigate to="/login" replace />
+    )}
+  </motion.div>
+} />
+            <Route path="/login/tasks" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+            
+            <Route path="/login/news" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+            // Añade esta ruta junto con las otras rutas del portal
+<Route path="/login/sci-news" element={
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
+    className="container max-w-full px-0 flex-grow"
+  >
+    {user ? (
+      <PortalSection user={user} onLogout={handleLogout} />
+    ) : (
+      <Navigate to="/login" replace />
+    )}
+  </motion.div>
+} />
+            <Route path="/login/admissions" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </motion.div>
+            } />
+            
+            <Route path="/login/users" element={
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="container max-w-full px-0 flex-grow"
+              >
+                {user ? (
+                  <PortalSection user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
               </motion.div>
             } />
 
-            {sections.map(s => (
-              <Route
-                key={s.path}
-                path={s.path}
-                element={
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`${s.name === 'home' ? 'w-full flex-grow' : `w-full ${user && isLoginActive ? 'max-w-full px-0' : ''} flex-grow`}`}>
-                    {s.component}
-                  </motion.div>
-                }
-              />
-            ))}
-
+            {/* Rutas de secciones en español */}
+           {sections.map(s => (
+  <Route
+    key={s.path}
+    path={s.path}
+    element={
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3 }}
+        className={`${
+          s.name === 'home'
+            ? 'container mx-auto px-6 lg:px-8 flex-grow'
+            : `w-full ${user && isLoginActive ? 'max-w-full px-0' : ''} flex-grow`
+        }`}
+      >
+        {s.component}
+      </motion.div>
+    }
+  />
+))}
+            {/* Ruta comodín para redirigir rutas no encontradas a / */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>
       </main>
-
-      <NewsletterModal delay={45000} scrollTrigger={0.5} cookieExpirationDays={90} />
-
-      {/* MENÚ HAMBURGUESA EDITORIAL */}
+      <NewsletterModal 
+  delay={45000}              // 45 segundos
+  scrollTrigger={0.5}        // 50% del scroll
+  cookieExpirationDays={90}  // 90 días = 3 meses
+/>
       <AnimatePresence>
         {isMenuOpen && (
           <>
@@ -808,8 +1107,9 @@ function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
               onClick={() => setIsMenuOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40"
+              className="fixed inset-0 bg-gray-900 bg-opacity-40 backdrop-blur-sm z-40"
               aria-hidden="true"
             />
             <motion.div
@@ -817,56 +1117,41 @@ function App() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white shadow-2xl z-50 overflow-y-auto border-r border-gray-300 font-sans"
+              className="fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white shadow-2xl z-50 overflow-y-auto"
             >
-              <div className="p-6 border-b border-gray-300 flex justify-between items-center bg-[#FAFAFA]">
-                <span className="font-serif font-bold text-lg text-[#002147]">Índice General</span>
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <span className="font-serif font-bold text-xl text-[#007398]">Navegación</span>
                 <button
                   onClick={() => setIsMenuOpen(false)}
-                  className="text-gray-500 hover:text-black transition-colors p-1"
+                  className="text-gray-400 hover:text-gray-900 transition-colors bg-gray-50 p-2 rounded-sm"
                   aria-label="Cerrar menú"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              <div className="p-2 flex flex-col">
-  {sections.map((section) => {
-    // Determinar si es una sección destacada
-    const isHighlighted = ['submit', 'guidelines', 'login'].includes(section.name);
-    
-    return (
-      <NavLink
-        key={section.name}
-        to={section.path}
-        className={({ isActive }) =>
-          `block py-3 px-4 text-xs font-semibold uppercase tracking-[0.15em] border-b border-gray-100 transition-colors relative ${
-            isActive 
-              ? 'bg-[#002147] text-white' 
-              : isHighlighted
-                ? 'text-[#002147] bg-[#002147]/5 hover:bg-[#002147]/10 border-l-4 border-[#002147]'
-                : 'text-gray-700 hover:bg-gray-100 hover:text-[#002147]'
-          }`
-        }
-        onClick={() => setIsMenuOpen(false)}
-      >
-        {section.label}
-        {isHighlighted && !isActive && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-bold text-[#002147]">
-            ●
-          </span>
-        )}
-      </NavLink>
-    );
-  })}
-</div>
+              <div className="p-4 flex flex-col gap-1">
+                {sections.map((section, index) => (
+                  <motion.div key={section.name} {...framerItem(index)}>
+                    <NavLink
+                      to={section.path}
+                      className={({ isActive }) =>
+                        `block py-3 px-4 text-sm uppercase tracking-wide font-semibold rounded-sm transition-all ${isActive ? 'bg-[#007398]/5 text-[#007398] border-l-2 border-[#007398]' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-2 border-transparent'}`
+                      }
+                      onClick={() => setIsMenuOpen(false)}
+                      aria-label={`Ir a ${section.label}`}
+                    >
+                      {section.label}
+                    </NavLink>
+                  </motion.div>
+                ))}
+              </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
-
-      <Footer className="w-full mt-auto border-t border-gray-300 bg-[#FAFAFA]" />
+      <Footer className="w-full mt-auto border-t border-gray-200 bg-[#FAFAFA]" />
     </div>
   );
 }

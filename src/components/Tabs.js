@@ -23,10 +23,14 @@ function Tabs({ sections }) {
               }`
             }
           >
-            {isHighlighted && !isActive && (
-              <span className="w-1.5 h-1.5 bg-[#002147] rounded-full flex-shrink-0"></span>
+            {({ isActive }) => (
+              <>
+                {isHighlighted && !isActive && (
+                  <span className="w-1.5 h-1.5 bg-[#002147] rounded-full flex-shrink-0"></span>
+                )}
+                {section.label}
+              </>
             )}
-            {section.label}
           </NavLink>
         );
       })}
