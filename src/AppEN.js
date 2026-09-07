@@ -1,12 +1,3 @@
-// AppEN.js - VERSIÓN COMPLETA CON DISEÑO EDITORIAL ACADÉMICO
-import React, { useState, useEffect, useMemo } from 'react';
-import { auth } from './firebase';
-import {
-  onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence,
-  signOut,
-} from 'firebase/auth';
 import { useLanguage } from './hooks/useLanguage';
 import Header from './components/HeaderEN';
 import SearchAndFilters from './components/SearchAndFiltersEN';
@@ -17,6 +8,7 @@ import NewsletterModal from './components/NewsletterModal';
 import CollectionViewEN from './components/CollectionViewEN';
 import SingleCollectionViewEN from './components/SingleCollectionViewEN';
 import ReviewerResponsePage from './components/ReviewerResponsePage';
+import ReviewerWorkspacePage from './components/ReviewerWorkspacePage'; // ← AGREGAR ESTA LÍNEA
 import Tabs from './components/TabsEN';
 import SubmitSection from './components/SubmitSectionEN';
 import AdminSection from './components/AdminSectionEN';
