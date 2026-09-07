@@ -15,25 +15,34 @@ html, body, #root {
 }
 
 body {
-  /* Sans-serif limpia y densa para interfaces de lectura */
   font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  background-color: #ffffff; /* Blanco puro, como papel */
-  color: #1a1a1a; /* Tinta negra, alto contraste */
+  background-color: #ffffff;
+  color: #1a1a1a;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Forzar la tipografía Serif en TODOS los encabezados para el look "Paper" */
+/* ===== CORRECCIÓN IMPORTANTE ===== */
+/* Solo forzar la tipografía Serif en encabezados */
+/* NO forzar color - dejar que Tailwind lo maneje */
 h1, h2, h3, h4, h5, h6, .font-serif {
   font-family: 'Playfair Display', serif !important;
+  letter-spacing: -0.015em;
+  /* COLOR ELIMINADO - Ahora los colores de Tailwind funcionan correctamente */
+}
+
+/* Si necesitas un color por defecto, usa una regla más específica */
+.editorial-heading-dark {
   color: #000000;
-  letter-spacing: -0.015em; /* Típico en prensa escrita */
+}
+
+.editorial-heading-light {
+  color: #ffffff;
 }
 
 /* Eliminar el aspecto "SaaS Genérico" globalmente */
-/* Convertimos esquinas redondeadas en rígidas (estilo revista) */
 button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
-  border-radius: 0 !important; /* Completamente cuadrado */
+  border-radius: 0 !important;
 }
 
 /* Reemplazamos las sombras flotantes por bordes sólidos */
@@ -46,7 +55,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
 /* ===== 2. NAVEGACIÓN EDITORIAL ================= */
 /* ================================================ */
 
-/* Barra de navegación estilo índice de revista */
 .editorial-nav {
   border-bottom: 2px solid #000000;
   background-color: #ffffff;
@@ -84,7 +92,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
 /* ===== 3. TARJETAS Y CONTENEDORES ============== */
 /* ================================================ */
 
-/* Contenedor de contenido principal */
 .content-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -97,7 +104,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
   }
 }
 
-/* Tarjeta editorial - sin sombras, bordes definidos */
 .editorial-card {
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
@@ -105,7 +111,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
   padding: 2rem;
 }
 
-/* Sección con borde inferior sólido */
 .section-divider {
   border-bottom: 2px solid #000000;
   padding-bottom: 1rem;
@@ -116,7 +121,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
 /* ===== 4. TABLAS EDITORIALES =================== */
 /* ================================================ */
 
-/* Tabla estilo revista académica */
 .editorial-table {
   width: 100%;
   border-collapse: collapse;
@@ -146,7 +150,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
 /* ===== 5. BOTONES INSTITUCIONALES ============== */
 /* ================================================ */
 
-/* Botón primario académico */
 .btn-academic-primary {
   background-color: #004b87;
   color: #ffffff;
@@ -161,7 +164,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
   background-color: #000000;
 }
 
-/* Botón secundario */
 .btn-academic-secondary {
   background-color: #ffffff;
   color: #1a1a1a;
@@ -182,7 +184,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
 /* ===== 6. FORMULARIOS EDITORIALES ============== */
 /* ================================================ */
 
-/* Input estilo editorial */
 .input-academic {
   width: 100%;
   padding: 0.75rem;
@@ -207,7 +208,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
 /* ===== 7. ETIQUETAS Y BADGES =================== */
 /* ================================================ */
 
-/* Etiqueta editorial */
 .editorial-tag {
   display: inline-flex;
   align-items: center;
@@ -219,7 +219,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
   color: #1a1a1a;
 }
 
-/* Badge de estado */
 .status-badge {
   display: inline-block;
   padding: 0.25rem 0.5rem;
@@ -251,7 +250,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
 /* ===== 8. PANELES DE REVISIÓN ================== */
 /* ================================================ */
 
-/* Contenedor de revisión */
 .review-panel {
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
@@ -275,7 +273,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
 /* ===== 9. MODALES Y OVERLAYS =================== */
 /* ================================================ */
 
-/* Modal editorial */
 .editorial-modal {
   background-color: #ffffff;
   border: 1px solid #000000;
@@ -457,7 +454,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
 /* ===== 12. UTILIDADES ADICIONALES ============== */
 /* ================================================ */
 
-/* Ocultar scrollbar en navegación horizontal */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -467,17 +463,14 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
   display: none;
 }
 
-/* Alineación vertical para tablas */
 .align-top {
   vertical-align: top;
 }
 
-/* Espaciado editorial consistente */
 .editorial-spacing {
   margin-bottom: 2.5rem;
 }
 
-/* Tipografía para metadatos */
 .metadata-text {
   font-size: 0.75rem;
   color: #64748b;
@@ -488,7 +481,6 @@ button, input, select, textarea, .rounded-md, .rounded-lg, .rounded {
 /* ===== 13. COMPONENTES DE FORMULARIO ======= */
 /* ============================================ */
 
-/* Phone Input - Diseño Institucional Rígido */
 .PhoneInput {
   display: flex;
   align-items: center;
