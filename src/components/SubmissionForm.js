@@ -2255,7 +2255,11 @@ useEffect(() => {
       }
     }
   };
-
+const prevStep = () => {
+  setValidationErrors({});
+  setCurrentStep(prev => prev - 1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 // Guardar y salir al dashboard
 const handleSaveAndExit = async () => {
   await saveDraftToFirestore(formDataRef.current, currentStep);
