@@ -271,9 +271,6 @@ const HomeSection = ({ onOpenMenu }) => {
                 className="w-full h-full object-cover grayscale-[80%] hover:grayscale-0 transition-all duration-700"
               />
             </div>
-            <div className="mt-3 text-[9px] uppercase tracking-[0.15em] text-gray-400 text-right">
-              FIG 1. — {isSpanish ? 'Práctica de laboratorio, 2025' : 'Laboratory practice, 2025'}
-            </div>
           </motion.div>
         </div>
 
